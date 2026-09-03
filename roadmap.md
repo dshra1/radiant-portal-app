@@ -23,3 +23,5 @@
 - [ ] Backend decision: user has GCP project `saha-l` (project number 428361199102, account sahadeveloperz@gmail.com) — decide Firebase (Firestore/Storage) vs Lovable Cloud; needs service account key if Firebase
 - [ ] Fold latest Stitch shell screen chrome (role switcher, offline sync, weather, notif badge, Sunlight Mode) into shared Shell — no duplicate route
 - [ ] Apply Saha Developers logo across app (shell sidebar, hub hero, favicon, PWA icons)
+
+- [ ] Fix layout sizing: cap content width on large screens, stop Download-app button overlapping header chrome

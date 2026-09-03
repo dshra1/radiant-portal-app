@@ -50,7 +50,7 @@ export function InstallAppButton() {
   };
 
   return (
-    <div className="fixed right-3 top-3 z-[200] flex flex-col items-end gap-2">
+    <div className="fixed bottom-20 left-4 z-[200] flex flex-col items-start gap-2 md:bottom-6 md:left-auto md:right-6 md:items-end">
       <button
         type="button"
         onClick={handleClick}
