@@ -55,9 +55,12 @@ export function Shell({
         )}
       >
         <div className="flex h-13 items-center gap-2 border-b border-sidebar-border px-4 py-3">
-          <span className="grid size-7 shrink-0 place-items-center rounded bg-[image:var(--gradient-accent)]">
-            <HardHat className="size-4 text-sidebar-primary-foreground" />
-          </span>
+          <img
+            src={sahaLogo.url}
+            alt="Saha Developers"
+            className="size-7 shrink-0 rounded bg-white object-contain p-0.5"
+          />
+
           {expanded && (
             <span className="truncate text-sm font-semibold tracking-tight text-sidebar-accent-foreground">
               Saha OS <span className="text-sidebar-primary">Next</span>
