@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
