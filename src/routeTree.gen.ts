@@ -19,6 +19,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ExecutionManualRouteImport } from './routes/execution-manual'
 import { Route as FieldConsoleRouteImport } from './routes/field-console'
 import { Route as FinancialForecastRouteImport } from './routes/financial-forecast'
+import { Route as FinancialIngestionRouteImport } from './routes/financial-ingestion'
 import { Route as InventoryControlRouteImport } from './routes/inventory-control'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
 import { Route as PoCreateRouteImport } from './routes/po-create'
@@ -84,6 +85,11 @@ const FieldConsoleRoute = FieldConsoleRouteImport.update({
 const FinancialForecastRoute = FinancialForecastRouteImport.update({
   id: '/financial-forecast',
   path: '/financial-forecast',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinancialIngestionRoute = FinancialIngestionRouteImport.update({
+  id: '/financial-ingestion',
+  path: '/financial-ingestion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InventoryControlRoute = InventoryControlRouteImport.update({
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
   '/financial-forecast': typeof FinancialForecastRoute
+  '/financial-ingestion': typeof FinancialIngestionRoute
   '/inventory-control': typeof InventoryControlRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/po-create': typeof PoCreateRoute
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
   '/financial-forecast': typeof FinancialForecastRoute
+  '/financial-ingestion': typeof FinancialIngestionRoute
   '/inventory-control': typeof InventoryControlRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/po-create': typeof PoCreateRoute
@@ -235,6 +243,7 @@ export interface FileRoutesById {
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
   '/financial-forecast': typeof FinancialForecastRoute
+  '/financial-ingestion': typeof FinancialIngestionRoute
   '/inventory-control': typeof InventoryControlRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/po-create': typeof PoCreateRoute
@@ -265,6 +274,7 @@ export interface FileRouteTypes {
     | '/execution-manual'
     | '/field-console'
     | '/financial-forecast'
+    | '/financial-ingestion'
     | '/inventory-control'
     | '/media-upload-studio'
     | '/po-create'
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/execution-manual'
     | '/field-console'
     | '/financial-forecast'
+    | '/financial-ingestion'
     | '/inventory-control'
     | '/media-upload-studio'
     | '/po-create'
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/execution-manual'
     | '/field-console'
     | '/financial-forecast'
+    | '/financial-ingestion'
     | '/inventory-control'
     | '/media-upload-studio'
     | '/po-create'
@@ -350,6 +362,7 @@ export interface RootRouteChildren {
   ExecutionManualRoute: typeof ExecutionManualRoute
   FieldConsoleRoute: typeof FieldConsoleRoute
   FinancialForecastRoute: typeof FinancialForecastRoute
+  FinancialIngestionRoute: typeof FinancialIngestionRoute
   InventoryControlRoute: typeof InventoryControlRoute
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
   PoCreateRoute: typeof PoCreateRoute
@@ -438,6 +451,13 @@ declare module '@tanstack/react-router' {
       path: '/financial-forecast'
       fullPath: '/financial-forecast'
       preLoaderRoute: typeof FinancialForecastRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financial-ingestion': {
+      id: '/financial-ingestion'
+      path: '/financial-ingestion'
+      fullPath: '/financial-ingestion'
+      preLoaderRoute: typeof FinancialIngestionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inventory-control': {
@@ -566,6 +586,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExecutionManualRoute: ExecutionManualRoute,
   FieldConsoleRoute: FieldConsoleRoute,
   FinancialForecastRoute: FinancialForecastRoute,
+  FinancialIngestionRoute: FinancialIngestionRoute,
   InventoryControlRoute: InventoryControlRoute,
   MediaUploadStudioRoute: MediaUploadStudioRoute,
   PoCreateRoute: PoCreateRoute,
