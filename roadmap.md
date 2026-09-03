@@ -18,3 +18,5 @@
 - [x] Import System Master Directory (/system-directory)
 - [x] Android/mobile responsiveness pass + PWA "Download app" button
 - [ ] Visual refresh: colored headings, richer accent palette, decluttered hub (fewer visible modules, search + grouped sections) per user reference screenshots
+- [ ] Add persistent home button in top header so any screen can navigate back to `/`
+- [ ] Clarify and, if requested, enable Lovable Cloud (database/storage/auth) and Lovable AI integration
