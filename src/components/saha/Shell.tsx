@@ -11,13 +11,13 @@ import {
   PanelLeft,
   Bell,
   Search,
-  HardHat,
   Home,
   Sun,
   CloudCog,
 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 
 const nav = [
   { to: "/", label: "Saha OS Hub", icon: LayoutDashboard },
