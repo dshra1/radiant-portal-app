@@ -208,7 +208,7 @@ function Page() {
 <line strokeDasharray="4 4" strokeWidth="0.75" x1="0" x2="100%" y1="55%" y2="55%"></line>
 <line strokeDasharray="4 4" strokeWidth="0.75" x1="0" x2="100%" y1="85%" y2="85%"></line>
 <circle cx="35%" cy="55%" fill="none" r="18" stroke="#85f8c4" strokeWidth="1.5"></circle>
-<text fill="#85f8c4" fontFamily="monospace" font-size="10" x="36%" y="54%">GRID C-2/B-4</text>
+<text fill="#85f8c4" fontFamily="monospace" font-size={10} x="36%" y="54%">GRID C-2/B-4</text>
 </svg>
 </div>
 

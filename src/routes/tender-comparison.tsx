@@ -577,17 +577,17 @@ function Page() {
 
 <line stroke="#dce9ff" strokeLinecap="round" strokeWidth="4" x1="20" x2="360" y1="45" y2="45"></line>
 <line stroke="#6d7a72" strokeDasharray="3 3" strokeWidth="2" x1="200" x2="200" y1="20" y2="70"></line>
-<text fill="#6d7a72" fontFamily="Inter" font-size="10" font-weight="500" textAnchor="middle" x="200" y="85">Benchmark ₹70.26L</text>
+<text fill="#6d7a72" fontFamily="Inter" font-size={10} font-weight="500" textAnchor="middle" x="200" y="85">Benchmark ₹70.26L</text>
 
 <circle cx="85" cy="45" fill="#006948" r="10"></circle>
 <circle cx="85" cy="45" r="16" stroke="#006948" stroke-opacity="0.2" strokeWidth="4"></circle>
-<text fill="#006948" fontFamily="Inter" font-size="11" font-weight="700" textAnchor="middle" x="85" y="25">Tirumala (-₹2.42L)</text>
+<text fill="#006948" fontFamily="Inter" font-size={11} font-weight="700" textAnchor="middle" x="85" y="25">Tirumala (-₹2.42L)</text>
 
 <circle cx="160" cy="45" fill="#565e74" r="8"></circle>
-<text fill="#565e74" fontFamily="Inter" font-size="10" font-weight="600" textAnchor="middle" x="160" y="25">Sagar (-₹0.94L)</text>
+<text fill="#565e74" fontFamily="Inter" font-size={10} font-weight="600" textAnchor="middle" x="160" y="25">Sagar (-₹0.94L)</text>
 
 <circle cx="280" cy="45" fill="#ba1a1a" r="8"></circle>
-<text fill="#ba1a1a" fontFamily="Inter" font-size="10" font-weight="600" textAnchor="middle" x="280" y="25">Deccan (+₹1.70L)</text>
+<text fill="#ba1a1a" fontFamily="Inter" font-size={10} font-weight="600" textAnchor="middle" x="280" y="25">Deccan (+₹1.70L)</text>
 </svg>
 </div>
 <div className="bg-surface-container-low p-space-sm rounded-lg flex items-center justify-between text-body-sm">
@@ -639,11 +639,11 @@ function Page() {
 </div>
 <div className="space-y-space-xs my-space-xs">
 <label className="flex items-start gap-space-xs cursor-pointer">
-<input defaultChecked="" className="mt-1 rounded text-primary focus:ring-primary accent-primary" type="checkbox" />
+<input defaultChecked={true} className="mt-1 rounded text-primary focus:ring-primary accent-primary" type="checkbox" />
 <span className="font-body-sm text-body-sm text-on-surface">Lock rates against price escalation clause for 60 calendar days</span>
 </label>
 <label className="flex items-start gap-space-xs cursor-pointer">
-<input defaultChecked="" className="mt-1 rounded text-primary focus:ring-primary accent-primary" type="checkbox" />
+<input defaultChecked={true} className="mt-1 rounded text-primary focus:ring-primary accent-primary" type="checkbox" />
 <span className="font-body-sm text-body-sm text-on-surface">Require mill test certificate before trailer uncoupling</span>
 </label>
 <label className="flex items-start gap-space-xs cursor-pointer">

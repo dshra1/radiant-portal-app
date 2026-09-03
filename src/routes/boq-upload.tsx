@@ -133,7 +133,7 @@ function Page() {
 </section>
 
 
-<details className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden group" open="">
+<details className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden group" open={true}>
 <summary className="px-5 py-3 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between cursor-pointer select-none">
 <div className="flex items-center gap-2">
 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -262,7 +262,7 @@ function Page() {
 </div>
 <div className="flex items-center gap-3">
 <label className="flex items-center gap-1.5 text-slate-600 cursor-pointer text-[11px]">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 <span>Highlight Hyderabad Wholesale Discrepancies (&gt;5%)</span>
 </label>
 <button className="text-emerald-700 hover:text-emerald-800 font-semibold text-[11px] underline">Reset Filter</button>
@@ -275,7 +275,7 @@ function Page() {
 <thead className="bg-slate-100/90 text-slate-700 font-semibold border-b border-slate-200 select-none uppercase tracking-wider text-[11px]">
 <tr>
 <th className="py-3 px-3 w-10 text-center" scope="col">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </th>
 <th className="py-3 px-3 min-w-[130px]" scope="col">Code &amp; Category</th>
 <th className="py-3 px-4 min-w-[280px]" scope="col">Item Specification / Description</th>
@@ -293,7 +293,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">ELE-0101</span>
@@ -322,7 +322,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">ELE-0102</span>
@@ -351,7 +351,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">ELE-0103</span>
@@ -380,7 +380,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">ELE-0104</span>
@@ -409,7 +409,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">ELE-0105</span>
@@ -438,7 +438,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">ELE-0106</span>
@@ -467,7 +467,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors bg-slate-50/30">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">PRE-0001</span>
@@ -495,7 +495,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors bg-slate-50/30">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">PRE-0002</span>
@@ -523,7 +523,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors bg-slate-50/30">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">PRE-0005</span>
@@ -551,7 +551,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">EAW-0003</span>
@@ -579,7 +579,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">PCC-0001</span>
@@ -607,7 +607,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">RCC-0001</span>
@@ -635,7 +635,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">RCC-0005</span>
@@ -663,7 +663,7 @@ function Page() {
 
 <tr className="hover:bg-slate-50/80 transition-colors">
 <td className="py-2.5 px-3 text-center">
-<input defaultChecked="" className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
+<input defaultChecked={true} className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" type="checkbox" />
 </td>
 <td className="py-2.5 px-3">
 <span className="font-mono font-semibold text-slate-900 block">ELE-0108</span>
@@ -698,7 +698,7 @@ function Page() {
 <span>Displaying 1 to 14 of 348 entries</span>
 </div>
 <div className="flex items-center gap-1 font-medium">
-<button className="px-2 py-1 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-50" disabled="">Previous</button>
+<button className="px-2 py-1 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-50" disabled={true}>Previous</button>
 <button className="px-2.5 py-1 bg-emerald-600 text-white rounded font-bold">1</button>
 <button className="px-2.5 py-1 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-100">2</button>
 <button className="px-2.5 py-1 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-100">3</button>

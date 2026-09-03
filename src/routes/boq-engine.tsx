@@ -287,7 +287,7 @@ function Page() {
 
 <div className="p-space-sm rounded bg-surface-container-low ring-1 ring-primary cursor-pointer flex items-center justify-between">
 <div className="flex items-start gap-space-sm">
-<input defaultChecked="" className="mt-1 accent-primary" name="socket_alt" type="radio" />
+<input defaultChecked={true} className="mt-1 accent-primary" name="socket_alt" type="radio" />
 <div className="flex flex-col">
 <div className="flex items-center gap-space-xs">
 <span className="font-title-md text-title-md text-primary font-bold">Anchor Roma 16A</span>
