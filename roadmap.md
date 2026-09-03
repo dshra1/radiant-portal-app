@@ -25,3 +25,5 @@
 - [ ] Apply Saha Developers logo across app (shell sidebar, hub hero, favicon, PWA icons)
 
 - [ ] Fix layout sizing: cap content width on large screens, stop Download-app button overlapping header chrome
+
+- [ ] Fix mobile touch scrolling (single-finger scroll blocked; only 2-finger pan worked)
