@@ -8,3 +8,4 @@
 - [x] Import Categorized Vendor Directory (/vendor-directory)
 - [x] Import Purchasing & Vendor Command Center (/purchasing-center)
 
+- [x] Import Contractors, Labour & Biometric Attendance screen (/contractors-labour)
