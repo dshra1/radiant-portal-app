@@ -16,3 +16,5 @@
 - [ ] Ongoing: dedupe near-identical Stitch screens; merge revisions into existing routes
 - /pmc-scope, /landowners-investment, /capital-ledger imported from Stitch
 - [x] Import System Master Directory (/system-directory)
+- [x] Android/mobile responsiveness pass + PWA "Download app" button
+- [ ] Visual refresh: colored headings, richer accent palette, decluttered hub (fewer visible modules, search + grouped sections) per user reference screenshots

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,73 +23,86 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const GROUPS: { group: string; items: { to: string; title: string; desc: string; icon: string }[] }[] = [
+type Tone = "green" | "blue" | "amber" | "violet" | "rose";
+
+const TONE: Record<Tone, { chip: string; title: string; rule: string; label: string }> = {
+  green: {
+    chip: "bg-primary-soft text-primary",
+    title: "text-primary",
+    rule: "bg-primary/25",
+    label: "text-primary",
+  },
+  blue: {
+    chip: "bg-info-soft text-info",
+    title: "text-info",
+    rule: "bg-info/25",
+    label: "text-info",
+  },
+  amber: {
+    chip: "bg-warning-soft text-[oklch(0.55_0.13_70)]",
+    title: "text-[oklch(0.52_0.13_70)]",
+    rule: "bg-warning/35",
+    label: "text-[oklch(0.52_0.13_70)]",
+  },
+  violet: {
+    chip: "bg-[oklch(0.95_0.04_300)] text-[oklch(0.48_0.16_300)]",
+    title: "text-[oklch(0.48_0.16_300)]",
+    rule: "bg-[oklch(0.48_0.16_300)]/25",
+    label: "text-[oklch(0.48_0.16_300)]",
+  },
+  rose: {
+    chip: "bg-destructive-soft text-[oklch(0.52_0.19_20)]",
+    title: "text-[oklch(0.52_0.19_20)]",
+    rule: "bg-destructive/25",
+    label: "text-[oklch(0.52_0.19_20)]",
+  },
+};
+
+type Item = {
+  to: string;
+  title: string;
+  desc: string;
+  icon: string;
+  pinned?: boolean;
+};
+
+const GROUPS: { group: string; tone: Tone; items: Item[] }[] = [
   {
-    group: "Lifecycle Core",
+    group: "Plan & Estimate",
+    tone: "green",
     items: [
       {
-        to: "/projects-setup",
-        title: "Project Setup & Geometry Wizard",
-        desc: "Project identity, floor geometry and CAD drawing ingestion.",
-        icon: "domain",
+        to: "/dashboard",
+        title: "Command Center",
+        desc: "Budget burn, spend trend, approval queue and site portfolio.",
+        icon: "space_dashboard",
+        pinned: true,
       },
       {
-        to: "/boq-upload",
-        title: "BOQ Excel Upload Studio",
-        desc: "Ingest spreadsheets with column auto-mapping and IS 456 unit validation.",
-        icon: "upload_file",
+        to: "/projects",
+        title: "Projects Portfolio",
+        desc: "Built-up area, slab take-offs, budget and phase progress.",
+        icon: "apartment",
+        pinned: true,
       },
       {
         to: "/boq-engine",
         title: "BOQ Master Engine",
         desc: "Line-item value engineering with spec compliance scoring.",
         icon: "receipt_long",
+        pinned: true,
       },
       {
-        to: "/execution-manual",
-        title: "Stage-Wise Execution Manual",
-        desc: "14-stage SOP, QA hold gates and zero-tolerance guardrails.",
-        icon: "account_tree",
-      },
-    ],
-  },
-  {
-    group: "Site & Operations",
-    items: [
-      {
-        to: "/site-execution",
-        title: "Site Execution & Planning Hub",
-        desc: "Stage progress, field roster and material runway.",
-        icon: "foundation",
+        to: "/projects-setup",
+        title: "Project Setup & Geometry",
+        desc: "Project identity, floor geometry and CAD drawing ingestion.",
+        icon: "domain",
       },
       {
-        to: "/site-media",
-        title: "Site Media & Upload Ledger",
-        desc: "Geo-tagged imagery, AI pour verification and drone orthos.",
-        icon: "photo_library",
-      },
-      {
-        to: "/qa-inspection",
-        title: "AI Visual QA/QC Audit",
-        desc: "Edge-inference compliance scoring and defect ledger.",
-        icon: "verified",
-      },
-    ],
-  },
-  {
-    group: "Saha OS Next (from Build It Bright)",
-    items: [
-      {
-        to: "/dashboard",
-        title: "Command Center Dashboard",
-        desc: "Budget burn, spend trend, approval queue and site portfolio.",
-        icon: "dashboard",
-      },
-      {
-        to: "/projects",
-        title: "Projects Portfolio",
-        desc: "Built-up area, slab take-offs, budget consumption and phase progress.",
-        icon: "apartment",
+        to: "/boq-upload",
+        title: "BOQ Excel Upload",
+        desc: "Spreadsheet ingestion with column mapping and unit validation.",
+        icon: "upload_file",
       },
       {
         to: "/boq",
@@ -97,289 +111,288 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
         icon: "calculate",
       },
       {
-        to: "/procurement",
-        title: "Procurement & PO Guardrails",
-        desc: "Multi-vendor POs with market price guardrails and approvals.",
-        icon: "shopping_cart",
+        to: "/execution-manual",
+        title: "Stage-Wise Execution Manual",
+        desc: "14-stage SOP, QA hold gates and zero-tolerance guardrails.",
+        icon: "account_tree",
       },
       {
-        to: "/pour-cards",
-        title: "Daily Pour Cards",
-        desc: "Pre-pour verification gates and concrete volume reconciliation.",
-        icon: "water_drop",
+        to: "/ai-programme",
+        title: "AI Programme Scheduler",
+        desc: "Timeline simulation from BOQ scale, lead times and constraints.",
+        icon: "auto_graph",
       },
       {
-        to: "/qa",
-        title: "AI Visual QA",
-        desc: "Photo-based defect detection with IS code compliance findings.",
-        icon: "visibility",
+        to: "/drawing-decipher",
+        title: "Drawing Decipher & Take-Off",
+        desc: "Drawing revisions, RFIs and BOQ-linked material take-off.",
+        icon: "architecture",
+      },
+      {
+        to: "/scope-brief",
+        title: "Consultant Scope Brief",
+        desc: "Engineering packages A–K with drawing lists and quantities.",
+        icon: "assignment",
       },
     ],
   },
   {
-    group: "Procurement & Commercial",
+    group: "Build & Inspect",
+    tone: "blue",
     items: [
+      {
+        to: "/site-execution",
+        title: "Site Execution Hub",
+        desc: "Stage progress, field roster and material runway.",
+        icon: "foundation",
+        pinned: true,
+      },
+      {
+        to: "/qa-inspection",
+        title: "AI Visual QA/QC Audit",
+        desc: "Edge-inference compliance scoring and defect ledger.",
+        icon: "verified",
+        pinned: true,
+      },
+      { to: "/pour-cards", title: "Daily Pour Cards", desc: "Pre-pour gates and concrete volume reconciliation.", icon: "water_drop" },
+      { to: "/qa", title: "AI Visual QA", desc: "Photo-based defect detection with IS code findings.", icon: "visibility" },
+      { to: "/field-console", title: "Field Console", desc: "GRN receipts, pour cards, QC sign-offs and defect scans.", icon: "smartphone" },
+      { to: "/site-media", title: "Site Media Ledger", desc: "Geo-tagged imagery, pour verification and drone orthos.", icon: "photo_library" },
+      { to: "/media-upload-studio", title: "Media Upload Studio", desc: "Photo, video and drone uploads for site activity.", icon: "cloud_upload" },
+      { to: "/command-operations", title: "Command Operations", desc: "Live telemetry, AI risk feed and site supervision.", icon: "bolt" },
+      { to: "/project-controls", title: "Project Controls Cockpit", desc: "Earned value, baseline tracker and change orders.", icon: "monitoring" },
+      { to: "/contractors-labour", title: "Contractors & Labour", desc: "Muster roll, RA bills and biometric gate sync.", icon: "engineering" },
+    ],
+  },
+  {
+    group: "Buy & Supply",
+    tone: "amber",
+    items: [
+      {
+        to: "/procurement",
+        title: "Procurement & PO Guardrails",
+        desc: "Multi-vendor POs with price guardrails and approvals.",
+        icon: "shopping_cart",
+        pinned: true,
+      },
       {
         to: "/price-intelligence",
         title: "Price Intelligence",
         desc: "Live mandi-indexed brand matrices for rebar, cement and tiles.",
         icon: "insights",
+        pinned: true,
       },
-      {
-        to: "/brand-benchmark",
-        title: "Brand Equivalency Matrix",
-        desc: "Arbitrage margins, vetted mills and auto-substitution.",
-        icon: "layers",
-      },
-      {
-        to: "/tender-comparison",
-        title: "Tender Comparison Studio",
-        desc: "L-1/L-2/L-3 unit rates, logistics parity and compliance.",
-        icon: "gavel",
-      },
-      {
-        to: "/po-create",
-        title: "PO Creation Engine",
-        desc: "Value-engineered drafting with BIS spec verification.",
-        icon: "add_circle",
-      },
-      {
-        to: "/purchase-orders",
-        title: "PO & Guardrail Hub",
-        desc: "Price-variance guardrails, approvals and ERP export.",
-        icon: "shield",
-      },
+      { to: "/purchase-orders", title: "PO & Guardrail Hub", desc: "Price-variance guardrails, approvals and ERP export.", icon: "shield" },
+      { to: "/po-create", title: "PO Creation Engine", desc: "Value-engineered drafting with BIS spec verification.", icon: "add_circle" },
+      { to: "/tender-comparison", title: "Tender Comparison Studio", desc: "L-1/L-2/L-3 rates, logistics parity and compliance.", icon: "gavel" },
+      { to: "/brand-benchmark", title: "Brand Equivalency Matrix", desc: "Arbitrage margins, vetted mills and auto-substitution.", icon: "layers" },
+      { to: "/vendor-directory", title: "Vendor Directory", desc: "Trade-wise vendor database with ratings and bulk import.", icon: "storefront" },
+      { to: "/vendor-lifecycle", title: "Vendor Lifecycle", desc: "Onboarding, bulk uploader and compliance vetting.", icon: "handshake" },
+      { to: "/purchasing-center", title: "Purchasing Command Center", desc: "PO pipeline, document OCR and price database.", icon: "shopping_bag" },
+      { to: "/inventory-control", title: "Inventory & Material Control", desc: "Stock ledger, consumption vs BOQ and reorder alerts.", icon: "inventory_2" },
     ],
   },
   {
-    group: "Vendor, Bills & Inventory (New)",
+    group: "Money & Owners",
+    tone: "violet",
     items: [
       {
-        to: "/vendor-lifecycle",
-        title: "Purchase & Vendor Lifecycle Hub",
-        desc: "Vendor onboarding, bulk uploader and compliance vetting.",
-        icon: "handshake",
-      },
-      {
-        to: "/bills-payments",
-        title: "Bills & Payments",
-        desc: "Subcontractor RA bills, certified milestones and retentions.",
-        icon: "receipt",
-      },
-      {
-        to: "/inventory-control",
-        title: "Inventory & Material Control",
-        desc: "Stock ledger, consumption vs BOQ and reorder alerts.",
-        icon: "inventory_2",
-      },
-      {
-        to: "/media-upload-studio",
-        title: "Site Media Upload Studio",
-        desc: "Geo-tagged photo, video and drone uploads for site activity.",
-        icon: "cloud_upload",
-      },
-      {
-        to: "/field-console",
-        title: "Field Console",
-        desc: "GRN receipts, pour cards, QC sign-offs and AI defect scans.",
-        icon: "smartphone",
-      },
-      {
         to: "/financial-forecast",
-        title: "Executive Financial Forecasting",
-        desc: "Cash-flow forecasts, cost-to-complete and executive project control.",
+        title: "Financial Forecasting",
+        desc: "Cash-flow forecasts, cost-to-complete and project control.",
         icon: "trending_up",
+        pinned: true,
       },
-      {
-        to: "/financial-ingestion",
-        title: "Financial Ingestion Hub",
-        desc: "GSTR-2B telemetry, AI transaction matching and bank reconciliation.",
-        icon: "account_balance",
-      },
-      {
-        to: "/vendor-directory",
-        title: "Categorized Vendor Directory",
-        desc: "Trade-wise vendor database with bulk Excel ingestion and ratings.",
-        icon: "storefront",
-      },
-      {
-        to: "/purchasing-center",
-        title: "Purchasing & Vendor Command Center",
-        desc: "PO pipeline, document OCR, price database and contractor registry.",
-        icon: "shopping_bag",
-      },
-      {
-        to: "/billing-expenditure",
-        title: "Billing & Expenditure Control",
-        desc: "Vendor bill OCR, WhatsApp bill feed, approvals and expenditure tracking.",
-        icon: "request_quote",
-      },
-      {
-        to: "/contractors-labour",
-        title: "Contractors, Labour & Biometric Attendance",
-        desc: "Trade subcontractors, muster roll, RA bills and biometric gate sync.",
-        icon: "engineering",
-      },
-      {
-        to: "/drawing-decipher",
-        title: "AI Drawing Decipher & Take-Off Hub",
-        desc: "Drawing revisions, RFIs, OCR invoices and BOQ-linked material take-off.",
-        icon: "architecture",
-      },
-      {
-        to: "/scope-brief",
-        title: "Architect & Consultant Scope Brief",
-        desc: "Engineering packages A–K with drawing lists and BOQ-linked quantities.",
-        icon: "assignment",
-      },
-      {
-        to: "/roles-access",
-        title: "Roles & Access Activity",
-        desc: "Role-based permissions with a live activity trail.",
-        icon: "admin_panel_settings",
-      },
-      {
-        to: "/command-operations",
-        title: "Command Operations Hub",
-        desc: "Real-time telemetry, AI risk feed and autonomous site supervision.",
-        icon: "bolt",
-      },
-      {
-        to: "/project-controls",
-        title: "Project Controls Cockpit",
-        desc: "Earned value metrics, baseline tracker, labour/fleet analytics and change orders.",
-        icon: "monitoring",
-      },
-      {
-        to: "/ai-programme",
-        title: "AI Project Programme Scheduler",
-        desc: "Autonomous timeline simulation from BOQ scale, lead times and site constraints.",
-        icon: "auto_graph",
-      },
-      {
-        to: "/pmc-scope",
-        title: "PMC Appointment Scope & Investment",
-        desc: "Work-package scope boundaries for common vs individual development with cost allocation.",
-        icon: "rule",
-      },
-      {
-        to: "/landowners-investment",
-        title: "Landowners & Investment Hub",
-        desc: "Owner scope, stake shares, stage-wise payment schedules and funding progress.",
-        icon: "real_estate_agent",
-      },
-      {
-        to: "/capital-ledger",
-        title: "Capital Ledger & Contributions",
-        desc: "Equity shares, capital calls, dues tracking and cost apportionment matrix.",
-        icon: "account_balance_wallet",
-      },
-      {
-        to: "/system-directory",
-        title: "System Master Directory",
-        desc: "Index of all modules across governance, procurement and site execution pillars.",
-        icon: "hub",
-      },
-
-
-
-
-
-
+      { to: "/billing-expenditure", title: "Billing & Expenditure", desc: "Vendor bill OCR, approvals and expenditure tracking.", icon: "request_quote" },
+      { to: "/bills-payments", title: "Bills & Payments", desc: "RA bills, certified milestones and retentions.", icon: "receipt" },
+      { to: "/financial-ingestion", title: "Financial Ingestion Hub", desc: "GSTR-2B telemetry, AI matching and bank reconciliation.", icon: "account_balance" },
+      { to: "/capital-ledger", title: "Capital Ledger", desc: "Equity shares, capital calls and cost apportionment.", icon: "account_balance_wallet" },
+      { to: "/landowners-investment", title: "Landowners & Investment", desc: "Owner scope, stake shares and funding progress.", icon: "real_estate_agent" },
+      { to: "/pmc-scope", title: "PMC Scope & Investment", desc: "Work-package boundaries with cost allocation.", icon: "rule" },
+    ],
+  },
+  {
+    group: "Govern & Access",
+    tone: "rose",
+    items: [
+      { to: "/roles-access", title: "Roles & Access", desc: "Role-based permissions with a live activity trail.", icon: "admin_panel_settings" },
+      { to: "/system-directory", title: "System Master Directory", desc: "Index of every module across all pillars.", icon: "hub" },
     ],
   },
 ];
 
-function Index() {
+const PINNED = GROUPS.flatMap((g) => g.items.filter((i) => i.pinned).map((i) => ({ ...i, tone: g.tone })));
+const ALL = GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, tone: g.tone, group: g.group })));
+
+function ModuleCard({ item, tone }: { item: Item; tone: Tone }) {
+  const t = TONE[tone];
   return (
-    <div className="m3 min-h-screen bg-surface text-on-surface font-body-md text-body-md">
-      <header className="hero-surface px-space-2xl py-space-3xl">
+    <Link to={item.to} className="group surface-card flex flex-col gap-2 p-5">
+      <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${t.chip}`}>
+        <span className="material-symbols-outlined text-xl leading-none">{item.icon}</span>
+      </span>
+      <span className={`display-title text-lg leading-snug ${t.title}`}>{item.title}</span>
+      <span className="text-sm text-muted-foreground">{item.desc}</span>
+      <span className={`mt-auto flex items-center gap-1 pt-2 text-xs font-semibold uppercase tracking-wider ${t.label} opacity-0 transition-opacity group-hover:opacity-100`}>
+        Open
+        <span className="material-symbols-outlined text-base leading-none">chevron_right</span>
+      </span>
+    </Link>
+  );
+}
+
+function Index() {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return ALL.filter(
+      (i) => i.title.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || i.group.toLowerCase().includes(q),
+    );
+  }, [query]);
+
+  return (
+    <div className="m3 min-h-screen bg-background text-foreground">
+      <header className="hero-surface px-5 py-12 sm:px-10 sm:py-16">
         <div className="mx-auto max-w-6xl">
-          <div className="flex items-center gap-space-xs">
+          <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-brand-bright animate-pulse" />
-            <span className="font-label-sm text-label-sm uppercase tracking-[0.14em] text-white/60">
-              Civil Platform Engine v3.4.0 • 99.8% Biometric &amp; IoT Sync
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+              Cyber Enclave · Phase 2 · Madhapur, Hyderabad
             </span>
           </div>
-          <h1 className="mt-space-md display-title text-5xl md:text-6xl">
+          <h1 className="mt-4 display-title text-4xl text-white sm:text-6xl">
             Saha <span className="italic text-brand-bright">OS</span>
           </h1>
-          <div className="mt-space-md h-px w-24 accent-rule" />
-          <p className="mt-space-base font-body-lg text-body-lg text-white/70 max-w-2xl">
-            Project lifecycle suite for Cyber Enclave - Phase 2, Plot 44/A, Madhapur, Hyderabad.
-            BOQ ingestion, stage execution, QA/QC governance and procurement intelligence.
+          <p className="mt-3 max-w-xl text-base text-white/70">
+            One workspace for estimation, site execution, quality and money — pick a workspace below.
           </p>
-          <div className="mt-space-xl flex flex-wrap gap-space-sm">
-            <Link
-              to="/site-execution"
-              className="flex items-center gap-space-xs px-space-lg py-space-md rounded-full bg-brand-bright text-[oklch(0.22_0.05_158)] font-title-md text-title-md shadow-[var(--shadow-glow)] hover:brightness-110 transition-all"
-            >
-              <span className="material-symbols-outlined text-space-base leading-none">foundation</span>
-              Open Site Execution
-            </Link>
-            <Link
-              to="/dashboard"
-              className="flex items-center gap-space-xs px-space-lg py-space-md rounded-full border border-white/25 bg-white/5 text-white font-title-md text-title-md hover:bg-white/15 transition-colors backdrop-blur-sm"
-            >
-              <span className="material-symbols-outlined text-space-base leading-none">space_dashboard</span>
-              Command Center
-            </Link>
-            <Link
-              to="/boq-engine"
-              className="flex items-center gap-space-xs px-space-lg py-space-md rounded-full border border-white/15 text-white/80 font-title-md text-title-md hover:text-white hover:border-white/35 transition-colors"
-            >
-              <span className="material-symbols-outlined text-space-base leading-none">receipt_long</span>
-              BOQ Master Engine
-            </Link>
+
+          <div className="mt-7 max-w-md">
+            <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
+              <span className="material-symbols-outlined text-base leading-none text-white/70">search</span>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search modules — BOQ, pour card, vendor, bills…"
+                aria-label="Search modules"
+                className="w-full bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
+              />
+            </div>
           </div>
-          <dl className="mt-space-2xl grid grid-cols-2 gap-space-base sm:grid-cols-4 max-w-3xl">
+
+          <dl className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-4 sm:max-w-3xl">
             {[
               ["3", "Active sites"],
               ["₹22.70 Cr", "Committed budget"],
               ["412", "Workforce on site"],
               ["8", "Open QA defects"],
             ].map(([v, l]) => (
-              <div key={l} className="border-l border-white/15 pl-space-md">
-                <dt className="font-label-sm text-label-sm uppercase tracking-[0.12em] text-white/50">{l}</dt>
-                <dd className="mt-space-2xs display-title text-2xl text-white">{v}</dd>
+              <div key={l} className="border-l border-white/15 pl-4">
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/50">{l}</dt>
+                <dd className="mt-1 display-title text-xl text-white sm:text-2xl">{v}</dd>
               </div>
             ))}
           </dl>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-space-2xl py-space-3xl flex flex-col gap-space-3xl">
-        {GROUPS.map((g) => (
-          <section key={g.group} className="flex flex-col gap-space-md">
-            <div className="flex items-center gap-space-md">
-              <h2 className="font-label-md text-label-md uppercase tracking-[0.14em] text-on-surface-variant">
-                {g.group}
-              </h2>
-              <span className="h-px flex-1 bg-outline-variant/60" />
-            </div>
-            <div className="grid gap-space-base sm:grid-cols-2 lg:grid-cols-3">
-              {g.items.map((it) => (
-                <Link
-                  key={it.to}
-                  to={it.to}
-                  className="group surface-card flex flex-col gap-space-sm p-space-lg"
-                >
-                  <span className="grid size-10 place-items-center rounded-full bg-primary-soft text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <span className="material-symbols-outlined text-space-lg leading-none">{it.icon}</span>
-                  </span>
-                  <span className="display-title text-xl text-on-surface">{it.title}</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">{it.desc}</span>
-                  <span className="mt-auto flex items-center gap-space-2xs font-label-md text-label-md text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    Open
-                    <span className="material-symbols-outlined text-space-base leading-none">
-                      chevron_right
-                    </span>
-                  </span>
-                </Link>
+      <main className="mx-auto flex max-w-6xl flex-col gap-14 px-5 py-12 sm:px-10">
+        {query.trim() ? (
+          <section className="flex flex-col gap-5">
+            <h2 className="display-title text-2xl">
+              {results.length} match{results.length === 1 ? "" : "es"} for “{query.trim()}”
+            </h2>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {results.map((i) => (
+                <ModuleCard key={i.to} item={i} tone={i.tone} />
               ))}
             </div>
           </section>
-        ))}
+        ) : (
+          <>
+            <section className="flex flex-col gap-5">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Everyday workspaces
+                  </p>
+                  <h2 className="mt-1 heading-gradient display-title text-3xl sm:text-4xl">Start here</h2>
+                </div>
+              </div>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {PINNED.map((i) => (
+                  <ModuleCard key={i.to} item={i} tone={i.tone} />
+                ))}
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {ALL.length} modules, grouped
+                </p>
+                <h2 className="mt-1 display-title text-2xl sm:text-3xl">Full suite</h2>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {GROUPS.map((g) => {
+                  const t = TONE[g.tone];
+                  const isOpen = open === g.group;
+                  return (
+                    <div key={g.group} className="overflow-hidden rounded-2xl border border-border bg-card">
+                      <button
+                        type="button"
+                        onClick={() => setOpen(isOpen ? null : g.group)}
+                        aria-expanded={isOpen}
+                        className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/60"
+                      >
+                        <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${t.chip}`}>
+                          <span className="material-symbols-outlined text-lg leading-none">
+                            {g.items[0]?.icon ?? "folder"}
+                          </span>
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className={`block display-title text-xl ${t.title}`}>{g.group}</span>
+                          <span className="block text-xs text-muted-foreground">{g.items.length} modules</span>
+                        </span>
+                        <span className="material-symbols-outlined shrink-0 text-muted-foreground">
+                          {isOpen ? "expand_less" : "expand_more"}
+                        </span>
+                      </button>
+                      {isOpen ? (
+                        <div className="grid gap-4 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                          {g.items.map((i) => (
+                            <ModuleCard key={i.to} item={i} tone={g.tone} />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2 border-t border-border px-5 py-3">
+                          {g.items.slice(0, 5).map((i) => (
+                            <Link
+                              key={i.to}
+                              to={i.to}
+                              className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                            >
+                              {i.title}
+                            </Link>
+                          ))}
+                          {g.items.length > 5 ? (
+                            <span className="px-2 py-1 text-xs text-muted-foreground">
+                              +{g.items.length - 5} more
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </>
+        )}
       </main>
     </div>
   );
