@@ -13,6 +13,9 @@ import {
   Search,
   HardHat,
   Home,
+  Sun,
+  CloudCog,
+
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
