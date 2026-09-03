@@ -412,7 +412,8 @@
    Android / small-screen adaptation for imported Stitch screens
    ============================================================ */
 @media (max-width: 767px) {
-  html, body { overflow-x: hidden; max-width: 100vw; }
+  html { max-width: 100%; }
+  body { overflow-x: hidden; max-width: 100vw; overflow-y: visible; touch-action: pan-x pan-y pinch-zoom; }
 
   /* Fixed desktop sidebars are hidden; the mobile hub button provides nav */
   aside.fixed,
