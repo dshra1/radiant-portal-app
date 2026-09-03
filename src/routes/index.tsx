@@ -274,6 +274,13 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
         desc: "Equity shares, capital calls, dues tracking and cost apportionment matrix.",
         icon: "account_balance_wallet",
       },
+      {
+        to: "/system-directory",
+        title: "System Master Directory",
+        desc: "Index of all modules across governance, procurement and site execution pillars.",
+        icon: "hub",
+      },
+
 
 
 
