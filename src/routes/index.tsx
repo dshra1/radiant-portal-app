@@ -191,6 +191,12 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
         icon: "trending_up",
       },
       {
+        to: "/financial-ingestion",
+        title: "Financial Ingestion Hub",
+        desc: "GSTR-2B telemetry, AI transaction matching and bank reconciliation.",
+        icon: "account_balance",
+      },
+      {
         to: "/roles-access",
         title: "Roles & Access Activity",
         desc: "Role-based permissions with a live activity trail.",
