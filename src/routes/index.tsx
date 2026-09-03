@@ -197,11 +197,24 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
         icon: "account_balance",
       },
       {
+        to: "/vendor-directory",
+        title: "Categorized Vendor Directory",
+        desc: "Trade-wise vendor database with bulk Excel ingestion and ratings.",
+        icon: "storefront",
+      },
+      {
+        to: "/purchasing-center",
+        title: "Purchasing & Vendor Command Center",
+        desc: "PO pipeline, document OCR, price database and contractor registry.",
+        icon: "shopping_bag",
+      },
+      {
         to: "/roles-access",
         title: "Roles & Access Activity",
         desc: "Role-based permissions with a live activity trail.",
         icon: "admin_panel_settings",
       },
+
     ],
   },
 ];

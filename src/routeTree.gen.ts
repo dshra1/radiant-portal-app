@@ -29,6 +29,7 @@ import { Route as ProcurementRouteImport } from './routes/procurement'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ProjectsSetupRouteImport } from './routes/projects-setup'
 import { Route as PurchaseOrdersRouteImport } from './routes/purchase-orders'
+import { Route as PurchasingCenterRouteImport } from './routes/purchasing-center'
 import { Route as QaRouteImport } from './routes/qa'
 import { Route as QaInspectionRouteImport } from './routes/qa-inspection'
 import { Route as RolesAccessRouteImport } from './routes/roles-access'
@@ -138,6 +139,11 @@ const PurchaseOrdersRoute = PurchaseOrdersRouteImport.update({
   path: '/purchase-orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PurchasingCenterRoute = PurchasingCenterRouteImport.update({
+  id: '/purchasing-center',
+  path: '/purchasing-center',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QaRoute = QaRouteImport.update({
   id: '/qa',
   path: '/qa',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/projects': typeof ProjectsRoute
   '/projects-setup': typeof ProjectsSetupRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
+  '/purchasing-center': typeof PurchasingCenterRoute
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
   '/roles-access': typeof RolesAccessRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/projects': typeof ProjectsRoute
   '/projects-setup': typeof ProjectsSetupRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
+  '/purchasing-center': typeof PurchasingCenterRoute
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
   '/roles-access': typeof RolesAccessRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   '/projects': typeof ProjectsRoute
   '/projects-setup': typeof ProjectsSetupRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
+  '/purchasing-center': typeof PurchasingCenterRoute
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
   '/roles-access': typeof RolesAccessRoute
@@ -293,6 +302,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/projects-setup'
     | '/purchase-orders'
+    | '/purchasing-center'
     | '/qa'
     | '/qa-inspection'
     | '/roles-access'
@@ -323,6 +333,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/projects-setup'
     | '/purchase-orders'
+    | '/purchasing-center'
     | '/qa'
     | '/qa-inspection'
     | '/roles-access'
@@ -353,6 +364,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/projects-setup'
     | '/purchase-orders'
+    | '/purchasing-center'
     | '/qa'
     | '/qa-inspection'
     | '/roles-access'
@@ -384,6 +396,7 @@ export interface RootRouteChildren {
   ProjectsRoute: typeof ProjectsRoute
   ProjectsSetupRoute: typeof ProjectsSetupRoute
   PurchaseOrdersRoute: typeof PurchaseOrdersRoute
+  PurchasingCenterRoute: typeof PurchasingCenterRoute
   QaRoute: typeof QaRoute
   QaInspectionRoute: typeof QaInspectionRoute
   RolesAccessRoute: typeof RolesAccessRoute
@@ -536,6 +549,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PurchaseOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/purchasing-center': {
+      id: '/purchasing-center'
+      path: '/purchasing-center'
+      fullPath: '/purchasing-center'
+      preLoaderRoute: typeof PurchasingCenterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/qa': {
       id: '/qa'
       path: '/qa'
@@ -616,6 +636,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsRoute: ProjectsRoute,
   ProjectsSetupRoute: ProjectsSetupRoute,
   PurchaseOrdersRoute: PurchaseOrdersRoute,
+  PurchasingCenterRoute: PurchasingCenterRoute,
   QaRoute: QaRoute,
   QaInspectionRoute: QaInspectionRoute,
   RolesAccessRoute: RolesAccessRoute,
