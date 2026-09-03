@@ -11,10 +11,13 @@ import {
   PanelLeft,
   Bell,
   Search,
-  HardHat,
   Home,
+  Sun,
+  CloudCog,
+
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 
 const nav = [
   { to: "/", label: "Saha OS Hub", icon: LayoutDashboard },
@@ -38,6 +41,9 @@ export function Shell({
   children: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [role, setRole] = useState("Project Manager (PM)");
+  const [sunlight, setSunlight] = useState(false);
+
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
@@ -49,9 +55,12 @@ export function Shell({
         )}
       >
         <div className="flex h-13 items-center gap-2 border-b border-sidebar-border px-4 py-3">
-          <span className="grid size-7 shrink-0 place-items-center rounded bg-[image:var(--gradient-accent)]">
-            <HardHat className="size-4 text-sidebar-primary-foreground" />
-          </span>
+          <img
+            src={sahaLogo.url}
+            alt="Saha Developers"
+            className="size-7 shrink-0 rounded bg-white object-contain p-0.5"
+          />
+
           {expanded && (
             <span className="truncate text-sm font-semibold tracking-tight text-sidebar-accent-foreground">
               Saha OS <span className="text-sidebar-primary">Next</span>
@@ -107,15 +116,53 @@ export function Shell({
             <Search className="size-3.5 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Search POs, BOQ codes, grids…</span>
           </div>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <label className="sr-only" htmlFor="saha-role">Active role</label>
+            <select
+              id="saha-role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="hidden rounded-md border border-input bg-background px-2 py-1 text-[11px] font-medium text-foreground lg:block"
+            >
+              <option>Project Manager (PM)</option>
+              <option>Site Engineer</option>
+              <option>Site Supervisor</option>
+              <option>Accounts</option>
+            </select>
+            <span className="hidden items-center gap-1.5 rounded-full bg-primary-soft px-2 py-1 text-[11px] font-medium text-primary lg:flex">
+              <CloudCog className="size-3.5" /> 3 cached — syncing
+            </span>
+            <span className="hidden items-center gap-1.5 label-caps text-muted-foreground xl:flex">
+              <Sun className="size-3.5" /> 31°C Clear • Madhapur
+            </span>
+            <button
+              type="button"
+              onClick={() => setSunlight((v) => !v)}
+              aria-pressed={sunlight}
+              title="Sunlight Mode"
+              className={cn(
+                "hidden items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors sm:inline-flex",
+                sunlight
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-input text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Sun className="size-3.5" /> Sunlight
+            </button>
             <span className="hidden items-center gap-1.5 label-caps text-muted-foreground sm:flex">
               <span className="size-1.5 rounded-full bg-primary" /> Site sync live
             </span>
-            <Bell className="size-4 text-muted-foreground" />
+            <span className="relative inline-flex">
+              <Bell className="size-4 text-muted-foreground" />
+              <span className="absolute -right-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-destructive text-[8px] font-bold text-destructive-foreground">
+                4
+              </span>
+            </span>
             <span className="grid size-7 place-items-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground">
               SD
             </span>
           </div>
+
         </header>
 
         <div className="border-b border-border bg-gradient-to-b from-primary-soft/50 to-card px-4 pb-5 pt-4 md:px-6">

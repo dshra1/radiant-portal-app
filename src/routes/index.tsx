@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -187,12 +189,18 @@ function Index() {
     <div className="m3 min-h-screen bg-background text-foreground">
       <header className="hero-surface px-5 py-12 sm:px-10 sm:py-16">
         <div className="mx-auto max-w-6xl">
+          <img
+            src={sahaLogo.url}
+            alt="Saha Developers"
+            className="mb-5 h-12 w-auto rounded-md bg-white/95 p-1.5 shadow-lg sm:h-14"
+          />
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-brand-bright animate-pulse" />
             <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
               Cyber Enclave · Phase 2 · Madhapur, Hyderabad
             </span>
           </div>
+
           <h1 className="mt-4 display-title text-4xl text-white sm:text-6xl">
             Saha <span className="italic text-brand-bright">OS</span>
           </h1>
