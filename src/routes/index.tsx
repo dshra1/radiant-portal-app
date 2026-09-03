@@ -221,11 +221,25 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
         icon: "engineering",
       },
       {
+        to: "/drawing-decipher",
+        title: "AI Drawing Decipher & Take-Off Hub",
+        desc: "Drawing revisions, RFIs, OCR invoices and BOQ-linked material take-off.",
+        icon: "architecture",
+      },
+      {
+        to: "/scope-brief",
+        title: "Architect & Consultant Scope Brief",
+        desc: "Engineering packages A–K with drawing lists and BOQ-linked quantities.",
+        icon: "assignment",
+      },
+      {
         to: "/roles-access",
         title: "Roles & Access Activity",
         desc: "Role-based permissions with a live activity trail.",
         icon: "admin_panel_settings",
       },
+
+
 
     ],
   },
