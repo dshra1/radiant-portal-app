@@ -23,7 +23,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Tone = "green" | "blue" | "amber" | "violet" | "rose";
+type Tone = "green" | "blue" | "amber" | "violet" | "rose" | "teal";
 
 const TONE: Record<Tone, { chip: string; title: string; rule: string; label: string }> = {
   green: {
@@ -56,6 +56,12 @@ const TONE: Record<Tone, { chip: string; title: string; rule: string; label: str
     rule: "bg-destructive/25",
     label: "text-[oklch(0.52_0.19_20)]",
   },
+  teal: {
+    chip: "bg-[oklch(0.94_0.05_200)] text-[oklch(0.46_0.11_210)]",
+    title: "text-[oklch(0.46_0.11_210)]",
+    rule: "bg-[oklch(0.46_0.11_210)]/25",
+    label: "text-[oklch(0.46_0.11_210)]",
+  },
 };
 
 type Item = {
@@ -68,158 +74,82 @@ type Item = {
 
 const GROUPS: { group: string; tone: Tone; items: Item[] }[] = [
   {
-    group: "Plan & Estimate",
+    group: "Main Planning & Master Database",
     tone: "green",
     items: [
-      {
-        to: "/dashboard",
-        title: "Command Center",
-        desc: "Budget burn, spend trend, approval queue and site portfolio.",
-        icon: "space_dashboard",
-        pinned: true,
-      },
-      {
-        to: "/projects",
-        title: "Projects Portfolio",
-        desc: "Built-up area, slab take-offs, budget and phase progress.",
-        icon: "apartment",
-        pinned: true,
-      },
-      {
-        to: "/boq-engine",
-        title: "BOQ Master Engine",
-        desc: "Line-item value engineering with spec compliance scoring.",
-        icon: "receipt_long",
-        pinned: true,
-      },
-      {
-        to: "/projects-setup",
-        title: "Project Setup & Geometry",
-        desc: "Project identity, floor geometry and CAD drawing ingestion.",
-        icon: "domain",
-      },
-      {
-        to: "/boq-upload",
-        title: "BOQ Excel Upload",
-        desc: "Spreadsheet ingestion with column mapping and unit validation.",
-        icon: "upload_file",
-      },
-      {
-        to: "/boq",
-        title: "BOQ & Rate Intelligence",
-        desc: "Dynamic bill of quantities with live Hyderabad market rates.",
-        icon: "calculate",
-      },
-      {
-        to: "/execution-manual",
-        title: "Stage-Wise Execution Manual",
-        desc: "14-stage SOP, QA hold gates and zero-tolerance guardrails.",
-        icon: "account_tree",
-      },
-      {
-        to: "/ai-programme",
-        title: "AI Programme Scheduler",
-        desc: "Timeline simulation from BOQ scale, lead times and constraints.",
-        icon: "auto_graph",
-      },
-      {
-        to: "/drawing-decipher",
-        title: "Drawing Decipher & Take-Off",
-        desc: "Drawing revisions, RFIs and BOQ-linked material take-off.",
-        icon: "architecture",
-      },
-      {
-        to: "/scope-brief",
-        title: "Consultant Scope Brief",
-        desc: "Engineering packages A–K with drawing lists and quantities.",
-        icon: "assignment",
-      },
+      { to: "/dashboard", title: "Command Center", desc: "Budget burn, spend trend, approval queue and site portfolio.", icon: "space_dashboard", pinned: true },
+      { to: "/projects", title: "Projects Portfolio", desc: "Built-up area, slab take-offs, budget and phase progress.", icon: "apartment", pinned: true },
+      { to: "/boq-engine", title: "BOQ Master Engine", desc: "Line-item value engineering with spec compliance scoring.", icon: "receipt_long", pinned: true },
+      { to: "/projects-setup", title: "Project Setup & Geometry", desc: "Project identity, floor geometry and CAD drawing ingestion.", icon: "domain" },
+      { to: "/boq-upload", title: "BOQ Excel Upload", desc: "Spreadsheet ingestion with column mapping and unit validation.", icon: "upload_file" },
+      { to: "/boq", title: "BOQ & Rate Intelligence", desc: "Dynamic bill of quantities with live Hyderabad market rates.", icon: "calculate" },
+      { to: "/execution-manual", title: "Stage-Wise Execution Manual", desc: "14-stage SOP, QA hold gates and zero-tolerance guardrails.", icon: "account_tree" },
+      { to: "/ai-programme", title: "AI Programme Scheduler", desc: "Timeline simulation from BOQ scale, lead times and constraints.", icon: "auto_graph" },
+      { to: "/drawing-decipher", title: "Drawing Decipher & Take-Off", desc: "Drawing revisions, RFIs and BOQ-linked material take-off.", icon: "architecture" },
+      { to: "/scope-brief", title: "Consultant Scope Brief", desc: "Engineering packages A\u2013K with drawing lists and quantities.", icon: "assignment" },
+      { to: "/vendor-directory", title: "Vendor Master Directory", desc: "Trade-wise vendor database with ratings and bulk import.", icon: "storefront" },
+      { to: "/system-directory", title: "System Master Directory", desc: "Index of every module across all pillars.", icon: "hub" },
+      { to: "/roles-access", title: "Roles & Access Master", desc: "Role-based permissions with a live activity trail.", icon: "admin_panel_settings" },
     ],
   },
   {
-    group: "Build & Inspect",
+    group: "Site Supervision",
     tone: "blue",
     items: [
-      {
-        to: "/site-execution",
-        title: "Site Execution Hub",
-        desc: "Stage progress, field roster and material runway.",
-        icon: "foundation",
-        pinned: true,
-      },
-      {
-        to: "/qa-inspection",
-        title: "AI Visual QA/QC Audit",
-        desc: "Edge-inference compliance scoring and defect ledger.",
-        icon: "verified",
-        pinned: true,
-      },
-      { to: "/pour-cards", title: "Daily Pour Cards", desc: "Pre-pour gates and concrete volume reconciliation.", icon: "water_drop" },
-      { to: "/qa", title: "AI Visual QA", desc: "Photo-based defect detection with IS code findings.", icon: "visibility" },
+      { to: "/site-execution", title: "Site Execution Hub", desc: "Stage progress, field roster and material runway.", icon: "foundation", pinned: true },
       { to: "/field-console", title: "Field Console", desc: "GRN receipts, pour cards, QC sign-offs and defect scans.", icon: "smartphone" },
-      { to: "/site-media", title: "Site Media Ledger", desc: "Geo-tagged imagery, pour verification and drone orthos.", icon: "photo_library" },
-      { to: "/media-upload-studio", title: "Media Upload Studio", desc: "Photo, video and drone uploads for site activity.", icon: "cloud_upload" },
       { to: "/command-operations", title: "Command Operations", desc: "Live telemetry, AI risk feed and site supervision.", icon: "bolt" },
       { to: "/project-controls", title: "Project Controls Cockpit", desc: "Earned value, baseline tracker and change orders.", icon: "monitoring" },
       { to: "/contractors-labour", title: "Contractors & Labour", desc: "Muster roll, RA bills and biometric gate sync.", icon: "engineering" },
+      { to: "/site-media", title: "Site Media Ledger", desc: "Geo-tagged imagery, pour verification and drone orthos.", icon: "photo_library" },
+      { to: "/media-upload-studio", title: "Media Upload Studio", desc: "Photo, video and drone uploads for site activity.", icon: "cloud_upload" },
     ],
   },
   {
-    group: "Buy & Supply",
+    group: "QA & Inspect",
+    tone: "teal",
+    items: [
+      { to: "/qa-inspection", title: "AI Visual QA/QC Audit", desc: "Edge-inference compliance scoring and defect ledger.", icon: "verified", pinned: true },
+      { to: "/qa", title: "AI Visual QA", desc: "Photo-based defect detection with IS code findings.", icon: "visibility" },
+      { to: "/pour-cards", title: "Daily Pour Cards", desc: "Pre-pour gates and concrete volume reconciliation.", icon: "water_drop" },
+    ],
+  },
+  {
+    group: "Stock & Inventory",
     tone: "amber",
     items: [
-      {
-        to: "/procurement",
-        title: "Procurement & PO Guardrails",
-        desc: "Multi-vendor POs with price guardrails and approvals.",
-        icon: "shopping_cart",
-        pinned: true,
-      },
-      {
-        to: "/price-intelligence",
-        title: "Price Intelligence",
-        desc: "Live mandi-indexed brand matrices for rebar, cement and tiles.",
-        icon: "insights",
-        pinned: true,
-      },
+      { to: "/inventory-control", title: "Inventory & Material Control", desc: "Stock ledger, consumption vs BOQ and reorder alerts.", icon: "inventory_2", pinned: true },
+      { to: "/procurement", title: "Procurement & PO Guardrails", desc: "Multi-vendor POs with price guardrails and approvals.", icon: "shopping_cart", pinned: true },
+      { to: "/price-intelligence", title: "Price Intelligence", desc: "Live mandi-indexed brand matrices for rebar, cement and tiles.", icon: "insights" },
       { to: "/purchase-orders", title: "PO & Guardrail Hub", desc: "Price-variance guardrails, approvals and ERP export.", icon: "shield" },
       { to: "/po-create", title: "PO Creation Engine", desc: "Value-engineered drafting with BIS spec verification.", icon: "add_circle" },
       { to: "/tender-comparison", title: "Tender Comparison Studio", desc: "L-1/L-2/L-3 rates, logistics parity and compliance.", icon: "gavel" },
       { to: "/brand-benchmark", title: "Brand Equivalency Matrix", desc: "Arbitrage margins, vetted mills and auto-substitution.", icon: "layers" },
-      { to: "/vendor-directory", title: "Vendor Directory", desc: "Trade-wise vendor database with ratings and bulk import.", icon: "storefront" },
       { to: "/vendor-lifecycle", title: "Vendor Lifecycle", desc: "Onboarding, bulk uploader and compliance vetting.", icon: "handshake" },
       { to: "/purchasing-center", title: "Purchasing Command Center", desc: "PO pipeline, document OCR and price database.", icon: "shopping_bag" },
-      { to: "/inventory-control", title: "Inventory & Material Control", desc: "Stock ledger, consumption vs BOQ and reorder alerts.", icon: "inventory_2" },
+    ],
+  },
+  {
+    group: "Accounts & Audit",
+    tone: "rose",
+    items: [
+      { to: "/billing-expenditure", title: "Billing & Expenditure", desc: "Vendor bill OCR, approvals and expenditure tracking.", icon: "request_quote", pinned: true },
+      { to: "/bills-payments", title: "Bills & Payments", desc: "RA bills, certified milestones and retentions.", icon: "receipt" },
+      { to: "/financial-ingestion", title: "Financial Ingestion Hub", desc: "GSTR-2B telemetry, AI matching and bank reconciliation.", icon: "account_balance" },
+      { to: "/financial-forecast", title: "Financial Forecasting", desc: "Cash-flow forecasts, cost-to-complete and project control.", icon: "trending_up" },
     ],
   },
   {
     group: "Money & Owners",
     tone: "violet",
     items: [
-      {
-        to: "/financial-forecast",
-        title: "Financial Forecasting",
-        desc: "Cash-flow forecasts, cost-to-complete and project control.",
-        icon: "trending_up",
-        pinned: true,
-      },
-      { to: "/billing-expenditure", title: "Billing & Expenditure", desc: "Vendor bill OCR, approvals and expenditure tracking.", icon: "request_quote" },
-      { to: "/bills-payments", title: "Bills & Payments", desc: "RA bills, certified milestones and retentions.", icon: "receipt" },
-      { to: "/financial-ingestion", title: "Financial Ingestion Hub", desc: "GSTR-2B telemetry, AI matching and bank reconciliation.", icon: "account_balance" },
-      { to: "/capital-ledger", title: "Capital Ledger", desc: "Equity shares, capital calls and cost apportionment.", icon: "account_balance_wallet" },
+      { to: "/capital-ledger", title: "Capital Ledger", desc: "Equity shares, capital calls and cost apportionment.", icon: "account_balance_wallet", pinned: true },
       { to: "/landowners-investment", title: "Landowners & Investment", desc: "Owner scope, stake shares and funding progress.", icon: "real_estate_agent" },
       { to: "/pmc-scope", title: "PMC Scope & Investment", desc: "Work-package boundaries with cost allocation.", icon: "rule" },
     ],
   },
-  {
-    group: "Govern & Access",
-    tone: "rose",
-    items: [
-      { to: "/roles-access", title: "Roles & Access", desc: "Role-based permissions with a live activity trail.", icon: "admin_panel_settings" },
-      { to: "/system-directory", title: "System Master Directory", desc: "Index of every module across all pillars.", icon: "hub" },
-    ],
-  },
 ];
+
 
 const PINNED = GROUPS.flatMap((g) => g.items.filter((i) => i.pinned).map((i) => ({ ...i, tone: g.tone })));
 const ALL = GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, tone: g.tone, group: g.group })));
