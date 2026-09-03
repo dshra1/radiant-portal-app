@@ -166,7 +166,7 @@ export function Shell({
         </header>
 
         <div className="border-b border-border bg-gradient-to-b from-primary-soft/50 to-card px-4 pb-5 pt-4 md:px-6">
-          <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-end justify-between gap-3">
+          <div className="mx-auto flex w-full max-w-none flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
               <h1 className="display-title truncate text-2xl text-foreground sm:text-3xl">{title}</h1>
               {subtitle && (
@@ -178,7 +178,7 @@ export function Shell({
         </div>
 
         <main className="flex-1 p-4 md:p-6">
-          <div className="mx-auto w-full max-w-[1600px]">{children}</div>
+          <div className="mx-auto w-full max-w-none">{children}</div>
         </main>
 
 
