@@ -151,60 +151,133 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
       },
     ],
   },
+  {
+    group: "Vendor, Bills & Inventory (New)",
+    items: [
+      {
+        to: "/vendor-lifecycle",
+        title: "Purchase & Vendor Lifecycle Hub",
+        desc: "Vendor onboarding, bulk uploader and compliance vetting.",
+        icon: "handshake",
+      },
+      {
+        to: "/bills-payments",
+        title: "Bills & Payments",
+        desc: "Subcontractor RA bills, certified milestones and retentions.",
+        icon: "receipt",
+      },
+      {
+        to: "/inventory-control",
+        title: "Inventory & Material Control",
+        desc: "Stock ledger, consumption vs BOQ and reorder alerts.",
+        icon: "inventory_2",
+      },
+      {
+        to: "/media-upload-studio",
+        title: "Site Media Upload Studio",
+        desc: "Geo-tagged photo, video and drone uploads for site activity.",
+        icon: "cloud_upload",
+      },
+      {
+        to: "/field-console",
+        title: "Field Console",
+        desc: "GRN receipts, pour cards, QC sign-offs and AI defect scans.",
+        icon: "smartphone",
+      },
+      {
+        to: "/financial-forecast",
+        title: "Executive Financial Forecasting",
+        desc: "Cash-flow forecasts, cost-to-complete and executive project control.",
+        icon: "trending_up",
+      },
+      {
+        to: "/roles-access",
+        title: "Roles & Access Activity",
+        desc: "Role-based permissions with a live activity trail.",
+        icon: "admin_panel_settings",
+      },
+    ],
+  },
 ];
 
 function Index() {
   return (
     <div className="m3 min-h-screen bg-surface text-on-surface font-body-md text-body-md">
-      <header className="bg-inverse-surface text-inverse-on-surface px-space-2xl py-space-2xl">
+      <header className="hero-surface px-space-2xl py-space-3xl">
         <div className="mx-auto max-w-6xl">
           <div className="flex items-center gap-space-xs">
-            <span className="h-2 w-2 rounded-full bg-primary-fixed-dim animate-pulse" />
-            <span className="font-label-sm text-label-sm uppercase tracking-wider text-outline-variant">
+            <span className="h-2 w-2 rounded-full bg-brand-bright animate-pulse" />
+            <span className="font-label-sm text-label-sm uppercase tracking-[0.14em] text-white/60">
               Civil Platform Engine v3.4.0 • 99.8% Biometric &amp; IoT Sync
             </span>
           </div>
-          <h1 className="mt-space-md font-display-lg text-display-lg tracking-tight">Saha OS</h1>
-          <p className="mt-space-xs font-body-lg text-body-lg text-secondary-fixed-dim max-w-2xl">
+          <h1 className="mt-space-md display-title text-5xl md:text-6xl">
+            Saha <span className="italic text-brand-bright">OS</span>
+          </h1>
+          <div className="mt-space-md h-px w-24 accent-rule" />
+          <p className="mt-space-base font-body-lg text-body-lg text-white/70 max-w-2xl">
             Project lifecycle suite for Cyber Enclave - Phase 2, Plot 44/A, Madhapur, Hyderabad.
             BOQ ingestion, stage execution, QA/QC governance and procurement intelligence.
           </p>
-          <div className="mt-space-lg flex flex-wrap gap-space-sm">
+          <div className="mt-space-xl flex flex-wrap gap-space-sm">
             <Link
               to="/site-execution"
-              className="flex items-center gap-space-xs px-space-base py-space-sm rounded bg-primary text-on-primary font-title-md text-title-md hover:bg-primary-container transition-colors"
+              className="flex items-center gap-space-xs px-space-lg py-space-md rounded-full bg-brand-bright text-[oklch(0.22_0.05_158)] font-title-md text-title-md shadow-[var(--shadow-glow)] hover:brightness-110 transition-all"
             >
               <span className="material-symbols-outlined text-space-base leading-none">foundation</span>
               Open Site Execution
             </Link>
             <Link
+              to="/dashboard"
+              className="flex items-center gap-space-xs px-space-lg py-space-md rounded-full border border-white/25 bg-white/5 text-white font-title-md text-title-md hover:bg-white/15 transition-colors backdrop-blur-sm"
+            >
+              <span className="material-symbols-outlined text-space-base leading-none">space_dashboard</span>
+              Command Center
+            </Link>
+            <Link
               to="/boq-engine"
-              className="flex items-center gap-space-xs px-space-base py-space-sm rounded bg-surface-variant/20 text-inverse-on-surface font-title-md text-title-md hover:bg-surface-variant/30 transition-colors"
+              className="flex items-center gap-space-xs px-space-lg py-space-md rounded-full border border-white/15 text-white/80 font-title-md text-title-md hover:text-white hover:border-white/35 transition-colors"
             >
               <span className="material-symbols-outlined text-space-base leading-none">receipt_long</span>
               BOQ Master Engine
             </Link>
           </div>
+          <dl className="mt-space-2xl grid grid-cols-2 gap-space-base sm:grid-cols-4 max-w-3xl">
+            {[
+              ["3", "Active sites"],
+              ["₹22.70 Cr", "Committed budget"],
+              ["412", "Workforce on site"],
+              ["8", "Open QA defects"],
+            ].map(([v, l]) => (
+              <div key={l} className="border-l border-white/15 pl-space-md">
+                <dt className="font-label-sm text-label-sm uppercase tracking-[0.12em] text-white/50">{l}</dt>
+                <dd className="mt-space-2xs display-title text-2xl text-white">{v}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-space-2xl py-space-2xl flex flex-col gap-space-2xl">
+      <main className="mx-auto max-w-6xl px-space-2xl py-space-3xl flex flex-col gap-space-3xl">
         {GROUPS.map((g) => (
           <section key={g.group} className="flex flex-col gap-space-md">
-            <h2 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant">
-              {g.group}
-            </h2>
+            <div className="flex items-center gap-space-md">
+              <h2 className="font-label-md text-label-md uppercase tracking-[0.14em] text-on-surface-variant">
+                {g.group}
+              </h2>
+              <span className="h-px flex-1 bg-outline-variant/60" />
+            </div>
             <div className="grid gap-space-base sm:grid-cols-2 lg:grid-cols-3">
               {g.items.map((it) => (
                 <Link
                   key={it.to}
                   to={it.to}
-                  className="group flex flex-col gap-space-sm p-space-base rounded-xl bg-surface-container-lowest border border-surface-container-high hover:border-primary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+                  className="group surface-card flex flex-col gap-space-sm p-space-lg"
                 >
-                  <span className="material-symbols-outlined text-primary text-space-lg leading-none">
-                    {it.icon}
+                  <span className="grid size-10 place-items-center rounded-full bg-primary-soft text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                    <span className="material-symbols-outlined text-space-lg leading-none">{it.icon}</span>
                   </span>
-                  <span className="font-headline-sm text-headline-sm text-on-surface">{it.title}</span>
+                  <span className="display-title text-xl text-on-surface">{it.title}</span>
                   <span className="font-body-sm text-body-sm text-on-surface-variant">{it.desc}</span>
                   <span className="mt-auto flex items-center gap-space-2xs font-label-md text-label-md text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                     Open

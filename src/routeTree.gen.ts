@@ -10,12 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BillsPaymentsRouteImport } from './routes/bills-payments'
 import { Route as BoqRouteImport } from './routes/boq'
 import { Route as BoqEngineRouteImport } from './routes/boq-engine'
 import { Route as BoqUploadRouteImport } from './routes/boq-upload'
 import { Route as BrandBenchmarkRouteImport } from './routes/brand-benchmark'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ExecutionManualRouteImport } from './routes/execution-manual'
+import { Route as FieldConsoleRouteImport } from './routes/field-console'
+import { Route as FinancialForecastRouteImport } from './routes/financial-forecast'
+import { Route as InventoryControlRouteImport } from './routes/inventory-control'
+import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
 import { Route as PoCreateRouteImport } from './routes/po-create'
 import { Route as PourCardsRouteImport } from './routes/pour-cards'
 import { Route as PriceIntelligenceRouteImport } from './routes/price-intelligence'
@@ -25,13 +30,20 @@ import { Route as ProjectsSetupRouteImport } from './routes/projects-setup'
 import { Route as PurchaseOrdersRouteImport } from './routes/purchase-orders'
 import { Route as QaRouteImport } from './routes/qa'
 import { Route as QaInspectionRouteImport } from './routes/qa-inspection'
+import { Route as RolesAccessRouteImport } from './routes/roles-access'
 import { Route as SiteExecutionRouteImport } from './routes/site-execution'
 import { Route as SiteMediaRouteImport } from './routes/site-media'
 import { Route as TenderComparisonRouteImport } from './routes/tender-comparison'
+import { Route as VendorLifecycleRouteImport } from './routes/vendor-lifecycle'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillsPaymentsRoute = BillsPaymentsRouteImport.update({
+  id: '/bills-payments',
+  path: '/bills-payments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BoqRoute = BoqRouteImport.update({
@@ -62,6 +74,26 @@ const DashboardRoute = DashboardRouteImport.update({
 const ExecutionManualRoute = ExecutionManualRouteImport.update({
   id: '/execution-manual',
   path: '/execution-manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FieldConsoleRoute = FieldConsoleRouteImport.update({
+  id: '/field-console',
+  path: '/field-console',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinancialForecastRoute = FinancialForecastRouteImport.update({
+  id: '/financial-forecast',
+  path: '/financial-forecast',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryControlRoute = InventoryControlRouteImport.update({
+  id: '/inventory-control',
+  path: '/inventory-control',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediaUploadStudioRoute = MediaUploadStudioRouteImport.update({
+  id: '/media-upload-studio',
+  path: '/media-upload-studio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoCreateRoute = PoCreateRouteImport.update({
@@ -109,6 +141,11 @@ const QaInspectionRoute = QaInspectionRouteImport.update({
   path: '/qa-inspection',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RolesAccessRoute = RolesAccessRouteImport.update({
+  id: '/roles-access',
+  path: '/roles-access',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SiteExecutionRoute = SiteExecutionRouteImport.update({
   id: '/site-execution',
   path: '/site-execution',
@@ -124,15 +161,25 @@ const TenderComparisonRoute = TenderComparisonRouteImport.update({
   path: '/tender-comparison',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VendorLifecycleRoute = VendorLifecycleRouteImport.update({
+  id: '/vendor-lifecycle',
+  path: '/vendor-lifecycle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
   '/dashboard': typeof DashboardRoute
   '/execution-manual': typeof ExecutionManualRoute
+  '/field-console': typeof FieldConsoleRoute
+  '/financial-forecast': typeof FinancialForecastRoute
+  '/inventory-control': typeof InventoryControlRoute
+  '/media-upload-studio': typeof MediaUploadStudioRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
@@ -142,18 +189,25 @@ export interface FileRoutesByFullPath {
   '/purchase-orders': typeof PurchaseOrdersRoute
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
+  '/roles-access': typeof RolesAccessRoute
   '/site-execution': typeof SiteExecutionRoute
   '/site-media': typeof SiteMediaRoute
   '/tender-comparison': typeof TenderComparisonRoute
+  '/vendor-lifecycle': typeof VendorLifecycleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
   '/dashboard': typeof DashboardRoute
   '/execution-manual': typeof ExecutionManualRoute
+  '/field-console': typeof FieldConsoleRoute
+  '/financial-forecast': typeof FinancialForecastRoute
+  '/inventory-control': typeof InventoryControlRoute
+  '/media-upload-studio': typeof MediaUploadStudioRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
@@ -163,19 +217,26 @@ export interface FileRoutesByTo {
   '/purchase-orders': typeof PurchaseOrdersRoute
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
+  '/roles-access': typeof RolesAccessRoute
   '/site-execution': typeof SiteExecutionRoute
   '/site-media': typeof SiteMediaRoute
   '/tender-comparison': typeof TenderComparisonRoute
+  '/vendor-lifecycle': typeof VendorLifecycleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
   '/dashboard': typeof DashboardRoute
   '/execution-manual': typeof ExecutionManualRoute
+  '/field-console': typeof FieldConsoleRoute
+  '/financial-forecast': typeof FinancialForecastRoute
+  '/inventory-control': typeof InventoryControlRoute
+  '/media-upload-studio': typeof MediaUploadStudioRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
@@ -185,20 +246,27 @@ export interface FileRoutesById {
   '/purchase-orders': typeof PurchaseOrdersRoute
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
+  '/roles-access': typeof RolesAccessRoute
   '/site-execution': typeof SiteExecutionRoute
   '/site-media': typeof SiteMediaRoute
   '/tender-comparison': typeof TenderComparisonRoute
+  '/vendor-lifecycle': typeof VendorLifecycleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/bills-payments'
     | '/boq'
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
     | '/dashboard'
     | '/execution-manual'
+    | '/field-console'
+    | '/financial-forecast'
+    | '/inventory-control'
+    | '/media-upload-studio'
     | '/po-create'
     | '/pour-cards'
     | '/price-intelligence'
@@ -208,18 +276,25 @@ export interface FileRouteTypes {
     | '/purchase-orders'
     | '/qa'
     | '/qa-inspection'
+    | '/roles-access'
     | '/site-execution'
     | '/site-media'
     | '/tender-comparison'
+    | '/vendor-lifecycle'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/bills-payments'
     | '/boq'
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
     | '/dashboard'
     | '/execution-manual'
+    | '/field-console'
+    | '/financial-forecast'
+    | '/inventory-control'
+    | '/media-upload-studio'
     | '/po-create'
     | '/pour-cards'
     | '/price-intelligence'
@@ -229,18 +304,25 @@ export interface FileRouteTypes {
     | '/purchase-orders'
     | '/qa'
     | '/qa-inspection'
+    | '/roles-access'
     | '/site-execution'
     | '/site-media'
     | '/tender-comparison'
+    | '/vendor-lifecycle'
   id:
     | '__root__'
     | '/'
+    | '/bills-payments'
     | '/boq'
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
     | '/dashboard'
     | '/execution-manual'
+    | '/field-console'
+    | '/financial-forecast'
+    | '/inventory-control'
+    | '/media-upload-studio'
     | '/po-create'
     | '/pour-cards'
     | '/price-intelligence'
@@ -250,19 +332,26 @@ export interface FileRouteTypes {
     | '/purchase-orders'
     | '/qa'
     | '/qa-inspection'
+    | '/roles-access'
     | '/site-execution'
     | '/site-media'
     | '/tender-comparison'
+    | '/vendor-lifecycle'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BillsPaymentsRoute: typeof BillsPaymentsRoute
   BoqRoute: typeof BoqRoute
   BoqEngineRoute: typeof BoqEngineRoute
   BoqUploadRoute: typeof BoqUploadRoute
   BrandBenchmarkRoute: typeof BrandBenchmarkRoute
   DashboardRoute: typeof DashboardRoute
   ExecutionManualRoute: typeof ExecutionManualRoute
+  FieldConsoleRoute: typeof FieldConsoleRoute
+  FinancialForecastRoute: typeof FinancialForecastRoute
+  InventoryControlRoute: typeof InventoryControlRoute
+  MediaUploadStudioRoute: typeof MediaUploadStudioRoute
   PoCreateRoute: typeof PoCreateRoute
   PourCardsRoute: typeof PourCardsRoute
   PriceIntelligenceRoute: typeof PriceIntelligenceRoute
@@ -272,9 +361,11 @@ export interface RootRouteChildren {
   PurchaseOrdersRoute: typeof PurchaseOrdersRoute
   QaRoute: typeof QaRoute
   QaInspectionRoute: typeof QaInspectionRoute
+  RolesAccessRoute: typeof RolesAccessRoute
   SiteExecutionRoute: typeof SiteExecutionRoute
   SiteMediaRoute: typeof SiteMediaRoute
   TenderComparisonRoute: typeof TenderComparisonRoute
+  VendorLifecycleRoute: typeof VendorLifecycleRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -284,6 +375,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bills-payments': {
+      id: '/bills-payments'
+      path: '/bills-payments'
+      fullPath: '/bills-payments'
+      preLoaderRoute: typeof BillsPaymentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/boq': {
@@ -326,6 +424,34 @@ declare module '@tanstack/react-router' {
       path: '/execution-manual'
       fullPath: '/execution-manual'
       preLoaderRoute: typeof ExecutionManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/field-console': {
+      id: '/field-console'
+      path: '/field-console'
+      fullPath: '/field-console'
+      preLoaderRoute: typeof FieldConsoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financial-forecast': {
+      id: '/financial-forecast'
+      path: '/financial-forecast'
+      fullPath: '/financial-forecast'
+      preLoaderRoute: typeof FinancialForecastRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory-control': {
+      id: '/inventory-control'
+      path: '/inventory-control'
+      fullPath: '/inventory-control'
+      preLoaderRoute: typeof InventoryControlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media-upload-studio': {
+      id: '/media-upload-studio'
+      path: '/media-upload-studio'
+      fullPath: '/media-upload-studio'
+      preLoaderRoute: typeof MediaUploadStudioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/po-create': {
@@ -391,6 +517,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QaInspectionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/roles-access': {
+      id: '/roles-access'
+      path: '/roles-access'
+      fullPath: '/roles-access'
+      preLoaderRoute: typeof RolesAccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/site-execution': {
       id: '/site-execution'
       path: '/site-execution'
@@ -412,17 +545,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TenderComparisonRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vendor-lifecycle': {
+      id: '/vendor-lifecycle'
+      path: '/vendor-lifecycle'
+      fullPath: '/vendor-lifecycle'
+      preLoaderRoute: typeof VendorLifecycleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BillsPaymentsRoute: BillsPaymentsRoute,
   BoqRoute: BoqRoute,
   BoqEngineRoute: BoqEngineRoute,
   BoqUploadRoute: BoqUploadRoute,
   BrandBenchmarkRoute: BrandBenchmarkRoute,
   DashboardRoute: DashboardRoute,
   ExecutionManualRoute: ExecutionManualRoute,
+  FieldConsoleRoute: FieldConsoleRoute,
+  FinancialForecastRoute: FinancialForecastRoute,
+  InventoryControlRoute: InventoryControlRoute,
+  MediaUploadStudioRoute: MediaUploadStudioRoute,
   PoCreateRoute: PoCreateRoute,
   PourCardsRoute: PourCardsRoute,
   PriceIntelligenceRoute: PriceIntelligenceRoute,
@@ -432,9 +577,11 @@ const rootRouteChildren: RootRouteChildren = {
   PurchaseOrdersRoute: PurchaseOrdersRoute,
   QaRoute: QaRoute,
   QaInspectionRoute: QaInspectionRoute,
+  RolesAccessRoute: RolesAccessRoute,
   SiteExecutionRoute: SiteExecutionRoute,
   SiteMediaRoute: SiteMediaRoute,
   TenderComparisonRoute: TenderComparisonRoute,
+  VendorLifecycleRoute: VendorLifecycleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

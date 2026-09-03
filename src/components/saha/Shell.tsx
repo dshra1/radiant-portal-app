@@ -43,12 +43,12 @@ export function Shell({
     <div className="flex min-h-screen bg-background">
       <aside
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 flex-col bg-sidebar transition-[width] duration-200 md:flex",
+          "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar bg-[image:var(--gradient-hero)] transition-[width] duration-200 md:flex",
           expanded ? "w-60" : "w-16",
         )}
       >
         <div className="flex h-13 items-center gap-2 border-b border-sidebar-border px-4 py-3">
-          <span className="grid size-7 shrink-0 place-items-center rounded bg-sidebar-primary">
+          <span className="grid size-7 shrink-0 place-items-center rounded bg-[image:var(--gradient-accent)]">
             <HardHat className="size-4 text-sidebar-primary-foreground" />
           </span>
           {expanded && (
@@ -67,9 +67,9 @@ export function Shell({
                 to={item.to}
                 title={item.label}
                 className={cn(
-                  "flex items-center gap-3 rounded px-3 py-2 text-[13px] font-medium text-sidebar-foreground transition-colors",
+                  "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-foreground transition-all",
                   active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_2px_0_0_0_var(--color-sidebar-primary)]"
                     : "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                 )}
               >
@@ -94,7 +94,7 @@ export function Shell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-13 items-center gap-3 border-b border-border bg-card px-4 py-2.5">
+        <header className="sticky top-0 z-20 flex h-13 items-center gap-3 border-b border-border bg-card/80 px-4 py-2.5 backdrop-blur-md">
           <div className="hidden items-center gap-2 rounded border border-input bg-background px-2.5 py-1.5 sm:flex">
             <Search className="size-3.5 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Search POs, BOQ codes, grids…</span>
@@ -110,10 +110,10 @@ export function Shell({
           </div>
         </header>
 
-        <div className="border-b border-border bg-card px-4 pb-4 pt-3 md:px-6">
+        <div className="border-b border-border bg-gradient-to-b from-primary-soft/50 to-card px-4 pb-5 pt-4 md:px-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+              <h1 className="display-title text-3xl text-foreground">{title}</h1>
               {subtitle && (
                 <p className="mt-0.5 text-[13px] text-muted-foreground">{subtitle}</p>
               )}
