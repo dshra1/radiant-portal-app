@@ -14,3 +14,4 @@
 - [x] Import Project Controls Cockpit (/project-controls)
 - [x] Import AI Project Programme Scheduler (/ai-programme) — later Stitch variant (Workstream Overlap Engine) merged into same route instead of a duplicate
 - [ ] Ongoing: dedupe near-identical Stitch screens; merge revisions into existing routes
+- ../pmc-scope, /landowners-investment, /capital-ledger imported from Stitch

@@ -256,6 +256,25 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
         desc: "Autonomous timeline simulation from BOQ scale, lead times and site constraints.",
         icon: "auto_graph",
       },
+      {
+        to: "/pmc-scope",
+        title: "PMC Appointment Scope & Investment",
+        desc: "Work-package scope boundaries for common vs individual development with cost allocation.",
+        icon: "rule",
+      },
+      {
+        to: "/landowners-investment",
+        title: "Landowners & Investment Hub",
+        desc: "Owner scope, stake shares, stage-wise payment schedules and funding progress.",
+        icon: "real_estate_agent",
+      },
+      {
+        to: "/capital-ledger",
+        title: "Capital Ledger & Contributions",
+        desc: "Equity shares, capital calls, dues tracking and cost apportionment matrix.",
+        icon: "account_balance_wallet",
+      },
+
 
 
 
