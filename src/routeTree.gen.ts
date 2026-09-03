@@ -35,6 +35,7 @@ import { Route as RolesAccessRouteImport } from './routes/roles-access'
 import { Route as SiteExecutionRouteImport } from './routes/site-execution'
 import { Route as SiteMediaRouteImport } from './routes/site-media'
 import { Route as TenderComparisonRouteImport } from './routes/tender-comparison'
+import { Route as VendorDirectoryRouteImport } from './routes/vendor-directory'
 import { Route as VendorLifecycleRouteImport } from './routes/vendor-lifecycle'
 
 const IndexRoute = IndexRouteImport.update({
@@ -167,6 +168,11 @@ const TenderComparisonRoute = TenderComparisonRouteImport.update({
   path: '/tender-comparison',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VendorDirectoryRoute = VendorDirectoryRouteImport.update({
+  id: '/vendor-directory',
+  path: '/vendor-directory',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VendorLifecycleRoute = VendorLifecycleRouteImport.update({
   id: '/vendor-lifecycle',
   path: '/vendor-lifecycle',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/site-execution': typeof SiteExecutionRoute
   '/site-media': typeof SiteMediaRoute
   '/tender-comparison': typeof TenderComparisonRoute
+  '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
 }
 export interface FileRoutesByTo {
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/site-execution': typeof SiteExecutionRoute
   '/site-media': typeof SiteMediaRoute
   '/tender-comparison': typeof TenderComparisonRoute
+  '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
 }
 export interface FileRoutesById {
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/site-execution': typeof SiteExecutionRoute
   '/site-media': typeof SiteMediaRoute
   '/tender-comparison': typeof TenderComparisonRoute
+  '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
 }
 export interface FileRouteTypes {
@@ -290,6 +299,7 @@ export interface FileRouteTypes {
     | '/site-execution'
     | '/site-media'
     | '/tender-comparison'
+    | '/vendor-directory'
     | '/vendor-lifecycle'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/site-execution'
     | '/site-media'
     | '/tender-comparison'
+    | '/vendor-directory'
     | '/vendor-lifecycle'
   id:
     | '__root__'
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/site-execution'
     | '/site-media'
     | '/tender-comparison'
+    | '/vendor-directory'
     | '/vendor-lifecycle'
   fileRoutesById: FileRoutesById
 }
@@ -378,6 +390,7 @@ export interface RootRouteChildren {
   SiteExecutionRoute: typeof SiteExecutionRoute
   SiteMediaRoute: typeof SiteMediaRoute
   TenderComparisonRoute: typeof TenderComparisonRoute
+  VendorDirectoryRoute: typeof VendorDirectoryRoute
   VendorLifecycleRoute: typeof VendorLifecycleRoute
 }
 
@@ -565,6 +578,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TenderComparisonRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vendor-directory': {
+      id: '/vendor-directory'
+      path: '/vendor-directory'
+      fullPath: '/vendor-directory'
+      preLoaderRoute: typeof VendorDirectoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/vendor-lifecycle': {
       id: '/vendor-lifecycle'
       path: '/vendor-lifecycle'
@@ -602,6 +622,7 @@ const rootRouteChildren: RootRouteChildren = {
   SiteExecutionRoute: SiteExecutionRoute,
   SiteMediaRoute: SiteMediaRoute,
   TenderComparisonRoute: TenderComparisonRoute,
+  VendorDirectoryRoute: VendorDirectoryRoute,
   VendorLifecycleRoute: VendorLifecycleRoute,
 }
 export const routeTree = rootRouteImport
