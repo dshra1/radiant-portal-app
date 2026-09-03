@@ -41,6 +41,9 @@ export function Shell({
   children: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [role, setRole] = useState("Project Manager (PM)");
+  const [sunlight, setSunlight] = useState(false);
+
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
