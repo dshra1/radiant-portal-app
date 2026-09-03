@@ -10,12 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AiProgrammeRouteImport } from './routes/ai-programme'
 import { Route as BillingExpenditureRouteImport } from './routes/billing-expenditure'
 import { Route as BillsPaymentsRouteImport } from './routes/bills-payments'
 import { Route as BoqRouteImport } from './routes/boq'
 import { Route as BoqEngineRouteImport } from './routes/boq-engine'
 import { Route as BoqUploadRouteImport } from './routes/boq-upload'
 import { Route as BrandBenchmarkRouteImport } from './routes/brand-benchmark'
+import { Route as CommandOperationsRouteImport } from './routes/command-operations'
 import { Route as ContractorsLabourRouteImport } from './routes/contractors-labour'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DrawingDecipherRouteImport } from './routes/drawing-decipher'
@@ -29,6 +31,7 @@ import { Route as PoCreateRouteImport } from './routes/po-create'
 import { Route as PourCardsRouteImport } from './routes/pour-cards'
 import { Route as PriceIntelligenceRouteImport } from './routes/price-intelligence'
 import { Route as ProcurementRouteImport } from './routes/procurement'
+import { Route as ProjectControlsRouteImport } from './routes/project-controls'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ProjectsSetupRouteImport } from './routes/projects-setup'
 import { Route as PurchaseOrdersRouteImport } from './routes/purchase-orders'
@@ -46,6 +49,11 @@ import { Route as VendorLifecycleRouteImport } from './routes/vendor-lifecycle'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiProgrammeRoute = AiProgrammeRouteImport.update({
+  id: '/ai-programme',
+  path: '/ai-programme',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BillingExpenditureRoute = BillingExpenditureRouteImport.update({
@@ -76,6 +84,11 @@ const BoqUploadRoute = BoqUploadRouteImport.update({
 const BrandBenchmarkRoute = BrandBenchmarkRouteImport.update({
   id: '/brand-benchmark',
   path: '/brand-benchmark',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommandOperationsRoute = CommandOperationsRouteImport.update({
+  id: '/command-operations',
+  path: '/command-operations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContractorsLabourRoute = ContractorsLabourRouteImport.update({
@@ -141,6 +154,11 @@ const PriceIntelligenceRoute = PriceIntelligenceRouteImport.update({
 const ProcurementRoute = ProcurementRouteImport.update({
   id: '/procurement',
   path: '/procurement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectControlsRoute = ProjectControlsRouteImport.update({
+  id: '/project-controls',
+  path: '/project-controls',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsRoute = ProjectsRouteImport.update({
@@ -211,12 +229,14 @@ const VendorLifecycleRoute = VendorLifecycleRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-programme': typeof AiProgrammeRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
@@ -230,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
   '/procurement': typeof ProcurementRoute
+  '/project-controls': typeof ProjectControlsRoute
   '/projects': typeof ProjectsRoute
   '/projects-setup': typeof ProjectsSetupRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
@@ -246,12 +267,14 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-programme': typeof AiProgrammeRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
@@ -265,6 +288,7 @@ export interface FileRoutesByTo {
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
   '/procurement': typeof ProcurementRoute
+  '/project-controls': typeof ProjectControlsRoute
   '/projects': typeof ProjectsRoute
   '/projects-setup': typeof ProjectsSetupRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
@@ -282,12 +306,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-programme': typeof AiProgrammeRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
@@ -301,6 +327,7 @@ export interface FileRoutesById {
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
   '/procurement': typeof ProcurementRoute
+  '/project-controls': typeof ProjectControlsRoute
   '/projects': typeof ProjectsRoute
   '/projects-setup': typeof ProjectsSetupRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
@@ -319,12 +346,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ai-programme'
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/command-operations'
     | '/contractors-labour'
     | '/dashboard'
     | '/drawing-decipher'
@@ -338,6 +367,7 @@ export interface FileRouteTypes {
     | '/pour-cards'
     | '/price-intelligence'
     | '/procurement'
+    | '/project-controls'
     | '/projects'
     | '/projects-setup'
     | '/purchase-orders'
@@ -354,12 +384,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ai-programme'
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/command-operations'
     | '/contractors-labour'
     | '/dashboard'
     | '/drawing-decipher'
@@ -373,6 +405,7 @@ export interface FileRouteTypes {
     | '/pour-cards'
     | '/price-intelligence'
     | '/procurement'
+    | '/project-controls'
     | '/projects'
     | '/projects-setup'
     | '/purchase-orders'
@@ -389,12 +422,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/ai-programme'
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/command-operations'
     | '/contractors-labour'
     | '/dashboard'
     | '/drawing-decipher'
@@ -408,6 +443,7 @@ export interface FileRouteTypes {
     | '/pour-cards'
     | '/price-intelligence'
     | '/procurement'
+    | '/project-controls'
     | '/projects'
     | '/projects-setup'
     | '/purchase-orders'
@@ -425,12 +461,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiProgrammeRoute: typeof AiProgrammeRoute
   BillingExpenditureRoute: typeof BillingExpenditureRoute
   BillsPaymentsRoute: typeof BillsPaymentsRoute
   BoqRoute: typeof BoqRoute
   BoqEngineRoute: typeof BoqEngineRoute
   BoqUploadRoute: typeof BoqUploadRoute
   BrandBenchmarkRoute: typeof BrandBenchmarkRoute
+  CommandOperationsRoute: typeof CommandOperationsRoute
   ContractorsLabourRoute: typeof ContractorsLabourRoute
   DashboardRoute: typeof DashboardRoute
   DrawingDecipherRoute: typeof DrawingDecipherRoute
@@ -444,6 +482,7 @@ export interface RootRouteChildren {
   PourCardsRoute: typeof PourCardsRoute
   PriceIntelligenceRoute: typeof PriceIntelligenceRoute
   ProcurementRoute: typeof ProcurementRoute
+  ProjectControlsRoute: typeof ProjectControlsRoute
   ProjectsRoute: typeof ProjectsRoute
   ProjectsSetupRoute: typeof ProjectsSetupRoute
   PurchaseOrdersRoute: typeof PurchaseOrdersRoute
@@ -466,6 +505,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-programme': {
+      id: '/ai-programme'
+      path: '/ai-programme'
+      fullPath: '/ai-programme'
+      preLoaderRoute: typeof AiProgrammeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/billing-expenditure': {
@@ -508,6 +554,13 @@ declare module '@tanstack/react-router' {
       path: '/brand-benchmark'
       fullPath: '/brand-benchmark'
       preLoaderRoute: typeof BrandBenchmarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/command-operations': {
+      id: '/command-operations'
+      path: '/command-operations'
+      fullPath: '/command-operations'
+      preLoaderRoute: typeof CommandOperationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contractors-labour': {
@@ -599,6 +652,13 @@ declare module '@tanstack/react-router' {
       path: '/procurement'
       fullPath: '/procurement'
       preLoaderRoute: typeof ProcurementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/project-controls': {
+      id: '/project-controls'
+      path: '/project-controls'
+      fullPath: '/project-controls'
+      preLoaderRoute: typeof ProjectControlsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects': {
@@ -697,12 +757,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiProgrammeRoute: AiProgrammeRoute,
   BillingExpenditureRoute: BillingExpenditureRoute,
   BillsPaymentsRoute: BillsPaymentsRoute,
   BoqRoute: BoqRoute,
   BoqEngineRoute: BoqEngineRoute,
   BoqUploadRoute: BoqUploadRoute,
   BrandBenchmarkRoute: BrandBenchmarkRoute,
+  CommandOperationsRoute: CommandOperationsRoute,
   ContractorsLabourRoute: ContractorsLabourRoute,
   DashboardRoute: DashboardRoute,
   DrawingDecipherRoute: DrawingDecipherRoute,
@@ -716,6 +778,7 @@ const rootRouteChildren: RootRouteChildren = {
   PourCardsRoute: PourCardsRoute,
   PriceIntelligenceRoute: PriceIntelligenceRoute,
   ProcurementRoute: ProcurementRoute,
+  ProjectControlsRoute: ProjectControlsRoute,
   ProjectsRoute: ProjectsRoute,
   ProjectsSetupRoute: ProjectsSetupRoute,
   PurchaseOrdersRoute: PurchaseOrdersRoute,
