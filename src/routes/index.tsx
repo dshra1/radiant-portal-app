@@ -188,53 +188,59 @@ function Index() {
   return (
     <div className="m3 min-h-screen bg-background text-foreground">
       <header className="hero-surface px-5 py-12 sm:px-10 sm:py-16">
-        <div className="mx-auto max-w-none">
-          <img
-            src={sahaLogo.url}
-            alt="Saha Developers"
-            className="mb-5 h-12 w-auto rounded-md bg-white/95 p-1.5 shadow-lg sm:h-14"
-          />
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-brand-bright animate-pulse" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
-              Cyber Enclave · Phase 2 · Madhapur, Hyderabad
-            </span>
-          </div>
+        <div className="mx-auto grid w-full max-w-none gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-end">
+          <div className="min-w-0">
+            <img
+              src={sahaLogo.url}
+              alt="Saha Developers"
+              className="mb-5 h-12 w-auto rounded-md bg-white/95 p-1.5 shadow-lg sm:h-14"
+            />
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-brand-bright animate-pulse" />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+                Cyber Enclave · Phase 2 · Madhapur, Hyderabad
+              </span>
+            </div>
 
-          <h1 className="mt-4 display-title text-4xl text-white sm:text-6xl">
-            Saha <span className="italic text-brand-bright">OS</span>
-          </h1>
-          <p className="mt-3 max-w-xl text-base text-white/70">
-            One workspace for estimation, site execution, quality and money — pick a workspace below.
-          </p>
+            <h1 className="mt-4 display-title text-4xl text-white sm:text-6xl">
+              Saha <span className="italic text-brand-bright">OS</span>
+            </h1>
+            <p className="mt-3 max-w-2xl text-base text-white/70">
+              One workspace for estimation, site execution, quality and money — pick a workspace below.
+            </p>
 
-          <div className="mt-7 max-w-md">
-            <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
-              <span className="material-symbols-outlined text-base leading-none text-white/70">search</span>
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search modules — BOQ, pour card, vendor, bills…"
-                aria-label="Search modules"
-                className="w-full bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
-              />
+            <div className="mt-7 max-w-xl">
+              <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                <span className="material-symbols-outlined text-base leading-none text-white/70">search</span>
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search modules — BOQ, pour card, vendor, bills…"
+                  aria-label="Search modules"
+                  className="w-full bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
+                />
+              </div>
             </div>
           </div>
 
-          <dl className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-4 sm:max-w-3xl">
+          <dl className="grid grid-cols-2 gap-5 lg:mb-2">
             {[
               ["3", "Active sites"],
               ["₹22.70 Cr", "Committed budget"],
               ["412", "Workforce on site"],
               ["8", "Open QA defects"],
             ].map(([v, l]) => (
-              <div key={l} className="border-l border-white/15 pl-4">
+              <div
+                key={l}
+                className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 backdrop-blur-sm"
+              >
                 <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/50">{l}</dt>
                 <dd className="mt-1 display-title text-xl text-white sm:text-2xl">{v}</dd>
               </div>
             ))}
           </dl>
         </div>
+
       </header>
 
       <main className="mx-auto flex max-w-none flex-col gap-14 px-5 py-12 sm:px-10">

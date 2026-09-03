@@ -487,3 +487,14 @@
 @media (min-width: 2200px) {
   html { font-size: 20px; }
 }
+
+/* ============================================================
+   Desktop layout guards — wide tables scroll, panels never clip
+   ============================================================ */
+@media (min-width: 768px) {
+  /* Any wrapper holding a wide table gets its own scroll area */
+  [class*="overflow-x-auto"] { overflow-x: auto; }
+  /* Panels containing tables must allow their content box to shrink */
+  main table { width: 100%; }
+  main .min-w-0, main [class*="grid-cols-"] > * { min-width: 0; }
+}
