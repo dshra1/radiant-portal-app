@@ -138,6 +138,15 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      {/* Mobile-only navigation: desktop sidebars are hidden under 768px */}
+      <Link
+        to="/"
+        aria-label="All screens"
+        className="fixed bottom-4 right-4 z-[100] inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg md:hidden"
+      >
+        <span className="material-symbols-outlined text-base leading-none">apps</span>
+        All screens
+      </Link>
     </QueryClientProvider>
   );
 }
