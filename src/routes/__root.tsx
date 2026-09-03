@@ -140,6 +140,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <InstallAppButton />
       {/* Mobile-only navigation: desktop sidebars are hidden under 768px */}
       <Link
         to="/"
