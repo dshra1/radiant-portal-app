@@ -17,6 +17,7 @@ import { Route as BoqRouteImport } from './routes/boq'
 import { Route as BoqEngineRouteImport } from './routes/boq-engine'
 import { Route as BoqUploadRouteImport } from './routes/boq-upload'
 import { Route as BrandBenchmarkRouteImport } from './routes/brand-benchmark'
+import { Route as CapitalLedgerRouteImport } from './routes/capital-ledger'
 import { Route as CommandOperationsRouteImport } from './routes/command-operations'
 import { Route as ContractorsLabourRouteImport } from './routes/contractors-labour'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -86,6 +87,11 @@ const BoqUploadRoute = BoqUploadRouteImport.update({
 const BrandBenchmarkRoute = BrandBenchmarkRouteImport.update({
   id: '/brand-benchmark',
   path: '/brand-benchmark',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CapitalLedgerRoute = CapitalLedgerRouteImport.update({
+  id: '/capital-ledger',
+  path: '/capital-ledger',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommandOperationsRoute = CommandOperationsRouteImport.update({
@@ -248,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
@@ -288,6 +295,7 @@ export interface FileRoutesByTo {
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
@@ -371,6 +380,7 @@ export interface FileRouteTypes {
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
     | '/dashboard'
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
     | '/dashboard'
@@ -451,6 +462,7 @@ export interface FileRouteTypes {
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
     | '/dashboard'
@@ -492,6 +504,7 @@ export interface RootRouteChildren {
   BoqEngineRoute: typeof BoqEngineRoute
   BoqUploadRoute: typeof BoqUploadRoute
   BrandBenchmarkRoute: typeof BrandBenchmarkRoute
+  CapitalLedgerRoute: typeof CapitalLedgerRoute
   CommandOperationsRoute: typeof CommandOperationsRoute
   ContractorsLabourRoute: typeof ContractorsLabourRoute
   DashboardRoute: typeof DashboardRoute
@@ -580,6 +593,13 @@ declare module '@tanstack/react-router' {
       path: '/brand-benchmark'
       fullPath: '/brand-benchmark'
       preLoaderRoute: typeof BrandBenchmarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/capital-ledger': {
+      id: '/capital-ledger'
+      path: '/capital-ledger'
+      fullPath: '/capital-ledger'
+      preLoaderRoute: typeof CapitalLedgerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/command-operations': {
@@ -804,6 +824,7 @@ const rootRouteChildren: RootRouteChildren = {
   BoqEngineRoute: BoqEngineRoute,
   BoqUploadRoute: BoqUploadRoute,
   BrandBenchmarkRoute: BrandBenchmarkRoute,
+  CapitalLedgerRoute: CapitalLedgerRoute,
   CommandOperationsRoute: CommandOperationsRoute,
   ContractorsLabourRoute: ContractorsLabourRoute,
   DashboardRoute: DashboardRoute,
