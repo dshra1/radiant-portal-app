@@ -166,9 +166,9 @@ export function Shell({
         </header>
 
         <div className="border-b border-border bg-gradient-to-b from-primary-soft/50 to-card px-4 pb-5 pt-4 md:px-6">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="display-title text-3xl text-foreground">{title}</h1>
+          <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="display-title truncate text-2xl text-foreground sm:text-3xl">{title}</h1>
               {subtitle && (
                 <p className="mt-0.5 text-[13px] text-muted-foreground">{subtitle}</p>
               )}
@@ -177,7 +177,10 @@ export function Shell({
           </div>
         </div>
 
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="flex-1 p-4 md:p-6">
+          <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+        </main>
+
 
         <nav className="sticky bottom-0 z-20 grid grid-cols-6 border-t border-border bg-card md:hidden">
           {nav.map((item) => {
