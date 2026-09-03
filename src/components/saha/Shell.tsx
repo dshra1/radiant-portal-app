@@ -16,7 +16,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const nav = [
-  { to: "/", label: "Command Center", icon: LayoutDashboard },
+  { to: "/", label: "Saha OS Hub", icon: LayoutDashboard },
+  { to: "/dashboard", label: "Command Center", icon: LayoutDashboard },
   { to: "/projects", label: "Projects", icon: Building2 },
   { to: "/boq", label: "BOQ & Rates", icon: Calculator },
   { to: "/procurement", label: "Procurement", icon: ShoppingCart },
