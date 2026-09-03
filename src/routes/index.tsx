@@ -76,6 +76,47 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
     ],
   },
   {
+    group: "Saha OS Next (from Build It Bright)",
+    items: [
+      {
+        to: "/dashboard",
+        title: "Command Center Dashboard",
+        desc: "Budget burn, spend trend, approval queue and site portfolio.",
+        icon: "dashboard",
+      },
+      {
+        to: "/projects",
+        title: "Projects Portfolio",
+        desc: "Built-up area, slab take-offs, budget consumption and phase progress.",
+        icon: "apartment",
+      },
+      {
+        to: "/boq",
+        title: "BOQ & Rate Intelligence",
+        desc: "Dynamic bill of quantities with live Hyderabad market rates.",
+        icon: "calculate",
+      },
+      {
+        to: "/procurement",
+        title: "Procurement & PO Guardrails",
+        desc: "Multi-vendor POs with market price guardrails and approvals.",
+        icon: "shopping_cart",
+      },
+      {
+        to: "/pour-cards",
+        title: "Daily Pour Cards",
+        desc: "Pre-pour verification gates and concrete volume reconciliation.",
+        icon: "water_drop",
+      },
+      {
+        to: "/qa",
+        title: "AI Visual QA",
+        desc: "Photo-based defect detection with IS code compliance findings.",
+        icon: "visibility",
+      },
+    ],
+  },
+  {
     group: "Procurement & Commercial",
     items: [
       {
