@@ -15,6 +15,7 @@ import { Route as BoqRouteImport } from './routes/boq'
 import { Route as BoqEngineRouteImport } from './routes/boq-engine'
 import { Route as BoqUploadRouteImport } from './routes/boq-upload'
 import { Route as BrandBenchmarkRouteImport } from './routes/brand-benchmark'
+import { Route as ContractorsLabourRouteImport } from './routes/contractors-labour'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ExecutionManualRouteImport } from './routes/execution-manual'
 import { Route as FieldConsoleRouteImport } from './routes/field-console'
@@ -67,6 +68,11 @@ const BoqUploadRoute = BoqUploadRouteImport.update({
 const BrandBenchmarkRoute = BrandBenchmarkRouteImport.update({
   id: '/brand-benchmark',
   path: '/brand-benchmark',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContractorsLabourRoute = ContractorsLabourRouteImport.update({
+  id: '/contractors-labour',
+  path: '/contractors-labour',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByTo {
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/contractors-labour'
     | '/dashboard'
     | '/execution-manual'
     | '/field-console'
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/contractors-labour'
     | '/dashboard'
     | '/execution-manual'
     | '/field-console'
@@ -350,6 +361,7 @@ export interface FileRouteTypes {
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/contractors-labour'
     | '/dashboard'
     | '/execution-manual'
     | '/field-console'
@@ -382,6 +394,7 @@ export interface RootRouteChildren {
   BoqEngineRoute: typeof BoqEngineRoute
   BoqUploadRoute: typeof BoqUploadRoute
   BrandBenchmarkRoute: typeof BrandBenchmarkRoute
+  ContractorsLabourRoute: typeof ContractorsLabourRoute
   DashboardRoute: typeof DashboardRoute
   ExecutionManualRoute: typeof ExecutionManualRoute
   FieldConsoleRoute: typeof FieldConsoleRoute
@@ -449,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/brand-benchmark'
       fullPath: '/brand-benchmark'
       preLoaderRoute: typeof BrandBenchmarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contractors-labour': {
+      id: '/contractors-labour'
+      path: '/contractors-labour'
+      fullPath: '/contractors-labour'
+      preLoaderRoute: typeof ContractorsLabourRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -622,6 +642,7 @@ const rootRouteChildren: RootRouteChildren = {
   BoqEngineRoute: BoqEngineRoute,
   BoqUploadRoute: BoqUploadRoute,
   BrandBenchmarkRoute: BrandBenchmarkRoute,
+  ContractorsLabourRoute: ContractorsLabourRoute,
   DashboardRoute: DashboardRoute,
   ExecutionManualRoute: ExecutionManualRoute,
   FieldConsoleRoute: FieldConsoleRoute,

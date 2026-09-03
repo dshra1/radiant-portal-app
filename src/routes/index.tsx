@@ -209,6 +209,12 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
         icon: "shopping_bag",
       },
       {
+        to: "/contractors-labour",
+        title: "Contractors, Labour & Biometric Attendance",
+        desc: "Trade subcontractors, muster roll, RA bills and biometric gate sync.",
+        icon: "engineering",
+      },
+      {
         to: "/roles-access",
         title: "Roles & Access Activity",
         desc: "Role-based permissions with a live activity trail.",
