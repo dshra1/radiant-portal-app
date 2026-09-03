@@ -20,3 +20,4 @@
 - [ ] Visual refresh: colored headings, richer accent palette, decluttered hub (fewer visible modules, search + grouped sections) per user reference screenshots
 - [ ] Add persistent home button in top header so any screen can navigate back to `/`
 - [ ] Clarify and, if requested, enable Lovable Cloud (database/storage/auth) and Lovable AI integration
+- [ ] Backend decision: user has GCP project `saha-l` (project number 428361199102, account sahadeveloperz@gmail.com) — decide Firebase (Firestore/Storage) vs Lovable Cloud; needs service account key if Firebase
