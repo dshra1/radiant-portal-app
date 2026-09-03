@@ -26,7 +26,9 @@ import { Route as FieldConsoleRouteImport } from './routes/field-console'
 import { Route as FinancialForecastRouteImport } from './routes/financial-forecast'
 import { Route as FinancialIngestionRouteImport } from './routes/financial-ingestion'
 import { Route as InventoryControlRouteImport } from './routes/inventory-control'
+import { Route as LandownersInvestmentRouteImport } from './routes/landowners-investment'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
+import { Route as PmcScopeRouteImport } from './routes/pmc-scope'
 import { Route as PoCreateRouteImport } from './routes/po-create'
 import { Route as PourCardsRouteImport } from './routes/pour-cards'
 import { Route as PriceIntelligenceRouteImport } from './routes/price-intelligence'
@@ -131,9 +133,19 @@ const InventoryControlRoute = InventoryControlRouteImport.update({
   path: '/inventory-control',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LandownersInvestmentRoute = LandownersInvestmentRouteImport.update({
+  id: '/landowners-investment',
+  path: '/landowners-investment',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MediaUploadStudioRoute = MediaUploadStudioRouteImport.update({
   id: '/media-upload-studio',
   path: '/media-upload-studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PmcScopeRoute = PmcScopeRouteImport.update({
+  id: '/pmc-scope',
+  path: '/pmc-scope',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoCreateRoute = PoCreateRouteImport.update({
@@ -245,7 +257,9 @@ export interface FileRoutesByFullPath {
   '/financial-forecast': typeof FinancialForecastRoute
   '/financial-ingestion': typeof FinancialIngestionRoute
   '/inventory-control': typeof InventoryControlRoute
+  '/landowners-investment': typeof LandownersInvestmentRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
+  '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
@@ -283,7 +297,9 @@ export interface FileRoutesByTo {
   '/financial-forecast': typeof FinancialForecastRoute
   '/financial-ingestion': typeof FinancialIngestionRoute
   '/inventory-control': typeof InventoryControlRoute
+  '/landowners-investment': typeof LandownersInvestmentRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
+  '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
@@ -322,7 +338,9 @@ export interface FileRoutesById {
   '/financial-forecast': typeof FinancialForecastRoute
   '/financial-ingestion': typeof FinancialIngestionRoute
   '/inventory-control': typeof InventoryControlRoute
+  '/landowners-investment': typeof LandownersInvestmentRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
+  '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
@@ -362,7 +380,9 @@ export interface FileRouteTypes {
     | '/financial-forecast'
     | '/financial-ingestion'
     | '/inventory-control'
+    | '/landowners-investment'
     | '/media-upload-studio'
+    | '/pmc-scope'
     | '/po-create'
     | '/pour-cards'
     | '/price-intelligence'
@@ -400,7 +420,9 @@ export interface FileRouteTypes {
     | '/financial-forecast'
     | '/financial-ingestion'
     | '/inventory-control'
+    | '/landowners-investment'
     | '/media-upload-studio'
+    | '/pmc-scope'
     | '/po-create'
     | '/pour-cards'
     | '/price-intelligence'
@@ -438,7 +460,9 @@ export interface FileRouteTypes {
     | '/financial-forecast'
     | '/financial-ingestion'
     | '/inventory-control'
+    | '/landowners-investment'
     | '/media-upload-studio'
+    | '/pmc-scope'
     | '/po-create'
     | '/pour-cards'
     | '/price-intelligence'
@@ -477,7 +501,9 @@ export interface RootRouteChildren {
   FinancialForecastRoute: typeof FinancialForecastRoute
   FinancialIngestionRoute: typeof FinancialIngestionRoute
   InventoryControlRoute: typeof InventoryControlRoute
+  LandownersInvestmentRoute: typeof LandownersInvestmentRoute
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
+  PmcScopeRoute: typeof PmcScopeRoute
   PoCreateRoute: typeof PoCreateRoute
   PourCardsRoute: typeof PourCardsRoute
   PriceIntelligenceRoute: typeof PriceIntelligenceRoute
@@ -619,11 +645,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventoryControlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/landowners-investment': {
+      id: '/landowners-investment'
+      path: '/landowners-investment'
+      fullPath: '/landowners-investment'
+      preLoaderRoute: typeof LandownersInvestmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/media-upload-studio': {
       id: '/media-upload-studio'
       path: '/media-upload-studio'
       fullPath: '/media-upload-studio'
       preLoaderRoute: typeof MediaUploadStudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pmc-scope': {
+      id: '/pmc-scope'
+      path: '/pmc-scope'
+      fullPath: '/pmc-scope'
+      preLoaderRoute: typeof PmcScopeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/po-create': {
@@ -773,7 +813,9 @@ const rootRouteChildren: RootRouteChildren = {
   FinancialForecastRoute: FinancialForecastRoute,
   FinancialIngestionRoute: FinancialIngestionRoute,
   InventoryControlRoute: InventoryControlRoute,
+  LandownersInvestmentRoute: LandownersInvestmentRoute,
   MediaUploadStudioRoute: MediaUploadStudioRoute,
+  PmcScopeRoute: PmcScopeRoute,
   PoCreateRoute: PoCreateRoute,
   PourCardsRoute: PourCardsRoute,
   PriceIntelligenceRoute: PriceIntelligenceRoute,
