@@ -209,6 +209,12 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
         icon: "shopping_bag",
       },
       {
+        to: "/billing-expenditure",
+        title: "Billing & Expenditure Control",
+        desc: "Vendor bill OCR, WhatsApp bill feed, approvals and expenditure tracking.",
+        icon: "request_quote",
+      },
+      {
         to: "/contractors-labour",
         title: "Contractors, Labour & Biometric Attendance",
         desc: "Trade subcontractors, muster roll, RA bills and biometric gate sync.",

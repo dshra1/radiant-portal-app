@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BillingExpenditureRouteImport } from './routes/billing-expenditure'
 import { Route as BillsPaymentsRouteImport } from './routes/bills-payments'
 import { Route as BoqRouteImport } from './routes/boq'
 import { Route as BoqEngineRouteImport } from './routes/boq-engine'
@@ -43,6 +44,11 @@ import { Route as VendorLifecycleRouteImport } from './routes/vendor-lifecycle'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingExpenditureRoute = BillingExpenditureRouteImport.update({
+  id: '/billing-expenditure',
+  path: '/billing-expenditure',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BillsPaymentsRoute = BillsPaymentsRouteImport.update({
@@ -193,6 +199,7 @@ const VendorLifecycleRoute = VendorLifecycleRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
@@ -258,6 +266,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
@@ -292,6 +301,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
     | '/boq-engine'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
     | '/boq-engine'
@@ -356,6 +367,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
     | '/boq-engine'
@@ -389,6 +401,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BillingExpenditureRoute: typeof BillingExpenditureRoute
   BillsPaymentsRoute: typeof BillsPaymentsRoute
   BoqRoute: typeof BoqRoute
   BoqEngineRoute: typeof BoqEngineRoute
@@ -427,6 +440,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing-expenditure': {
+      id: '/billing-expenditure'
+      path: '/billing-expenditure'
+      fullPath: '/billing-expenditure'
+      preLoaderRoute: typeof BillingExpenditureRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bills-payments': {
@@ -637,6 +657,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BillingExpenditureRoute: BillingExpenditureRoute,
   BillsPaymentsRoute: BillsPaymentsRoute,
   BoqRoute: BoqRoute,
   BoqEngineRoute: BoqEngineRoute,

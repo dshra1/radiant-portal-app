@@ -9,3 +9,4 @@
 - [x] Import Purchasing & Vendor Command Center (/purchasing-center)
 
 - [x] Import Contractors, Labour & Biometric Attendance screen (/contractors-labour)
+- [x] Import Billing & Expenditure screen (/billing-expenditure)
