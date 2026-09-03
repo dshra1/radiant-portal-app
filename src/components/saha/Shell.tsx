@@ -96,6 +96,13 @@ export function Shell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-13 items-center gap-3 border-b border-border bg-card/80 px-4 py-2.5 backdrop-blur-md">
+          <Link
+            to="/"
+            aria-label="Go home"
+            className="inline-flex items-center justify-center rounded-md bg-primary/10 p-2 text-primary transition-colors hover:bg-primary/20"
+          >
+            <Home className="size-4" />
+          </Link>
           <div className="hidden items-center gap-2 rounded border border-input bg-background px-2.5 py-1.5 sm:flex">
             <Search className="size-3.5 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Search POs, BOQ codes, grids…</span>
