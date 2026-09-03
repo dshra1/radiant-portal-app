@@ -238,6 +238,25 @@ const GROUPS: { group: string; items: { to: string; title: string; desc: string;
         desc: "Role-based permissions with a live activity trail.",
         icon: "admin_panel_settings",
       },
+      {
+        to: "/command-operations",
+        title: "Command Operations Hub",
+        desc: "Real-time telemetry, AI risk feed and autonomous site supervision.",
+        icon: "bolt",
+      },
+      {
+        to: "/project-controls",
+        title: "Project Controls Cockpit",
+        desc: "Earned value metrics, baseline tracker, labour/fleet analytics and change orders.",
+        icon: "monitoring",
+      },
+      {
+        to: "/ai-programme",
+        title: "AI Project Programme Scheduler",
+        desc: "Autonomous timeline simulation from BOQ scale, lead times and site constraints.",
+        icon: "auto_graph",
+      },
+
 
 
 
