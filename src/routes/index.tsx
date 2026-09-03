@@ -188,7 +188,7 @@ function Index() {
   return (
     <div className="m3 min-h-screen bg-background text-foreground">
       <header className="hero-surface px-5 py-12 sm:px-10 sm:py-16">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-[1500px]">
           <img
             src={sahaLogo.url}
             alt="Saha Developers"
@@ -237,7 +237,7 @@ function Index() {
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-6xl flex-col gap-14 px-5 py-12 sm:px-10">
+      <main className="mx-auto flex max-w-[1500px] flex-col gap-14 px-5 py-12 sm:px-10">
         {query.trim() ? (
           <section className="flex flex-col gap-5">
             <h2 className="display-title text-2xl">
