@@ -446,7 +446,7 @@
 
 @media (max-width: 767px) {
   /* Taller wrapped headers need extra offset for fixed-header pages */
-  main[class*="pt-16"], main[class*="pt-20"] { padding-top: 7.5rem !important; }
+  main[class*="pt-16"], main[class*="pt-20"] { padding-top: 9.5rem !important; }
   /* Search fields get their own row instead of collapsing */
   header [class*="max-w-xl"], header [class*="flex-1"] { flex-basis: 100% !important; margin-left: 0 !important; margin-right: 0 !important; max-width: 100% !important; }
 }
