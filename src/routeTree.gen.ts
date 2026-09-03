@@ -18,6 +18,7 @@ import { Route as BoqUploadRouteImport } from './routes/boq-upload'
 import { Route as BrandBenchmarkRouteImport } from './routes/brand-benchmark'
 import { Route as ContractorsLabourRouteImport } from './routes/contractors-labour'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DrawingDecipherRouteImport } from './routes/drawing-decipher'
 import { Route as ExecutionManualRouteImport } from './routes/execution-manual'
 import { Route as FieldConsoleRouteImport } from './routes/field-console'
 import { Route as FinancialForecastRouteImport } from './routes/financial-forecast'
@@ -35,6 +36,7 @@ import { Route as PurchasingCenterRouteImport } from './routes/purchasing-center
 import { Route as QaRouteImport } from './routes/qa'
 import { Route as QaInspectionRouteImport } from './routes/qa-inspection'
 import { Route as RolesAccessRouteImport } from './routes/roles-access'
+import { Route as ScopeBriefRouteImport } from './routes/scope-brief'
 import { Route as SiteExecutionRouteImport } from './routes/site-execution'
 import { Route as SiteMediaRouteImport } from './routes/site-media'
 import { Route as TenderComparisonRouteImport } from './routes/tender-comparison'
@@ -84,6 +86,11 @@ const ContractorsLabourRoute = ContractorsLabourRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DrawingDecipherRoute = DrawingDecipherRouteImport.update({
+  id: '/drawing-decipher',
+  path: '/drawing-decipher',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExecutionManualRoute = ExecutionManualRouteImport.update({
@@ -171,6 +178,11 @@ const RolesAccessRoute = RolesAccessRouteImport.update({
   path: '/roles-access',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ScopeBriefRoute = ScopeBriefRouteImport.update({
+  id: '/scope-brief',
+  path: '/scope-brief',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SiteExecutionRoute = SiteExecutionRouteImport.update({
   id: '/site-execution',
   path: '/site-execution',
@@ -207,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/brand-benchmark': typeof BrandBenchmarkRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
+  '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
   '/financial-forecast': typeof FinancialForecastRoute
@@ -224,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
   '/roles-access': typeof RolesAccessRoute
+  '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
   '/site-media': typeof SiteMediaRoute
   '/tender-comparison': typeof TenderComparisonRoute
@@ -240,6 +254,7 @@ export interface FileRoutesByTo {
   '/brand-benchmark': typeof BrandBenchmarkRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
+  '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
   '/financial-forecast': typeof FinancialForecastRoute
@@ -257,6 +272,7 @@ export interface FileRoutesByTo {
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
   '/roles-access': typeof RolesAccessRoute
+  '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
   '/site-media': typeof SiteMediaRoute
   '/tender-comparison': typeof TenderComparisonRoute
@@ -274,6 +290,7 @@ export interface FileRoutesById {
   '/brand-benchmark': typeof BrandBenchmarkRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/dashboard': typeof DashboardRoute
+  '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
   '/financial-forecast': typeof FinancialForecastRoute
@@ -291,6 +308,7 @@ export interface FileRoutesById {
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
   '/roles-access': typeof RolesAccessRoute
+  '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
   '/site-media': typeof SiteMediaRoute
   '/tender-comparison': typeof TenderComparisonRoute
@@ -309,6 +327,7 @@ export interface FileRouteTypes {
     | '/brand-benchmark'
     | '/contractors-labour'
     | '/dashboard'
+    | '/drawing-decipher'
     | '/execution-manual'
     | '/field-console'
     | '/financial-forecast'
@@ -326,6 +345,7 @@ export interface FileRouteTypes {
     | '/qa'
     | '/qa-inspection'
     | '/roles-access'
+    | '/scope-brief'
     | '/site-execution'
     | '/site-media'
     | '/tender-comparison'
@@ -342,6 +362,7 @@ export interface FileRouteTypes {
     | '/brand-benchmark'
     | '/contractors-labour'
     | '/dashboard'
+    | '/drawing-decipher'
     | '/execution-manual'
     | '/field-console'
     | '/financial-forecast'
@@ -359,6 +380,7 @@ export interface FileRouteTypes {
     | '/qa'
     | '/qa-inspection'
     | '/roles-access'
+    | '/scope-brief'
     | '/site-execution'
     | '/site-media'
     | '/tender-comparison'
@@ -375,6 +397,7 @@ export interface FileRouteTypes {
     | '/brand-benchmark'
     | '/contractors-labour'
     | '/dashboard'
+    | '/drawing-decipher'
     | '/execution-manual'
     | '/field-console'
     | '/financial-forecast'
@@ -392,6 +415,7 @@ export interface FileRouteTypes {
     | '/qa'
     | '/qa-inspection'
     | '/roles-access'
+    | '/scope-brief'
     | '/site-execution'
     | '/site-media'
     | '/tender-comparison'
@@ -409,6 +433,7 @@ export interface RootRouteChildren {
   BrandBenchmarkRoute: typeof BrandBenchmarkRoute
   ContractorsLabourRoute: typeof ContractorsLabourRoute
   DashboardRoute: typeof DashboardRoute
+  DrawingDecipherRoute: typeof DrawingDecipherRoute
   ExecutionManualRoute: typeof ExecutionManualRoute
   FieldConsoleRoute: typeof FieldConsoleRoute
   FinancialForecastRoute: typeof FinancialForecastRoute
@@ -426,6 +451,7 @@ export interface RootRouteChildren {
   QaRoute: typeof QaRoute
   QaInspectionRoute: typeof QaInspectionRoute
   RolesAccessRoute: typeof RolesAccessRoute
+  ScopeBriefRoute: typeof ScopeBriefRoute
   SiteExecutionRoute: typeof SiteExecutionRoute
   SiteMediaRoute: typeof SiteMediaRoute
   TenderComparisonRoute: typeof TenderComparisonRoute
@@ -496,6 +522,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/drawing-decipher': {
+      id: '/drawing-decipher'
+      path: '/drawing-decipher'
+      fullPath: '/drawing-decipher'
+      preLoaderRoute: typeof DrawingDecipherRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/execution-manual': {
@@ -617,6 +650,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RolesAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/scope-brief': {
+      id: '/scope-brief'
+      path: '/scope-brief'
+      fullPath: '/scope-brief'
+      preLoaderRoute: typeof ScopeBriefRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/site-execution': {
       id: '/site-execution'
       path: '/site-execution'
@@ -665,6 +705,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrandBenchmarkRoute: BrandBenchmarkRoute,
   ContractorsLabourRoute: ContractorsLabourRoute,
   DashboardRoute: DashboardRoute,
+  DrawingDecipherRoute: DrawingDecipherRoute,
   ExecutionManualRoute: ExecutionManualRoute,
   FieldConsoleRoute: FieldConsoleRoute,
   FinancialForecastRoute: FinancialForecastRoute,
@@ -682,6 +723,7 @@ const rootRouteChildren: RootRouteChildren = {
   QaRoute: QaRoute,
   QaInspectionRoute: QaInspectionRoute,
   RolesAccessRoute: RolesAccessRoute,
+  ScopeBriefRoute: ScopeBriefRoute,
   SiteExecutionRoute: SiteExecutionRoute,
   SiteMediaRoute: SiteMediaRoute,
   TenderComparisonRoute: TenderComparisonRoute,
