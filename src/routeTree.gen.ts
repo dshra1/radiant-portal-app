@@ -10,33 +10,193 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BoqEngineRouteImport } from './routes/boq-engine'
+import { Route as BoqUploadRouteImport } from './routes/boq-upload'
+import { Route as BrandBenchmarkRouteImport } from './routes/brand-benchmark'
+import { Route as ExecutionManualRouteImport } from './routes/execution-manual'
+import { Route as PoCreateRouteImport } from './routes/po-create'
+import { Route as PriceIntelligenceRouteImport } from './routes/price-intelligence'
+import { Route as ProjectsSetupRouteImport } from './routes/projects-setup'
+import { Route as PurchaseOrdersRouteImport } from './routes/purchase-orders'
+import { Route as QaInspectionRouteImport } from './routes/qa-inspection'
+import { Route as SiteExecutionRouteImport } from './routes/site-execution'
+import { Route as SiteMediaRouteImport } from './routes/site-media'
+import { Route as TenderComparisonRouteImport } from './routes/tender-comparison'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BoqEngineRoute = BoqEngineRouteImport.update({
+  id: '/boq-engine',
+  path: '/boq-engine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BoqUploadRoute = BoqUploadRouteImport.update({
+  id: '/boq-upload',
+  path: '/boq-upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrandBenchmarkRoute = BrandBenchmarkRouteImport.update({
+  id: '/brand-benchmark',
+  path: '/brand-benchmark',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExecutionManualRoute = ExecutionManualRouteImport.update({
+  id: '/execution-manual',
+  path: '/execution-manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PoCreateRoute = PoCreateRouteImport.update({
+  id: '/po-create',
+  path: '/po-create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PriceIntelligenceRoute = PriceIntelligenceRouteImport.update({
+  id: '/price-intelligence',
+  path: '/price-intelligence',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsSetupRoute = ProjectsSetupRouteImport.update({
+  id: '/projects-setup',
+  path: '/projects-setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PurchaseOrdersRoute = PurchaseOrdersRouteImport.update({
+  id: '/purchase-orders',
+  path: '/purchase-orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QaInspectionRoute = QaInspectionRouteImport.update({
+  id: '/qa-inspection',
+  path: '/qa-inspection',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SiteExecutionRoute = SiteExecutionRouteImport.update({
+  id: '/site-execution',
+  path: '/site-execution',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SiteMediaRoute = SiteMediaRouteImport.update({
+  id: '/site-media',
+  path: '/site-media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenderComparisonRoute = TenderComparisonRouteImport.update({
+  id: '/tender-comparison',
+  path: '/tender-comparison',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/boq-engine': typeof BoqEngineRoute
+  '/boq-upload': typeof BoqUploadRoute
+  '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/execution-manual': typeof ExecutionManualRoute
+  '/po-create': typeof PoCreateRoute
+  '/price-intelligence': typeof PriceIntelligenceRoute
+  '/projects-setup': typeof ProjectsSetupRoute
+  '/purchase-orders': typeof PurchaseOrdersRoute
+  '/qa-inspection': typeof QaInspectionRoute
+  '/site-execution': typeof SiteExecutionRoute
+  '/site-media': typeof SiteMediaRoute
+  '/tender-comparison': typeof TenderComparisonRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/boq-engine': typeof BoqEngineRoute
+  '/boq-upload': typeof BoqUploadRoute
+  '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/execution-manual': typeof ExecutionManualRoute
+  '/po-create': typeof PoCreateRoute
+  '/price-intelligence': typeof PriceIntelligenceRoute
+  '/projects-setup': typeof ProjectsSetupRoute
+  '/purchase-orders': typeof PurchaseOrdersRoute
+  '/qa-inspection': typeof QaInspectionRoute
+  '/site-execution': typeof SiteExecutionRoute
+  '/site-media': typeof SiteMediaRoute
+  '/tender-comparison': typeof TenderComparisonRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/boq-engine': typeof BoqEngineRoute
+  '/boq-upload': typeof BoqUploadRoute
+  '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/execution-manual': typeof ExecutionManualRoute
+  '/po-create': typeof PoCreateRoute
+  '/price-intelligence': typeof PriceIntelligenceRoute
+  '/projects-setup': typeof ProjectsSetupRoute
+  '/purchase-orders': typeof PurchaseOrdersRoute
+  '/qa-inspection': typeof QaInspectionRoute
+  '/site-execution': typeof SiteExecutionRoute
+  '/site-media': typeof SiteMediaRoute
+  '/tender-comparison': typeof TenderComparisonRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/boq-engine'
+    | '/boq-upload'
+    | '/brand-benchmark'
+    | '/execution-manual'
+    | '/po-create'
+    | '/price-intelligence'
+    | '/projects-setup'
+    | '/purchase-orders'
+    | '/qa-inspection'
+    | '/site-execution'
+    | '/site-media'
+    | '/tender-comparison'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/boq-engine'
+    | '/boq-upload'
+    | '/brand-benchmark'
+    | '/execution-manual'
+    | '/po-create'
+    | '/price-intelligence'
+    | '/projects-setup'
+    | '/purchase-orders'
+    | '/qa-inspection'
+    | '/site-execution'
+    | '/site-media'
+    | '/tender-comparison'
+  id:
+    | '__root__'
+    | '/'
+    | '/boq-engine'
+    | '/boq-upload'
+    | '/brand-benchmark'
+    | '/execution-manual'
+    | '/po-create'
+    | '/price-intelligence'
+    | '/projects-setup'
+    | '/purchase-orders'
+    | '/qa-inspection'
+    | '/site-execution'
+    | '/site-media'
+    | '/tender-comparison'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BoqEngineRoute: typeof BoqEngineRoute
+  BoqUploadRoute: typeof BoqUploadRoute
+  BrandBenchmarkRoute: typeof BrandBenchmarkRoute
+  ExecutionManualRoute: typeof ExecutionManualRoute
+  PoCreateRoute: typeof PoCreateRoute
+  PriceIntelligenceRoute: typeof PriceIntelligenceRoute
+  ProjectsSetupRoute: typeof ProjectsSetupRoute
+  PurchaseOrdersRoute: typeof PurchaseOrdersRoute
+  QaInspectionRoute: typeof QaInspectionRoute
+  SiteExecutionRoute: typeof SiteExecutionRoute
+  SiteMediaRoute: typeof SiteMediaRoute
+  TenderComparisonRoute: typeof TenderComparisonRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +208,107 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/boq-engine': {
+      id: '/boq-engine'
+      path: '/boq-engine'
+      fullPath: '/boq-engine'
+      preLoaderRoute: typeof BoqEngineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/boq-upload': {
+      id: '/boq-upload'
+      path: '/boq-upload'
+      fullPath: '/boq-upload'
+      preLoaderRoute: typeof BoqUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brand-benchmark': {
+      id: '/brand-benchmark'
+      path: '/brand-benchmark'
+      fullPath: '/brand-benchmark'
+      preLoaderRoute: typeof BrandBenchmarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/execution-manual': {
+      id: '/execution-manual'
+      path: '/execution-manual'
+      fullPath: '/execution-manual'
+      preLoaderRoute: typeof ExecutionManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/po-create': {
+      id: '/po-create'
+      path: '/po-create'
+      fullPath: '/po-create'
+      preLoaderRoute: typeof PoCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/price-intelligence': {
+      id: '/price-intelligence'
+      path: '/price-intelligence'
+      fullPath: '/price-intelligence'
+      preLoaderRoute: typeof PriceIntelligenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects-setup': {
+      id: '/projects-setup'
+      path: '/projects-setup'
+      fullPath: '/projects-setup'
+      preLoaderRoute: typeof ProjectsSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/purchase-orders': {
+      id: '/purchase-orders'
+      path: '/purchase-orders'
+      fullPath: '/purchase-orders'
+      preLoaderRoute: typeof PurchaseOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qa-inspection': {
+      id: '/qa-inspection'
+      path: '/qa-inspection'
+      fullPath: '/qa-inspection'
+      preLoaderRoute: typeof QaInspectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/site-execution': {
+      id: '/site-execution'
+      path: '/site-execution'
+      fullPath: '/site-execution'
+      preLoaderRoute: typeof SiteExecutionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/site-media': {
+      id: '/site-media'
+      path: '/site-media'
+      fullPath: '/site-media'
+      preLoaderRoute: typeof SiteMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tender-comparison': {
+      id: '/tender-comparison'
+      path: '/tender-comparison'
+      fullPath: '/tender-comparison'
+      preLoaderRoute: typeof TenderComparisonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BoqEngineRoute: BoqEngineRoute,
+  BoqUploadRoute: BoqUploadRoute,
+  BrandBenchmarkRoute: BrandBenchmarkRoute,
+  ExecutionManualRoute: ExecutionManualRoute,
+  PoCreateRoute: PoCreateRoute,
+  PriceIntelligenceRoute: PriceIntelligenceRoute,
+  ProjectsSetupRoute: ProjectsSetupRoute,
+  PurchaseOrdersRoute: PurchaseOrdersRoute,
+  QaInspectionRoute: QaInspectionRoute,
+  SiteExecutionRoute: SiteExecutionRoute,
+  SiteMediaRoute: SiteMediaRoute,
+  TenderComparisonRoute: TenderComparisonRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
