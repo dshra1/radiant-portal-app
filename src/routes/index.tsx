@@ -1,24 +1,182 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Saha OS — Civil Project Lifecycle Command Center" },
+      {
+        name: "description",
+        content:
+          "Command center for Cyber Enclave Phase 2: BOQ ingestion, stage execution, QA/QC audits, price intelligence and procurement guardrails.",
+      },
+      { property: "og:title", content: "Saha OS — Civil Project Lifecycle Command Center" },
+      {
+        property: "og:description",
+        content:
+          "BOQ ingestion, stage execution, QA/QC audits, price intelligence and procurement guardrails in one suite.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
+const GROUPS: { group: string; items: { to: string; title: string; desc: string; icon: string }[] }[] = [
+  {
+    group: "Lifecycle Core",
+    items: [
+      {
+        to: "/projects-setup",
+        title: "Project Setup & Geometry Wizard",
+        desc: "Project identity, floor geometry and CAD drawing ingestion.",
+        icon: "domain",
+      },
+      {
+        to: "/boq-upload",
+        title: "BOQ Excel Upload Studio",
+        desc: "Ingest spreadsheets with column auto-mapping and IS 456 unit validation.",
+        icon: "upload_file",
+      },
+      {
+        to: "/boq-engine",
+        title: "BOQ Master Engine",
+        desc: "Line-item value engineering with spec compliance scoring.",
+        icon: "receipt_long",
+      },
+      {
+        to: "/execution-manual",
+        title: "Stage-Wise Execution Manual",
+        desc: "14-stage SOP, QA hold gates and zero-tolerance guardrails.",
+        icon: "account_tree",
+      },
+    ],
+  },
+  {
+    group: "Site & Operations",
+    items: [
+      {
+        to: "/site-execution",
+        title: "Site Execution & Planning Hub",
+        desc: "Stage progress, field roster and material runway.",
+        icon: "foundation",
+      },
+      {
+        to: "/site-media",
+        title: "Site Media & Upload Ledger",
+        desc: "Geo-tagged imagery, AI pour verification and drone orthos.",
+        icon: "photo_library",
+      },
+      {
+        to: "/qa-inspection",
+        title: "AI Visual QA/QC Audit",
+        desc: "Edge-inference compliance scoring and defect ledger.",
+        icon: "verified",
+      },
+    ],
+  },
+  {
+    group: "Procurement & Commercial",
+    items: [
+      {
+        to: "/price-intelligence",
+        title: "Price Intelligence",
+        desc: "Live mandi-indexed brand matrices for rebar, cement and tiles.",
+        icon: "insights",
+      },
+      {
+        to: "/brand-benchmark",
+        title: "Brand Equivalency Matrix",
+        desc: "Arbitrage margins, vetted mills and auto-substitution.",
+        icon: "layers",
+      },
+      {
+        to: "/tender-comparison",
+        title: "Tender Comparison Studio",
+        desc: "L-1/L-2/L-3 unit rates, logistics parity and compliance.",
+        icon: "gavel",
+      },
+      {
+        to: "/po-create",
+        title: "PO Creation Engine",
+        desc: "Value-engineered drafting with BIS spec verification.",
+        icon: "add_circle",
+      },
+      {
+        to: "/purchase-orders",
+        title: "PO & Guardrail Hub",
+        desc: "Price-variance guardrails, approvals and ERP export.",
+        icon: "shield",
+      },
+    ],
+  },
+];
+
 function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="m3 min-h-screen bg-surface text-on-surface font-body-md text-body-md">
+      <header className="bg-inverse-surface text-inverse-on-surface px-space-2xl py-space-2xl">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex items-center gap-space-xs">
+            <span className="h-2 w-2 rounded-full bg-primary-fixed-dim animate-pulse" />
+            <span className="font-label-sm text-label-sm uppercase tracking-wider text-outline-variant">
+              Civil Platform Engine v3.4.0 • 99.8% Biometric &amp; IoT Sync
+            </span>
+          </div>
+          <h1 className="mt-space-md font-display-lg text-display-lg tracking-tight">Saha OS</h1>
+          <p className="mt-space-xs font-body-lg text-body-lg text-secondary-fixed-dim max-w-2xl">
+            Project lifecycle suite for Cyber Enclave - Phase 2, Plot 44/A, Madhapur, Hyderabad.
+            BOQ ingestion, stage execution, QA/QC governance and procurement intelligence.
+          </p>
+          <div className="mt-space-lg flex flex-wrap gap-space-sm">
+            <Link
+              to="/site-execution"
+              className="flex items-center gap-space-xs px-space-base py-space-sm rounded bg-primary text-on-primary font-title-md text-title-md hover:bg-primary-container transition-colors"
+            >
+              <span className="material-symbols-outlined text-space-base leading-none">foundation</span>
+              Open Site Execution
+            </Link>
+            <Link
+              to="/boq-engine"
+              className="flex items-center gap-space-xs px-space-base py-space-sm rounded bg-surface-variant/20 text-inverse-on-surface font-title-md text-title-md hover:bg-surface-variant/30 transition-colors"
+            >
+              <span className="material-symbols-outlined text-space-base leading-none">receipt_long</span>
+              BOQ Master Engine
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-space-2xl py-space-2xl flex flex-col gap-space-2xl">
+        {GROUPS.map((g) => (
+          <section key={g.group} className="flex flex-col gap-space-md">
+            <h2 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant">
+              {g.group}
+            </h2>
+            <div className="grid gap-space-base sm:grid-cols-2 lg:grid-cols-3">
+              {g.items.map((it) => (
+                <Link
+                  key={it.to}
+                  to={it.to}
+                  className="group flex flex-col gap-space-sm p-space-base rounded-xl bg-surface-container-lowest border border-surface-container-high hover:border-primary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]"
+                >
+                  <span className="material-symbols-outlined text-primary text-space-lg leading-none">
+                    {it.icon}
+                  </span>
+                  <span className="font-headline-sm text-headline-sm text-on-surface">{it.title}</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">{it.desc}</span>
+                  <span className="mt-auto flex items-center gap-space-2xs font-label-md text-label-md text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                    Open
+                    <span className="material-symbols-outlined text-space-base leading-none">
+                      chevron_right
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ))}
+      </main>
     </div>
   );
 }
