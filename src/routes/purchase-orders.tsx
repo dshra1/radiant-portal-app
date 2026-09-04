@@ -140,11 +140,11 @@ function Page() {
   };
 
   return (
-    <Shell title="Purchase Order Register | Saha OS">
+    <Shell title="Purchase Orders" subtitle="Register, PM approvals and printable GST-format POs">
       <div className="mx-auto flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6 no-print">
         <header className="panel flex flex-wrap items-end justify-between gap-3 p-4">
           <div>
-            <h1 className="display-title">PURCHASE ORDERS</h1>
+            <p className="section-title text-primary">REGISTER</p>
             <p className="text-sm text-muted-foreground">
               {counts.draft} draft · {counts.pending} awaiting PM approval · {counts.approved}{" "}
               approved

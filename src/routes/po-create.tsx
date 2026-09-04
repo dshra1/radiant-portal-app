@@ -214,14 +214,13 @@ function Page() {
   });
 
   return (
-    <Shell title="Raise Purchase Order | Saha OS">
+    <Shell title="Raise Purchase Order" subtitle="GST-format purchase order routed to the PM for approval">
       <div className="mx-auto flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
         <header className="panel flex flex-wrap items-end justify-between gap-3 p-4">
           <div>
-            <h1 className="display-title">RAISE PURCHASE ORDER</h1>
+            <p className="section-title text-primary">PO NUMBER</p>
             <p className="text-sm text-muted-foreground">
-              {poNumber ? `Next number: ${poNumber}` : "Generating PO number…"} · GST-compliant
-              format · routes to PM for approval
+              {poNumber ? poNumber : "Generating PO number…"} — assigned when you save
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
