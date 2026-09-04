@@ -33,7 +33,16 @@
 - [ ] Enforce privileges server-side (user roles table + RLS) once auth is added
 - [x] Unified shared sidebar across all pages
 
+## New project intake (single form, no duplicate screens)
+- [x] Capture timeline drivers (start/handover, working days, slab cycle, finishing per floor, procurement lead)
+- [x] Capture material BOQ specs (concrete grade, steel Fe500/Fe500D/Fe550D, AAC vs red/fly-ash brick, flooring, paint, plumbing, electrical, doors/windows, sanitaryware quality: Standard/Premium/Luxury)
+- [x] Capture workflow inputs (contract type, workflow template)
+- [x] Google Maps location: latitude, longitude, maps link + "View on Google Maps"
+- [x] Staffing (total staff, engineers, labour), landowner & investor details, company + bank details (only last 4 digits stored)
+- [x] Floor plan drawing uploads (private cloud storage, signed links)
+
 ## BOQ
+
 - [x] Upload + Export per BOQ category/stage
 - [x] Project Setup: distinguish user-entry fields from calculated/app-suggested results, with instant recalculation and working draft/generate actions
 

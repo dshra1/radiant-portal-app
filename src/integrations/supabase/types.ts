@@ -105,58 +105,175 @@ export type Database = {
       }
       site_projects: {
         Row: {
+          bank_account_last4: string
+          bank_account_name: string
+          bank_ifsc: string
+          bank_name: string
+          blockwork_type: string
           cellar_floors: number
+          cement_bags_per_sft: number
+          company_gstin: string
+          company_name: string
+          concrete_grade: string
+          contract_type: string
           created_at: string
+          doors_windows_spec: string
+          drawings: Json
+          electrical_spec: string
+          engineers_count: number
+          finishing_days_per_floor: number
+          finishing_spec: string
+          flooring_spec: string
           health: string
           id: string
+          investor_amount: number
+          investor_contact: string
+          investor_name: string
+          labour_count: number
+          landowner_contact: string
+          landowner_name: string
+          landowner_share_pct: number
+          latitude: number | null
           location: string
+          longitude: number | null
+          map_link: string
           name: string
+          paint_spec: string
           phases: Json
+          plumbing_spec: string
+          procurement_lead_days: number
+          sanitaryware_spec: string
           single_floor_slab_sft: number
+          slab_cycle_days: number
           spend: number
+          start_date: string | null
+          steel_grade: string
+          steel_ratio_kg_per_sft: number
           stilt_floors: number
           target_budget: number
+          target_handover_date: string | null
           total_built_up_sft: number
           total_slab_sft: number
+          total_staff: number
           type: string
           typical_floors: number
           updated_at: string
+          workflow_template: string
+          working_days_per_week: number
         }
         Insert: {
+          bank_account_last4?: string
+          bank_account_name?: string
+          bank_ifsc?: string
+          bank_name?: string
+          blockwork_type?: string
           cellar_floors?: number
+          cement_bags_per_sft?: number
+          company_gstin?: string
+          company_name?: string
+          concrete_grade?: string
+          contract_type?: string
           created_at?: string
+          doors_windows_spec?: string
+          drawings?: Json
+          electrical_spec?: string
+          engineers_count?: number
+          finishing_days_per_floor?: number
+          finishing_spec?: string
+          flooring_spec?: string
           health?: string
           id?: string
+          investor_amount?: number
+          investor_contact?: string
+          investor_name?: string
+          labour_count?: number
+          landowner_contact?: string
+          landowner_name?: string
+          landowner_share_pct?: number
+          latitude?: number | null
           location?: string
+          longitude?: number | null
+          map_link?: string
           name: string
+          paint_spec?: string
           phases?: Json
+          plumbing_spec?: string
+          procurement_lead_days?: number
+          sanitaryware_spec?: string
           single_floor_slab_sft?: number
+          slab_cycle_days?: number
           spend?: number
+          start_date?: string | null
+          steel_grade?: string
+          steel_ratio_kg_per_sft?: number
           stilt_floors?: number
           target_budget?: number
+          target_handover_date?: string | null
           total_built_up_sft?: number
           total_slab_sft?: number
+          total_staff?: number
           type?: string
           typical_floors?: number
           updated_at?: string
+          workflow_template?: string
+          working_days_per_week?: number
         }
         Update: {
+          bank_account_last4?: string
+          bank_account_name?: string
+          bank_ifsc?: string
+          bank_name?: string
+          blockwork_type?: string
           cellar_floors?: number
+          cement_bags_per_sft?: number
+          company_gstin?: string
+          company_name?: string
+          concrete_grade?: string
+          contract_type?: string
           created_at?: string
+          doors_windows_spec?: string
+          drawings?: Json
+          electrical_spec?: string
+          engineers_count?: number
+          finishing_days_per_floor?: number
+          finishing_spec?: string
+          flooring_spec?: string
           health?: string
           id?: string
+          investor_amount?: number
+          investor_contact?: string
+          investor_name?: string
+          labour_count?: number
+          landowner_contact?: string
+          landowner_name?: string
+          landowner_share_pct?: number
+          latitude?: number | null
           location?: string
+          longitude?: number | null
+          map_link?: string
           name?: string
+          paint_spec?: string
           phases?: Json
+          plumbing_spec?: string
+          procurement_lead_days?: number
+          sanitaryware_spec?: string
           single_floor_slab_sft?: number
+          slab_cycle_days?: number
           spend?: number
+          start_date?: string | null
+          steel_grade?: string
+          steel_ratio_kg_per_sft?: number
           stilt_floors?: number
           target_budget?: number
+          target_handover_date?: string | null
           total_built_up_sft?: number
           total_slab_sft?: number
+          total_staff?: number
           type?: string
           typical_floors?: number
           updated_at?: string
+          workflow_template?: string
+          working_days_per_week?: number
         }
         Relationships: []
       }
