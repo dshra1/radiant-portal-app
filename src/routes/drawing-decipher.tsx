@@ -5,9 +5,9 @@ export const Route = createFileRoute("/drawing-decipher")({
   head: () => ({
     meta: [
       { title: "AI Drawing Decipher & Material Take-Off Hub — Saha OS" },
-      { name: "description", content: "Drawing revision control, RFI tracking, OCR material invoices and BOQ-linked take-off for Cyber Enclave Phase 2." },
+      { name: "description", content: "Drawing revision control, RFI tracking, OCR material invoices and BOQ-linked take-off for your live project." },
       { property: "og:title", content: "AI Drawing Decipher & Material Take-Off Hub — Saha OS" },
-      { property: "og:description", content: "Drawing revision control, RFI tracking, OCR material invoices and BOQ-linked take-off for Cyber Enclave Phase 2." },
+      { property: "og:description", content: "Drawing revision control, RFI tracking, OCR material invoices and BOQ-linked take-off for your live project." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

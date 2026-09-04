@@ -162,7 +162,10 @@ function Page() {
   const generateMutation = useMutation({
     mutationFn: async () => generate({ data: { projectId: activeId, extraBrief: brief } }),
     onSuccess: async (res) => {
-      setStatus(`AI estimate ready — ${res.inserted} line items generated.`);
+      setStatus(
+        `AI estimate ready — ${res.inserted} line items across ${res.tradesCovered} of 25 trades.` +
+          (res.tradesMissing.length ? ` Not covered: ${res.tradesMissing.join(", ")}.` : ""),
+      );
       await refresh();
     },
     onError: (e: Error) => setStatus(`Generation failed: ${e.message}`),
@@ -204,7 +207,7 @@ function Page() {
     mutationFn: async () => {
       const { error } = await supabase.from("boq_items").insert({
         project_id: activeId,
-        stage: stage === "ALL" ? "Stage 01: Site Preparation & Enabling Works" : stage,
+        stage: stage === "ALL" ? "Preliminaries" : stage,
         category: "General",
         item_code: `MAN-${String(items.length + 1).padStart(4, "0")}`,
         description: "New line item",
@@ -315,7 +318,8 @@ function Page() {
             BOQ Master Engine
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Pre-drawing AI cost estimation — site preparation through handover — generated from the
+            Pre-drawing AI cost estimation across all 25 construction trades — preliminaries and
+            earthwork through services, external development and handover — generated from the
             project inputs you saved. Every line item is editable, deletable and exportable, and you
             can upload your own complete trade list at any time.
           </p>
@@ -454,7 +458,7 @@ function Page() {
               onClick={() => setStage("ALL")}
               className={`h-8 rounded px-3 text-[13px] font-medium ${stage === "ALL" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
             >
-              All stages ({items.length})
+              All trades ({items.length})
             </button>
             {stages.map(([name, count]) => (
               <button
@@ -488,7 +492,7 @@ function Page() {
             ) : visible.length === 0 ? (
               <div className="p-6 text-sm text-muted-foreground">
                 {items.length === 0
-                  ? "No BOQ yet for this project. Click “Generate AI estimate” to build a complete stage-wise estimate from your project inputs, or upload your own trade list."
+                  ? "No BOQ yet for this project. Click “Generate AI estimate” to build a complete 25-trade estimate from your project inputs, or upload your own trade list."
                   : "No line items match this stage or search."}
               </div>
             ) : (
@@ -511,7 +515,7 @@ function Page() {
                     <tr key={it.id} className="border-t border-border align-top">
                       <td className="px-2 py-2">
                         <div className="text-[11px] font-semibold uppercase text-primary">
-                          {it.stage.replace(/^Stage \d+:\s*/, "")}
+                          {it.stage}
                         </div>
                         <input
                           defaultValue={it.category}
@@ -617,7 +621,7 @@ function Page() {
 
         {stages.length > 0 && (
           <div className="rounded-xl border border-border bg-card p-3">
-            <h2 className="mb-2 text-sm font-semibold">Stage-wise estimate roll-up</h2>
+            <h2 className="mb-2 text-sm font-semibold">Trade-wise estimate roll-up</h2>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {stages.map(([name]) => {
                 const total = items

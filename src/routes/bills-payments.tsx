@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/bills-payments")({
   head: () => ({
@@ -16,10 +17,11 @@ export const Route = createFileRoute("/bills-payments")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Bills & Payments"}>
       <div className="m3">
-        <main className="flex flex-col relative w-full px-gutter-normal pt-16 pb-24 bg-surface flex-grow"><div className="flex flex-col w-full text-on-surface">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-xl bg-surface-container-low p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex items-center gap-space-md"> <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary"> <span className="material-symbols-outlined text-[28px]">payments</span> </div> <div> <div className="flex items-center gap-space-xs text-label-sm text-outline uppercase tracking-wider"> <span>SAHA OS</span> <span>/</span> <span>PRJ-0001 Cyber Enclave A</span> <span>/</span> <span className="text-primary font-bold">Bills & Payments</span> </div> <h2 className="font-headline-lg text-on-surface">Subcontractor RA Bills & Certified Milestones</h2> </div> </div> <div className="flex items-center gap-space-sm flex-wrap"> <button className="bg-surface text-on-surface px-space-md py-space-sm rounded-lg text-label-md flex items-center gap-space-xs shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] hover:bg-surface-container transition-all"> <span className="material-symbols-outlined text-[18px]">download</span>
+        <main className="flex flex-col relative w-full px-gutter-normal pt-16 pb-24 bg-surface flex-grow"><div className="flex flex-col w-full text-on-surface">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-xl bg-surface-container-low p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex items-center gap-space-md"> <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary"> <span className="material-symbols-outlined text-[28px]">payments</span> </div> <div> <div className="flex items-center gap-space-xs text-label-sm text-outline uppercase tracking-wider"> <span>SAHA OS</span> <span>/</span> <span>PRJ-0001 {project.name}</span> <span>/</span> <span className="text-primary font-bold">Bills & Payments</span> </div> <h2 className="font-headline-lg text-on-surface">Subcontractor RA Bills & Certified Milestones</h2> </div> </div> <div className="flex items-center gap-space-sm flex-wrap"> <button className="bg-surface text-on-surface px-space-md py-space-sm rounded-lg text-label-md flex items-center gap-space-xs shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] hover:bg-surface-container transition-all"> <span className="material-symbols-outlined text-[18px]">download</span>
         Export Tally Sync
       </button> <button className="bg-primary text-on-primary px-space-md py-space-sm rounded-lg text-label-md flex items-center gap-space-xs hover:bg-primary-container transition-all shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <span className="material-symbols-outlined text-[18px]">add</span>
         + New RA Bill / Work Order Bill

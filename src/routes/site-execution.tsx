@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/site-execution")({
   head: () => ({
     meta: [
       { title: "Site Execution & Next-Stage Planning Hub | Saha OS" },
-      { name: "description", content: "Live stage progress, field roster, material runway and next-stage readiness for Cyber Enclave Phase 2." },
+      { name: "description", content: "Live stage progress, field roster, material runway and next-stage readiness for your live project." },
       { property: "og:title", content: "Site Execution & Next-Stage Planning Hub | Saha OS" },
-      { property: "og:description", content: "Live stage progress, field roster, material runway and next-stage readiness for Cyber Enclave Phase 2." },
+      { property: "og:description", content: "Live stage progress, field roster, material runway and next-stage readiness for your live project." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/site-execution")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Site Execution & Next-Stage Planning Hub | Saha OS"}>
       <div className="m3">
@@ -26,7 +28,7 @@ function Page() {
 <div className="flex items-center gap-space-xs">
 <span className="px-space-xs py-0.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider font-semibold">TOWER A • SUPERSTRUCTURE</span>
 <span className="w-1 h-1 rounded-full bg-outline"></span>
-<span className="text-on-surface-variant font-body-sm text-body-sm">Madhapur, Hyderabad</span>
+<span className="text-on-surface-variant font-body-sm text-body-sm">{project.location}</span>
 <span className="w-1 h-1 rounded-full bg-outline"></span>
 <span className="font-label-sm text-label-sm text-primary font-medium flex items-center gap-0.5">
 <span className="material-symbols-outlined text-[14px]">cell_tower</span> Telemetry Active
@@ -34,7 +36,7 @@ function Page() {
 </div>
 <div className="flex items-baseline gap-space-sm">
 <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Site Execution &amp; Next-Stage Planning Hub</h1>
-<span className="hidden sm:inline font-body-sm text-body-sm text-on-surface-variant">Cyber Enclave - Phase 2 (G+5 Superstructure)</span>
+<span className="hidden sm:inline font-body-sm text-body-sm text-on-surface-variant">{project.name} (G+5 Superstructure)</span>
 </div>
 </div>
 

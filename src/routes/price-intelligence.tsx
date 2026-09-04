@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/price-intelligence")({
   head: () => ({
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/price-intelligence")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Real-Time Multi-Brand Price Intelligence | Saha OS"}>
       <div className="m3">
@@ -117,7 +119,7 @@ function Page() {
 <span className="material-symbols-outlined text-space-base">savings</span> 4 Indents
         </span>
 </div>
-<p className="font-body-sm text-body-sm text-on-surface-variant mt-space-xs">Approved hybrid substitution potential across Cyber Enclave Ph-2 Tower A, B &amp; C.</p>
+<p className="font-body-sm text-body-sm text-on-surface-variant mt-space-xs">Approved hybrid substitution potential across {project.name} Tower A, B &amp; C.</p>
 <div className="w-full bg-surface-container rounded-full h-1.5 mt-space-md overflow-hidden">
 <div className="bg-primary-container h-1.5 rounded-full" style={{ width: "84%" }}></div>
 </div>
@@ -372,7 +374,7 @@ function Page() {
 </div>
 <div>
 <div className="flex items-center gap-space-xs">
-<span className="font-title-md text-title-md text-on-surface font-bold">AI Hybrid Spec Recommendation: Cyber Enclave Ph-2 (Tower C)</span>
+<span className="font-title-md text-title-md text-on-surface font-bold">AI Hybrid Spec Recommendation: {project.name} (Tower C)</span>
 <span className="px-space-xs py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm">IS 456 Cl. 26.5 Compliant</span>
 </div>
 <p className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs max-w-2xl">
@@ -716,7 +718,7 @@ function Page() {
 <div className="flex flex-col gap-space-xs">
 <div className="flex justify-between font-label-sm text-label-sm opacity-80 pb-space-2xs border-b-0">
 <span>Project:</span>
-<span className="font-bold">Cyber Enclave Phase 2 (Tower C)</span>
+<span className="font-bold">{project.name} (Tower C)</span>
 </div>
 <button className="w-full py-space-xs rounded bg-surface-container-lowest text-on-surface font-title-md text-title-md shadow-sm hover:bg-surface transition-all flex items-center justify-center gap-1">
 <span className="material-symbols-outlined text-space-base text-primary">send</span>

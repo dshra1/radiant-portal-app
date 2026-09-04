@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/capital-ledger")({
   head: () => ({
@@ -16,10 +17,11 @@ export const Route = createFileRoute("/capital-ledger")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Capital Ledger & Landowner Contributions"}>
       <div className="m3">
-        <main className="w-full  px-gutter-normal pb-gutter-expanded bg-surface"><div className="flex flex-col w-full gap-space-xl">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex flex-col gap-space-2xs"> <div className="flex items-center gap-space-sm"> <span className="font-label-sm text-label-sm text-primary uppercase tracking-widest bg-surface-container px-space-sm py-space-2xs rounded-lg">PRJ-79687 • Cyber Enclave A</span> <span className="flex items-center gap-space-2xs text-secondary"><span className="material-symbols-outlined text-[14px]">verified</span> Verified Capital Ledger</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">PMC Project Scope & Investment & Landowner Contribution</h1> <p className="font-body-md text-body-md text-on-surface-variant">Owner funding • PMC scope • common vs individual cost planning</p> </div> <div className="flex items-center gap-space-sm"> <button className="flex items-center gap-space-xs bg-surface-container text-on-surface px-space-md py-space-sm rounded-lg font-label-md hover:bg-surface-container-high transition-colors" type="button"> <span className="material-symbols-outlined text-[18px]">description</span>
+        <main className="w-full  px-gutter-normal pb-gutter-expanded bg-surface"><div className="flex flex-col w-full gap-space-xl">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex flex-col gap-space-2xs"> <div className="flex items-center gap-space-sm"> <span className="font-label-sm text-label-sm text-primary uppercase tracking-widest bg-surface-container px-space-sm py-space-2xs rounded-lg">PRJ-79687 • {project.name}</span> <span className="flex items-center gap-space-2xs text-secondary"><span className="material-symbols-outlined text-[14px]">verified</span> Verified Capital Ledger</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">PMC Project Scope & Investment & Landowner Contribution</h1> <p className="font-body-md text-body-md text-on-surface-variant">Owner funding • PMC scope • common vs individual cost planning</p> </div> <div className="flex items-center gap-space-sm"> <button className="flex items-center gap-space-xs bg-surface-container text-on-surface px-space-md py-space-sm rounded-lg font-label-md hover:bg-surface-container-high transition-colors" type="button"> <span className="material-symbols-outlined text-[18px]">description</span>
         Generate Capital Demand
       </button> <button className="flex items-center gap-space-xs bg-primary text-on-primary px-space-md py-space-sm rounded-lg font-label-md hover:bg-primary-container transition-colors shadow-sm" type="button"> <span className="material-symbols-outlined text-[18px]">add</span>
         Add Landowner / Investor

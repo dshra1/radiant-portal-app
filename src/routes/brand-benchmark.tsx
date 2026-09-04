@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/brand-benchmark")({
   head: () => ({
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/brand-benchmark")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Multi-Brand Equivalency & Savings Matrix | Saha OS"}>
       <div className="m3">
@@ -59,7 +61,7 @@ function Page() {
 <span className="font-label-sm uppercase text-on-surface-variant">Active Benchmarking Scope:</span>
 <div className="flex items-center gap-space-2xs px-space-xs py-space-2xs rounded bg-surface-container-low font-label-md text-on-surface">
 <span className="material-symbols-outlined text-[15px] text-primary">apartment</span>
-<span>Cyber Enclave - Phase 2</span>
+<span>{project.name}</span>
 </div>
 <div className="flex items-center gap-space-2xs px-space-xs py-space-2xs rounded bg-surface-container-low font-label-md text-on-surface">
 <span className="material-symbols-outlined text-[15px] text-tertiary">location_on</span>

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/vendor-lifecycle")({
   head: () => ({
@@ -16,10 +17,11 @@ export const Route = createFileRoute("/vendor-lifecycle")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Purchase & Vendor Lifecycle Hub | Saha OS"}>
       <div className="m3">
-        <main className="w-full  px-gutter-normal pb-gutter-expanded bg-surface"><div className="flex flex-col w-full">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-2xl"> <div> <div className="flex items-center gap-space-xs mb-space-2xs"> <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Procurement & Supply Chain</span> <span className="text-outline">/</span> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Lifecycle Hub</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Purchase & Vendor Lifecycle Hub</h1> <p className="font-body-md text-body-md text-on-surface-variant mt-space-2xs">End-to-end vendor onboarding, market price intelligence, multi-stage material tracking, and milestone payment reconciliation for Cyber Enclave Phase 2.</p> </div> <div className="flex items-center gap-space-sm"> <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-title-md rounded-lg transition-colors shadow-sm" type="button"> <span className="material-symbols-outlined text-[18px]">download</span>
+        <main className="w-full  px-gutter-normal pb-gutter-expanded bg-surface"><div className="flex flex-col w-full">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-2xl"> <div> <div className="flex items-center gap-space-xs mb-space-2xs"> <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Procurement & Supply Chain</span> <span className="text-outline">/</span> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Lifecycle Hub</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Purchase & Vendor Lifecycle Hub</h1> <p className="font-body-md text-body-md text-on-surface-variant mt-space-2xs">End-to-end vendor onboarding, market price intelligence, multi-stage material tracking, and milestone payment reconciliation for {project.name}.</p> </div> <div className="flex items-center gap-space-sm"> <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-title-md rounded-lg transition-colors shadow-sm" type="button"> <span className="material-symbols-outlined text-[18px]">download</span>
         Export Full Audit
       </button> <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-primary text-on-primary hover:bg-primary-container font-title-md text-title-md rounded-lg transition-colors shadow-sm" type="button"> <span className="material-symbols-outlined text-[18px]">add_circle</span>
         New Purchase Order

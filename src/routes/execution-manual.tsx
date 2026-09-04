@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/execution-manual")({
   head: () => ({
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/execution-manual")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Stage-Wise Field Execution Manual & QA/QC Protocols | Saha OS"}>
       <div className="m3">
@@ -26,7 +28,7 @@ function Page() {
 <div className="flex items-center gap-space-xs text-on-surface-variant font-body-sm text-body-sm flex-wrap">
 <span className="hover:text-primary cursor-pointer">Projects</span>
 <span className="material-symbols-outlined text-space-xs">chevron_right</span>
-<span className="hover:text-primary cursor-pointer">Cyber Enclave - Phase 2</span>
+<span className="hover:text-primary cursor-pointer">{project.name}</span>
 <span className="material-symbols-outlined text-space-xs">chevron_right</span>
 <span className="hover:text-primary cursor-pointer">Engineering Governance</span>
 <span className="material-symbols-outlined text-space-xs">chevron_right</span>
@@ -651,7 +653,7 @@ function Page() {
 <div className="absolute inset-0 bg-gradient-to-t from-inverse-surface/90 via-inverse-surface/40 to-transparent p-space-sm flex flex-col justify-end">
 <span className="font-label-sm text-label-sm text-primary-fixed uppercase font-bold tracking-wider">Site Inspection Feed</span>
 <h4 className="font-title-md text-title-md text-inverse-on-surface">G+3 Superstructure Concrete Pouring</h4>
-<span className="font-body-sm text-body-sm text-outline-variant">Live Cam 03 • Madhapur Cyber Enclave Phase 2</span>
+<span className="font-body-sm text-body-sm text-outline-variant">Live Cam 03 • Madhapur {project.name}</span>
 </div>
 </div>
 <div className="p-space-sm flex items-center justify-between bg-surface-container-low text-on-surface font-body-sm text-body-sm">

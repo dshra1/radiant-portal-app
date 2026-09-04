@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/site-media")({
   head: () => ({
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/site-media")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Site Media & Upload Ledger | Saha OS"}>
       <div className="m3">
@@ -25,7 +27,7 @@ function Page() {
 <div className="flex flex-col gap-space-2xs">
 <div className="flex items-center gap-space-sm flex-wrap">
 <span className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Site Media &amp; Uploads</span>
-<span className="px-space-sm py-space-2xs rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">Cyber Enclave - Phase 2</span>
+<span className="px-space-sm py-space-2xs rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">{project.name}</span>
 <span className="inline-flex items-center gap-space-2xs px-space-sm py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm">
 <span className="w-1.5 h-1.5 rounded-full bg-primary-fixed animate-pulse"></span>
           Stage 07: RCC 4th Floor Slab Casting

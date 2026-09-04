@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/purchase-orders")({
   head: () => ({
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/purchase-orders")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Smart Purchase Order & Guardrail Hub | Saha OS"}>
       <div className="m3">
@@ -43,7 +45,7 @@ function Page() {
 </div>
 </div>
 <p className="font-body-sm text-body-sm text-on-surface-variant">
-        Strict structural material rate compliance for Cyber Enclave Ph-2. Real-time OCR baseline checks mapped to Hyderabad West civil index.
+        Strict structural material rate compliance for {project.name}. Real-time OCR baseline checks mapped to Hyderabad West civil index.
       </p>
 </div>
 
@@ -200,7 +202,7 @@ function Page() {
 
 <div className="flex flex-col gap-space-2xs">
 <span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Delivery Destination</span>
-<div className="font-title-md text-title-md text-on-surface font-bold">Cyber Enclave Ph-2 • Tower C Yard</div>
+<div className="font-title-md text-title-md text-on-surface font-bold">{project.name} • Tower C Yard</div>
 <div className="font-body-sm text-body-sm text-on-surface-variant flex flex-col gap-1">
 <span>Unloading Slot: <strong>Tomorrow, 06:00 - 10:00 IST</strong></span>
 <span>Weighbridge: Madhapur Internal Scale #2 (Calibrated)</span>
