@@ -153,11 +153,36 @@ function Boq() {
                   <tr>
                     <td
                       colSpan={8}
-                      className="label-caps border-y border-border bg-secondary/40 px-3 py-1.5 text-muted-foreground"
+                      className="border-y border-border bg-secondary/40 px-3 py-1.5"
                     >
-                      {stage}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="label-caps text-muted-foreground">{stage}</span>
+                        <div className="flex items-center gap-1.5">
+                          <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-input bg-card px-2 py-1 text-[11px] font-semibold hover:bg-secondary">
+                            <Upload className="size-3" /> Upload
+                            <input
+                              type="file"
+                              accept=".csv,text/csv"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) void uploadStage(stage, f);
+                                e.target.value = "";
+                              }}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => exportStage(stage)}
+                            className="inline-flex items-center gap-1 rounded border border-input bg-card px-2 py-1 text-[11px] font-semibold hover:bg-secondary"
+                          >
+                            <Download className="size-3" /> Export
+                          </button>
+                        </div>
+                      </div>
                     </td>
                   </tr>
+
                   {items
                     .filter((i) => i.stage === stage)
                     .map((i) => {
