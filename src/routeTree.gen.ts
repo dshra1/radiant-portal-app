@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AiProgrammeRouteImport } from './routes/ai-programme'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BillingExpenditureRouteImport } from './routes/billing-expenditure'
 import { Route as BillsPaymentsRouteImport } from './routes/bills-payments'
 import { Route as BoqRouteImport } from './routes/boq'
@@ -63,6 +64,11 @@ const IndexRoute = IndexRouteImport.update({
 const AiProgrammeRoute = AiProgrammeRouteImport.update({
   id: '/ai-programme',
   path: '/ai-programme',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BillingExpenditureRoute = BillingExpenditureRouteImport.update({
@@ -284,6 +290,7 @@ const ApiChatRoute = ApiChatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai-programme': typeof AiProgrammeRoute
+  '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
@@ -331,6 +338,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai-programme': typeof AiProgrammeRoute
+  '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
@@ -379,6 +387,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ai-programme': typeof AiProgrammeRoute
+  '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
@@ -428,6 +437,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ai-programme'
+    | '/auth'
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/ai-programme'
+    | '/auth'
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
@@ -522,6 +533,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/ai-programme'
+    | '/auth'
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
@@ -570,6 +582,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AiProgrammeRoute: typeof AiProgrammeRoute
+  AuthRoute: typeof AuthRoute
   BillingExpenditureRoute: typeof BillingExpenditureRoute
   BillsPaymentsRoute: typeof BillsPaymentsRoute
   BoqRoute: typeof BoqRoute
@@ -629,6 +642,13 @@ declare module '@tanstack/react-router' {
       path: '/ai-programme'
       fullPath: '/ai-programme'
       preLoaderRoute: typeof AiProgrammeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/billing-expenditure': {
@@ -938,6 +958,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiProgrammeRoute: AiProgrammeRoute,
+  AuthRoute: AuthRoute,
   BillingExpenditureRoute: BillingExpenditureRoute,
   BillsPaymentsRoute: BillsPaymentsRoute,
   BoqRoute: BoqRoute,

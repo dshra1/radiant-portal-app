@@ -6,16 +6,15 @@ import type { Database } from "@/integrations/supabase/types";
 
 type ChatRequestBody = { messages?: unknown; threadId?: unknown };
 
-function serverSupabase() {
+function serverSupabase(accessToken: string) {
   const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
   return createClient<Database>(process.env["SUPABASE_URL"]!, key, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
       fetch: (input, init) => {
         const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`)
-          h.delete("Authorization");
         h.set("apikey", key);
+        h.set("Authorization", `Bearer ${accessToken}`);
         return fetch(input, { ...init, headers: h });
       },
     },
@@ -29,8 +28,8 @@ function textOf(message: UIMessage) {
     .trim();
 }
 
-async function buildLiveContext() {
-  const sb = serverSupabase();
+async function buildLiveContext(accessToken: string) {
+  const sb = serverSupabase(accessToken);
   const [projects, notifications, messages] = await Promise.all([
     sb
       .from("site_projects")
@@ -58,6 +57,16 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const accessToken = (request.headers.get("Authorization") ?? "").replace(/^Bearer /i, "");
+        if (!accessToken) return new Response("Unauthorized", { status: 401 });
+        const authCheck = await fetch(`${process.env["SUPABASE_URL"]}/auth/v1/user`, {
+          headers: {
+            apikey: process.env["SUPABASE_PUBLISHABLE_KEY"]!,
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        if (!authCheck.ok) return new Response("Unauthorized", { status: 401 });
+
         const body = (await request.json()) as ChatRequestBody;
         const messages = body.messages;
         const threadId = typeof body.threadId === "string" ? body.threadId : null;
@@ -69,7 +78,7 @@ export const Route = createFileRoute("/api/chat")({
         if (!key) return new Response("AI is not configured", { status: 500 });
 
         const uiMessages = messages as UIMessage[];
-        const context = await buildLiveContext();
+        const context = await buildLiveContext(accessToken);
         const gateway = createLovableAiGatewayProvider(key);
 
         const result = streamText({
@@ -84,7 +93,7 @@ export const Route = createFileRoute("/api/chat")({
           messages: await convertToModelMessages(uiMessages),
           onFinish: async ({ text }) => {
             if (!threadId) return;
-            const sb = serverSupabase();
+            const sb = serverSupabase(accessToken);
             const last = uiMessages[uiMessages.length - 1];
             const rows: { thread_id: string; role: string; content: string }[] = [];
             if (last && last.role === "user")

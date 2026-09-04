@@ -29,11 +29,35 @@ import {
   Plus,
   UnfoldVertical,
   Bot,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 import { navForRole, roles, type NavItem } from "@/components/saha/nav";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+
+function SignOutButton() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  return (
+    <button
+      type="button"
+      aria-label="Sign out"
+      title="Sign out"
+      onClick={async () => {
+        await queryClient.cancelQueries();
+        queryClient.clear();
+        await supabase.auth.signOut();
+        navigate({ to: "/auth", replace: true });
+      }}
+      className="inline-flex shrink-0 items-center justify-center rounded-md bg-muted p-2 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
+    >
+      <LogOut className="size-4" />
+    </button>
+  );
+}
 
 const mobileNav: NavItem[] = [
   { to: "/", label: "Hub", icon: Home },
@@ -262,6 +286,9 @@ export function Shell({
           >
             <Home className="size-4" />
           </Link>
+
+          <SignOutButton />
+
 
           <div className="relative hidden min-w-0 sm:block">
             <button

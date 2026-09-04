@@ -94,6 +94,12 @@ function AiThread() {
       new DefaultChatTransport({
         api: "/api/chat",
         body: { threadId },
+        fetch: async (input, init) => {
+          const { data } = await supabase.auth.getSession();
+          const headers = new Headers(init?.headers);
+          if (data.session) headers.set("Authorization", `Bearer ${data.session.access_token}`);
+          return fetch(input, { ...init, headers });
+        },
       }),
     [threadId],
   );
