@@ -25,6 +25,7 @@
 - [x] Apply Saha Developers logo across app (shell sidebar, hub hero, favicon, PWA icons)
 - [ ] Redesign landing page as Action-first notification hub with project-specific data (selected prototype v1)
 - [ ] Make notifications / team messages / landing stats project-scoped so 3 projects can run together
+- [ ] User-assigned chat tasks + notifications: messages/tasks assigned to a specific user trigger in-app + push (phone/WhatsApp) notifications to that user only
 
 - [ ] Fix layout sizing: cap content width on large screens, stop Download-app button overlapping header chrome
 
