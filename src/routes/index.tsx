@@ -1,28 +1,50 @@
-import { useActiveProject } from "@/hooks/useActiveProject";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { inrCompact, num } from "@/data/saha";
-import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
-
-
-
+import { useAccess } from "@/lib/access";
+import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
+import { cn } from "@/lib/utils";
+import {
+  LayoutDashboard,
+  Calculator,
+  ShoppingCart,
+  ClipboardCheck,
+  ScanEye,
+  Building2,
+  FileText,
+  Users,
+  TrendingUp,
+  Bell,
+  ChevronDown,
+  Plus,
+  CloudCog,
+  Sun,
+  Wind,
+  Droplets,
+  CloudRain,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  MoreHorizontal,
+  ArrowRight,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Saha OS — Civil Project Lifecycle Command Center" },
+      { title: "Saha OS — Action Centre" },
       {
         name: "description",
         content:
-          "Command center for {project.name}: BOQ ingestion, stage execution, QA/QC audits, price intelligence and procurement guardrails.",
+          "Project-specific action centre for Saha OS: notifications, approvals, live project metrics and quick workspace access.",
       },
-      { property: "og:title", content: "Saha OS — Civil Project Lifecycle Command Center" },
+      { property: "og:title", content: "Saha OS — Action Centre" },
       {
         property: "og:description",
         content:
-          "BOQ ingestion, stage execution, QA/QC audits, price intelligence and procurement guardrails in one suite.",
+          "Project-specific action centre for Saha OS: notifications, approvals, live project metrics and quick workspace access.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -31,343 +53,639 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Tone = "green" | "blue" | "amber" | "violet" | "rose" | "teal";
-
-const TONE: Record<Tone, { chip: string; title: string; rule: string; label: string }> = {
-  green: {
-    chip: "bg-primary-soft text-primary",
-    title: "text-primary",
-    rule: "bg-primary/25",
-    label: "text-primary",
-  },
-  blue: {
-    chip: "bg-info-soft text-info",
-    title: "text-info",
-    rule: "bg-info/25",
-    label: "text-info",
-  },
-  amber: {
-    chip: "bg-warning-soft text-[oklch(0.55_0.13_70)]",
-    title: "text-[oklch(0.52_0.13_70)]",
-    rule: "bg-warning/35",
-    label: "text-[oklch(0.52_0.13_70)]",
-  },
-  violet: {
-    chip: "bg-[oklch(0.95_0.04_300)] text-[oklch(0.48_0.16_300)]",
-    title: "text-[oklch(0.48_0.16_300)]",
-    rule: "bg-[oklch(0.48_0.16_300)]/25",
-    label: "text-[oklch(0.48_0.16_300)]",
-  },
-  rose: {
-    chip: "bg-destructive-soft text-[oklch(0.52_0.19_20)]",
-    title: "text-[oklch(0.52_0.19_20)]",
-    rule: "bg-destructive/25",
-    label: "text-[oklch(0.52_0.19_20)]",
-  },
-  teal: {
-    chip: "bg-[oklch(0.94_0.05_200)] text-[oklch(0.46_0.11_210)]",
-    title: "text-[oklch(0.46_0.11_210)]",
-    rule: "bg-[oklch(0.46_0.11_210)]/25",
-    label: "text-[oklch(0.46_0.11_210)]",
-  },
-};
-
-type Item = {
-  to: string;
+type Notification = {
+  id: string;
   title: string;
-  desc: string;
-  icon: string;
-  pinned?: boolean;
+  body: string;
+  category: string;
+  priority: string;
+  link: string;
+  is_read: boolean;
+  created_at: string;
 };
 
-const GROUPS: { group: string; tone: Tone; items: Item[] }[] = [
-  {
-    group: "Main Planning & Master Database",
-    tone: "green",
-    items: [
-      { to: "/dashboard", title: "Command Center", desc: "Budget burn, spend trend, approval queue and site portfolio.", icon: "space_dashboard", pinned: true },
-      { to: "/messages", title: "Team Chat", desc: "Internal channels for site, purchase, accounts and QA crews.", icon: "forum", pinned: true },
-      { to: "/notifications", title: "Action Centre", desc: "Approvals, rate alerts, PO releases and payout reminders.", icon: "notifications_active", pinned: true },
+type Shortcut = {
+  id: string;
+  label: string;
+  to: string;
+  icon: React.ElementType;
+  tone: "primary" | "secondary" | "warning" | "info" | "success";
+};
 
-      { to: "/projects", title: "Projects Portfolio", desc: "Built-up area, slab take-offs, budget and phase progress.", icon: "apartment", pinned: true },
-      { to: "/boq-engine", title: "BOQ Master Engine", desc: "Line-item value engineering with spec compliance scoring.", icon: "receipt_long", pinned: true },
-      { to: "/projects-setup", title: "Project Setup & Geometry", desc: "Project identity, floor geometry and CAD drawing ingestion.", icon: "domain" },
-      { to: "/boq-upload", title: "BOQ Excel Upload", desc: "Spreadsheet ingestion with column mapping and unit validation.", icon: "upload_file" },
-      { to: "/boq", title: "BOQ & Rate Intelligence", desc: "Dynamic bill of quantities with live Hyderabad market rates.", icon: "calculate" },
-      { to: "/execution-manual", title: "Stage-Wise Execution Manual", desc: "14-stage SOP, QA hold gates and zero-tolerance guardrails.", icon: "account_tree" },
-      { to: "/ai-programme", title: "AI Programme Scheduler", desc: "Timeline simulation from BOQ scale, lead times and constraints.", icon: "auto_graph" },
-      { to: "/drawing-decipher", title: "Drawing Decipher & Take-Off", desc: "Drawing revisions, RFIs and BOQ-linked material take-off.", icon: "architecture" },
-      { to: "/scope-brief", title: "Consultant Scope Brief", desc: "Engineering packages A\u2013K with drawing lists and quantities.", icon: "assignment" },
-      { to: "/vendor-directory", title: "Vendor Master Directory", desc: "Trade-wise vendor database with ratings and bulk import.", icon: "storefront" },
-      { to: "/system-directory", title: "System Master Directory", desc: "Index of every module across all pillars.", icon: "hub" },
-      { to: "/roles-access", title: "Roles & Access Master", desc: "Role-based permissions with a live activity trail.", icon: "admin_panel_settings" },
-    ],
-  },
-  {
-    group: "Site Supervision",
-    tone: "blue",
-    items: [
-      { to: "/site-execution", title: "Site Execution Hub", desc: "Stage progress, field roster and material runway.", icon: "foundation", pinned: true },
-      { to: "/field-console", title: "Field Console", desc: "GRN receipts, pour cards, QC sign-offs and defect scans.", icon: "smartphone" },
-      { to: "/command-operations", title: "Command Operations", desc: "Live telemetry, AI risk feed and site supervision.", icon: "bolt" },
-      { to: "/project-controls", title: "Project Controls Cockpit", desc: "Earned value, baseline tracker and change orders.", icon: "monitoring" },
-      { to: "/contractors-labour", title: "Contractors & Labour", desc: "Muster roll, RA bills and biometric gate sync.", icon: "engineering" },
-      { to: "/site-media", title: "Site Media Ledger", desc: "Geo-tagged imagery, pour verification and drone orthos.", icon: "photo_library" },
-      { to: "/media-upload-studio", title: "Media Upload Studio", desc: "Photo, video and drone uploads for site activity.", icon: "cloud_upload" },
-    ],
-  },
-  {
-    group: "QA & Inspect",
-    tone: "teal",
-    items: [
-      { to: "/qa-inspection", title: "AI Visual QA/QC Audit", desc: "Edge-inference compliance scoring and defect ledger.", icon: "verified", pinned: true },
-      { to: "/qa", title: "AI Visual QA", desc: "Photo-based defect detection with IS code findings.", icon: "visibility" },
-      { to: "/pour-cards", title: "Daily Pour Cards", desc: "Pre-pour gates and concrete volume reconciliation.", icon: "water_drop" },
-    ],
-  },
-  {
-    group: "Stock & Inventory",
-    tone: "amber",
-    items: [
-      { to: "/inventory-control", title: "Inventory & Material Control", desc: "Stock ledger, consumption vs BOQ and reorder alerts.", icon: "inventory_2", pinned: true },
-      { to: "/procurement", title: "Procurement & PO Guardrails", desc: "Multi-vendor POs with price guardrails and approvals.", icon: "shopping_cart", pinned: true },
-      { to: "/price-intelligence", title: "Price Intelligence", desc: "Live mandi-indexed brand matrices for rebar, cement and tiles.", icon: "insights" },
-      { to: "/purchase-orders", title: "PO & Guardrail Hub", desc: "Price-variance guardrails, approvals and ERP export.", icon: "shield" },
-      { to: "/po-create", title: "PO Creation Engine", desc: "Value-engineered drafting with BIS spec verification.", icon: "add_circle" },
-      { to: "/tender-comparison", title: "Tender Comparison Studio", desc: "L-1/L-2/L-3 rates, logistics parity and compliance.", icon: "gavel" },
-      { to: "/brand-benchmark", title: "Brand Equivalency Matrix", desc: "Arbitrage margins, vetted mills and auto-substitution.", icon: "layers" },
-      { to: "/vendor-lifecycle", title: "Vendor Lifecycle", desc: "Onboarding, bulk uploader and compliance vetting.", icon: "handshake" },
-      { to: "/purchasing-center", title: "Purchasing Command Center", desc: "PO pipeline, document OCR and price database.", icon: "shopping_bag" },
-    ],
-  },
-  {
-    group: "Accounts & Audit",
-    tone: "rose",
-    items: [
-      { to: "/billing-expenditure", title: "Billing & Expenditure", desc: "Vendor bill OCR, approvals and expenditure tracking.", icon: "request_quote", pinned: true },
-      { to: "/bills-payments", title: "Bills & Payments", desc: "RA bills, certified milestones and retentions.", icon: "receipt" },
-      { to: "/financial-ingestion", title: "Financial Ingestion Hub", desc: "GSTR-2B telemetry, AI matching and bank reconciliation.", icon: "account_balance" },
-      { to: "/financial-forecast", title: "Financial Forecasting", desc: "Cash-flow forecasts, cost-to-complete and project control.", icon: "trending_up" },
-    ],
-  },
-  {
-    group: "Money & Owners",
-    tone: "violet",
-    items: [
-      { to: "/capital-ledger", title: "Capital Ledger", desc: "Equity shares, capital calls and cost apportionment.", icon: "account_balance_wallet", pinned: true },
-      { to: "/landowners-investment", title: "Landowners & Investment", desc: "Owner scope, stake shares and funding progress.", icon: "real_estate_agent" },
-      { to: "/pmc-scope", title: "PMC Scope & Investment", desc: "Work-package boundaries with cost allocation.", icon: "rule" },
-    ],
-  },
+const DEFAULT_SHORTCUTS: Shortcut[] = [
+  { id: "dashboard", label: "Command", to: "/dashboard", icon: LayoutDashboard, tone: "primary" },
+  { id: "projects", label: "Projects", to: "/projects", icon: Building2, tone: "secondary" },
+  { id: "boq", label: "BOQ Engine", to: "/boq-engine", icon: Calculator, tone: "success" },
+  { id: "po", label: "Raise PO", to: "/po-create", icon: ShoppingCart, tone: "warning" },
+  { id: "qa", label: "QA Audit", to: "/qa-inspection", icon: ScanEye, tone: "info" },
+  { id: "pours", label: "Pour Cards", to: "/pour-cards", icon: ClipboardCheck, tone: "secondary" },
 ];
 
+const ALL_SHORTCUTS: Shortcut[] = [
+  ...DEFAULT_SHORTCUTS,
+  { id: "billing", label: "Billing", to: "/billing-expenditure", icon: FileText, tone: "secondary" },
+  { id: "team", label: "Team Chat", to: "/messages", icon: Users, tone: "info" },
+  { id: "forecast", label: "Forecast", to: "/financial-forecast", icon: TrendingUp, tone: "success" },
+];
 
-const PINNED = GROUPS.flatMap((g) => g.items.filter((i) => i.pinned).map((i) => ({ ...i, tone: g.tone })));
-const ALL = GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, tone: g.tone, group: g.group })));
+const SHORTCUT_STORAGE_KEY = "saha-home-shortcuts";
 
-function ModuleCard({ item, tone }: { item: Item; tone: Tone }) {
-  const t = TONE[tone];
-  return (
-    <Link to={item.to} className="group surface-card flex flex-col gap-2 p-5">
-      <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${t.chip}`}>
-        <span className="material-symbols-outlined text-xl leading-none">{item.icon}</span>
-      </span>
-      <span className={`display-title text-lg leading-snug ${t.title}`}>{item.title}</span>
-      <span className="text-sm text-muted-foreground">{item.desc}</span>
-      <span className={`mt-auto flex items-center gap-1 pt-2 text-xs font-semibold uppercase tracking-wider ${t.label} opacity-0 transition-opacity group-hover:opacity-100`}>
-        Open
-        <span className="material-symbols-outlined text-base leading-none">chevron_right</span>
-      </span>
-    </Link>
-  );
+function greetingForHour() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function weatherFromLocation(_location: string) {
+  // Placeholder: in production this can call a weather API. Returns sensible defaults for Hyderabad.
+  return { temp: 31, condition: "Clear", humidity: "High", advice: "Field work recommended before 11:00 AM." };
+}
+
+function priorityTone(priority: string) {
+  const p = priority.toLowerCase();
+  if (p === "high" || p === "urgent") return "warning";
+  if (p === "normal") return "info";
+  if (p === "low") return "success";
+  return "info";
 }
 
 function Index() {
-  const project = useActiveProject();
-  const [query, setQuery] = useState("");
-  const [open, setOpen] = useState<string | null>(null);
+  const { access } = useAccess();
+  const activeProject = useActiveProject();
+  const setActiveProject = useActiveProjectSetter();
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [editShortcuts, setEditShortcuts] = useState(false);
+  const [shortcuts, setShortcuts] = useState<Shortcut[]>(DEFAULT_SHORTCUTS);
 
-  const { data: liveProjects } = useQuery({
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = window.localStorage.getItem(SHORTCUT_STORAGE_KEY);
+      if (saved) {
+        const ids: string[] = JSON.parse(saved);
+        const ordered = ids
+          .map((id) => ALL_SHORTCUTS.find((s) => s.id === id))
+          .filter(Boolean) as Shortcut[];
+        if (ordered.length) setShortcuts(ordered);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const saveShortcuts = (next: Shortcut[]) => {
+    setShortcuts(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SHORTCUT_STORAGE_KEY, JSON.stringify(next.map((s) => s.id)));
+    }
+  };
+
+  const toggleShortcut = (s: Shortcut) => {
+    const exists = shortcuts.find((x) => x.id === s.id);
+    if (exists) {
+      saveShortcuts(shortcuts.filter((x) => x.id !== s.id));
+    } else if (shortcuts.length < 8) {
+      saveShortcuts([...shortcuts, s]);
+    }
+  };
+
+  const firstName = access?.profile?.full_name?.split(" ")[0] ?? access?.email?.split("@")[0] ?? "Saha";
+  const greeting = greetingForHour();
+
+  const { data: projects = [] } = useQuery({
     queryKey: ["site_projects", "hub-summary"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
-        .select("id,target_budget,total_staff,health");
+        .select("id,name,location,target_budget,spend,total_staff,health,total_built_up_sft")
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return data ?? [];
     },
   });
 
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["notifications", "landing", activeProject.id],
+    queryFn: async () => {
+      let q = supabase
+        .from("notifications")
+        .select("id,title,body,category,priority,link,is_read,created_at")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (activeProject.id) {
+        // project_id may not exist on older notifications; show workspace-wide until migrated
+        q = q.or(`project_id.eq.${activeProject.id},project_id.is.null`);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as Notification[];
+    },
+    enabled: true,
+  });
+
+  const { data: boqCount = 0 } = useQuery({
+    queryKey: ["boq_items", "count", activeProject.id],
+    queryFn: async () => {
+      if (!activeProject.id) return 0;
+      const { count, error } = await supabase
+        .from("boq_items")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", activeProject.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!activeProject.id,
+  });
+
+  const { data: pendingPOs = 0 } = useQuery({
+    queryKey: ["purchase_orders", "pending-count", activeProject.id],
+    queryFn: async () => {
+      if (!activeProject.id) return 0;
+      const { count, error } = await supabase
+        .from("purchase_orders")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", activeProject.id)
+        .in("status", ["draft", "pending"]);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!activeProject.id,
+  });
+
+  const activeRow = useMemo(
+    () => projects.find((p) => p.id === activeProject.id) ?? projects[0],
+    [projects, activeProject.id],
+  );
+
   const stats = useMemo(() => {
-    const rows = liveProjects ?? [];
-    const budget = rows.reduce((s, r) => s + Number(r.target_budget ?? 0), 0);
-    const staff = rows.reduce((s, r) => s + Number(r.total_staff ?? 0), 0);
-    const atRisk = rows.filter((r) => r.health !== "On Track").length;
-    return [
-      [String(rows.length), "Active sites"],
-      [inrCompact(budget), "Committed budget"],
-      [num(staff), "Workforce on site"],
-      [String(atRisk), "Sites needing attention"],
-    ] as [string, string][];
-  }, [liveProjects]);
+    const totalBudget = projects.reduce((s, p) => s + Number(p.target_budget ?? 0), 0);
+    const totalSpend = projects.reduce((s, p) => s + Number(p.spend ?? 0), 0);
+    const totalStaff = projects.reduce((s, p) => s + Number(p.total_staff ?? 0), 0);
+    const atRisk = projects.filter((p) => p.health && p.health !== "On Track").length;
+    const active = activeRow;
+    return {
+      totalProjects: projects.length,
+      totalBudget,
+      totalSpend,
+      totalStaff,
+      atRisk,
+      activeBudget: Number(active?.target_budget ?? 0),
+      activeSpend: Number(active?.spend ?? 0),
+      activeStaff: Number(active?.total_staff ?? 0),
+      activeBuiltUp: Number(active?.total_built_up_sft ?? 0),
+      activeHealth: active?.health ?? "—",
+    };
+  }, [projects, activeRow]);
 
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const pendingCount = notifications.filter(
+    (n) => !n.is_read && (n.priority.toLowerCase() === "high" || n.priority.toLowerCase() === "urgent"),
+  ).length;
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return ALL.filter(
-      (i) => i.title.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || i.group.toLowerCase().includes(q),
-    );
-  }, [query]);
+  const weather = weatherFromLocation(activeProject.location);
+
+  const markRead = async (id: string) => {
+    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+  };
+
+  const markAllRead = async () => {
+    const ids = notifications.filter((n) => !n.is_read).map((n) => n.id);
+    if (!ids.length) return;
+    await supabase.from("notifications").update({ is_read: true }).in("id", ids);
+  };
 
   return (
-    <div className="m3 min-h-screen bg-background text-foreground">
-      <header className="hero-surface px-5 py-12 sm:px-10 sm:py-16">
-        <div className="mx-auto grid w-full max-w-none gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-end">
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Top greeting bar */}
+      <header className="border-b border-border bg-card px-5 py-6 sm:px-8">
+        <div className="mx-auto flex w-full max-w-none flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <img
-              src={sahaLogo.url}
-              alt="Saha Developers"
-              className="mb-5 h-12 w-auto rounded-md bg-white/95 p-1.5 shadow-lg sm:h-14"
-            />
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-brand-bright animate-pulse" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
-                {project.name} · {project.location}
-              </span>
+            <h1 className="display-title text-2xl sm:text-3xl">
+              {greeting}, <span className="text-primary">{firstName}</span>
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {unreadCount > 0
+                ? `You have ${unreadCount} notification${unreadCount === 1 ? "" : "s"} requiring attention.`
+                : "No pending notifications. Your projects are up to date."}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setProjectMenuOpen((v) => !v)}
+                className="flex min-w-[14rem] items-center justify-between gap-3 rounded-xl border border-border bg-secondary px-4 py-2.5 text-left transition-colors hover:bg-secondary/70"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-secondary-foreground">
+                    {activeProject.name}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">{activeProject.location}</span>
+                </span>
+                <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+              </button>
+
+              {projectMenuOpen && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-border bg-card p-3 shadow-lg">
+                  <div className="flex items-center justify-between gap-2 border-b border-border pb-2">
+                    <span className="text-sm font-semibold">Active project</span>
+                    <Link
+                      to="/projects"
+                      onClick={() => setProjectMenuOpen(false)}
+                      className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary-hover"
+                    >
+                      <Plus className="size-3" /> New
+                    </Link>
+                  </div>
+                  <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto">
+                    {projects.length === 0 && (
+                      <li className="px-1 py-2 text-xs text-muted-foreground">No projects yet.</li>
+                    )}
+                    {projects.map((p) => (
+                      <li key={p.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveProject(p.id);
+                            setProjectMenuOpen(false);
+                          }}
+                          className={cn(
+                            "flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left hover:bg-secondary",
+                            p.id === activeProject.id && "bg-primary-soft",
+                          )}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-[13px] font-medium">{p.name}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{p.location}</span>
+                          </span>
+                          {p.id === activeProject.id && (
+                            <span className="label-caps shrink-0 rounded bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
+                              Active
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
-            <h1 className="mt-4 display-title text-4xl text-white sm:text-6xl">
-              Saha <span className="italic text-brand-bright">OS</span>
-            </h1>
-            <p className="mt-3 max-w-2xl text-base text-white/70">
-              One workspace for estimation, site execution, quality and money — pick a workspace below.
-            </p>
-
-            <div className="mt-7 max-w-xl">
-              <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
-                <span className="material-symbols-outlined text-base leading-none text-white/70">search</span>
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search modules — BOQ, pour card, vendor, bills…"
-                  aria-label="Search modules"
-                  className="w-full bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
-                />
+            <div className="hidden items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-right sm:flex">
+              <CloudCog className="size-4 text-primary" />
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sync status</p>
+                <p className="text-xs font-semibold text-foreground">Online · Synced</p>
               </div>
             </div>
           </div>
-
-          <dl className="grid grid-cols-2 gap-5 lg:mb-2">
-            {stats.map(([v, l]) => (
-              <div
-                key={l}
-                className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 backdrop-blur-sm"
-              >
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/50">{l}</dt>
-                <dd className="mt-1 display-title text-xl text-white sm:text-2xl">{v}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
-
       </header>
 
-      <main className="mx-auto flex max-w-none flex-col gap-14 px-5 py-12 sm:px-10">
-        {query.trim() ? (
-          <section className="flex flex-col gap-5">
-            <h2 className="display-title text-2xl">
-              {results.length} match{results.length === 1 ? "" : "es"} for “{query.trim()}”
-            </h2>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {results.map((i) => (
-                <ModuleCard key={i.to} item={i} tone={i.tone} />
-              ))}
-            </div>
-          </section>
-        ) : (
-          <>
-            <section className="flex flex-col gap-5">
-              <div className="flex items-end justify-between gap-4">
+      <main className="mx-auto grid w-full max-w-none gap-6 px-5 py-6 lg:grid-cols-12 lg:px-8">
+        {/* Left column: stats + action centre */}
+        <div className="flex flex-col gap-6 lg:col-span-8">
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <StatCard
+              label="Active Projects"
+              value={String(stats.totalProjects)}
+              hint={stats.totalProjects > 1 ? `${stats.totalProjects} running` : undefined}
+              tone="primary"
+              icon={Building2}
+            />
+            <StatCard
+              label="Active Budget"
+              value={inrCompact(stats.activeBudget)}
+              hint={stats.activeBudget > 0 ? `${Math.round((stats.activeSpend / (stats.activeBudget || 1)) * 100)}% spent` : undefined}
+              tone="success"
+              icon={TrendingUp}
+            />
+            <StatCard
+              label="Workforce on Site"
+              value={num(stats.activeStaff)}
+              hint={stats.activeStaff > 0 ? "Total staff" : undefined}
+              tone="info"
+              icon={Users}
+            />
+            <StatCard
+              label="Attention Items"
+              value={String(pendingCount + pendingPOs)}
+              hint={pendingPOs > 0 ? `${pendingPOs} PO pending` : undefined}
+              tone={pendingCount + pendingPOs > 0 ? "warning" : "success"}
+              icon={Bell}
+            />
+          </div>
+
+          {/* Active project summary */}
+          {activeRow && (
+            <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-card p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Everyday workspaces
-                  </p>
-                  <h2 className="mt-1 heading-gradient display-title text-3xl sm:text-4xl">Start here</h2>
+                  <div className="flex items-center gap-2">
+                    <span className="label-caps rounded bg-primary-soft px-2 py-0.5 text-primary">{activeProject.health}</span>
+                    <span className="text-xs text-muted-foreground">{activeProject.type}</span>
+                  </div>
+                  <h2 className="mt-2 display-title text-xl sm:text-2xl">{activeProject.name}</h2>
+                  <p className="text-sm text-muted-foreground">{activeProject.location}</p>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <MiniMetric label="BOQ Items" value={String(boqCount)} />
+                  <MiniMetric label="Built-up" value={`${num(stats.activeBuiltUp)} sft`} />
+                  <MiniMetric label="POs Pending" value={String(pendingPOs)} />
                 </div>
               </div>
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {PINNED.map((i) => (
-                  <ModuleCard key={i.to} item={i} tone={i.tone} />
-                ))}
+              <div className="mt-5">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-muted-foreground">Budget consumed</span>
+                  <span className="font-semibold">
+                    {inrCompact(stats.activeSpend)} / {inrCompact(stats.activeBudget)}
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${Math.min(100, (stats.activeSpend / (stats.activeBudget || 1)) * 100)}%` }}
+                  />
+                </div>
               </div>
-            </section>
+            </div>
+          )}
 
-            <section className="flex flex-col gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  {ALL.length} modules, grouped
-                </p>
-                <h2 className="mt-1 display-title text-2xl sm:text-3xl">Full suite</h2>
+          {/* Action Centre */}
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Bell className="size-5 text-primary" />
+                <h2 className="display-title text-lg">Action Centre</h2>
+                {unreadCount > 0 && (
+                  <span className="grid size-5 place-items-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/notifications"
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  View all
+                </Link>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAllRead}
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    Mark read
+                  </button>
+                )}
+              </div>
+            </div>
 
-              <div className="flex flex-col gap-3">
-                {GROUPS.map((g) => {
-                  const t = TONE[g.tone];
-                  const isOpen = open === g.group;
-                  return (
-                    <div key={g.group} className="overflow-hidden rounded-2xl border border-border bg-card">
-                      <button
-                        type="button"
-                        onClick={() => setOpen(isOpen ? null : g.group)}
-                        aria-expanded={isOpen}
-                        className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/60"
-                      >
-                        <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${t.chip}`}>
-                          <span className="material-symbols-outlined text-lg leading-none">
-                            {g.items[0]?.icon ?? "folder"}
-                          </span>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className={`block display-title text-xl ${t.title}`}>{g.group}</span>
-                          <span className="block text-xs text-muted-foreground">{g.items.length} modules</span>
-                        </span>
-                        <span className="material-symbols-outlined shrink-0 text-muted-foreground">
-                          {isOpen ? "expand_less" : "expand_more"}
-                        </span>
-                      </button>
-                      {isOpen ? (
-                        <div className="grid gap-4 border-t border-border bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                          {g.items.map((i) => (
-                            <ModuleCard key={i.to} item={i} tone={g.tone} />
-                          ))}
-                        </div>
+            <div className="divide-y divide-border">
+              {notifications.length === 0 && (
+                <div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
+                  <CheckCircle2 className="size-8 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">Nothing pending for {activeProject.name}.</p>
+                </div>
+              )}
+              {notifications.map((n) => {
+                const tone = priorityTone(n.priority);
+                return (
+                  <div
+                    key={n.id}
+                    className={cn(
+                      "group flex items-start gap-4 px-5 py-4 transition-colors hover:bg-muted/40",
+                      !n.is_read && "bg-primary-soft/30",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "grid size-10 shrink-0 place-items-center rounded-xl",
+                        tone === "warning" && "bg-warning-soft text-warning",
+                        tone === "info" && "bg-info-soft text-info",
+                        tone === "success" && "bg-primary-soft text-primary",
+                        tone === "secondary" && "bg-secondary text-secondary-foreground",
+                      )}
+                    >
+                      {tone === "warning" ? (
+                        <AlertTriangle className="size-5" />
+                      ) : tone === "info" ? (
+                        <Info className="size-5" />
                       ) : (
-                        <div className="flex flex-wrap gap-2 border-t border-border px-5 py-3">
-                          {g.items.slice(0, 5).map((i) => (
-                            <Link
-                              key={i.to}
-                              to={i.to}
-                              className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
-                            >
-                              {i.title}
-                            </Link>
-                          ))}
-                          {g.items.length > 5 ? (
-                            <span className="px-2 py-1 text-xs text-muted-foreground">
-                              +{g.items.length - 5} more
-                            </span>
-                          ) : null}
-                        </div>
+                        <CheckCircle2 className="size-5" />
                       )}
                     </div>
-                  );
-                })}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className={cn("text-sm font-semibold", !n.is_read && "text-foreground")}>{n.title}</h3>
+                        <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(n.created_at)}</span>
+                      </div>
+                      <p className="mt-0.5 text-sm text-muted-foreground">{n.body}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        {n.link && (
+                          <Link
+                            to={n.link}
+                            onClick={() => markRead(n.id)}
+                            className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary-hover"
+                          >
+                            Review <ArrowRight className="size-3" />
+                          </Link>
+                        )}
+                        {!n.is_read && (
+                          <button
+                            type="button"
+                            onClick={() => markRead(n.id)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Dismiss
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Right column: shortcuts + insight */}
+        <div className="flex flex-col gap-6 lg:col-span-4">
+          {/* Quick Access */}
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="display-title text-sm uppercase tracking-wider text-muted-foreground">Quick Access</h2>
+              <button
+                type="button"
+                onClick={() => setEditShortcuts((v) => !v)}
+                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                title="Edit shortcuts"
+              >
+                <MoreHorizontal className="size-4" />
+              </button>
+            </div>
+
+            {editShortcuts && (
+              <div className="mt-3 rounded-xl border border-border bg-muted/50 p-3">
+                <p className="mb-2 text-xs text-muted-foreground">Tap to pin/unpin shortcuts (max 8)</p>
+                <div className="flex flex-wrap gap-2">
+                  {ALL_SHORTCUTS.map((s) => {
+                    const active = shortcuts.some((x) => x.id === s.id);
+                    const Icon = s.icon;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => toggleShortcut(s)}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                          active
+                            ? "border-primary bg-primary-soft text-primary"
+                            : "border-border bg-card text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <Icon className="size-3" />
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </section>
-          </>
-        )}
+            )}
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {shortcuts.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <Link
+                    key={s.id}
+                    to={s.to}
+                    className={cn(
+                      "group flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-all hover:-translate-y-0.5",
+                      s.tone === "primary" && "border-primary/20 bg-primary-soft/50 hover:border-primary",
+                      s.tone === "secondary" && "border-border bg-secondary/50 hover:border-primary/30",
+                      s.tone === "success" && "border-primary/20 bg-primary-soft/30 hover:border-primary",
+                      s.tone === "warning" && "border-warning/30 bg-warning-soft/50 hover:border-warning",
+                      s.tone === "info" && "border-info/30 bg-info-soft/50 hover:border-info",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "grid size-10 place-items-center rounded-full text-white shadow-sm transition-colors",
+                        s.tone === "primary" && "bg-primary",
+                        s.tone === "secondary" && "bg-muted-foreground/70",
+                        s.tone === "success" && "bg-primary",
+                        s.tone === "warning" && "bg-warning",
+                        s.tone === "info" && "bg-info",
+                      )}
+                    >
+                      <Icon className="size-5" />
+                    </div>
+                    <span className="text-xs font-semibold text-foreground">{s.label}</span>
+                  </Link>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setEditShortcuts((v) => !v)}
+                className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border p-4 text-center text-muted-foreground transition-colors hover:border-primary/30 hover:bg-muted/30"
+              >
+                <div className="grid size-10 place-items-center rounded-full bg-muted text-muted-foreground">
+                  <Plus className="size-5" />
+                </div>
+                <span className="text-xs font-semibold">Customize</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Contextual insight */}
+          <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-lg">
+            <div className="relative z-10">
+              <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary-foreground/70">
+                <Sun className="size-4" /> Site Context
+              </h3>
+              <div className="mt-3 flex items-baseline gap-3">
+                <span className="display-title text-3xl">{weather.temp}°C</span>
+                <span className="text-sm font-medium">{weather.condition}</span>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-primary-foreground/80">{weather.advice}</p>
+              <div className="mt-4 flex gap-4 text-xs text-primary-foreground/70">
+                <span className="flex items-center gap-1"><Droplets className="size-3" /> {weather.humidity}</span>
+                <span className="flex items-center gap-1"><Wind className="size-3" /> Light breeze</span>
+              </div>
+            </div>
+            <div className="absolute -right-6 -bottom-6 size-32 rounded-full bg-primary-foreground/10 blur-2xl" />
+          </div>
+
+          {/* All modules link */}
+          <Link
+            to="/system-directory"
+            className="flex items-center justify-between rounded-xl border border-border bg-card p-4 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted/50"
+          >
+            Browse all modules
+            <ArrowRight className="size-4 text-muted-foreground" />
+          </Link>
+        </div>
       </main>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  tone,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone: "primary" | "success" | "info" | "warning";
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-primary/20">
+      <div className="flex items-start justify-between">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+        <div
+          className={cn(
+            "grid size-8 place-items-center rounded-lg",
+            tone === "primary" && "bg-primary-soft text-primary",
+            tone === "success" && "bg-primary-soft text-primary",
+            tone === "info" && "bg-info-soft text-info",
+            tone === "warning" && "bg-warning-soft text-warning",
+          )}
+        >
+          <Icon className="size-4" />
+        </div>
+      </div>
+      <p className="mt-2 display-title text-2xl">{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card/60 p-3 text-center">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-foreground">{value}</p>
     </div>
   );
 }
