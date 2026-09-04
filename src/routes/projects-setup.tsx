@@ -286,50 +286,35 @@ function Page() {
 <span>Drawing Parsing Directives &amp; Internal Notes</span>
 <span className="text-on-surface-variant font-label-sm text-label-sm font-normal">Auto-indexes to Stage BOQs</span>
 </label>
-<textarea className="w-full p-space-md rounded bg-surface-container-low text-on-surface font-body-sm text-body-sm leading-relaxed focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary focus:outline-none transition-all" rows={4} defaultValue="Windows shown as blue rectangles; doors are 3'x7' single-leaf flush doors. Each typical floor has 4 3BHK units with 8 doors + 12 windows per unit. Roof has open terrace slab with 3' parapet wall and overhead water tank, no internal partition walls." />
+<textarea className="w-full p-space-md rounded bg-surface-container-low text-on-surface font-body-sm text-body-sm leading-relaxed" rows={4} value={project ? `${project.workflow_template} workflow. ${project.blockwork_type} blockwork, ${project.steel_grade} steel, ${project.concrete_grade} concrete. ${project.finishing_spec} finishing with ${project.flooring_spec} flooring, ${project.paint_spec} paint, ${project.plumbing_spec} plumbing and ${project.electrical_spec} electrical specifications.` : "Add or select a project to load its saved construction specifications."} readOnly />
 </div>
 
 <div className="flex flex-col gap-space-sm">
 <label className="font-label-md text-label-md text-on-surface font-semibold">Attached Architectural &amp; Structural Assets</label>
 <div className="flex flex-col gap-space-xs">
-
-<div className="flex items-center justify-between p-space-sm rounded bg-surface-container-low hover:bg-surface-container transition-colors">
-<div className="flex items-center gap-space-sm min-w-0">
-<span className="material-symbols-outlined text-tertiary text-space-lg leading-none">layers</span>
-<div className="flex flex-col min-w-0">
-<span className="font-title-md text-title-md text-on-surface truncate">architectural_floorplan_v3.dwg</span>
-<span className="font-label-sm text-label-sm text-on-surface-variant">14.8 MB • Extracted 12 layers • Layer: WALL_STRUCT</span>
-</div>
-</div>
-<div className="flex items-center gap-space-xs shrink-0">
-<span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm">Parsed</span>
-<button className="p-space-2xs text-on-surface-variant hover:text-error transition-colors">
-<span className="material-symbols-outlined text-space-base leading-none">delete</span>
-</button>
-</div>
-</div>
-
-<div className="flex items-center justify-between p-space-sm rounded bg-surface-container-low hover:bg-surface-container transition-colors">
-<div className="flex items-center gap-space-sm min-w-0">
-<span className="material-symbols-outlined text-error text-space-lg leading-none">picture_as_pdf</span>
-<div className="flex flex-col min-w-0">
-<span className="font-title-md text-title-md text-on-surface truncate">structural_framing_plan.pdf</span>
-<span className="font-label-sm text-label-sm text-on-surface-variant">8.4 MB • Column grid C1-C18 • Beams B1-B34</span>
-</div>
-</div>
-<div className="flex items-center gap-space-xs shrink-0">
-<span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm">Parsed</span>
-<button className="p-space-2xs text-on-surface-variant hover:text-error transition-colors">
-<span className="material-symbols-outlined text-space-base leading-none">delete</span>
-</button>
-</div>
-</div>
+{Array.isArray(project?.drawings) && project.drawings.length > 0 ? project.drawings.map((drawing, index) => {
+  const asset = typeof drawing === "object" && drawing !== null ? drawing as { name?: string; path?: string } : null;
+  return (
+    <div key={asset?.path ?? `${asset?.name ?? "drawing"}-${index}`} className="flex items-center justify-between p-space-sm rounded bg-surface-container-low">
+      <div className="flex items-center gap-space-sm min-w-0">
+        <span className="material-symbols-outlined text-tertiary text-space-lg leading-none">draft</span>
+        <div className="flex flex-col min-w-0">
+          <span className="font-title-md text-title-md text-on-surface truncate">{asset?.name ?? `Project drawing ${index + 1}`}</span>
+          <span className="font-label-sm text-label-sm text-on-surface-variant">Saved with {project.name}</span>
+        </div>
+      </div>
+      <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm">Available</span>
+    </div>
+  );
+}) : (
+  <div className="rounded bg-surface-container-low p-space-md font-body-sm text-body-sm text-on-surface-variant">No drawings were uploaded for this project.</div>
+)}
 </div>
 
-<button className="flex items-center justify-center gap-space-sm py-space-md px-space-base rounded bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-all">
+<Button type="button" variant="outline" onClick={() => navigate({ to: "/projects" })} className="h-auto flex items-center justify-center gap-space-sm py-space-md px-space-base">
 <span className="material-symbols-outlined text-space-base leading-none">upload_file</span>
-<span className="font-title-md text-title-md">Drop revisions or click to attach (DWG, DXF, PDF up to 100MB)</span>
-</button>
+<span className="font-title-md text-title-md">Manage drawings in Project Details</span>
+</Button>
 </div>
 </div>
 </div>
@@ -418,7 +403,7 @@ function Page() {
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-2xs mt-space-2xs">
 <span className="material-symbols-outlined text-space-sm leading-none text-primary">holiday_village</span>
-<span>Habitable apartment floors 1 to 5</span>
+<span>{geometry.typical} saved typical floor{geometry.typical === 1 ? "" : "s"}</span>
 </span>
 </div>
 </div>
@@ -429,7 +414,7 @@ function Page() {
 <span className="material-symbols-outlined text-primary text-space-base leading-none">calculate</span>
 <span className="font-label-sm text-label-sm font-bold uppercase tracking-wider text-on-surface">Calculated Civil Quantities</span>
 </div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">IS 456:2000 Structural Estimation Model</span>
+<span className="font-label-sm text-label-sm text-on-surface-variant">{project?.concrete_grade ?? "Concrete grade pending"} structural estimation model</span>
 </div>
 <div className="grid grid-cols-2 sm:grid-cols-3 gap-space-md">
 
@@ -475,7 +460,7 @@ function Page() {
 <span className="font-tabular-metric text-tabular-metric text-tertiary" id="metricConcreteVol">~{concreteVolume}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">CUM</span>
 </div>
-<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">@ 5″ slab + beams + col</span>
+<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">Saved grade: {project?.concrete_grade ?? "Not provided"}</span>
 </div>
 
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
@@ -484,7 +469,7 @@ function Page() {
 <span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricRebarWeight">~{rebarWeight}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">MT</span>
 </div>
-<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">@ 3.0 kg/SFT structural density</span>
+<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">@ {Number(project?.steel_ratio_kg_per_sft ?? 0).toLocaleString("en-IN")} kg/SFT · {project?.steel_grade ?? "Grade pending"}</span>
 </div>
 </div>
 </div>
