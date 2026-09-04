@@ -31,59 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
-
-type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
-type NavGroup = { id: string; label: string; items: NavItem[] };
-
-const groups: NavGroup[] = [
-  {
-    id: "core",
-    label: "Core",
-    items: [
-      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/", label: "Saha OS Hub", icon: Home },
-    ],
-  },
-  {
-    id: "project",
-    label: "Project",
-    items: [
-      { to: "/projects", label: "Projects", icon: Building2 },
-      { to: "/boq", label: "BOQ & Inventory", icon: Calculator },
-      { to: "/drawing-decipher", label: "Documents", icon: FileText },
-      { to: "/project-controls", label: "Reports", icon: BarChart3 },
-    ],
-  },
-  {
-    id: "site",
-    label: "Site Work",
-    items: [
-      { to: "/site-execution", label: "Execution & QA/QC", icon: HardHat },
-      { to: "/pour-cards", label: "Pour Cards", icon: ClipboardCheck },
-      { to: "/qa", label: "AI Visual QA", icon: ScanEye },
-      { to: "/site-media", label: "Site Media & Uploads", icon: Video },
-    ],
-  },
-  {
-    id: "purchase",
-    label: "Purchase & Accounts",
-    items: [
-      { to: "/purchasing-center", label: "Purchasing", icon: ShoppingCart },
-      { to: "/procurement", label: "Procurement", icon: ShoppingCart },
-      { to: "/vendor-directory", label: "Vendors & Contractors", icon: Store },
-      { to: "/bills-payments", label: "Bills & Payments", icon: Receipt },
-    ],
-  },
-  {
-    id: "money",
-    label: "Money & Owners",
-    items: [
-      { to: "/capital-ledger", label: "Capital Ledger", icon: Wallet },
-      { to: "/landowners-investment", label: "Landowners & Investment", icon: Landmark },
-      { to: "/financial-forecast", label: "Financial Forecast", icon: BarChart3 },
-    ],
-  },
-];
+import { navForRole, roles, type NavItem } from "@/components/saha/nav";
 
 const mobileNav: NavItem[] = [
   { to: "/", label: "Hub", icon: Home },
@@ -106,15 +54,24 @@ export function Shell({
   children: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(true);
-  const [role, setRole] = useState("Project Manager (PM)");
+  const [role, setRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "Admin / Owner";
+    return window.localStorage.getItem("saha-role") ?? "Admin / Owner";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") window.localStorage.setItem("saha-role", role);
+  }, [role]);
   const [sunlight, setSunlight] = useState(false);
   const [projectMenu, setProjectMenu] = useState(false);
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
+  const groups = useMemo(() => navForRole(role), [role]);
+
   const activeGroup = useMemo(
-    () => groups.find((g) => g.items.some((i) => i.to === pathname))?.id ?? "core",
-    [pathname],
+    () => groups.find((g) => g.items.some((i) => i.to === pathname))?.id ?? groups[0]?.id ?? "planning",
+    [groups, pathname],
   );
   const [open, setOpen] = useState<Record<string, boolean>>({ [activeGroup]: true });
 
@@ -173,10 +130,11 @@ export function Shell({
                 onChange={(e) => setRole(e.target.value)}
                 className="mt-1 h-8 w-full rounded bg-sidebar-accent/60 px-2 text-[13px] font-medium text-sidebar-accent-foreground"
               >
-                <option>Project Manager (PM)</option>
-                <option>Site Engineer</option>
-                <option>Site Supervisor</option>
-                <option>Accounts</option>
+                {roles.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
               </select>
             </div>
           )}
