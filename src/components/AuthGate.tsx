@@ -59,7 +59,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
         <p className="label-caps text-emerald-300">Awaiting approval</p>
         <h1 className="mt-2 text-lg font-bold text-white">Permission required</h1>
         <p className="mt-3 text-sm text-white/70">
-          You are signed in as <span className="font-semibold text-white">{access?.email}</span>.
+          You are signed in as{" "}
+          <span className="font-semibold text-white">
+            {access?.email || access?.profile?.email || "this account"}
+          </span>
+          .
           An admin or project manager must approve your account and assign the screens you may
           view before the workspace opens.
         </p>
