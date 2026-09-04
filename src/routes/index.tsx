@@ -17,6 +17,7 @@ import {
   Users,
   TrendingUp,
   Bell,
+  MessagesSquare,
   ChevronDown,
   Plus,
   CloudCog,
@@ -201,6 +202,23 @@ function Index() {
     enabled: true,
   });
 
+  const { data: unreadChats = 0 } = useQuery({
+    queryKey: ["notifications", "unread-chat-count", user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("is_read", false)
+        .eq("recipient_id", user!.id)
+        .in("category", ["Chat", "Task"]);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 6000,
+    refetchOnWindowFocus: true,
+  });
+
   const { data: boqCount = 0 } = useQuery({
     queryKey: ["boq_items", "count", activeProject.id],
     queryFn: async () => {
@@ -289,6 +307,33 @@ function Index() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link
+              to="/messages"
+              className="relative inline-flex shrink-0 items-center rounded-full bg-secondary p-2.5 text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+              aria-label="Team chat"
+              title="Team chat"
+            >
+              <MessagesSquare className="size-5" />
+              {unreadChats > 0 && (
+                <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
+                  {unreadChats > 9 ? "9+" : unreadChats}
+                </span>
+              )}
+            </Link>
+            <Link
+              to="/notifications"
+              className="relative inline-flex shrink-0 items-center rounded-full bg-secondary p-2.5 text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+              aria-label="Notifications"
+              title="Action centre"
+            >
+              <Bell className="size-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Link>
+
             <div className="relative">
               <button
                 type="button"
