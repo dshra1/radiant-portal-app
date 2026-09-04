@@ -211,3 +211,193 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
       tradesMissing: BOQ_TRADES.filter((t) => !covered.has(t)),
     };
   });
+
+export type BrandOption = {
+  brand: string;
+  supplier: string;
+  rate: number;
+  tier: string;
+  why: string;
+};
+
+export type BrandSuggestion = {
+  itemId: string;
+  description: string;
+  trade: string;
+  unit: string;
+  quantity: number;
+  currentBrand: string;
+  currentRate: number;
+  options: BrandOption[];
+};
+
+/**
+ * Brand / value-engineering alternatives for one or more BOQ line items.
+ * Returns 3-4 realistic Indian brand options per item with per-unit rates so
+ * the owner can compare and apply a substitution.
+ */
+export const suggestBrandOptions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { itemIds: string[] }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const ids = (data.itemIds ?? []).slice(0, 15);
+    if (ids.length === 0) return { suggestions: [] as BrandSuggestion[] };
+
+    const { data: items, error } = await supabase
+      .from("boq_items")
+      .select("id,project_id,stage,category,description,unit,quantity,rate,brand,supplier")
+      .in("id", ids);
+    if (error) throw new Error(error.message);
+    if (!items || items.length === 0) return { suggestions: [] as BrandSuggestion[] };
+
+    const { data: project } = await supabase
+      .from("site_projects")
+      .select(
+        "name,location,type,finishing_spec,paint_spec,plumbing_spec,electrical_spec,flooring_spec,sanitaryware_spec,doors_windows_spec,steel_grade,concrete_grade,blockwork_type",
+      )
+      .eq("id", items[0]!.project_id)
+      .maybeSingle();
+
+    const key = process.env["LOVABLE_API_KEY"];
+    if (!key) throw new Error("AI is not configured for this workspace");
+    const { createLovableAiGatewayProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
+    const gateway = createLovableAiGatewayProvider(key);
+
+    const payload = items.map((it) => ({
+      id: it.id,
+      trade: it.stage,
+      description: it.description,
+      unit: it.unit,
+      quantity: Number(it.quantity) || 0,
+      currentBrand: it.brand || "",
+      currentRate: Number(it.rate) || 0,
+    }));
+
+    const result = streamText({
+      model: gateway(SAHA_MODEL),
+      system: [
+        "You are a procurement and value-engineering specialist for building construction in Hyderabad, India.",
+        "For each BOQ line item given, propose 3-4 REAL alternative brands / makes available in the Indian market that can supply that item, spanning economy, standard and premium tiers.",
+        "Return ONLY a JSON array, no prose or markdown. Each element:",
+        '{"id":string,"options":[{"brand":string,"supplier":string,"rate":number,"tier":"Economy"|"Standard"|"Premium","why":string}]}',
+        "rate = realistic current per-unit rate in INR for that brand and the item's unit (plain number). why = one short line on quality/warranty/lead-time trade-off (max 90 chars).",
+        "Where a branded product does not apply (e.g. earthwork labour), propose execution/vendor options instead and keep rates realistic.",
+        "Always include at least one option cheaper than the current rate when a credible cheaper make exists.",
+      ].join("\n"),
+      prompt: [
+        project
+          ? `PROJECT CONTEXT: ${JSON.stringify(project)}`
+          : "PROJECT CONTEXT: general residential building",
+        `LINE ITEMS: ${JSON.stringify(payload)}`,
+        "Respond with the JSON array only, one element per line item id.",
+      ].join("\n\n"),
+    });
+
+    const parsed = extractJsonArray(await result.text) as unknown as {
+      id?: unknown;
+      options?: unknown;
+    }[];
+
+    const byId = new Map<string, BrandOption[]>();
+    for (const entry of parsed) {
+      const id = String(entry.id ?? "");
+      if (!id || !Array.isArray(entry.options)) continue;
+      const options: BrandOption[] = (entry.options as RawItem[])
+        .map((o) => ({
+          brand: String((o as { brand?: unknown }).brand ?? "").trim(),
+          supplier: String((o as { supplier?: unknown }).supplier ?? "").trim(),
+          rate: toNum((o as { rate?: unknown }).rate),
+          tier: String((o as { tier?: unknown }).tier ?? "Standard").trim() || "Standard",
+          why: String((o as { why?: unknown }).why ?? "").trim(),
+        }))
+        .filter((o) => o.brand !== "");
+      if (options.length) byId.set(id, options);
+    }
+
+    const suggestions: BrandSuggestion[] = items
+      .filter((it) => byId.has(it.id))
+      .map((it) => ({
+        itemId: it.id,
+        description: it.description,
+        trade: it.stage,
+        unit: it.unit,
+        quantity: Number(it.quantity) || 0,
+        currentBrand: it.brand || "",
+        currentRate: Number(it.rate) || 0,
+        options: byId.get(it.id)!,
+      }));
+
+    return { suggestions };
+  });
+
+
+/**
+ * Tries to find a real product image on the internet for a BOQ line item
+ * (e.g. "Kohler July series diverter/spout"). The model proposes candidate
+ * image URLs from manufacturer/dealer sites; each candidate is verified
+ * server-side and only a URL that really serves an image is saved.
+ * Returns found:false when nothing verifies, so the UI can ask for an upload.
+ */
+export const findProductImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { itemId: string; query?: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const { data: item, error } = await supabase
+      .from("boq_items")
+      .select("id,stage,description,brand,unit")
+      .eq("id", data.itemId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!item) throw new Error("Line item not found");
+
+    const searchText =
+      (data.query ?? "").trim() || `${item.brand} ${item.description}`.trim();
+    if (!searchText) return { found: false as const, searchText: "" };
+
+    const key = process.env["LOVABLE_API_KEY"];
+    if (!key) throw new Error("AI is not configured for this workspace");
+    const { createLovableAiGatewayProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
+    const gateway = createLovableAiGatewayProvider(key);
+
+    const result = streamText({
+      model: gateway(SAHA_MODEL),
+      system: [
+        "You locate product photographs for Indian construction and bathroom/electrical/finishing products.",
+        "Given a product description, return ONLY a JSON array of 6 candidate DIRECT image URLs (ending in .jpg/.jpeg/.png/.webp) from manufacturer or authorised dealer/e-commerce websites.",
+        'Format: ["https://...jpg", "https://...png"]',
+        "Prefer official brand product pages and large Indian retailers. Do not return search-result pages, data URIs or placeholders.",
+      ].join("\n"),
+      prompt: `PRODUCT: ${searchText}\nTRADE: ${item.stage}\nReturn the JSON array only.`,
+    });
+
+    const text = await result.text;
+    const urls = Array.from(
+      new Set(
+        (text.match(/https?:\/\/[^\s"'<>\]]+/g) ?? []).filter((u) =>
+          /\.(jpe?g|png|webp)(\?|$)/i.test(u),
+        ),
+      ),
+    ).slice(0, 8);
+
+    for (const url of urls) {
+      try {
+        const probe = await fetch(url, { method: "GET", headers: { Accept: "image/*" } });
+        const type = probe.headers.get("content-type") ?? "";
+        if (probe.ok && type.startsWith("image/")) {
+          const upd = await supabase
+            .from("boq_items")
+            .update({ image_url: url, image_source: "web" })
+            .eq("id", item.id);
+          if (upd.error) throw new Error(upd.error.message);
+          return { found: true as const, imageUrl: url, searchText };
+        }
+      } catch {
+        /* try the next candidate */
+      }
+    }
+
+    return { found: false as const, searchText, candidates: urls };
+  });
