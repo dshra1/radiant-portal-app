@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Layers, Ruler, Trash2, Plus, X, ExternalLink } from "lucide-react";
+import { MapPin, Layers, Ruler, Trash2, Plus, X, ExternalLink, Pencil } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { ActionButton, PhaseBar, StatusBadge } from "@/components/saha/ui";
 import { inrCompact, num } from "@/data/saha";
@@ -29,6 +29,12 @@ export const Route = createFileRoute("/projects")({
 
 type Phase = { name: string; state: "done" | "active" | "pending" };
 
+export type Owner = { name: string; contact: string; share_pct: string };
+export type Investor = { name: string; contact: string; amount: string };
+
+const emptyOwner = (): Owner => ({ name: "", contact: "", share_pct: "" });
+const emptyInvestor = (): Investor => ({ name: "", contact: "", amount: "" });
+
 type Row = {
   id: string;
   name: string;
@@ -52,12 +58,15 @@ type Row = {
   total_staff: number;
   landowner_name: string;
   investor_name: string;
+  landowners: { name?: string; contact?: string; share_pct?: number | string }[] | null;
+  investors: { name?: string; contact?: string; amount?: number | string }[] | null;
   steel_grade: string;
   blockwork_type: string;
   finishing_spec: string;
   drawings: { name: string; path: string }[];
-
+  [key: string]: unknown;
 };
+
 
 const DEFAULT_PHASES: Phase[] = [
   { name: "Piling", state: "pending" },
@@ -110,13 +119,8 @@ const emptyForm = {
   total_staff: "",
   engineers_count: "",
   labour_count: "",
-  // Owners & investors
-  landowner_name: "",
-  landowner_contact: "",
-  landowner_share_pct: "",
-  investor_name: "",
-  investor_contact: "",
-  investor_amount: "",
+  // Owners & investors (legacy single fields kept in sync with the lists)
+
   // Company & bank
   company_name: "",
   company_gstin: "",
@@ -131,7 +135,11 @@ const QUALITY = ["Standard", "Premium", "Luxury"];
 function Projects() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [owners, setOwners] = useState<Owner[]>([emptyOwner()]);
+  const [investors, setInvestors] = useState<Investor[]>([]);
+
   const [error, setError] = useState<string | null>(null);
   const [drawings, setDrawings] = useState<{ name: string; path: string }[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -216,78 +224,166 @@ function Projects() {
     };
   }, [form]);
 
-  const createProject = useMutation({
+  const buildPayload = () => {
+    const n = (v: string) => Number(v) || 0;
+    const cleanOwners = owners
+      .filter((o) => o.name.trim() || o.contact.trim())
+      .map((o) => ({ name: o.name.trim(), contact: o.contact.trim(), share_pct: n(o.share_pct) }));
+    const cleanInvestors = investors
+      .filter((i) => i.name.trim() || i.contact.trim())
+      .map((i) => ({ name: i.name.trim(), contact: i.contact.trim(), amount: n(i.amount) }));
+    return {
+      name: form.name.trim(),
+      location: form.location.trim(),
+      type: form.type.trim(),
+      single_floor_slab_sft: n(form.single_floor_slab_sft),
+      cellar_floors: n(form.cellar_floors),
+      stilt_floors: n(form.stilt_floors),
+      typical_floors: n(form.typical_floors),
+      total_built_up_sft: derived.builtUp,
+      total_slab_sft: derived.slab,
+      target_budget: n(form.target_budget),
+      spend: n(form.spend),
+      health: form.health,
+      latitude: form.latitude === "" ? null : n(form.latitude),
+      longitude: form.longitude === "" ? null : n(form.longitude),
+      map_link: form.map_link.trim(),
+      start_date: form.start_date || null,
+      target_handover_date:
+        form.target_handover_date || (derived.handover !== "—" ? derived.handover : null),
+      working_days_per_week: n(form.working_days_per_week),
+      slab_cycle_days: n(form.slab_cycle_days),
+      finishing_days_per_floor: n(form.finishing_days_per_floor),
+      procurement_lead_days: n(form.procurement_lead_days),
+      concrete_grade: form.concrete_grade,
+      steel_grade: form.steel_grade,
+      steel_ratio_kg_per_sft: n(form.steel_ratio_kg_per_sft),
+      cement_bags_per_sft: n(form.cement_bags_per_sft),
+      blockwork_type: form.blockwork_type,
+      flooring_spec: form.flooring_spec,
+      paint_spec: form.paint_spec,
+      plumbing_spec: form.plumbing_spec,
+      electrical_spec: form.electrical_spec,
+      doors_windows_spec: form.doors_windows_spec,
+      sanitaryware_spec: form.sanitaryware_spec,
+      finishing_spec: form.finishing_spec,
+      contract_type: form.contract_type,
+      workflow_template: form.workflow_template,
+      total_staff: n(form.total_staff),
+      engineers_count: n(form.engineers_count),
+      labour_count: n(form.labour_count),
+      landowners: cleanOwners,
+      investors: cleanInvestors,
+      landowner_name: cleanOwners[0]?.name ?? "",
+      landowner_contact: cleanOwners[0]?.contact ?? "",
+      landowner_share_pct: cleanOwners[0]?.share_pct ?? 0,
+      investor_name: cleanInvestors[0]?.name ?? "",
+      investor_contact: cleanInvestors[0]?.contact ?? "",
+      investor_amount: cleanInvestors[0]?.amount ?? 0,
+      company_name: form.company_name.trim(),
+      company_gstin: form.company_gstin.trim(),
+      bank_name: form.bank_name.trim(),
+      bank_account_name: form.bank_account_name.trim(),
+      bank_account_last4: form.bank_account_last4.trim().slice(-4),
+      bank_ifsc: form.bank_ifsc.trim(),
+      drawings,
+    };
+  };
+
+  const resetForm = () => {
+    setForm(emptyForm);
+    setOwners([emptyOwner()]);
+    setInvestors([]);
+    setDrawings([]);
+    setEditingId(null);
+  };
+
+  const startEdit = (p: Row) => {
+    const s = (v: unknown) => (v === null || v === undefined ? "" : String(v));
+    setEditingId(p.id);
+    setForm({
+      ...emptyForm,
+      name: s(p.name),
+      location: s(p.location),
+      type: s(p.type),
+      health: s(p.health) || "On Track",
+      single_floor_slab_sft: s(p.single_floor_slab_sft),
+      cellar_floors: s(p.cellar_floors),
+      stilt_floors: s(p.stilt_floors),
+      typical_floors: s(p.typical_floors),
+      target_budget: s(p.target_budget),
+      spend: s(p.spend),
+      latitude: s(p.latitude),
+      longitude: s(p.longitude),
+      map_link: s(p.map_link),
+      start_date: s(p.start_date),
+      target_handover_date: s(p.target_handover_date),
+      working_days_per_week: s(p['working_days_per_week']) || "6",
+      slab_cycle_days: s(p['slab_cycle_days']) || "14",
+      finishing_days_per_floor: s(p['finishing_days_per_floor']) || "20",
+      procurement_lead_days: s(p['procurement_lead_days']) || "10",
+      concrete_grade: s(p['concrete_grade']) || "M25",
+      steel_grade: s(p.steel_grade) || "Fe500D",
+      steel_ratio_kg_per_sft: s(p['steel_ratio_kg_per_sft']) || "4",
+      cement_bags_per_sft: s(p['cement_bags_per_sft']) || "0.4",
+      blockwork_type: s(p.blockwork_type) || "AAC Blocks",
+      flooring_spec: s(p['flooring_spec']) || "Standard",
+      paint_spec: s(p['paint_spec']) || "Standard",
+      plumbing_spec: s(p['plumbing_spec']) || "Standard",
+      electrical_spec: s(p['electrical_spec']) || "Standard",
+      doors_windows_spec: s(p['doors_windows_spec']) || "Standard",
+      sanitaryware_spec: s(p['sanitaryware_spec']) || "Standard",
+      finishing_spec: s(p.finishing_spec) || "Standard",
+      contract_type: s(p['contract_type']) || "Item Rate",
+      workflow_template: s(p['workflow_template']) || "Standard RCC Framed",
+      total_staff: s(p.total_staff),
+      engineers_count: s(p['engineers_count']),
+      labour_count: s(p['labour_count']),
+      company_name: s(p['company_name']),
+      company_gstin: s(p['company_gstin']),
+      bank_name: s(p['bank_name']),
+      bank_account_name: s(p['bank_account_name']),
+      bank_account_last4: s(p['bank_account_last4']),
+      bank_ifsc: s(p['bank_ifsc']),
+    });
+    const ol = Array.isArray(p.landowners) ? p.landowners : [];
+    setOwners(
+      ol.length
+        ? ol.map((o) => ({ name: s(o.name), contact: s(o.contact), share_pct: s(o.share_pct) }))
+        : [{ name: s(p.landowner_name), contact: "", share_pct: "" }],
+    );
+    const il = Array.isArray(p.investors) ? p.investors : [];
+    setInvestors(
+      il.map((i) => ({ name: s(i.name), contact: s(i.contact), amount: s(i.amount) })),
+    );
+    setDrawings(Array.isArray(p.drawings) ? p.drawings : []);
+    setOpen(true);
+    setError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const saveProject = useMutation({
     mutationFn: async () => {
-      const n = (v: string) => Number(v) || 0;
-      const { error } = await supabase.from("site_projects").insert({
-        name: form.name.trim(),
-        location: form.location.trim(),
-        type: form.type.trim(),
-        single_floor_slab_sft: n(form.single_floor_slab_sft),
-        cellar_floors: n(form.cellar_floors),
-        stilt_floors: n(form.stilt_floors),
-        typical_floors: n(form.typical_floors),
-        total_built_up_sft: derived.builtUp,
-        total_slab_sft: derived.slab,
-        target_budget: n(form.target_budget),
-        spend: n(form.spend),
-        health: form.health,
-        phases: DEFAULT_PHASES,
-        latitude: form.latitude === "" ? null : n(form.latitude),
-        longitude: form.longitude === "" ? null : n(form.longitude),
-        map_link: form.map_link.trim(),
-        start_date: form.start_date || null,
-        target_handover_date:
-          form.target_handover_date || (derived.handover !== "—" ? derived.handover : null),
-
-        working_days_per_week: n(form.working_days_per_week),
-        slab_cycle_days: n(form.slab_cycle_days),
-        finishing_days_per_floor: n(form.finishing_days_per_floor),
-        procurement_lead_days: n(form.procurement_lead_days),
-        concrete_grade: form.concrete_grade,
-        steel_grade: form.steel_grade,
-        steel_ratio_kg_per_sft: n(form.steel_ratio_kg_per_sft),
-        cement_bags_per_sft: n(form.cement_bags_per_sft),
-        blockwork_type: form.blockwork_type,
-        flooring_spec: form.flooring_spec,
-        paint_spec: form.paint_spec,
-        plumbing_spec: form.plumbing_spec,
-        electrical_spec: form.electrical_spec,
-        doors_windows_spec: form.doors_windows_spec,
-        sanitaryware_spec: form.sanitaryware_spec,
-        finishing_spec: form.finishing_spec,
-        contract_type: form.contract_type,
-        workflow_template: form.workflow_template,
-        total_staff: n(form.total_staff),
-        engineers_count: n(form.engineers_count),
-        labour_count: n(form.labour_count),
-        landowner_name: form.landowner_name.trim(),
-        landowner_contact: form.landowner_contact.trim(),
-        landowner_share_pct: n(form.landowner_share_pct),
-        investor_name: form.investor_name.trim(),
-        investor_contact: form.investor_contact.trim(),
-        investor_amount: n(form.investor_amount),
-        company_name: form.company_name.trim(),
-        company_gstin: form.company_gstin.trim(),
-        bank_name: form.bank_name.trim(),
-        bank_account_name: form.bank_account_name.trim(),
-        bank_account_last4: form.bank_account_last4.trim().slice(-4),
-        bank_ifsc: form.bank_ifsc.trim(),
-        drawings,
-
-      });
-      if (error) throw error;
+      const payload = buildPayload();
+      if (editingId) {
+        const { error } = await supabase.from("site_projects").update(payload).eq("id", editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("site_projects")
+          .insert({ ...payload, phases: DEFAULT_PHASES });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      setForm(emptyForm);
-      setDrawings([]);
-
+      resetForm();
       setOpen(false);
       setError(null);
       void qc.refetchQueries({ queryKey: ["site_projects"] });
     },
     onError: (e: Error) => setError(e.message),
   });
+
 
   const removeProject = useMutation({
     mutationFn: async (id: string) => {
@@ -308,7 +404,17 @@ function Projects() {
       title="Projects"
       subtitle="Project setup: geometry, timeline drivers, material specs, staffing, owners and banking"
       actions={
-        <ActionButton onClick={() => setOpen((v) => !v)}>
+        <ActionButton
+          onClick={() => {
+            if (open) {
+              setOpen(false);
+              resetForm();
+            } else {
+              resetForm();
+              setOpen(true);
+            }
+          }}
+        >
           {open ? (
             <>
               <X className="size-3.5" /> Close
@@ -320,6 +426,7 @@ function Projects() {
           )}
         </ActionButton>
       }
+
     >
       {error && (
         <div className="mb-3 rounded border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive">
@@ -336,11 +443,11 @@ function Projects() {
               setError("Project name is required.");
               return;
             }
-            createProject.mutate();
+            saveProject.mutate();
           }}
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold tracking-tight">Add a project</h2>
+            <h2 className="text-sm font-semibold tracking-tight">{editingId ? "Edit project" : "Add a project"}</h2>
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <span className="size-2.5 rounded-sm bg-secondary" /> Your input
@@ -518,24 +625,151 @@ function Projects() {
             <Field label="Labour strength" value={form.labour_count} onChange={set("labour_count")} numeric />
           </Section>
 
-          <Section title="Landowner & investor">
-            <Field label="Landowner name" value={form.landowner_name} onChange={set("landowner_name")} />
-            <Field label="Landowner contact" value={form.landowner_contact} onChange={set("landowner_contact")} />
-            <Field
-              label="Landowner share (%)"
-              value={form.landowner_share_pct}
-              onChange={set("landowner_share_pct")}
-              numeric
-            />
-            <Field label="Investor name" value={form.investor_name} onChange={set("investor_name")} />
-            <Field label="Investor contact" value={form.investor_contact} onChange={set("investor_contact")} />
-            <Field
-              label="Investment amount (₹)"
-              value={form.investor_amount}
-              onChange={set("investor_amount")}
-              numeric
-            />
-          </Section>
+          <fieldset className="mt-4">
+            <legend className="label-caps text-secondary-foreground">Landowners</legend>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="block">
+                <span className="label-caps text-muted-foreground">How many landowners?</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={owners.length}
+                  onChange={(e) => {
+                    const c = Math.max(0, Math.min(20, Number(e.target.value) || 0));
+                    setOwners((prev) =>
+                      c > prev.length
+                        ? [...prev, ...Array.from({ length: c - prev.length }, emptyOwner)]
+                        : prev.slice(0, c),
+                    );
+                  }}
+                  className="mt-1 h-9 w-full rounded border border-secondary/40 bg-secondary/10 px-2 text-sm"
+                />
+              </label>
+            </div>
+            <div className="mt-3 space-y-3">
+              {owners.map((o, i) => (
+                <div key={i} className="rounded border border-secondary/40 bg-secondary/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="label-caps text-secondary-foreground">Landowner {i + 1}</p>
+                    <button
+                      type="button"
+                      onClick={() => setOwners((prev) => prev.filter((_, x) => x !== i))}
+                      className="text-xs text-muted-foreground hover:text-destructive"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                    <Field
+                      label="Name"
+                      value={o.name}
+                      onChange={(v) =>
+                        setOwners((prev) => prev.map((x, xi) => (xi === i ? { ...x, name: v } : x)))
+                      }
+                    />
+                    <Field
+                      label="Contact"
+                      value={o.contact}
+                      onChange={(v) =>
+                        setOwners((prev) => prev.map((x, xi) => (xi === i ? { ...x, contact: v } : x)))
+                      }
+                    />
+                    <Field
+                      label="Share (%)"
+                      numeric
+                      value={o.share_pct}
+                      onChange={(v) =>
+                        setOwners((prev) => prev.map((x, xi) => (xi === i ? { ...x, share_pct: v } : x)))
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setOwners((prev) => [...prev, emptyOwner()])}
+                className="inline-flex h-8 items-center gap-1.5 rounded border border-input bg-card px-3 text-[13px] font-medium"
+              >
+                <Plus className="size-3.5" /> Add landowner
+              </button>
+              <p className="text-xs text-muted-foreground">
+                Total share entered: {owners.reduce((s, o) => s + (Number(o.share_pct) || 0), 0)}%
+              </p>
+            </div>
+          </fieldset>
+
+          <fieldset className="mt-4">
+            <legend className="label-caps text-secondary-foreground">Investors</legend>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="block">
+                <span className="label-caps text-muted-foreground">How many investors?</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={investors.length}
+                  onChange={(e) => {
+                    const c = Math.max(0, Math.min(20, Number(e.target.value) || 0));
+                    setInvestors((prev) =>
+                      c > prev.length
+                        ? [...prev, ...Array.from({ length: c - prev.length }, emptyInvestor)]
+                        : prev.slice(0, c),
+                    );
+                  }}
+                  className="mt-1 h-9 w-full rounded border border-secondary/40 bg-secondary/10 px-2 text-sm"
+                />
+              </label>
+            </div>
+            <div className="mt-3 space-y-3">
+              {investors.map((iv, i) => (
+                <div key={i} className="rounded border border-secondary/40 bg-secondary/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="label-caps text-secondary-foreground">Investor {i + 1}</p>
+                    <button
+                      type="button"
+                      onClick={() => setInvestors((prev) => prev.filter((_, x) => x !== i))}
+                      className="text-xs text-muted-foreground hover:text-destructive"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                    <Field
+                      label="Name"
+                      value={iv.name}
+                      onChange={(v) =>
+                        setInvestors((prev) => prev.map((x, xi) => (xi === i ? { ...x, name: v } : x)))
+                      }
+                    />
+                    <Field
+                      label="Contact"
+                      value={iv.contact}
+                      onChange={(v) =>
+                        setInvestors((prev) => prev.map((x, xi) => (xi === i ? { ...x, contact: v } : x)))
+                      }
+                    />
+                    <Field
+                      label="Amount (₹)"
+                      numeric
+                      value={iv.amount}
+                      onChange={(v) =>
+                        setInvestors((prev) => prev.map((x, xi) => (xi === i ? { ...x, amount: v } : x)))
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setInvestors((prev) => [...prev, emptyInvestor()])}
+                className="inline-flex h-8 items-center gap-1.5 rounded border border-input bg-card px-3 text-[13px] font-medium"
+              >
+                <Plus className="size-3.5" /> Add investor
+              </button>
+            </div>
+          </fieldset>
+
 
           <fieldset className="mt-4">
             <legend className="label-caps text-secondary-foreground">Floor plan drawings (if any)</legend>
@@ -612,14 +846,17 @@ function Projects() {
           <div className="mt-4 flex gap-2">
             <button
               type="submit"
-              disabled={createProject.isPending}
+              disabled={saveProject.isPending}
               className="inline-flex h-8 items-center gap-1.5 rounded bg-primary px-3 text-[13px] font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-60"
             >
-              {createProject.isPending ? "Saving…" : "Save project"}
+              {saveProject.isPending ? "Saving…" : editingId ? "Update project" : "Save project"}
             </button>
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                resetForm();
+              }}
               className="inline-flex h-8 items-center rounded border border-input bg-card px-3 text-[13px] font-medium"
             >
               Cancel
@@ -644,6 +881,14 @@ function Projects() {
               n(p.total_slab_sft) || n(p.single_floor_slab_sft) * (floors ? floors + 1 : 0);
             const burn = n(p.target_budget) ? Math.round((n(p.spend) / n(p.target_budget)) * 100) : 0;
             const phases = Array.isArray(p.phases) ? p.phases : DEFAULT_PHASES;
+            const ownerList = (Array.isArray(p.landowners) ? p.landowners : [])
+              .map((o) => ({ name: String(o?.name ?? "").trim() }))
+              .filter((o) => o.name);
+            if (!ownerList.length && p.landowner_name) ownerList.push({ name: p.landowner_name });
+            const investorList = (Array.isArray(p.investors) ? p.investors : [])
+              .map((o) => ({ name: String(o?.name ?? "").trim() }))
+              .filter((o) => o.name);
+            if (!investorList.length && p.investor_name) investorList.push({ name: p.investor_name });
             const mapHref =
               p.map_link ||
               (p.latitude != null && p.longitude != null
@@ -677,6 +922,15 @@ function Projects() {
                       {p.health}
                     </StatusBadge>
                     <button
+                      type="button"
+                      aria-label={`Edit ${p.name}`}
+                      onClick={() => startEdit(p)}
+                      className="grid size-7 place-items-center rounded border border-input text-muted-foreground hover:bg-primary-soft hover:text-primary"
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                    <button
+
                       type="button"
                       aria-label={`Delete ${p.name}`}
                       onClick={() => {
@@ -720,8 +974,14 @@ function Projects() {
                   <Cell label="Target handover" value={p.target_handover_date || "—"} />
                   <Cell label="Target budget" value={inrCompact(p.target_budget)} />
                   <Cell label="Total staff" value={num(p.total_staff)} />
-                  <Cell label="Landowner" value={p.landowner_name || "—"} />
-                  <Cell label="Investor" value={p.investor_name || "—"} />
+                  <Cell
+                    label={`Landowners (${ownerList.length})`}
+                    value={ownerList.length ? ownerList.map((o) => o.name).join(", ") : "—"}
+                  />
+                  <Cell
+                    label={`Investors (${investorList.length})`}
+                    value={investorList.length ? investorList.map((o) => o.name).join(", ") : "—"}
+                  />
                 </dl>
 
                 <div className="mt-3">
