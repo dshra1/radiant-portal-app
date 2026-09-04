@@ -28,7 +28,7 @@ function Page() {
 <div className="flex items-center gap-space-xs">
 <span className="px-space-xs py-0.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider font-semibold">TOWER A • SUPERSTRUCTURE</span>
 <span className="w-1 h-1 rounded-full bg-outline"></span>
-<span className="text-on-surface-variant font-body-sm text-body-sm">Madhapur, Hyderabad</span>
+<span className="text-on-surface-variant font-body-sm text-body-sm">{project.location}</span>
 <span className="w-1 h-1 rounded-full bg-outline"></span>
 <span className="font-label-sm text-label-sm text-primary font-medium flex items-center gap-0.5">
 <span className="material-symbols-outlined text-[14px]">cell_tower</span> Telemetry Active
