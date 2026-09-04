@@ -32,10 +32,19 @@ function textOf(message: UIMessage) {
 async function buildLiveContext() {
   const sb = serverSupabase();
   const [projects, notifications, messages] = await Promise.all([
-    sb.from("site_projects").select("name,location,health,budget,spent,phases").limit(30),
-    sb.from("notifications").select("title,body,severity,is_read,created_at").limit(25),
+    sb
+      .from("site_projects")
+      .select(
+        "name,location,type,health,target_budget,spend,total_built_up_sft,total_slab_sft,phases",
+      )
+      .limit(30),
+    sb.from("notifications").select("*").limit(25),
     sb.from("team_messages").select("channel,author_name,author_role,body").limit(30),
   ]);
+
+  for (const r of [projects, notifications, messages]) {
+    if (r.error) console.error("saha ai context read failed:", r.error.message);
+  }
 
   return [
     "LIVE APP DATA (JSON, read-only snapshot):",
