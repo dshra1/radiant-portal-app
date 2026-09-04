@@ -51,6 +51,9 @@ import { Route as SystemDirectoryRouteImport } from './routes/system-directory'
 import { Route as TenderComparisonRouteImport } from './routes/tender-comparison'
 import { Route as VendorDirectoryRouteImport } from './routes/vendor-directory'
 import { Route as VendorLifecycleRouteImport } from './routes/vendor-lifecycle'
+import { Route as AiIndexRouteImport } from './routes/ai.index'
+import { Route as AiThreadIdRouteImport } from './routes/ai.$threadId'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -262,6 +265,21 @@ const VendorLifecycleRoute = VendorLifecycleRouteImport.update({
   path: '/vendor-lifecycle',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiIndexRoute = AiIndexRouteImport.update({
+  id: '/ai/',
+  path: '/ai/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiThreadIdRoute = AiThreadIdRouteImport.update({
+  id: '/ai/$threadId',
+  path: '/ai/$threadId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -306,6 +324,9 @@ export interface FileRoutesByFullPath {
   '/tender-comparison': typeof TenderComparisonRoute
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
+  '/ai/$threadId': typeof AiThreadIdRoute
+  '/api/chat': typeof ApiChatRoute
+  '/ai/': typeof AiIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -350,6 +371,9 @@ export interface FileRoutesByTo {
   '/tender-comparison': typeof TenderComparisonRoute
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
+  '/ai/$threadId': typeof AiThreadIdRoute
+  '/api/chat': typeof ApiChatRoute
+  '/ai': typeof AiIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -395,6 +419,9 @@ export interface FileRoutesById {
   '/tender-comparison': typeof TenderComparisonRoute
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
+  '/ai/$threadId': typeof AiThreadIdRoute
+  '/api/chat': typeof ApiChatRoute
+  '/ai/': typeof AiIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -441,6 +468,9 @@ export interface FileRouteTypes {
     | '/tender-comparison'
     | '/vendor-directory'
     | '/vendor-lifecycle'
+    | '/ai/$threadId'
+    | '/api/chat'
+    | '/ai/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -485,6 +515,9 @@ export interface FileRouteTypes {
     | '/tender-comparison'
     | '/vendor-directory'
     | '/vendor-lifecycle'
+    | '/ai/$threadId'
+    | '/api/chat'
+    | '/ai'
   id:
     | '__root__'
     | '/'
@@ -529,6 +562,9 @@ export interface FileRouteTypes {
     | '/tender-comparison'
     | '/vendor-directory'
     | '/vendor-lifecycle'
+    | '/ai/$threadId'
+    | '/api/chat'
+    | '/ai/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -574,6 +610,9 @@ export interface RootRouteChildren {
   TenderComparisonRoute: typeof TenderComparisonRoute
   VendorDirectoryRoute: typeof VendorDirectoryRoute
   VendorLifecycleRoute: typeof VendorLifecycleRoute
+  AiThreadIdRoute: typeof AiThreadIdRoute
+  ApiChatRoute: typeof ApiChatRoute
+  AiIndexRoute: typeof AiIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -872,6 +911,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VendorLifecycleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai/': {
+      id: '/ai/'
+      path: '/ai'
+      fullPath: '/ai/'
+      preLoaderRoute: typeof AiIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai/$threadId': {
+      id: '/ai/$threadId'
+      path: '/ai/$threadId'
+      fullPath: '/ai/$threadId'
+      preLoaderRoute: typeof AiThreadIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -918,6 +978,9 @@ const rootRouteChildren: RootRouteChildren = {
   TenderComparisonRoute: TenderComparisonRoute,
   VendorDirectoryRoute: VendorDirectoryRoute,
   VendorLifecycleRoute: VendorLifecycleRoute,
+  AiThreadIdRoute: AiThreadIdRoute,
+  ApiChatRoute: ApiChatRoute,
+  AiIndexRoute: AiIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
