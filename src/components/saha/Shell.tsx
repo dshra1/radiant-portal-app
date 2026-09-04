@@ -42,6 +42,7 @@ import { SAMPLE_DATA_ROUTES } from "@/components/saha/sample-data";
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { NotificationBell } from "@/components/saha/NotificationBell";
 
 function SignOutButton() {
   const queryClient = useQueryClient();
@@ -431,19 +432,7 @@ export function Shell({
                 </span>
               )}
             </Link>
-            <Link
-              to="/notifications"
-              className="relative inline-flex shrink-0 items-center"
-              aria-label="Notifications"
-              title="Action centre"
-            >
-              <Bell className="size-4 text-muted-foreground hover:text-foreground" />
-              {unreadCount > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-destructive text-[8px] font-bold text-destructive-foreground">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </Link>
+            <NotificationBell size="sm" />
             <Link
               to="/projects"
               className="hidden items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover sm:inline-flex"
