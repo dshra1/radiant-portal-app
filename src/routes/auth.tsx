@@ -77,11 +77,15 @@ function AuthPage() {
   const google = async () => {
     setError(null);
     try {
-      await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+      await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+        extraParams: { prompt: "select_account" },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Google sign-in failed.");
     }
   };
+
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0C1F17] px-4 py-10">
