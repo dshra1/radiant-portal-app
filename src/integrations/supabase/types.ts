@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      site_projects: {
+        Row: {
+          cellar_floors: number
+          created_at: string
+          health: string
+          id: string
+          location: string
+          name: string
+          phases: Json
+          single_floor_slab_sft: number
+          spend: number
+          stilt_floors: number
+          target_budget: number
+          total_built_up_sft: number
+          total_slab_sft: number
+          type: string
+          typical_floors: number
+          updated_at: string
+        }
+        Insert: {
+          cellar_floors?: number
+          created_at?: string
+          health?: string
+          id?: string
+          location?: string
+          name: string
+          phases?: Json
+          single_floor_slab_sft?: number
+          spend?: number
+          stilt_floors?: number
+          target_budget?: number
+          total_built_up_sft?: number
+          total_slab_sft?: number
+          type?: string
+          typical_floors?: number
+          updated_at?: string
+        }
+        Update: {
+          cellar_floors?: number
+          created_at?: string
+          health?: string
+          id?: string
+          location?: string
+          name?: string
+          phases?: Json
+          single_floor_slab_sft?: number
+          spend?: number
+          stilt_floors?: number
+          target_budget?: number
+          total_built_up_sft?: number
+          total_slab_sft?: number
+          type?: string
+          typical_floors?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
