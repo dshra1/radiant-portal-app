@@ -1,14 +1,39 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
-import { useActiveProject } from "@/hooks/useActiveProject";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAccess } from "@/lib/access";
+import { inr, num } from "@/data/saha";
+import logoAsset from "@/assets/saha-logo.jpeg.asset.json";
+import {
+  STATUS_LABEL,
+  amountInWords,
+  lineTotals,
+  poTotals,
+  type PoItem,
+  type PoRecord,
+  type PoStatus,
+} from "@/lib/po";
+import { CheckCircle2, Plus, Printer, Send, Trash2, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/purchase-orders")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    po: typeof search['po'] === "string" ? (search['po'] as string) : undefined,
+  }),
   head: () => ({
     meta: [
-      { title: "Smart Purchase Order & Guardrail Hub | Saha OS" },
-      { name: "description", content: "PO register with price-variance guardrails, approvals and Tally/SAP export." },
-      { property: "og:title", content: "Smart Purchase Order & Guardrail Hub | Saha OS" },
-      { property: "og:description", content: "PO register with price-variance guardrails, approvals and Tally/SAP export." },
+      { title: "Purchase Order Register | Saha OS" },
+      {
+        name: "description",
+        content:
+          "Live purchase order register with draft, PM approval and approved states, printable GST-format POs and vendor details.",
+      },
+      { property: "og:title", content: "Purchase Order Register | Saha OS" },
+      {
+        property: "og:description",
+        content: "Track, approve and print every purchase order raised on your project.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -16,680 +41,391 @@ export const Route = createFileRoute("/purchase-orders")({
   component: Page,
 });
 
+const statusTone: Record<PoStatus, string> = {
+  draft: "bg-secondary text-muted-foreground",
+  pending: "bg-warning-soft text-warning",
+  approved: "bg-primary-soft text-primary",
+  rejected: "bg-destructive-soft text-destructive",
+};
+
 function Page() {
-  const project = useActiveProject();
+  const qc = useQueryClient();
+  const { access } = useAccess();
+  const canApprove = !!access && (access.isAdmin || access.roles.includes("pm"));
+  const search = Route.useSearch();
+
+  const { data: orders, isPending } = useQuery({
+    queryKey: ["purchase_orders", "list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as PoRecord[];
+    },
+  });
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!orders?.length) return;
+    if (selectedId && orders.some((o) => o.id === selectedId)) return;
+    const bySearch = search.po ? orders.find((o) => o.po_number === search.po) : undefined;
+    setSelectedId((bySearch ?? orders[0]!).id);
+  }, [orders, search.po, selectedId]);
+
+  const selected = orders?.find((o) => o.id === selectedId) ?? null;
+
+  const { data: items } = useQuery({
+    queryKey: ["purchase_order_items", selectedId],
+    enabled: !!selectedId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("purchase_order_items")
+        .select("*")
+        .eq("po_id", selectedId!)
+        .order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as PoItem[];
+    },
+  });
+
+  const totals = useMemo(
+    () =>
+      poTotals(items ?? [], {
+        freight: selected?.freight_charges,
+        other: selected?.other_charges,
+        taxMode: selected?.tax_mode,
+      }),
+    [items, selected],
+  );
+
+  const setStatus = useMutation({
+    mutationFn: async ({ status, reason }: { status: PoStatus; reason?: string }) => {
+      if (!selected) return;
+      const patch: Record<string, unknown> = { status };
+      if (status === "approved" || status === "rejected") {
+        patch['approved_by'] = access?.userId ?? null;
+        patch['approved_by_name'] = access?.profile?.full_name || access?.email || "";
+        patch['approved_at'] = new Date().toISOString();
+        patch['rejection_reason'] = status === "rejected" ? (reason ?? "") : "";
+      }
+      const { error } = await supabase.from("purchase_orders").update(patch).eq("id", selected.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["purchase_orders"] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("purchase_orders").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setSelectedId(null);
+      qc.invalidateQueries({ queryKey: ["purchase_orders"] });
+    },
+  });
+
+  const counts = {
+    draft: orders?.filter((o) => o.status === "draft").length ?? 0,
+    pending: orders?.filter((o) => o.status === "pending").length ?? 0,
+    approved: orders?.filter((o) => o.status === "approved").length ?? 0,
+  };
+
   return (
-    <Shell title={"Smart Purchase Order & Guardrail Hub | Saha OS"}>
-      <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full gap-space-lg">
+    <Shell title="Purchase Order Register | Saha OS">
+      <div className="mx-auto flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6 no-print">
+        <header className="panel flex flex-wrap items-end justify-between gap-3 p-4">
+          <div>
+            <h1 className="display-title">PURCHASE ORDERS</h1>
+            <p className="text-sm text-muted-foreground">
+              {counts.draft} draft · {counts.pending} awaiting PM approval · {counts.approved}{" "}
+              approved
+            </p>
+          </div>
+          <Link
+            to="/po-create"
+            className="inline-flex items-center gap-2 rounded bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+          >
+            <Plus className="size-4" /> Raise PO
+          </Link>
+        </header>
 
-<div className="flex flex-col xl:flex-row xl:items-center justify-between gap-space-md bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
-<div className="flex flex-col gap-space-2xs">
-<div className="flex items-center gap-space-sm flex-wrap">
-<span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Procurement &amp; Commercial Governance</span>
-<span className="h-1.5 w-1.5 rounded-full bg-outline-variant"></span>
-<span className="font-label-sm text-label-sm text-primary font-semibold">Live Site Node</span>
-</div>
-<div className="flex items-baseline gap-space-md flex-wrap">
-<h1 className="font-headline-lg text-headline-lg text-on-surface">Smart Purchase Order &amp; Guardrail Hub</h1>
-<div className="flex items-center gap-space-xs">
-<span className="px-space-xs py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm flex items-center gap-1">
-<span className="material-symbols-outlined text-[13px]">shield</span>Guardrail Engine Active
-          </span>
-<span className="px-space-xs py-space-2xs rounded bg-secondary-container text-on-secondary-fixed font-label-sm text-label-sm flex items-center gap-1">
-<span className="material-symbols-outlined text-[13px]">sync_alt</span>Master Price Sync: 10m ago
-          </span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1">
-<span className="material-symbols-outlined text-[13px]">cable</span>Tally &amp; SAP S/4 Ready
-          </span>
-</div>
-</div>
-<p className="font-body-sm text-body-sm text-on-surface-variant">
-        Strict structural material rate compliance for {project.name}. Real-time OCR baseline checks mapped to Hyderabad West civil index.
-      </p>
-</div>
-
-<div className="flex items-center gap-space-sm flex-wrap shrink-0">
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-title-md transition-colors">
-<span className="material-symbols-outlined text-space-base">tune</span>
-<span>Tolerance (+3%)</span>
-</button>
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-title-md transition-colors">
-<span className="material-symbols-outlined text-space-base">table_view</span>
-<span>Export PO Register</span>
-</button>
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-secondary text-on-secondary hover:bg-secondary/90 font-title-md text-title-md transition-colors">
-<span className="material-symbols-outlined text-space-base">send_and_archive</span>
-<span>Bulk Release (6)</span>
-</button>
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-primary text-on-primary hover:bg-primary-container font-title-md text-title-md shadow-sm transition-colors">
-<span className="material-symbols-outlined text-space-base">add_circle</span>
-<span>Create Draft PO</span>
-</button>
-</div>
-</div>
-
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
-
-<div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between gap-space-sm">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Active POs Under Review</span>
-<span className="material-symbols-outlined text-secondary text-space-lg">fact_check</span>
-</div>
-<div className="flex items-baseline justify-between">
-<div>
-<div className="font-display-lg text-display-lg text-on-surface leading-none">14</div>
-<div className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs">Total value: ₹1.84 Cr</div>
-</div>
-<div className="flex flex-col items-end">
-<span className="px-space-xs py-space-2xs rounded bg-secondary-container text-on-secondary-fixed font-label-sm text-label-sm font-semibold">
-            8 At L2 Approval
-          </span>
-<span className="font-body-sm text-body-sm text-outline mt-1">4 Escalated</span>
-</div>
-</div>
-<div className="w-full bg-surface-container h-1 rounded-full overflow-hidden">
-<div className="bg-primary h-full rounded-full" style={{ width: "57%" }}></div>
-</div>
-</div>
-
-<div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between gap-space-sm">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-error">Price Variance Blocked</span>
-<span className="material-symbols-outlined text-error text-space-lg">gpp_bad</span>
-</div>
-<div className="flex items-baseline justify-between">
-<div>
-<div className="font-display-lg text-display-lg text-error leading-none">3 POs</div>
-<div className="font-body-sm text-body-sm text-error mt-space-2xs">Exceeded +3% Threshold</div>
-</div>
-<div className="text-right">
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold block">₹3.12 Lakhs</span>
-<span className="font-label-sm text-label-sm text-secondary">Saved Potential Leak</span>
-</div>
-</div>
-<div className="flex items-center gap-space-xs text-error font-label-sm text-label-sm">
-<span className="material-symbols-outlined text-[14px]">warning</span>
-<span>Requires VP or Director Pin override</span>
-</div>
-</div>
-
-<div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between gap-space-sm">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Avg. PO Cycle Time</span>
-<span className="material-symbols-outlined text-tertiary text-space-lg">speed</span>
-</div>
-<div className="flex items-baseline justify-between">
-<div>
-<div className="font-display-lg text-display-lg text-on-surface leading-none">4.2 <span className="text-headline-md font-semibold text-secondary">Hours</span></div>
-<div className="font-body-sm text-body-sm text-primary font-medium mt-space-2xs">↓ From 72h historical avg</div>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-surface-variant text-on-surface font-label-sm text-label-sm">
-          -94% latency
-        </span>
-</div>
-<div className="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
-<span className="material-symbols-outlined text-primary text-[14px]">bolt</span>
-<span>OCR auto-reconciliation enabled</span>
-</div>
-</div>
-
-<div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between gap-space-sm">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-primary">Approved &amp; Released (MTD)</span>
-<span className="material-symbols-outlined text-primary text-space-lg">verified</span>
-</div>
-<div className="flex items-baseline justify-between">
-<div>
-<div className="font-display-lg text-display-lg text-on-surface leading-none">42 <span className="text-headline-md font-semibold text-secondary">POs</span></div>
-<div className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs">₹5.68 Cr Delivered to Site</div>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold">
-          100% In Budget
-        </span>
-</div>
-<div className="flex items-center justify-between text-outline font-label-sm text-label-sm">
-<span>Weighbridge matched: 39</span>
-<span>GRN Pending: 3</span>
-</div>
-</div>
-</div>
-
-<div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
-
-<div className="lg:col-span-8 flex flex-col gap-space-md">
-
-<div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
-<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm pb-space-sm border-b-0">
-<div className="flex items-center gap-space-sm">
-<div className="p-space-xs rounded bg-primary-container text-on-primary">
-<span className="material-symbols-outlined text-space-lg">receipt_long</span>
-</div>
-<div>
-<div className="flex items-center gap-space-xs">
-<span className="font-headline-md text-headline-md text-on-surface font-bold tracking-tight">PO-HYD-CE2-2026-084</span>
-<span className="px-space-xs py-space-2xs rounded bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">
-                  1 Line Guardrail Flag
+        <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+          <aside className="panel max-h-[70vh] overflow-y-auto p-2">
+            {isPending && <p className="p-3 text-sm text-muted-foreground">Loading…</p>}
+            {!isPending && (orders ?? []).length === 0 && (
+              <p className="p-3 text-sm text-muted-foreground">
+                No purchase orders yet. Raise your first PO to see it here.
+              </p>
+            )}
+            {(orders ?? []).map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => setSelectedId(o.id)}
+                className={`mb-1 flex w-full flex-col gap-1 rounded p-2.5 text-left transition-colors ${
+                  o.id === selectedId ? "bg-secondary" : "hover:bg-secondary/60"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold">{o.po_number}</span>
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${statusTone[o.status]}`}
+                  >
+                    {STATUS_LABEL[o.status]}
+                  </span>
+                </div>
+                <span className="truncate text-sm text-muted-foreground">
+                  {o.vendor_name || "Vendor not set"} · {o.project_name || "—"}
                 </span>
-</div>
-<div className="font-body-sm text-body-sm text-secondary">Created today at 09:42 AM by Er. Rajesh M. (Tower C Lead)</div>
-</div>
-</div>
-<div className="flex items-center gap-space-xs">
-<button className="px-space-sm py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-1 transition-colors">
-<span className="material-symbols-outlined text-[15px]">print</span>Print / PDF
-            </button>
-<button className="px-space-sm py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-1 transition-colors">
-<span className="material-symbols-outlined text-[15px]">history</span>Audit Log
-            </button>
-</div>
-</div>
+              </button>
+            ))}
+          </aside>
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-space-md p-space-md rounded-lg bg-surface-container-low">
-
-<div className="flex flex-col gap-space-2xs">
-<div className="flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Vendor Entity</span>
-<span className="px-1.5 py-0.5 rounded bg-primary text-on-primary font-label-sm text-[10px] font-bold">Tier-1</span>
-</div>
-<div className="font-title-md text-title-md text-on-surface font-bold">Tirumala Steel &amp; Infra Traders</div>
-<div className="font-body-sm text-body-sm text-on-surface-variant flex flex-col gap-1">
-<span>GSTIN: <strong className="text-on-surface">36AAACT9821R1ZC</strong> (Verified)</span>
-<span>Credit Terms: <strong>30 Days Post Dated Cheque (PDC)</strong></span>
-<span>Primary Contact: Srikanth Reddy (+91 98490 23118)</span>
-</div>
-</div>
-
-<div className="flex flex-col gap-space-2xs">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Delivery Destination</span>
-<div className="font-title-md text-title-md text-on-surface font-bold">{project.name} • Tower C Yard</div>
-<div className="font-body-sm text-body-sm text-on-surface-variant flex flex-col gap-1">
-<span>Unloading Slot: <strong>Tomorrow, 06:00 - 10:00 IST</strong></span>
-<span>Weighbridge: Madhapur Internal Scale #2 (Calibrated)</span>
-<span>Target Activity: Level 4 Slab &amp; Column Stilt Cage Pour</span>
-</div>
-</div>
-</div>
-
-<div className="flex flex-col gap-space-xs">
-<div className="flex items-center justify-between">
-<span className="font-title-md text-title-md text-on-surface font-semibold">Bill of Materials &amp; Rate Verification</span>
-<span className="font-body-sm text-body-sm text-secondary">Hyderabad TMT Regional Benchmark: ₹58,400 / MT</span>
-</div>
-<div className="overflow-x-auto rounded-lg bg-surface-container-lowest">
-<table className="w-full text-left border-collapse">
-<thead>
-<tr className="bg-surface-container-high text-on-surface font-label-md text-label-md uppercase tracking-wider">
-<th className="py-space-sm px-space-md">Item &amp; Grade</th>
-<th className="py-space-sm px-space-sm text-right">Quantity</th>
-<th className="py-space-sm px-space-sm text-right">Quoted Rate</th>
-<th className="py-space-sm px-space-sm text-right">Master Ref</th>
-<th className="py-space-sm px-space-sm text-center">Variance</th>
-<th className="py-space-sm px-space-sm text-right">Net Value</th>
-<th className="py-space-sm px-space-md text-center">Status</th>
-</tr>
-</thead>
-<tbody className="divide-y-0 text-on-surface font-body-sm text-body-sm">
-
-<tr className="hover:bg-surface-container-low transition-colors">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">Fe 500D TMT Rebar 16mm</div>
-<div className="font-body-sm text-body-sm text-secondary">Tata Tiscon • IS 1786:2008 • 12m length</div>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">40.00 MT</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">₹56,200</td>
-<td className="py-space-sm px-space-sm text-right font-body-sm text-body-sm text-secondary">₹58,400</td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-label-sm text-label-sm font-semibold">
-                      -3.76%
-                    </span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm font-bold">₹22,48,000</td>
-<td className="py-space-sm px-space-md text-center">
-<span className="inline-flex items-center gap-1 px-space-xs py-0.5 rounded bg-primary text-on-primary font-label-sm text-[11px] font-semibold">
-<span className="material-symbols-outlined text-[12px]">check_circle</span>Approved
-                    </span>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low transition-colors">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">Fe 500D TMT Rebar 12mm</div>
-<div className="font-body-sm text-body-sm text-secondary">Tata Tiscon • Primary Heat Certified</div>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">25.00 MT</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">₹56,800</td>
-<td className="py-space-sm px-space-sm text-right font-body-sm text-body-sm text-secondary">₹58,900</td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-label-sm text-label-sm font-semibold">
-                      -3.56%
-                    </span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm font-bold">₹14,20,000</td>
-<td className="py-space-sm px-space-md text-center">
-<span className="inline-flex items-center gap-1 px-space-xs py-0.5 rounded bg-primary text-on-primary font-label-sm text-[11px] font-semibold">
-<span className="material-symbols-outlined text-[12px]">check_circle</span>Approved
-                    </span>
-</td>
-</tr>
-
-<tr className="bg-error-container/20 hover:bg-error-container/30 transition-colors">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface font-semibold flex items-center gap-1">
-<span>Binding Wire (18 Gauge GI)</span>
-<span className="material-symbols-outlined text-error text-[16px]">error</span>
-</div>
-<div className="font-body-sm text-body-sm text-error font-medium">Over company limit (+8.33% vs ₹72/Kg Master)</div>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">800.00 Kg</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-error font-bold">₹78.00</td>
-<td className="py-space-sm px-space-sm text-right font-body-sm text-body-sm text-secondary">₹72.00</td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="px-1.5 py-0.5 rounded bg-error text-on-error font-label-sm text-label-sm font-bold">
-                      +8.33%
-                    </span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm font-bold">₹62,400</td>
-<td className="py-space-sm px-space-md text-center">
-<span className="inline-flex items-center gap-1 px-space-xs py-0.5 rounded bg-error text-on-error font-label-sm text-[11px] font-bold">
-<span className="material-symbols-outlined text-[12px]">block</span>Blocked
-                    </span>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<div className="p-space-md rounded-lg bg-surface-container flex flex-col gap-space-sm">
-<div className="flex items-center justify-between">
-<div className="flex items-center gap-space-xs text-tertiary">
-<span className="material-symbols-outlined text-space-md">psychology</span>
-<span className="font-title-md text-title-md font-bold">Smart AI Guardrail Assistant</span>
-</div>
-<span className="font-label-sm text-label-sm text-secondary">Based on 14 local supplier invoices (last 90 days)</span>
-</div>
-<p className="font-body-sm text-body-sm text-on-surface">
-<strong>Price Alert on Line 3:</strong> 18 Gauge GI Binding Wire quoted rate (₹78/Kg) exceeds contract ceiling of ₹74.16/Kg (+3% ceiling). Average prevailing procurement rate in Kukatpally-Madhapur corridor is <strong>₹71.80 – ₹73.00/Kg</strong>. 
-          </p>
-<div className="flex items-center gap-space-xs flex-wrap pt-space-xs">
-<button className="px-space-md py-space-xs rounded bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md flex items-center gap-1 transition-colors">
-<span className="material-symbols-outlined text-[15px]">price_change</span>
-<span>Apply Suggested Rate (₹73.00/Kg)</span>
-</button>
-<button className="px-space-md py-space-xs rounded bg-surface-container-lowest hover:bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-1 transition-colors">
-<span className="material-symbols-outlined text-[15px]">chat</span>
-<span>Request Vendor Justification</span>
-</button>
-<button className="px-space-md py-space-xs rounded bg-secondary-container hover:bg-surface-variant text-on-secondary-fixed font-label-md text-label-md flex items-center gap-1 transition-colors">
-<span className="material-symbols-outlined text-[15px]">call_split</span>
-<span>Split to Sri Rama Hardware</span>
-</button>
-</div>
-</div>
-
-<div className="flex flex-col sm:flex-row justify-between items-end gap-space-md pt-space-sm bg-surface-container-low p-space-md rounded-lg">
-<div className="flex flex-col gap-1 w-full sm:w-auto">
-<div className="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Commercial Terms Note</div>
-<div className="font-body-sm text-body-sm text-on-surface-variant max-w-sm">
-              Freight included up to site unloader. Test certificates (MTC) required prior to vehicle weigh-in. 0.5% moisture tolerance.
-            </div>
-</div>
-<div className="flex flex-col gap-1 text-right min-w-[240px]">
-<div className="flex justify-between font-body-sm text-body-sm text-secondary">
-<span>Base Subtotal:</span>
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface font-semibold">₹37,28,400.00</span>
-</div>
-<div className="flex justify-between font-body-sm text-body-sm text-secondary">
-<span>GST (18% IGST / CGST):</span>
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface font-semibold">₹6,71,112.00</span>
-</div>
-<div className="flex justify-between font-body-sm text-body-sm text-primary">
-<span>Total Price Guardrail Savings:</span>
-<span className="font-tabular-metric-sm text-tabular-metric-sm font-bold">-₹1,38,700.00</span>
-</div>
-<div className="h-0.5 bg-surface-container-high my-1"></div>
-<div className="flex justify-between items-baseline font-title-md text-title-md text-on-surface font-bold">
-<span>Net PO Amount:</span>
-<span className="font-tabular-metric text-tabular-metric text-primary leading-none">₹43,99,512.00</span>
-</div>
-</div>
-</div>
-</div>
-
-<div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-sm">
-<div className="flex items-center justify-between cursor-pointer">
-<div className="flex items-center gap-space-sm">
-<span className="material-symbols-outlined text-primary text-space-base">document_scanner</span>
-<span className="font-title-md text-title-md text-on-surface font-semibold">Vendor Quotation OCR Verification</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
-              OCR Match: 99.4%
-            </span>
-</div>
-<span className="material-symbols-outlined text-secondary text-space-base">expand_more</span>
-</div>
-<div className="grid grid-cols-1 md:grid-cols-3 gap-space-sm pt-space-xs font-body-sm text-body-sm text-on-surface-variant">
-<div className="p-space-sm rounded bg-surface-container-low flex flex-col">
-<span className="font-label-sm text-label-sm text-secondary uppercase">Scanned Document</span>
-<span className="font-title-md text-title-md text-on-surface">Tirumala_Quote_Q892.pdf</span>
-<span className="text-primary font-medium mt-1">Uploaded 42 mins ago</span>
-</div>
-<div className="p-space-sm rounded bg-surface-container-low flex flex-col">
-<span className="font-label-sm text-label-sm text-secondary uppercase">HSN Harmonization</span>
-<span className="font-title-md text-title-md text-on-surface">7214 20 90 (Rebar)</span>
-<span className="text-secondary mt-1">Verified with Central GST Master</span>
-</div>
-<div className="p-space-sm rounded bg-surface-container-low flex flex-col">
-<span className="font-label-sm text-label-sm text-secondary uppercase">ERP Linkage ID</span>
-<span className="font-title-md text-title-md text-on-surface">PR-2026-0992-TWR-C</span>
-<span className="text-primary font-medium mt-1">Pre-Budget Allocated</span>
-</div>
-</div>
-</div>
-</div>
-
-<div className="lg:col-span-4 flex flex-col gap-space-md">
-
-<div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
-<div className="flex items-center justify-between pb-space-xs">
-<div className="flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-primary text-space-base">assignment_turned_in</span>
-<span className="font-title-md text-title-md text-on-surface font-bold">Multi-Level Approval Matrix</span>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-secondary font-label-sm text-label-sm">
-            Stage 3 of 4
-          </span>
-</div>
-
-<div className="flex flex-col gap-space-md relative pl-space-sm">
-
-<div className="flex gap-space-sm relative">
-<div className="flex flex-col items-center">
-<div className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-label-sm shadow-sm z-10">
-<span className="material-symbols-outlined text-[16px]">check</span>
-</div>
-<div className="w-0.5 bg-primary flex-1 my-1"></div>
-</div>
-<div className="flex flex-col pb-space-sm">
-<span className="font-title-md text-title-md text-on-surface font-semibold">1. Site Engineer Indent</span>
-<span className="font-body-sm text-body-sm text-secondary">Er. Rajesh M. • Tower C Civil</span>
-<span className="font-label-sm text-label-sm text-primary font-medium mt-1 flex items-center gap-1">
-<span className="material-symbols-outlined text-[13px]">pin_drop</span>Approved • Geo-Fence Tower C (09:42 AM)
-              </span>
-</div>
-</div>
-
-<div className="flex gap-space-sm relative">
-<div className="flex flex-col items-center">
-<div className="w-7 h-7 rounded-full bg-error text-on-error flex items-center justify-center font-bold text-label-sm shadow-sm z-10">
-<span className="material-symbols-outlined text-[16px]">priority_high</span>
-</div>
-<div className="w-0.5 bg-primary flex-1 my-1"></div>
-</div>
-<div className="flex flex-col pb-space-sm">
-<span className="font-title-md text-title-md text-on-surface font-semibold">2. Automated Guardrail Audit</span>
-<span className="font-body-sm text-body-sm text-error font-medium">Rate Exception: Line 3 Flagged</span>
-<span className="font-label-sm text-label-sm text-on-surface-variant mt-1">
-                Triggered AI Overspend Alert. Overwrite token logged.
-              </span>
-</div>
-</div>
-
-<div className="flex gap-space-sm relative">
-<div className="flex flex-col items-center">
-<div className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-label-sm shadow-sm z-10">
-<span className="material-symbols-outlined text-[16px]">check</span>
-</div>
-<div className="w-0.5 bg-surface-container flex-1 my-1"></div>
-</div>
-<div className="flex flex-col pb-space-sm">
-<span className="font-title-md text-title-md text-on-surface font-semibold">3. Procurement Lead</span>
-<span className="font-body-sm text-body-sm text-secondary">Vikram Sharma • Commercial Head</span>
-<span className="font-label-sm text-label-sm text-primary font-medium mt-1">
-                Recommended with Condition (10:15 AM)
-              </span>
-</div>
-</div>
-
-<div className="flex gap-space-sm relative">
-<div className="flex flex-col items-center">
-<div className="w-7 h-7 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-label-sm ring-4 ring-primary-container/20 shadow-sm z-10 animate-pulse">
-                4
+          <section className="flex flex-col gap-3">
+            {!selected && (
+              <div className="panel p-6 text-sm text-muted-foreground">
+                Select a purchase order to view it.
               </div>
-</div>
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface font-bold">4. VP Civil &amp; Project Director</span>
-<span className="font-body-sm text-body-sm text-on-surface font-semibold">Shravan Kumar • Director Authorization</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-variant text-on-surface font-label-sm text-label-sm font-semibold w-fit mt-1">
-                Action Required (Awaiting Sign-off)
-              </span>
-</div>
-</div>
-</div>
-
-<div className="p-space-md rounded-lg bg-surface-container-low flex flex-col gap-space-xs">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Milestone &amp; Release Stage</span>
-<div className="font-title-md text-title-md text-on-surface font-bold">Pour 12: Stilt Level Cage Binding</div>
-<div className="flex items-center justify-between text-body-sm font-body-sm text-on-surface-variant mt-1">
-<span>Advance BG: <strong>20%</strong></span>
-<span>Weighbridge Release: <strong>80%</strong></span>
-</div>
-</div>
-
-<div className="flex flex-col gap-space-sm pt-space-xs">
-<div className="flex flex-col gap-1">
-<label className="font-label-sm text-label-sm uppercase tracking-wider text-secondary">Director PIN / Override Justification</label>
-<input className="w-full px-space-sm py-space-xs rounded bg-surface-container-low text-on-surface font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Enter 6-digit Safe PIN for Rate Override" type="password" />
-</div>
-<div className="flex flex-col gap-space-xs pt-space-xs">
-<button className="w-full flex items-center justify-center gap-space-xs py-space-sm px-space-md rounded bg-primary text-on-primary hover:bg-primary-container font-title-md text-title-md shadow-sm transition-colors">
-<span className="material-symbols-outlined text-space-base">draw</span>
-<span>Sign &amp; Release PO (₹43.99L)</span>
-</button>
-<button className="w-full flex items-center justify-center gap-space-xs py-space-sm px-space-md rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-title-md transition-colors">
-<span className="material-symbols-outlined text-space-base">rule</span>
-<span>Reject with Counter-Offer (₹73/Kg)</span>
-</button>
-<button className="w-full flex items-center justify-center gap-space-xs py-space-xs px-space-md rounded text-error hover:bg-error-container/30 font-title-md text-title-md transition-colors">
-<span className="material-symbols-outlined text-space-base">undo</span>
-<span>Send Back to Site Engineer</span>
-</button>
-</div>
-</div>
-</div>
-
-<div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-sm">
-<div className="flex items-center justify-between">
-<span className="font-title-md text-title-md text-on-surface font-semibold">Tower C Steel Consumption</span>
-<span className="font-label-sm text-label-sm text-primary font-bold">Within Budget</span>
-</div>
-<div className="flex items-center justify-between font-body-sm text-body-sm text-secondary">
-<span>Allocated BoQ: 450 MT</span>
-<span>Ordered to date: 310 MT</span>
-</div>
-<div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
-<div className="bg-primary h-full rounded-full" style={{ width: "68.8%" }}></div>
-</div>
-<div className="font-label-sm text-label-sm text-outline text-right">68.8% Consumed • Balance: 140 MT</div>
-</div>
-</div>
-</div>
-
-<div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
-
-<div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
-<div className="flex items-center gap-space-xs flex-wrap">
-<button className="px-space-md py-space-xs rounded bg-primary text-on-primary font-title-md text-title-md font-semibold">
-          All Pending (14)
-        </button>
-<button className="px-space-md py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-title-md transition-colors flex items-center gap-1">
-<span>Price Guardrail Exceptions</span>
-<span className="px-1.5 py-0.2 rounded-full bg-error text-on-error font-label-sm text-[10px] font-bold">3</span>
-</button>
-<button className="px-space-md py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-title-md transition-colors">
-          Ready for Release (6)
-        </button>
-<button className="px-space-md py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-title-md transition-colors">
-          Fulfilled / Live (42)
-        </button>
-</div>
-<div className="flex items-center gap-space-sm">
-<div className="relative flex items-center">
-<span className="material-symbols-outlined absolute left-space-xs text-secondary text-space-base">search</span>
-<input className="pl-8 pr-space-sm py-1.5 rounded bg-surface-container-low text-on-surface placeholder:text-outline font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-primary w-64" placeholder="Filter POs, Vendors, Materials..." type="text" />
-</div>
-<button className="p-1.5 rounded bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors">
-<span className="material-symbols-outlined text-space-base">filter_list</span>
-</button>
-</div>
-</div>
-
-<div className="overflow-x-auto rounded-lg">
-<table className="w-full text-left border-collapse">
-<thead>
-<tr className="bg-surface-container text-on-surface font-label-md text-label-md uppercase tracking-wider">
-<th className="py-space-sm px-space-md">PO Reference &amp; Date</th>
-<th className="py-space-sm px-space-sm">Vendor Name</th>
-<th className="py-space-sm px-space-sm">Category / Trade</th>
-<th className="py-space-sm px-space-sm text-right">Total (₹)</th>
-<th className="py-space-sm px-space-sm text-center">Price Variance Check</th>
-<th className="py-space-sm px-space-sm">Approval Level</th>
-<th className="py-space-sm px-space-md text-right">Quick Action</th>
-</tr>
-</thead>
-<tbody className="divide-y-0 text-on-surface font-body-sm text-body-sm">
-
-<tr className="bg-primary/5 hover:bg-primary/10 transition-colors">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface font-bold">PO-HYD-CE2-2026-084</div>
-<div className="font-body-sm text-body-sm text-secondary">Today, 09:42 AM</div>
-</td>
-<td className="py-space-sm px-space-sm">
-<div className="font-title-md text-title-md text-on-surface">Tirumala Steel &amp; Infra</div>
-<span className="font-label-sm text-label-sm text-primary font-semibold">Tier-1 Preferred</span>
-</td>
-<td className="py-space-sm px-space-sm font-body-sm text-body-sm">TMT Rebar &amp; Binding Wire</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm font-bold">₹43,99,512</td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="px-space-xs py-0.5 rounded bg-error text-on-error font-label-sm text-label-sm font-bold">
-                +8.33% (1 Line Blocked)
-              </span>
-</td>
-<td className="py-space-sm px-space-sm">
-<div className="flex items-center gap-1 font-body-sm text-body-sm text-error font-semibold">
-<span className="h-2 w-2 rounded-full bg-error"></span>
-<span>L4: VP Civil (Pending)</span>
-</div>
-</td>
-<td className="py-space-sm px-space-md text-right">
-<button className="px-space-sm py-1 rounded bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md font-medium transition-colors">
-                Inspect Active
-              </button>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low transition-colors">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">PO-HYD-CE2-2026-083</div>
-<div className="font-body-sm text-body-sm text-secondary">Yesterday, 16:20 PM</div>
-</td>
-<td className="py-space-sm px-space-sm">
-<div className="font-title-md text-title-md text-on-surface">Ultratech Ready-Mix Plant</div>
-<span className="font-label-sm text-label-sm text-secondary">Contract Locked</span>
-</td>
-<td className="py-space-sm px-space-sm font-body-sm text-body-sm">M40 Grade RMC (180 Cum)</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm font-bold">₹9,82,400</td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="px-space-xs py-0.5 rounded bg-primary text-on-primary font-label-sm text-label-sm font-semibold">
-                -1.20% (Passed)
-              </span>
-</td>
-<td className="py-space-sm px-space-sm">
-<div className="flex items-center gap-1 font-body-sm text-body-sm text-primary font-medium">
-<span className="h-2 w-2 rounded-full bg-primary"></span>
-<span>Approved • Release Queue</span>
-</div>
-</td>
-<td className="py-space-sm px-space-md text-right">
-<button className="px-space-sm py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors">
-                Release PO
-              </button>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low transition-colors">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">PO-HYD-CE2-2026-082</div>
-<div className="font-body-sm text-body-sm text-secondary">18 Mar, 11:15 AM</div>
-</td>
-<td className="py-space-sm px-space-sm">
-<div className="font-title-md text-title-md text-on-surface">Sri Lakshmi Electricals</div>
-<span className="font-label-sm text-label-sm text-secondary">Tier-2 Supplier</span>
-</td>
-<td className="py-space-sm px-space-sm font-body-sm text-body-sm">Conduits &amp; Embedded J-Boxes</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm font-bold">₹3,45,600</td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="px-space-xs py-0.5 rounded bg-error text-on-error font-label-sm text-label-sm font-bold">
-                +4.20% (Blocked)
-              </span>
-</td>
-<td className="py-space-sm px-space-sm">
-<div className="flex items-center gap-1 font-body-sm text-body-sm text-secondary">
-<span className="h-2 w-2 rounded-full bg-error"></span>
-<span>L3: Procurement Lead</span>
-</div>
-</td>
-<td className="py-space-sm px-space-md text-right">
-<button className="px-space-sm py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors">
-                Review Rate
-              </button>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low transition-colors">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">PO-HYD-CE2-2026-081</div>
-<div className="font-body-sm text-body-sm text-secondary">17 Mar, 14:05 PM</div>
-</td>
-<td className="py-space-sm px-space-sm">
-<div className="font-title-md text-title-md text-on-surface">Godrej &amp; Boyce Plywoods</div>
-<span className="font-label-sm text-label-sm text-primary font-semibold">Tier-1 OEM</span>
-</td>
-<td className="py-space-sm px-space-sm font-body-sm text-body-sm">Film-Faced Shuttering Ply 12mm</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm font-bold">₹12,40,000</td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="px-space-xs py-0.5 rounded bg-primary text-on-primary font-label-sm text-label-sm font-semibold">
-                -0.85% (Passed)
-              </span>
-</td>
-<td className="py-space-sm px-space-sm">
-<div className="flex items-center gap-1 font-body-sm text-body-sm text-primary font-medium">
-<span className="h-2 w-2 rounded-full bg-primary"></span>
-<span>Released • Dispatched</span>
-</div>
-</td>
-<td className="py-space-sm px-space-md text-right">
-<button className="px-space-sm py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors">
-                Track Gate Pass
-              </button>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-
-<div className="flex flex-col sm:flex-row items-center justify-between gap-space-sm text-body-sm font-body-sm text-secondary pt-space-xs">
-<div>Showing 1 to 4 of 14 Pending Purchase Orders • Auto-refreshed via Kafka Broker</div>
-<div className="flex items-center gap-space-xs">
-<button className="px-space-sm py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md">Previous</button>
-<span className="px-space-sm py-1 rounded bg-primary text-on-primary font-label-md text-label-md font-bold">1</span>
-<button className="px-space-sm py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md">2</button>
-<button className="px-space-sm py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md">Next</button>
-</div>
-</div>
-</div>
-</div></main>
+            )}
+            {selected && (
+              <>
+                <div className="panel flex flex-wrap items-center gap-2 p-3">
+                  <span
+                    className={`rounded px-2 py-1 text-xs font-semibold ${statusTone[selected.status]}`}
+                  >
+                    {STATUS_LABEL[selected.status]}
+                  </span>
+                  {selected.status === "draft" && (
+                    <button
+                      type="button"
+                      onClick={() => setStatus.mutate({ status: "pending" })}
+                      className="inline-flex items-center gap-2 rounded border border-border px-3 py-1.5 text-sm font-semibold hover:bg-secondary"
+                    >
+                      <Send className="size-4" /> Submit for approval
+                    </button>
+                  )}
+                  {canApprove && selected.status === "pending" && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setStatus.mutate({ status: "approved" })}
+                        className="inline-flex items-center gap-2 rounded bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
+                      >
+                        <CheckCircle2 className="size-4" /> Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const reason = window.prompt("Reason for rejection") ?? "";
+                          setStatus.mutate({ status: "rejected", reason });
+                        }}
+                        className="inline-flex items-center gap-2 rounded border border-destructive/40 px-3 py-1.5 text-sm font-semibold text-destructive hover:bg-destructive-soft"
+                      >
+                        <XCircle className="size-4" /> Reject
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="inline-flex items-center gap-2 rounded border border-border px-3 py-1.5 text-sm font-semibold hover:bg-secondary"
+                  >
+                    <Printer className="size-4" /> Print / PDF
+                  </button>
+                  {canApprove && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Delete ${selected.po_number}?`))
+                          remove.mutate(selected.id);
+                      }}
+                      className="ml-auto inline-flex items-center gap-2 rounded p-2 text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
+                      aria-label="Delete purchase order"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  )}
+                </div>
+                {selected.status === "rejected" && selected.rejection_reason && (
+                  <div className="rounded border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive">
+                    Rejected: {selected.rejection_reason}
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        </div>
       </div>
+
+      {selected && (
+        <PoDocument po={selected} items={items ?? []} totals={totals} />
+      )}
     </Shell>
+  );
+}
+
+function PoDocument({
+  po,
+  items,
+  totals,
+}: {
+  po: PoRecord;
+  items: PoItem[];
+  totals: ReturnType<typeof poTotals>;
+}) {
+  return (
+    <div className="po-print mx-auto w-full max-w-4xl bg-card px-4 pb-16 md:px-6">
+      <div className="panel space-y-4 p-6 text-sm text-foreground">
+        <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
+          <div className="flex items-center gap-3">
+            <img src={logoAsset.url} alt="Saha Developers" className="h-12 w-auto" />
+            <div>
+              <p className="text-base font-bold">{po.project_name || "Saha Developers"}</p>
+              <p className="text-muted-foreground">{po.site_address}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="display-title text-xl">PURCHASE ORDER</p>
+            <p className="font-semibold">{po.po_number}</p>
+            <p className="text-muted-foreground">Date: {po.po_date}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Block title="VENDOR">
+            <p className="font-semibold">{po.vendor_name}</p>
+            <p className="whitespace-pre-line text-muted-foreground">{po.vendor_address}</p>
+            {po.vendor_gstin && <p>GSTIN: {po.vendor_gstin}</p>}
+            {po.vendor_contact && <p>Contact: {po.vendor_contact}</p>}
+            {po.vendor_email && <p>{po.vendor_email}</p>}
+            {po.quote_reference && <p>Quote ref: {po.quote_reference}</p>}
+          </Block>
+          <Block title="DELIVERY & PAYMENT">
+            <p>Deliver to: {po.site_address || "—"}</p>
+            <p>Required by: {po.delivery_date || "—"}</p>
+            <p>Payment terms: {po.payment_terms}</p>
+            <p>Delivery terms: {po.delivery_terms || "—"}</p>
+          </Block>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] border border-border text-xs">
+            <thead className="bg-secondary">
+              <tr className="text-left">
+                {["#", "Item", "Description", "Brand", "Unit", "Qty", "Rate", "Disc%", "Taxable", "GST%", "Amount"].map(
+                  (h) => (
+                    <th key={h} className="border border-border px-2 py-1.5 font-semibold">
+                      {h}
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((it, i) => {
+                const l = lineTotals(it);
+                return (
+                  <tr key={it.id}>
+                    <td className="border border-border px-2 py-1 tnum">{i + 1}</td>
+                    <td className="border border-border px-2 py-1">{it.item_code}</td>
+                    <td className="border border-border px-2 py-1">{it.description}</td>
+                    <td className="border border-border px-2 py-1">{it.brand}</td>
+                    <td className="border border-border px-2 py-1">{it.unit}</td>
+                    <td className="border border-border px-2 py-1 text-right tnum">
+                      {num(it.quantity, 2)}
+                    </td>
+                    <td className="border border-border px-2 py-1 text-right tnum">
+                      {num(it.rate, 2)}
+                    </td>
+                    <td className="border border-border px-2 py-1 text-right tnum">
+                      {num(it.discount_pct, 1)}
+                    </td>
+                    <td className="border border-border px-2 py-1 text-right tnum">
+                      {inr(l.taxable)}
+                    </td>
+                    <td className="border border-border px-2 py-1 text-right tnum">
+                      {num(it.gst_pct, 1)}
+                    </td>
+                    <td className="border border-border px-2 py-1 text-right font-semibold tnum">
+                      {inr(l.total)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Block title="AMOUNT IN WORDS">
+            <p>{amountInWords(totals.grand)}</p>
+          </Block>
+          <div className="space-y-1">
+            <Line k="Taxable value" v={inr(totals.taxable)} />
+            {po.tax_mode === "intra" ? (
+              <>
+                <Line k="CGST" v={inr(totals.cgst)} />
+                <Line k="SGST" v={inr(totals.sgst)} />
+              </>
+            ) : (
+              <Line k="IGST" v={inr(totals.igst)} />
+            )}
+            {totals.freight > 0 && <Line k="Freight" v={inr(totals.freight)} />}
+            {totals.other > 0 && <Line k="Other charges" v={inr(totals.other)} />}
+            <Line k="Round off" v={inr(totals.roundOff)} />
+            <div className="flex justify-between border-t border-border pt-1 text-base font-bold">
+              <span>Grand total</span>
+              <span className="tnum">{inr(totals.grand)}</span>
+            </div>
+          </div>
+        </div>
+
+        {po.terms && (
+          <Block title="TERMS & CONDITIONS">
+            <p className="whitespace-pre-line text-muted-foreground">{po.terms}</p>
+          </Block>
+        )}
+
+        <div className="grid gap-6 border-t border-border pt-8 sm:grid-cols-3">
+          <Sign role="Prepared by" name={po.raised_by_name} />
+          <Sign
+            role="Checked / approved by (PM)"
+            name={po.status === "approved" ? po.approved_by_name : ""}
+          />
+          <Sign role="Authorised signatory" name="" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Block({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="label-caps mb-1 text-primary">{title}</p>
+      <div className="space-y-0.5">{children}</div>
+    </div>
+  );
+}
+
+function Line({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex justify-between gap-2">
+      <span className="text-muted-foreground">{k}</span>
+      <span className="font-medium tnum">{v}</span>
+    </div>
+  );
+}
+
+function Sign({ role, name }: { role: string; name: string }) {
+  return (
+    <div>
+      <div className="h-10 border-b border-border" />
+      <p className="mt-1 text-xs font-semibold">{role}</p>
+      <p className="text-xs text-muted-foreground">{name || "—"}</p>
+    </div>
   );
 }
