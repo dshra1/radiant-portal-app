@@ -178,15 +178,18 @@ function Index() {
   });
 
   const { data: notifications = [] } = useQuery({
-    queryKey: ["notifications", "landing", activeProject.id],
+    queryKey: ["notifications", "landing", activeProject.id, user?.id],
     queryFn: async () => {
       let q = supabase
         .from("notifications")
         .select("id,title,body,category,priority,link,is_read,created_at")
         .order("created_at", { ascending: false })
         .limit(20);
+      // Each user sees workspace-wide notifications (no recipient) plus those addressed to them
+      if (user?.id) {
+        q = q.or(`recipient_id.eq.${user.id},recipient_id.is.null`);
+      }
       if (activeProject.id) {
-        // project_id may not exist on older notifications; show workspace-wide until migrated
         q = q.or(`project_id.eq.${activeProject.id},project_id.is.null`);
       }
       const { data, error } = await q;
