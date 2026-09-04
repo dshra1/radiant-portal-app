@@ -1,3 +1,4 @@
+import { useActiveProject } from "@/hooks/useActiveProject";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -182,6 +183,7 @@ function ModuleCard({ item, tone }: { item: Item; tone: Tone }) {
 }
 
 function Index() {
+  const project = useActiveProject();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<string | null>(null);
 
@@ -231,7 +233,7 @@ function Index() {
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-brand-bright animate-pulse" />
               <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
-                {project.name} · Madhapur, Hyderabad
+                {project.name} · {project.location}
               </span>
             </div>
 
