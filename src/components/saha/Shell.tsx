@@ -100,6 +100,7 @@ export function Shell({
 }) {
   const [expanded, setExpanded] = useState(true);
   const { access } = useAccess();
+  const user = useSessionUser();
   const isAdmin = access?.isAdmin ?? false;
   /** Roles the admin assigned to this account; admins may preview any role. */
   const allowedRoles = useMemo<string[]>(
