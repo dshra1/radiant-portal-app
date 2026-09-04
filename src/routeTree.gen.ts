@@ -51,6 +51,7 @@ import { Route as SystemDirectoryRouteImport } from './routes/system-directory'
 import { Route as TenderComparisonRouteImport } from './routes/tender-comparison'
 import { Route as VendorDirectoryRouteImport } from './routes/vendor-directory'
 import { Route as VendorLifecycleRouteImport } from './routes/vendor-lifecycle'
+import { Route as AiIndexRouteImport } from './routes/ai.index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
 const IndexRoute = IndexRouteImport.update({
@@ -263,6 +264,11 @@ const VendorLifecycleRoute = VendorLifecycleRouteImport.update({
   path: '/vendor-lifecycle',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiIndexRoute = AiIndexRouteImport.update({
+  id: '/ai/',
+  path: '/ai/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -313,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
   '/api/chat': typeof ApiChatRoute
+  '/ai/': typeof AiIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
   '/api/chat': typeof ApiChatRoute
+  '/ai': typeof AiIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -404,6 +412,7 @@ export interface FileRoutesById {
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
   '/api/chat': typeof ApiChatRoute
+  '/ai/': typeof AiIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -451,6 +460,7 @@ export interface FileRouteTypes {
     | '/vendor-directory'
     | '/vendor-lifecycle'
     | '/api/chat'
+    | '/ai/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -496,6 +506,7 @@ export interface FileRouteTypes {
     | '/vendor-directory'
     | '/vendor-lifecycle'
     | '/api/chat'
+    | '/ai'
   id:
     | '__root__'
     | '/'
@@ -541,6 +552,7 @@ export interface FileRouteTypes {
     | '/vendor-directory'
     | '/vendor-lifecycle'
     | '/api/chat'
+    | '/ai/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -587,6 +599,7 @@ export interface RootRouteChildren {
   VendorDirectoryRoute: typeof VendorDirectoryRoute
   VendorLifecycleRoute: typeof VendorLifecycleRoute
   ApiChatRoute: typeof ApiChatRoute
+  AiIndexRoute: typeof AiIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -885,6 +898,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VendorLifecycleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai/': {
+      id: '/ai/'
+      path: '/ai'
+      fullPath: '/ai/'
+      preLoaderRoute: typeof AiIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -939,6 +959,7 @@ const rootRouteChildren: RootRouteChildren = {
   VendorDirectoryRoute: VendorDirectoryRoute,
   VendorLifecycleRoute: VendorLifecycleRoute,
   ApiChatRoute: ApiChatRoute,
+  AiIndexRoute: AiIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
