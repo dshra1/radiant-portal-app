@@ -17,6 +17,7 @@ import {
   Users,
   TrendingUp,
   Bell,
+  MessagesSquare,
   ChevronDown,
   Plus,
   CloudCog,
