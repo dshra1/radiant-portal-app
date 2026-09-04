@@ -28,6 +28,7 @@ import {
   ChevronDown,
   Plus,
   UnfoldVertical,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -372,6 +373,12 @@ export function Shell({
                 </span>
               )}
             </Link>
+            <Link
+              to="/projects"
+              className="hidden items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover sm:inline-flex"
+            >
+              <Plus className="size-3.5" /> Add Entry
+            </Link>
             <span className="grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground">
               SD
             </span>
@@ -391,6 +398,15 @@ export function Shell({
         <main className="flex-1 p-4 md:p-6">
           <div className="mx-auto w-full max-w-none">{children}</div>
         </main>
+
+        <Link
+          to="/messages"
+          aria-label="Saha AI Assistant"
+          className="fixed bottom-20 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover md:bottom-6 md:right-6"
+        >
+          <Bot className="size-4" />
+          <span className="hidden sm:inline">Saha AI Assistant</span>
+        </Link>
 
         <nav className="sticky bottom-0 z-20 grid grid-cols-6 border-t border-border bg-card md:hidden">
           {mobileNav.map((item) => {
