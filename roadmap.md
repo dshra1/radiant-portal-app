@@ -34,4 +34,4 @@
 - [x] Unified shared sidebar across all pages
 
 ## BOQ
-- [ ] Upload + Export per BOQ category/stage
+- [x] Upload + Export per BOQ category/stage
