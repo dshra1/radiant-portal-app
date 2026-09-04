@@ -372,6 +372,12 @@ export function Shell({
                 </span>
               )}
             </Link>
+            <Link
+              to="/projects"
+              className="hidden items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover sm:inline-flex"
+            >
+              <Plus className="size-3.5" /> Add Entry
+            </Link>
             <span className="grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground">
               SD
             </span>
