@@ -61,7 +61,11 @@ export function lineTotals(item: PoItem) {
 
 export function poTotals(
   items: PoItem[],
-  opts: { freight?: number | string; other?: number | string; taxMode?: "intra" | "inter" } = {},
+  opts: {
+    freight?: number | string | null | undefined;
+    other?: number | string | null | undefined;
+    taxMode?: "intra" | "inter" | undefined;
+  } = {},
 ) {
   let taxable = 0;
   let discount = 0;

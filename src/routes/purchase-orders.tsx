@@ -103,12 +103,12 @@ function Page() {
   const setStatus = useMutation({
     mutationFn: async ({ status, reason }: { status: PoStatus; reason?: string }) => {
       if (!selected) return;
-      const patch: Record<string, unknown> = { status };
+      const patch: Partial<PoRecord> & { status: PoStatus } = { status };
       if (status === "approved" || status === "rejected") {
-        patch['approved_by'] = access?.userId ?? null;
-        patch['approved_by_name'] = access?.profile?.full_name || access?.email || "";
-        patch['approved_at'] = new Date().toISOString();
-        patch['rejection_reason'] = status === "rejected" ? (reason ?? "") : "";
+        patch.approved_by = access?.userId ?? null;
+        patch.approved_by_name = access?.profile?.full_name || access?.email || "";
+        patch.approved_at = new Date().toISOString();
+        patch.rejection_reason = status === "rejected" ? (reason ?? "") : "";
       }
       const { error } = await supabase.from("purchase_orders").update(patch).eq("id", selected.id);
       if (error) throw error;
