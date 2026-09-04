@@ -412,8 +412,13 @@
    Android / small-screen adaptation for imported Stitch screens
    ============================================================ */
 @media (max-width: 767px) {
-  html { max-width: 100%; }
-  body { overflow-x: hidden; max-width: 100vw; overflow-y: visible; touch-action: pan-x pan-y pinch-zoom; }
+  html { max-width: 100%; overflow-x: clip; }
+  body { overflow-x: clip; max-width: 100vw; overflow-y: visible; touch-action: pan-x pan-y pinch-zoom; }
+
+  /* Stitch panels that hold wide content scroll inside themselves */
+  main [class*="rounded-xl"], main [class*="rounded-lg"], main section, main table { max-width: 100% !important; }
+  main [class*="whitespace-nowrap"] { white-space: normal !important; }
+
 
   /* Fixed desktop sidebars are hidden; the mobile hub button provides nav */
   aside.fixed,

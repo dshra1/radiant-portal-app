@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Download, Upload } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { ActionButton, MetricTile, Section, StatusBadge, TrendPill } from "@/components/saha/ui";
 import { boqItems, inr, inrCompact, materialRates, num, projects } from "@/data/saha";
@@ -24,16 +24,76 @@ export const Route = createFileRoute("/boq")({
   component: Boq,
 });
 
+type BoqRow = (typeof boqItems)[number];
+
 function Boq() {
   const [projectId, setProjectId] = useState<string>("all");
   const [openRow, setOpenRow] = useState<string | null>(null);
+  const [uploaded, setUploaded] = useState<BoqRow[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const items = boqItems.filter((i) => projectId === "all" || i.projectId === projectId);
+  const items = [...boqItems, ...uploaded].filter(
+    (i) => projectId === "all" || i.projectId === projectId,
+  );
   const estTotal = items.reduce((s, i) => s + i.quantity * i.estimatedRate, 0);
   const mktTotal = items.reduce((s, i) => s + i.quantity * i.marketRate, 0);
   const variance = ((mktTotal - estTotal) / estTotal) * 100;
 
   const stages = [...new Set(items.map((i) => i.stage))];
+
+  const exportStage = (stage: string) => {
+    const rows = items.filter((i) => i.stage === stage);
+    const header = ["Code", "Description", "Unit", "Qty", "Est rate", "Market rate", "Amount"];
+    const csv = [
+      header.join(","),
+      ...rows.map((i) =>
+        [
+          i.itemCode,
+          `"${i.description.replace(/"/g, '""')}"`,
+          i.unit,
+          i.quantity,
+          i.estimatedRate,
+          i.marketRate,
+          i.quantity * i.marketRate,
+        ].join(","),
+      ),
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `BOQ-${stage.replace(/\s+/g, "-").toLowerCase()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setNotice(`Exported ${rows.length} line items from ${stage}.`);
+  };
+
+  const uploadStage = async (stage: string, file: File) => {
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const body = lines.slice(/code/i.test(lines[0] ?? "") ? 1 : 0);
+    const parsed: BoqRow[] = body.map((line, idx) => {
+      const cells = line.match(/("([^"]|"")*"|[^,]*)/g)?.filter((_, k) => k % 2 === 0) ?? [];
+      const cell = (n: number) => (cells[n] ?? "").replace(/^"|"$/g, "").replace(/""/g, '"').trim();
+      const est = Number(cell(4)) || 0;
+      const mkt = Number(cell(5)) || est;
+      return {
+        ...(boqItems[0] as BoqRow),
+        id: `upl-${stage}-${Date.now()}-${idx}`,
+        projectId: projectId === "all" ? boqItems[0]!.projectId : projectId,
+        stage,
+        itemCode: cell(0) || `NEW-${idx + 1}`,
+        description: cell(1) || "Uploaded line item",
+        unit: cell(2) || "nos",
+        quantity: Number(cell(3)) || 0,
+        estimatedRate: est,
+        marketRate: mkt,
+        alternatives: [],
+      } as BoqRow;
+    });
+    setUploaded((prev) => [...prev, ...parsed]);
+    setNotice(`Uploaded ${parsed.length} line items into ${stage}.`);
+  };
+
 
   return (
     <Shell
@@ -58,6 +118,15 @@ function Boq() {
         </>
       }
     >
+      {notice && (
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-[13px] text-primary">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice(null)} className="text-xs font-semibold underline">
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricTile label="Estimated value" value={inrCompact(estTotal)} />
         <MetricTile label="At market rate" value={inrCompact(mktTotal)} />
@@ -93,11 +162,36 @@ function Boq() {
                   <tr>
                     <td
                       colSpan={8}
-                      className="label-caps border-y border-border bg-secondary/40 px-3 py-1.5 text-muted-foreground"
+                      className="border-y border-border bg-secondary/40 px-3 py-1.5"
                     >
-                      {stage}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="label-caps text-muted-foreground">{stage}</span>
+                        <div className="flex items-center gap-1.5">
+                          <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-input bg-card px-2 py-1 text-[11px] font-semibold hover:bg-secondary">
+                            <Upload className="size-3" /> Upload
+                            <input
+                              type="file"
+                              accept=".csv,text/csv"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) void uploadStage(stage, f);
+                                e.target.value = "";
+                              }}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => exportStage(stage)}
+                            className="inline-flex items-center gap-1 rounded border border-input bg-card px-2 py-1 text-[11px] font-semibold hover:bg-secondary"
+                          >
+                            <Download className="size-3" /> Export
+                          </button>
+                        </div>
+                      </div>
                     </td>
                   </tr>
+
                   {items
                     .filter((i) => i.stage === stage)
                     .map((i) => {

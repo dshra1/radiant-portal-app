@@ -32,3 +32,6 @@
 - [x] Role-based sidebar filtering (Admin, PM, Site Engineer, Supervisor, Purchase/Stores, Accounts, Landowner) — client-side nav filter in src/components/saha/nav.ts
 - [ ] Enforce privileges server-side (user roles table + RLS) once auth is added
 - [x] Unified shared sidebar across all pages
+
+## BOQ
+- [x] Upload + Export per BOQ category/stage
