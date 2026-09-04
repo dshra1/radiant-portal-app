@@ -1,14 +1,34 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
-import { useActiveProject } from "@/hooks/useActiveProject";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAccess } from "@/lib/access";
+import { inr, num } from "@/data/saha";
+import {
+  DEFAULT_PO_TERMS,
+  amountInWords,
+  lineTotals,
+  n,
+  poTotals,
+  type PoItem,
+} from "@/lib/po";
+import { Plus, Save, Send, Trash2, PackageSearch } from "lucide-react";
 
 export const Route = createFileRoute("/po-create")({
   head: () => ({
     meta: [
-      { title: "Smart Purchase Order Creation Engine | Saha OS" },
-      { name: "description", content: "Value-engineered PO drafting with BIS spec verification and brand alternatives." },
-      { property: "og:title", content: "Smart Purchase Order Creation Engine | Saha OS" },
-      { property: "og:description", content: "Value-engineered PO drafting with BIS spec verification and brand alternatives." },
+      { title: "Raise Purchase Order | Saha OS" },
+      {
+        name: "description",
+        content:
+          "Raise a GST-compliant purchase order against your project BOQ with vendor details, terms and PM approval routing.",
+      },
+      { property: "og:title", content: "Raise Purchase Order | Saha OS" },
+      {
+        property: "og:description",
+        content: "Create, price and route a purchase order for PM approval in Saha OS.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -16,667 +36,580 @@ export const Route = createFileRoute("/po-create")({
   component: Page,
 });
 
+type ProjectRow = {
+  id: string;
+  name: string;
+  location: string;
+  company_name: string;
+  company_gstin: string;
+  bank_name: string;
+  bank_account_name: string;
+  bank_account_last4: string;
+  bank_ifsc: string;
+};
+
+const emptyItem = (sort: number): PoItem => ({
+  id: crypto.randomUUID(),
+  item_code: "",
+  description: "",
+  brand: "",
+  unit: "",
+  quantity: 0,
+  rate: 0,
+  discount_pct: 0,
+  gst_pct: 18,
+  sort_order: sort,
+});
+
+const field =
+  "w-full rounded border border-border bg-card px-2.5 py-2 text-sm text-foreground outline-none focus:border-primary";
+const label = "label-caps text-muted-foreground";
+
 function Page() {
-  const project = useActiveProject();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { access } = useAccess();
+
+  const { data: projects } = useQuery({
+    queryKey: ["site_projects", "po-create"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_projects")
+        .select(
+          "id,name,location,company_name,company_gstin,bank_name,bank_account_name,bank_account_last4,bank_ifsc",
+        )
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ProjectRow[];
+    },
+  });
+
+  const [projectId, setProjectId] = useState("");
+  useEffect(() => {
+    if (!projectId && projects?.[0]) setProjectId(projects[0].id);
+  }, [projects, projectId]);
+  const project = projects?.find((p) => p.id === projectId) ?? null;
+
+  const [poNumber, setPoNumber] = useState("");
+  useEffect(() => {
+    supabase.rpc("next_po_number").then(({ data }) => {
+      if (typeof data === "string") setPoNumber(data);
+    });
+  }, []);
+
+  const [vendor, setVendor] = useState({
+    vendor_name: "",
+    vendor_address: "",
+    vendor_gstin: "",
+    vendor_contact: "",
+    vendor_email: "",
+    quote_reference: "",
+  });
+  const [meta, setMeta] = useState({
+    po_date: new Date().toISOString().slice(0, 10),
+    delivery_date: "",
+    payment_terms: "30 days from certified delivery",
+    delivery_terms: "Free delivery at site, unloading in vendor scope",
+    tax_mode: "intra" as "intra" | "inter",
+    freight_charges: 0 as number | string,
+    other_charges: 0 as number | string,
+    notes: "",
+    terms: DEFAULT_PO_TERMS,
+  });
+
+  const [items, setItems] = useState<PoItem[]>([emptyItem(0)]);
+  const totals = useMemo(
+    () =>
+      poTotals(items, {
+        freight: meta.freight_charges,
+        other: meta.other_charges,
+        taxMode: meta.tax_mode,
+      }),
+    [items, meta.freight_charges, meta.other_charges, meta.tax_mode],
+  );
+
+  const [boqOpen, setBoqOpen] = useState(false);
+  const { data: boqItems } = useQuery({
+    queryKey: ["boq_items", "po-picker", projectId],
+    enabled: !!projectId && boqOpen,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("boq_items")
+        .select("id,item_code,description,brand,unit,quantity,rate,stage,category")
+        .eq("project_id", projectId)
+        .order("sort_order");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const [boqSearch, setBoqSearch] = useState("");
+  const boqFiltered = (boqItems ?? []).filter((b) => {
+    const q = boqSearch.trim().toLowerCase();
+    if (!q) return true;
+    return `${b.description} ${b.brand} ${b.item_code} ${b.category}`.toLowerCase().includes(q);
+  });
+
+  const setItem = (id: string, patch: Partial<PoItem>) =>
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+
+  const [message, setMessage] = useState("");
+
+  const save = useMutation({
+    mutationFn: async (status: "draft" | "pending") => {
+      const rows = items.filter((it) => it.description.trim() || n(it.quantity) > 0);
+      if (!vendor.vendor_name.trim()) throw new Error("Vendor name is required");
+      if (rows.length === 0) throw new Error("Add at least one line item");
+
+      let number = poNumber;
+      const { data: fresh } = await supabase.rpc("next_po_number");
+      if (typeof fresh === "string") number = fresh;
+
+      const { data: po, error } = await supabase
+        .from("purchase_orders")
+        .insert({
+          po_number: number,
+          project_id: projectId || null,
+          project_name: project?.name ?? "",
+          site_address: project?.location ?? "",
+          ...vendor,
+          po_date: meta.po_date,
+          delivery_date: meta.delivery_date || null,
+          payment_terms: meta.payment_terms,
+          delivery_terms: meta.delivery_terms,
+          freight_charges: n(meta.freight_charges),
+          other_charges: n(meta.other_charges),
+          tax_mode: meta.tax_mode,
+          terms: meta.terms,
+          notes: meta.notes,
+          status,
+          raised_by: access?.userId ?? null,
+          raised_by_name: access?.profile?.full_name || access?.email || "",
+        })
+        .select("id,po_number")
+        .single();
+      if (error) throw error;
+
+      const { error: itemErr } = await supabase.from("purchase_order_items").insert(
+        rows.map((it, i) => ({
+          po_id: po.id,
+          item_code: it.item_code,
+          description: it.description,
+          brand: it.brand,
+          unit: it.unit,
+          quantity: n(it.quantity),
+          rate: n(it.rate),
+          discount_pct: n(it.discount_pct),
+          gst_pct: n(it.gst_pct),
+          sort_order: i,
+        })),
+      );
+      if (itemErr) throw itemErr;
+      return po;
+    },
+    onSuccess: async (po) => {
+      await qc.invalidateQueries({ queryKey: ["purchase_orders"] });
+      navigate({ to: "/purchase-orders", search: { po: po.po_number } as never });
+    },
+    onError: (e: unknown) => setMessage(e instanceof Error ? e.message : "Could not save PO"),
+  });
+
   return (
-    <Shell title={"Smart Purchase Order Creation Engine | Saha OS"}>
-      <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full gap-space-lg">
-
-<div className="flex flex-col bg-surface-container-lowest p-space-lg rounded shadow-sm gap-space-md">
-
-<div className="flex flex-wrap items-center justify-between gap-space-sm">
-<div className="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
-<span className="hover:text-primary cursor-pointer transition-colors">Projects</span>
-<span className="material-symbols-outlined text-space-sm leading-none">chevron_right</span>
-<span className="hover:text-primary cursor-pointer transition-colors">{project.name}</span>
-<span className="material-symbols-outlined text-space-sm leading-none">chevron_right</span>
-<span className="hover:text-primary cursor-pointer transition-colors">Procurement &amp; Supply Chain</span>
-<span className="material-symbols-outlined text-space-sm leading-none">chevron_right</span>
-<span className="text-on-surface font-title-md text-title-md">PO Creation Engine</span>
-</div>
-<div className="flex items-center gap-space-xs px-space-sm py-space-2xs bg-primary/10 text-primary rounded font-label-sm text-label-sm font-medium">
-<span className="material-symbols-outlined text-space-sm leading-none">sync</span>
-<span>AI Guardrails &amp; Mandi Sync Active • Spot Index: Madhapur H-4</span>
-</div>
-</div>
-
-<div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
-<div>
-<div className="flex items-center gap-space-sm">
-<span className="font-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">Smart Purchase Order Creation — Value Engineering &amp; Brand Alternative Integration</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wide">PO-DRAFT-HYD-8842</span>
-</div>
-<p className="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
-          Binding purchase contract generation with real-time BIS/NABL spec verification and algorithmic BOQ baseline reconciliation.
-        </p>
-</div>
-<div className="flex items-center gap-space-sm self-start lg:self-auto shrink-0">
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high font-title-md text-title-md transition-colors">
-<span className="material-symbols-outlined text-space-base leading-none">compare_arrows</span>
-<span>Diff Against Baseline BOQ</span>
-</button>
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high font-title-md text-title-md transition-colors">
-<span className="material-symbols-outlined text-space-base leading-none">history</span>
-<span>Version 3.2</span>
-</button>
-</div>
-</div>
-
-<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-space-sm pt-space-xs">
-
-<div className="flex flex-col p-space-sm rounded bg-surface-container-low">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase text-on-surface-variant tracking-wider">Total PO Draft Value</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant leading-none">request_quote</span>
-</div>
-<div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="font-tabular-metric text-tabular-metric text-on-surface">₹38,42,800</span>
-</div>
-<div className="flex items-center gap-space-2xs mt-space-2xs text-on-surface-variant font-body-sm text-body-sm">
-<span>Orig:</span>
-<span className="line-through">₹44,18,000</span>
-<span className="text-primary font-label-sm text-label-sm font-semibold ml-space-2xs">Landed Net</span>
-</div>
-</div>
-
-<div className="flex flex-col p-space-sm rounded bg-primary/5">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase text-primary font-semibold tracking-wider">Direct VE Savings Locked</span>
-<span className="material-symbols-outlined text-space-base text-primary leading-none">trending_down</span>
-</div>
-<div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="font-tabular-metric text-tabular-metric text-primary">₹5,75,200</span>
-<span className="px-space-xs py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm font-bold">-13.0%</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs">Reallocated to Contingency</span>
-</div>
-
-<div className="flex flex-col p-space-sm rounded bg-surface-container-low">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase text-on-surface-variant tracking-wider">Substituted Brand Items</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant leading-none">alt_route</span>
-</div>
-<div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="font-tabular-metric text-tabular-metric text-on-surface">6 <span className="font-headline-sm text-headline-sm font-normal text-on-surface-variant">of 18 lines</span></span>
-</div>
-<div className="w-full bg-surface-container-high h-1.5 rounded-full mt-space-xs overflow-hidden">
-<div className="bg-primary h-full rounded-full" style={{ width: "33.3%" }}></div>
-</div>
-</div>
-
-<div className="flex flex-col p-space-sm rounded bg-surface-container-low">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase text-on-surface-variant tracking-wider">IS Code &amp; Spec Lock</span>
-<span className="material-symbols-outlined text-space-base text-primary leading-none">verified</span>
-</div>
-<div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="font-tabular-metric text-tabular-metric text-primary">100% Certified</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs">BIS • NABL Lab Validated</span>
-</div>
-
-<div className="flex flex-col p-space-sm rounded bg-surface-container-low">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase text-on-surface-variant tracking-wider">Primary Vendor</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant leading-none">storefront</span>
-</div>
-<div className="truncate font-title-md text-title-md text-on-surface mt-space-2xs" title="Sri Balaji Electricals & Distribution">
-          Sri Balaji Electricals
-        </div>
-<span className="font-body-sm text-body-sm text-on-surface-variant truncate">Sanathnagar, HYD • L1 Bid</span>
-</div>
-</div>
-</div>
-
-<div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
-
-<div className="lg:col-span-8 flex flex-col gap-space-md">
-
-<div className="flex flex-col bg-surface-container-lowest rounded shadow-sm overflow-hidden">
-
-<div className="p-space-base bg-surface-container-lowest flex flex-wrap items-center justify-between gap-space-sm">
-<div className="flex items-center gap-space-sm">
-<div className="p-space-xs bg-primary/10 text-primary rounded">
-<span className="material-symbols-outlined text-space-md leading-none">fact_check</span>
-</div>
-<div className="flex flex-col">
-<span className="font-headline-sm text-headline-sm text-on-surface">Procurement Line Items &amp; VE Substitutions</span>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Validated against MEP Stage 04 Bill of Quantities</span>
-</div>
-</div>
-
-<div className="flex items-center gap-space-xs">
-<div className="flex items-center px-space-xs py-space-2xs rounded bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm">
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-lowest text-on-surface font-semibold shadow-xs">All (18)</span>
-<span className="px-space-xs py-space-2xs rounded hover:text-on-surface cursor-pointer">VE Substituted (6)</span>
-<span className="px-space-xs py-space-2xs rounded hover:text-on-surface cursor-pointer">Original Spec (12)</span>
-</div>
-<button className="p-space-xs rounded hover:bg-surface-container-low text-on-surface-variant" title="Download Excel Sheet">
-<span className="material-symbols-outlined text-space-base leading-none">download</span>
-</button>
-</div>
-</div>
-
-<div className="overflow-x-auto">
-<table className="w-full text-left border-collapse">
-<thead>
-<tr className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
-<th className="py-space-sm px-space-base">Item &amp; Category</th>
-<th className="py-space-sm px-space-base">BOQ Spec (Base)</th>
-<th className="py-space-sm px-space-base">PO Spec (Substituted)</th>
-<th className="py-space-sm px-space-base text-right">Order Qty</th>
-<th className="py-space-sm px-space-base text-right">Negotiated Rate</th>
-<th className="py-space-sm px-space-base text-right">PO Total</th>
-<th className="py-space-sm px-space-base text-center">IS Spec / Status</th>
-<th className="py-space-sm px-space-base text-center">Actions</th>
-</tr>
-</thead>
-<tbody className="divide-y-0 text-on-surface font-body-sm text-body-sm">
-
-<tr className="hover:bg-surface-container-low/50 transition-colors">
-<td className="py-space-sm px-space-base">
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">Modular Sockets 16A</span>
-<span className="text-on-surface-variant font-label-sm text-label-sm">Electrical • Tower A &amp; B</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-on-surface-variant">
-<div className="flex flex-col">
-<span className="line-through">Legrand Myrius</span>
-<span className="font-tabular-metric-sm text-tabular-metric-sm">₹250 / NOS</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base">
-<div className="flex flex-col">
-<div className="flex items-center gap-space-2xs">
-<span className="font-title-md text-title-md text-primary">Anchor Roma 16A</span>
-<span className="px-space-2xs py-0.5 rounded bg-primary/10 text-primary font-label-sm text-label-sm font-semibold">VE Best</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Polycarbonate UV Grade</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-right font-tabular-metric-sm text-tabular-metric-sm text-on-surface">
-                  600 NOS
-                </td>
-<td className="py-space-sm px-space-base text-right">
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface">₹200</span>
-<span className="block text-primary font-label-sm text-label-sm">-20.0%</span>
-</td>
-<td className="py-space-sm px-space-base text-right font-tabular-metric text-tabular-metric text-on-surface">
-                  ₹1,20,000
-                </td>
-<td className="py-space-sm px-space-base text-center">
-<div className="flex flex-col items-center">
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface font-label-sm text-label-sm font-medium">IS 1293:2019</span>
-<span className="text-primary font-label-sm text-label-sm font-semibold flex items-center gap-space-2xs mt-0.5">
-<span className="material-symbols-outlined text-space-xs leading-none">check_circle</span> NABL OK
-                    </span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-center">
-<div className="flex items-center justify-center gap-space-2xs">
-<button className="p-space-2xs rounded hover:bg-surface-container text-on-surface-variant" title="View Technical Data Sheet">
-<span className="material-symbols-outlined text-space-base leading-none">description</span>
-</button>
-<button className="p-space-2xs rounded hover:bg-surface-container text-on-surface-variant" title="Revert to Original Spec">
-<span className="material-symbols-outlined text-space-base leading-none">undo</span>
-</button>
-</div>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors bg-surface-container-low/20">
-<td className="py-space-sm px-space-base">
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">PVC Conduits 25mm Heavy</span>
-<span className="text-on-surface-variant font-label-sm text-label-sm">Electrical • Slab Casting</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-on-surface-variant">
-<div className="flex flex-col">
-<span className="line-through">Precision FRLS</span>
-<span className="font-tabular-metric-sm text-tabular-metric-sm">₹20 / RFT</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base">
-<div className="flex flex-col">
-<div className="flex items-center gap-space-2xs">
-<span className="font-title-md text-title-md text-primary">Sudhakar ISI Heavy</span>
-<span className="px-space-2xs py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Regional</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Flame Retardant Grade B</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-right font-tabular-metric-sm text-tabular-metric-sm text-on-surface">
-                  42,000 RFT
-                </td>
-<td className="py-space-sm px-space-base text-right">
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface">₹13</span>
-<span className="block text-primary font-label-sm text-label-sm">-35.0%</span>
-</td>
-<td className="py-space-sm px-space-base text-right font-tabular-metric text-tabular-metric text-on-surface">
-                  ₹5,46,000
-                </td>
-<td className="py-space-sm px-space-base text-center">
-<div className="flex flex-col items-center">
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface font-label-sm text-label-sm font-medium">IS 9537-3</span>
-<span className="text-primary font-label-sm text-label-sm font-semibold flex items-center gap-space-2xs mt-0.5">
-<span className="material-symbols-outlined text-space-xs leading-none">check_circle</span> Lab Passed
-                    </span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-center">
-<div className="flex items-center justify-center gap-space-2xs">
-<button className="p-space-2xs rounded hover:bg-surface-container text-on-surface-variant" title="View Technical Data Sheet">
-<span className="material-symbols-outlined text-space-base leading-none">description</span>
-</button>
-<button className="p-space-2xs rounded hover:bg-surface-container text-on-surface-variant" title="Revert to Original Spec">
-<span className="material-symbols-outlined text-space-base leading-none">undo</span>
-</button>
-</div>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors">
-<td className="py-space-sm px-space-base">
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">FRLS Copper Wire 2.5 mm²</span>
-<span className="text-on-surface-variant font-label-sm text-label-sm">Electrical Wiring • Power Circuit</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-on-surface-variant">
-<div className="flex flex-col">
-<span className="line-through">Finolex FRLS-H</span>
-<span className="font-tabular-metric-sm text-tabular-metric-sm">₹29 / RFT</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base">
-<div className="flex flex-col">
-<div className="flex items-center gap-space-2xs">
-<span className="font-title-md text-title-md text-primary">Polycab Green Wire</span>
-<span className="px-space-2xs py-0.5 rounded bg-primary/10 text-primary font-label-sm text-label-sm font-semibold">Equivalent</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Class 5 Annealed Copper</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-right font-tabular-metric-sm text-tabular-metric-sm text-on-surface">
-                  1,02,000 RFT
-                </td>
-<td className="py-space-sm px-space-base text-right">
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface">₹25</span>
-<span className="block text-primary font-label-sm text-label-sm">-13.8%</span>
-</td>
-<td className="py-space-sm px-space-base text-right font-tabular-metric text-tabular-metric text-on-surface">
-                  ₹25,50,000
-                </td>
-<td className="py-space-sm px-space-base text-center">
-<div className="flex flex-col items-center">
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface font-label-sm text-label-sm font-medium">IS 694:2010</span>
-<span className="text-primary font-label-sm text-label-sm font-semibold flex items-center gap-space-2xs mt-0.5">
-<span className="material-symbols-outlined text-space-xs leading-none">check_circle</span> NABL OK
-                    </span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-center">
-<div className="flex items-center justify-center gap-space-2xs">
-<button className="p-space-2xs rounded hover:bg-surface-container text-on-surface-variant" title="View Technical Data Sheet">
-<span className="material-symbols-outlined text-space-base leading-none">description</span>
-</button>
-<button className="p-space-2xs rounded hover:bg-surface-container text-on-surface-variant" title="Revert to Original Spec">
-<span className="material-symbols-outlined text-space-base leading-none">undo</span>
-</button>
-</div>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors bg-surface-container-low/20">
-<td className="py-space-sm px-space-base">
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">TMT Fe500D 12mm Rebar</span>
-<span className="text-on-surface-variant font-label-sm text-label-sm">Civil • Secondary Distribution</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-on-surface-variant">
-<div className="flex flex-col">
-<span className="line-through">Tata Tiscon Fe500D</span>
-<span className="font-tabular-metric-sm text-tabular-metric-sm">₹61,200 / MT</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base">
-<div className="flex flex-col">
-<div className="flex items-center gap-space-2xs">
-<span className="font-title-md text-title-md text-primary">Jairaj Fe500D</span>
-<span className="px-space-2xs py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Local Primary</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Approved for Non-Critical Beams</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-right font-tabular-metric-sm text-tabular-metric-sm text-on-surface">
-                  28 MT
-                </td>
-<td className="py-space-sm px-space-base text-right">
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface">₹51,800</span>
-<span className="block text-primary font-label-sm text-label-sm">-15.3%</span>
-</td>
-<td className="py-space-sm px-space-base text-right font-tabular-metric text-tabular-metric text-on-surface">
-                  ₹14,50,400
-                </td>
-<td className="py-space-sm px-space-base text-center">
-<div className="flex flex-col items-center">
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface font-label-sm text-label-sm font-medium">IS 1786:2008</span>
-<span className="text-primary font-label-sm text-label-sm font-semibold flex items-center gap-space-2xs mt-0.5">
-<span className="material-symbols-outlined text-space-xs leading-none">check_circle</span> UTS/YS Cert
-                    </span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-center">
-<div className="flex items-center justify-center gap-space-2xs">
-<button className="p-space-2xs rounded hover:bg-surface-container text-on-surface-variant" title="View Technical Data Sheet">
-<span className="material-symbols-outlined text-space-base leading-none">description</span>
-</button>
-<button className="p-space-2xs rounded hover:bg-surface-container text-on-surface-variant" title="Revert to Original Spec">
-<span className="material-symbols-outlined text-space-base leading-none">undo</span>
-</button>
-</div>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors">
-<td className="py-space-sm px-space-base">
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">GVT Glazed Tiles 600x1200</span>
-<span className="text-on-surface-variant font-label-sm text-label-sm">Finishing • Typical Floor Lobbies</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-on-surface-variant">
-<div className="flex flex-col">
-<span className="line-through">Kajaria Eternity</span>
-<span className="font-tabular-metric-sm text-tabular-metric-sm">₹62.50 / SFT</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base">
-<div className="flex flex-col">
-<div className="flex items-center gap-space-2xs">
-<span className="font-title-md text-title-md text-primary">Simpolo Marvel Series</span>
-<span className="px-space-2xs py-0.5 rounded bg-primary/10 text-primary font-label-sm text-label-sm font-semibold">Tier 1 Matched</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Stain Resistant Group 5</span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-right font-tabular-metric-sm text-tabular-metric-sm text-on-surface">
-                  14,000 SFT
-                </td>
-<td className="py-space-sm px-space-base text-right">
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface">₹59.00</span>
-<span className="block text-primary font-label-sm text-label-sm">-5.6%</span>
-</td>
-<td className="py-space-sm px-space-base text-right font-tabular-metric text-tabular-metric text-on-surface">
-                  ₹8,26,000
-                </td>
-<td className="py-space-sm px-space-base text-center">
-<div className="flex flex-col items-center">
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface font-label-sm text-label-sm font-medium">IS 15622:2017</span>
-<span className="text-primary font-label-sm text-label-sm font-semibold flex items-center gap-space-2xs mt-0.5">
-<span className="material-symbols-outlined text-space-xs leading-none">check_circle</span> MOR Pass
-                    </span>
-</div>
-</td>
-<td className="py-space-sm px-space-base text-center">
-<div className="flex items-center justify-center gap-space-2xs">
-<button className="p-space-2xs rounded hover:bg-surface-container text-on-surface-variant" title="View Technical Data Sheet">
-<span className="material-symbols-outlined text-space-base leading-none">description</span>
-</button>
-<button className="p-space-2xs rounded hover:bg-surface-container text-on-surface-variant" title="Revert to Original Spec">
-<span className="material-symbols-outlined text-space-base leading-none">undo</span>
-</button>
-</div>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-
-<div className="p-space-sm bg-surface-container-low flex flex-col sm:flex-row items-center justify-between text-on-surface-variant font-label-sm text-label-sm gap-space-sm">
-<div className="flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-primary text-space-base leading-none">gavel</span>
-<span>All 6 VE substitutions are architect-reviewed and verified to maintain zero impact on structural durability and 10-year warranty covenants.</span>
-</div>
-<button className="text-primary hover:underline font-title-md text-title-md shrink-0">
-            Export VE Audit Dossier (.PDF)
-          </button>
-</div>
-</div>
-
-<div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
-
-<div className="flex flex-col p-space-base rounded bg-surface-container-lowest shadow-sm gap-space-sm">
-<div className="flex items-center justify-between">
-<span className="font-headline-sm text-headline-sm text-on-surface">Material Physical Testing Log</span>
-<span className="px-space-xs py-space-2xs rounded bg-primary/10 text-primary font-label-sm text-label-sm font-bold">4 of 4 Batches Passed</span>
-</div>
-<div className="flex flex-col gap-space-xs mt-space-2xs">
-<div className="flex items-center justify-between p-space-xs rounded bg-surface-container-low">
-<div className="flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-primary text-space-base leading-none">check_box</span>
-<span className="font-title-md text-title-md text-on-surface">Jairaj Fe500D Tensile Stress</span>
-</div>
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-primary">545 N/mm² (Min 500)</span>
-</div>
-<div className="flex items-center justify-between p-space-xs rounded bg-surface-container-low">
-<div className="flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-primary text-space-base leading-none">check_box</span>
-<span className="font-title-md text-title-md text-on-surface">Sudhakar Conduit Impact Strength</span>
-</div>
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-primary">Heavy Class OK</span>
-</div>
-<div className="flex items-center justify-between p-space-xs rounded bg-surface-container-low">
-<div className="flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-primary text-space-base leading-none">check_box</span>
-<span className="font-title-md text-title-md text-on-surface">Polycab FRLS Oxygen Index</span>
-</div>
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-primary">31.4% (Min 29%)</span>
-</div>
-</div>
-<div className="mt-space-2xs flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
-<span>External NABL Lab: Vimta Labs Hyderabad</span>
-<span className="text-primary cursor-pointer hover:underline">View Test Certificates #9822</span>
-</div>
-</div>
-
-<div className="flex flex-col p-space-base rounded bg-surface-container-lowest shadow-sm gap-space-sm">
-<div className="flex items-center justify-between">
-<span className="font-headline-sm text-headline-sm text-on-surface">Hyd Wholesale Mandi Benchmark</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm">Weekly Spot Avg</span>
-</div>
-<p className="font-body-sm text-body-sm text-on-surface-variant">
-            Negotiated bundle price is ₹5,75,200 below benchmark spot quotes across Sanathnagar &amp; Ranigunj market yards.
-          </p>
-
-<div className="h-28 w-full flex items-end gap-space-xs pt-space-xs">
-<div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end">
-<div className="w-full bg-surface-container-high rounded-t" style={{ height: "85%" }}></div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Mandi Avg</span>
-</div>
-<div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end">
-<div className="w-full bg-error/20 rounded-t" style={{ height: "100%" }}></div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">BOQ Orig</span>
-</div>
-<div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end">
-<div className="w-full bg-primary rounded-t" style={{ height: "68%" }}></div>
-<span className="font-label-sm text-label-sm text-primary font-bold">This PO Draft</span>
-</div>
-</div>
-<div className="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant mt-space-2xs">
-<span>Mandi Base: ₹40,12,000</span>
-<span className="text-primary font-bold">PO Delta: -₹1,69,200 vs Mandi</span>
-</div>
-</div>
-</div>
-</div>
-
-<div className="lg:col-span-4 flex flex-col gap-space-md">
-
-<div className="flex flex-col p-space-base rounded bg-surface-container-lowest shadow-sm gap-space-md">
-<div className="flex items-start justify-between">
-<div className="flex items-center gap-space-sm">
-<div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center text-primary font-bold">
-              SB
-            </div>
-<div className="flex flex-col">
-<span className="font-headline-sm text-headline-sm text-on-surface leading-tight">Sri Balaji Electricals</span>
-<span className="font-label-sm text-label-sm text-on-surface-variant">GSTIN: 36AAACS1234F1Z5 • Reg. L1</span>
-</div>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm font-semibold">Verified Vendor</span>
-</div>
-<div className="divide-y-0 flex flex-col gap-space-sm pt-space-xs">
-
-<div className="flex flex-col p-space-sm rounded bg-surface-container-low gap-space-2xs">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase text-on-surface-variant tracking-wider font-semibold">Delivery Schedule</span>
-<span className="font-label-sm text-label-sm text-primary font-bold">2-Stage Call-Off</span>
-</div>
-<p className="font-body-sm text-body-sm text-on-surface">
-              • <strong className="text-on-surface">Stage 1 (40%):</strong> Immediate dispatch within 48h to Madhapur Site Yard.<br />
-              • <strong className="text-on-surface">Stage 2 (60%):</strong> Balance triggered upon Slab 06 casting sign-off.
+    <Shell title="Raise Purchase Order | Saha OS">
+      <div className="mx-auto flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
+        <header className="panel flex flex-wrap items-end justify-between gap-3 p-4">
+          <div>
+            <h1 className="display-title">RAISE PURCHASE ORDER</h1>
+            <p className="text-sm text-muted-foreground">
+              {poNumber ? `Next number: ${poNumber}` : "Generating PO number…"} · GST-compliant
+              format · routes to PM for approval
             </p>
-</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={save.isPending}
+              onClick={() => save.mutate("draft")}
+              className="inline-flex items-center gap-2 rounded border border-border px-3 py-2 text-sm font-semibold hover:bg-secondary"
+            >
+              <Save className="size-4" /> Save as draft
+            </button>
+            <button
+              type="button"
+              disabled={save.isPending}
+              onClick={() => save.mutate("pending")}
+              className="inline-flex items-center gap-2 rounded bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+            >
+              <Send className="size-4" /> Submit for PM approval
+            </button>
+          </div>
+        </header>
 
-<div className="flex flex-col p-space-sm rounded bg-surface-container-low gap-space-2xs">
-<div className="flex items-center justify-between">
-<span className="font-label-sm text-label-sm uppercase text-on-surface-variant tracking-wider font-semibold">Payment Milestones</span>
-<span className="material-symbols-outlined text-space-sm text-on-surface-variant leading-none">account_balance_wallet</span>
-</div>
-<div className="grid grid-cols-3 gap-space-xs mt-space-2xs text-center font-body-sm text-body-sm">
-<div className="p-space-xs bg-surface-container-lowest rounded">
-<span className="font-bold text-on-surface">30%</span>
-<span className="block font-label-sm text-label-sm text-on-surface-variant">PO Issuance</span>
-</div>
-<div className="p-space-xs bg-surface-container-lowest rounded">
-<span className="font-bold text-on-surface">60%</span>
-<span className="block font-label-sm text-label-sm text-on-surface-variant">Site GRN Check</span>
-</div>
-<div className="p-space-xs bg-surface-container-lowest rounded">
-<span className="font-bold text-on-surface">10%</span>
-<span className="block font-label-sm text-label-sm text-on-surface-variant">30d Retention</span>
-</div>
-</div>
-</div>
+        {message && (
+          <div className="rounded border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive">
+            {message}
+          </div>
+        )}
 
-<div className="flex items-center justify-between px-space-xs text-on-surface-variant font-label-sm text-label-sm">
-<span>Freight &amp; Unloading</span>
-<span className="text-on-surface font-title-md text-title-md">Included (Landed Madhapur Yard)</span>
-</div>
-<div className="flex items-center justify-between px-space-xs text-on-surface-variant font-label-sm text-label-sm">
-<span>Price Validity</span>
-<span className="text-on-surface font-title-md text-title-md">Firm till Dec 31, 2025</span>
-</div>
-</div>
-</div>
+        {/* Buyer + PO meta */}
+        <section className="grid gap-4 lg:grid-cols-3">
+          <div className="panel space-y-3 p-4">
+            <h2 className="section-title text-primary">BUYER</h2>
+            <div>
+              <span className={label}>Project</span>
+              <select
+                className={field}
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+              >
+                {(projects ?? []).length === 0 && <option value="">No project yet</option>}
+                {(projects ?? []).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <dl className="space-y-1 text-sm">
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">Company</dt>
+                <dd className="text-right font-medium">{project?.company_name || "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">GSTIN</dt>
+                <dd className="text-right font-medium">{project?.company_gstin || "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">Site</dt>
+                <dd className="text-right font-medium">{project?.location || "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">Bank</dt>
+                <dd className="text-right font-medium">
+                  {project?.bank_name
+                    ? `${project.bank_name} ••••${project.bank_account_last4}`
+                    : "—"}
+                </dd>
+              </div>
+            </dl>
+          </div>
 
-<div className="flex flex-col p-space-base rounded bg-surface-container-lowest shadow-sm gap-space-sm">
-<div className="flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-primary text-space-md leading-none">shield</span>
-<span className="font-headline-sm text-headline-sm text-on-surface">Automated Guardrail Checks</span>
-</div>
-<div className="flex flex-col gap-space-xs mt-space-xs">
-<div className="flex items-start gap-space-sm p-space-xs rounded bg-surface-container-low">
-<span className="material-symbols-outlined text-primary text-space-base shrink-0 leading-tight">check_circle</span>
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">Mandi Spot Index Price Cap</span>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Current price is 4.2% under prevailing Hyderabad Wholesale Spot Index.</span>
-</div>
-</div>
-<div className="flex items-start gap-space-sm p-space-xs rounded bg-surface-container-low">
-<span className="material-symbols-outlined text-primary text-space-base shrink-0 leading-tight">check_circle</span>
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">Zero Phantom Inventory Lock</span>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Quantities perfectly reconcile with Stage 04 MEP execution forecast.</span>
-</div>
-</div>
-<div className="flex items-start gap-space-sm p-space-xs rounded bg-surface-container-low">
-<span className="material-symbols-outlined text-primary text-space-base shrink-0 leading-tight">check_circle</span>
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">Mandatory Gate Pass QA Gate</span>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Vendor batch mill test certificates required before gate barrier release.</span>
-</div>
-</div>
-</div>
-</div>
+          <div className="panel space-y-3 p-4">
+            <h2 className="section-title text-primary">VENDOR</h2>
+            <div className="grid gap-2">
+              <input
+                className={field}
+                placeholder="Vendor name *"
+                value={vendor.vendor_name}
+                onChange={(e) => setVendor({ ...vendor, vendor_name: e.target.value })}
+              />
+              <textarea
+                className={field}
+                rows={2}
+                placeholder="Vendor address"
+                value={vendor.vendor_address}
+                onChange={(e) => setVendor({ ...vendor, vendor_address: e.target.value })}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className={field}
+                  placeholder="Vendor GSTIN"
+                  value={vendor.vendor_gstin}
+                  onChange={(e) => setVendor({ ...vendor, vendor_gstin: e.target.value })}
+                />
+                <input
+                  className={field}
+                  placeholder="Contact number"
+                  value={vendor.vendor_contact}
+                  onChange={(e) => setVendor({ ...vendor, vendor_contact: e.target.value })}
+                />
+                <input
+                  className={field}
+                  placeholder="Email"
+                  value={vendor.vendor_email}
+                  onChange={(e) => setVendor({ ...vendor, vendor_email: e.target.value })}
+                />
+                <input
+                  className={field}
+                  placeholder="Quotation reference"
+                  value={vendor.quote_reference}
+                  onChange={(e) => setVendor({ ...vendor, quote_reference: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
 
-<div className="flex flex-col p-space-base rounded bg-surface-container-lowest shadow-sm gap-space-md">
-<div className="flex items-center justify-between">
-<span className="font-headline-sm text-headline-sm text-on-surface">Approval Hierarchy &amp; Sign-off</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Stage 3 of 3</span>
-</div>
+          <div className="panel space-y-3 p-4">
+            <h2 className="section-title text-primary">ORDER DETAILS</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className={label}>PO date</span>
+                <input
+                  type="date"
+                  className={field}
+                  value={meta.po_date}
+                  onChange={(e) => setMeta({ ...meta, po_date: e.target.value })}
+                />
+              </div>
+              <div>
+                <span className={label}>Required by</span>
+                <input
+                  type="date"
+                  className={field}
+                  value={meta.delivery_date}
+                  onChange={(e) => setMeta({ ...meta, delivery_date: e.target.value })}
+                />
+              </div>
+              <div className="col-span-2">
+                <span className={label}>Payment terms</span>
+                <input
+                  className={field}
+                  value={meta.payment_terms}
+                  onChange={(e) => setMeta({ ...meta, payment_terms: e.target.value })}
+                />
+              </div>
+              <div className="col-span-2">
+                <span className={label}>Delivery terms</span>
+                <input
+                  className={field}
+                  value={meta.delivery_terms}
+                  onChange={(e) => setMeta({ ...meta, delivery_terms: e.target.value })}
+                />
+              </div>
+              <div className="col-span-2">
+                <span className={label}>GST type</span>
+                <select
+                  className={field}
+                  value={meta.tax_mode}
+                  onChange={(e) =>
+                    setMeta({ ...meta, tax_mode: e.target.value as "intra" | "inter" })
+                  }
+                >
+                  <option value="intra">Within state — CGST + SGST</option>
+                  <option value="inter">Other state — IGST</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
 
-<div className="flex flex-col gap-space-sm">
+        {/* Line items */}
+        <section className="panel p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="section-title text-primary">LINE ITEMS</h2>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setBoqOpen((v) => !v)}
+                className="inline-flex items-center gap-2 rounded border border-border px-3 py-1.5 text-sm font-semibold hover:bg-secondary"
+              >
+                <PackageSearch className="size-4" /> Pick from BOQ
+              </button>
+              <button
+                type="button"
+                onClick={() => setItems((p) => [...p, emptyItem(p.length)])}
+                className="inline-flex items-center gap-2 rounded bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
+              >
+                <Plus className="size-4" /> Add line
+              </button>
+            </div>
+          </div>
 
-<div className="flex items-center justify-between">
-<div className="flex items-center gap-space-sm">
-<span className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-space-xs">
-<span className="material-symbols-outlined text-space-base">done</span>
-</span>
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">Vikram Rao</span>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Project MEP Lead</span>
-</div>
-</div>
-<span className="font-label-sm text-label-sm text-primary font-medium">Auto-Approved (Oct 24)</span>
-</div>
+          {boqOpen && (
+            <div className="mb-3 rounded border border-border bg-secondary/40 p-3">
+              <input
+                className={field}
+                placeholder="Search BOQ items…"
+                value={boqSearch}
+                onChange={(e) => setBoqSearch(e.target.value)}
+              />
+              <div className="mt-2 max-h-56 overflow-y-auto">
+                {boqFiltered.slice(0, 60).map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() =>
+                      setItems((p) => [
+                        ...p.filter((it) => it.description.trim() || n(it.quantity) > 0),
+                        {
+                          ...emptyItem(p.length),
+                          item_code: b.item_code ?? "",
+                          description: b.description ?? "",
+                          brand: b.brand ?? "",
+                          unit: b.unit ?? "",
+                          quantity: Number(b.quantity ?? 0),
+                          rate: Number(b.rate ?? 0),
+                        },
+                      ])
+                    }
+                    className="flex w-full items-center justify-between gap-3 rounded px-2 py-1.5 text-left text-sm hover:bg-card"
+                  >
+                    <span className="truncate">
+                      {b.description}
+                      {b.brand ? ` · ${b.brand}` : ""}
+                    </span>
+                    <span className="shrink-0 text-muted-foreground tnum">
+                      {num(b.quantity)} {b.unit} · {inr(b.rate)}
+                    </span>
+                  </button>
+                ))}
+                {boqFiltered.length === 0 && (
+                  <p className="px-2 py-3 text-sm text-muted-foreground">
+                    No BOQ items for this project yet — generate them in the BOQ Engine.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
-<div className="flex items-center justify-between">
-<div className="flex items-center gap-space-sm">
-<span className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-space-xs">
-<span className="material-symbols-outlined text-space-base">done</span>
-</span>
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">Kavitha Reddy</span>
-<span className="font-label-sm text-label-sm text-on-surface-variant">QS &amp; Value Eng. Lead</span>
-</div>
-</div>
-<span className="font-label-sm text-label-sm text-primary font-medium">Auto-Approved (Oct 24)</span>
-</div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-sm">
+              <thead>
+                <tr className="border-b border-border text-left label-caps text-muted-foreground">
+                  <th className="py-2 pr-2">#</th>
+                  <th className="py-2 pr-2">Code</th>
+                  <th className="py-2 pr-2">Description</th>
+                  <th className="py-2 pr-2">Brand / make</th>
+                  <th className="py-2 pr-2">Unit</th>
+                  <th className="py-2 pr-2 text-right">Qty</th>
+                  <th className="py-2 pr-2 text-right">Rate</th>
+                  <th className="py-2 pr-2 text-right">Disc %</th>
+                  <th className="py-2 pr-2 text-right">GST %</th>
+                  <th className="py-2 pr-2 text-right">Amount</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((it, i) => {
+                  const l = lineTotals(it);
+                  return (
+                    <tr key={it.id} className="border-b border-border/60">
+                      <td className="py-1.5 pr-2 text-muted-foreground tnum">{i + 1}</td>
+                      <td className="py-1.5 pr-2">
+                        <input
+                          className={field}
+                          value={it.item_code}
+                          onChange={(e) => setItem(it.id, { item_code: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2 min-w-[220px]">
+                        <input
+                          className={field}
+                          value={it.description}
+                          onChange={(e) => setItem(it.id, { description: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        <input
+                          className={field}
+                          value={it.brand}
+                          onChange={(e) => setItem(it.id, { brand: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2 w-20">
+                        <input
+                          className={field}
+                          value={it.unit}
+                          onChange={(e) => setItem(it.id, { unit: e.target.value })}
+                        />
+                      </td>
+                      {(["quantity", "rate", "discount_pct", "gst_pct"] as const).map((k) => (
+                        <td key={k} className="py-1.5 pr-2 w-24">
+                          <input
+                            type="number"
+                            className={`${field} text-right`}
+                            value={String(it[k])}
+                            onChange={(e) => setItem(it.id, { [k]: e.target.value } as Partial<PoItem>)}
+                          />
+                        </td>
+                      ))}
+                      <td className="py-1.5 pr-2 text-right font-semibold tnum">{inr(l.total)}</td>
+                      <td className="py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setItems((p) => p.filter((x) => x.id !== it.id))}
+                          className="rounded p-1.5 text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
+                          aria-label="Remove line"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-<div className="flex items-center justify-between p-space-xs rounded bg-surface-container-low">
-<div className="flex items-center gap-space-sm">
-<span className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-space-xs">
-<span className="material-symbols-outlined text-space-base">hourglass_top</span>
-</span>
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">Shravan Saha</span>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Project Director (Your Account)</span>
-</div>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-primary/20 text-primary font-label-sm text-label-sm font-bold">Pending Action</span>
-</div>
-</div>
+        {/* Totals + terms */}
+        <section className="grid gap-4 lg:grid-cols-3">
+          <div className="panel space-y-2 p-4 lg:col-span-2">
+            <h2 className="section-title text-primary">TERMS &amp; NOTES</h2>
+            <textarea
+              className={field}
+              rows={7}
+              value={meta.terms}
+              onChange={(e) => setMeta({ ...meta, terms: e.target.value })}
+            />
+            <textarea
+              className={field}
+              rows={2}
+              placeholder="Internal notes (not printed on the PO)"
+              value={meta.notes}
+              onChange={(e) => setMeta({ ...meta, notes: e.target.value })}
+            />
+          </div>
 
-<div className="flex flex-col gap-space-xs pt-space-xs">
-<button className="w-full flex items-center justify-center gap-space-xs px-space-md py-space-sm rounded bg-primary text-on-primary hover:bg-primary-container font-title-md text-title-md font-semibold shadow-sm transition-all transform active:scale-[0.99]" id="authorizePoBtn">
-<span className="material-symbols-outlined text-space-base leading-none">lock</span>
-<span>Authorize &amp; Issue PO (₹38,42,800)</span>
-</button>
-<button className="w-full flex items-center justify-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high font-title-md text-title-md transition-colors">
-<span className="material-symbols-outlined text-space-base leading-none">picture_as_pdf</span>
-<span>Download PO (.PDF with Digital Stamp)</span>
-</button>
-<button className="w-full flex items-center justify-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors font-body-sm text-body-sm">
-<span className="material-symbols-outlined text-space-base leading-none">send_to_mobile</span>
-<span>Push to Vendor WhatsApp &amp; Saha Vendor Portal</span>
-</button>
-</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant text-center">
-          Secured by 256-bit Saha OS Cryptographic Ledger • Immutable PO Hash
-        </span>
-</div>
-</div>
-</div>
-
-
-</div></main>
+          <div className="panel space-y-2 p-4 text-sm">
+            <h2 className="section-title text-primary">SUMMARY</h2>
+            <Row k="Taxable value" v={inr(totals.taxable)} />
+            {totals.discount > 0 && <Row k="Discount" v={`− ${inr(totals.discount)}`} />}
+            {meta.tax_mode === "intra" ? (
+              <>
+                <Row k="CGST" v={inr(totals.cgst)} />
+                <Row k="SGST" v={inr(totals.sgst)} />
+              </>
+            ) : (
+              <Row k="IGST" v={inr(totals.igst)} />
+            )}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <div>
+                <span className={label}>Freight</span>
+                <input
+                  type="number"
+                  className={`${field} text-right`}
+                  value={String(meta.freight_charges)}
+                  onChange={(e) => setMeta({ ...meta, freight_charges: e.target.value })}
+                />
+              </div>
+              <div>
+                <span className={label}>Other charges</span>
+                <input
+                  type="number"
+                  className={`${field} text-right`}
+                  value={String(meta.other_charges)}
+                  onChange={(e) => setMeta({ ...meta, other_charges: e.target.value })}
+                />
+              </div>
+            </div>
+            <Row k="Round off" v={inr(totals.roundOff)} />
+            <div className="flex items-baseline justify-between border-t border-border pt-2">
+              <span className="label-caps text-muted-foreground">Grand total</span>
+              <span className="metric-figure text-foreground">{inr(totals.grand)}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">{amountInWords(totals.grand)}</p>
+          </div>
+        </section>
       </div>
     </Shell>
+  );
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex justify-between gap-2">
+      <span className="text-muted-foreground">{k}</span>
+      <span className="font-medium tnum">{v}</span>
+    </div>
   );
 }
