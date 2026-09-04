@@ -202,6 +202,23 @@ function Index() {
     enabled: true,
   });
 
+  const { data: unreadChats = 0 } = useQuery({
+    queryKey: ["notifications", "unread-chat-count", user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("is_read", false)
+        .eq("recipient_id", user!.id)
+        .in("category", ["Chat", "Task"]);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 6000,
+    refetchOnWindowFocus: true,
+  });
+
   const { data: boqCount = 0 } = useQuery({
     queryKey: ["boq_items", "count", activeProject.id],
     queryFn: async () => {
