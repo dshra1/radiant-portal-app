@@ -111,7 +111,7 @@ function Projects() {
       setForm(emptyForm);
       setOpen(false);
       setError(null);
-      void qc.invalidateQueries({ queryKey: ["site_projects"] });
+      void qc.refetchQueries({ queryKey: ["site_projects"] });
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -121,7 +121,12 @@ function Projects() {
       const { error } = await supabase.from("site_projects").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["site_projects"] }),
+    onSuccess: (_d, id) => {
+      qc.setQueryData(["site_projects"], (prev: Row[] | undefined) =>
+        (prev ?? []).filter((r) => r.id !== id),
+      );
+      void qc.refetchQueries({ queryKey: ["site_projects"] });
+    },
     onError: (e: Error) => setError(e.message),
   });
 

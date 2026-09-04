@@ -38,3 +38,4 @@
 
 ## Typography
 - [ ] Single professional font across app; bold subtle-colored headings; caps for main headings; fluid responsive sizes
+- [ ] Data freshness: projects/list views must refresh instantly after add/delete (no stale or NaN values)
