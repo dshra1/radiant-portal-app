@@ -398,6 +398,15 @@ export function Shell({
           <div className="mx-auto w-full max-w-none">{children}</div>
         </main>
 
+        <Link
+          to="/messages"
+          aria-label="Saha AI Assistant"
+          className="fixed bottom-20 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover md:bottom-6 md:right-6"
+        >
+          <Bot className="size-4" />
+          <span className="hidden sm:inline">Saha AI Assistant</span>
+        </Link>
+
         <nav className="sticky bottom-0 z-20 grid grid-cols-6 border-t border-border bg-card md:hidden">
           {mobileNav.map((item) => {
             const active = pathname === item.to;
