@@ -80,6 +80,9 @@ const GROUPS: { group: string; tone: Tone; items: Item[] }[] = [
     tone: "green",
     items: [
       { to: "/dashboard", title: "Command Center", desc: "Budget burn, spend trend, approval queue and site portfolio.", icon: "space_dashboard", pinned: true },
+      { to: "/messages", title: "Team Chat", desc: "Internal channels for site, purchase, accounts and QA crews.", icon: "forum", pinned: true },
+      { to: "/notifications", title: "Action Centre", desc: "Approvals, rate alerts, PO releases and payout reminders.", icon: "notifications_active", pinned: true },
+
       { to: "/projects", title: "Projects Portfolio", desc: "Built-up area, slab take-offs, budget and phase progress.", icon: "apartment", pinned: true },
       { to: "/boq-engine", title: "BOQ Master Engine", desc: "Line-item value engineering with spec compliance scoring.", icon: "receipt_long", pinned: true },
       { to: "/projects-setup", title: "Project Setup & Geometry", desc: "Project identity, floor geometry and CAD drawing ingestion.", icon: "domain" },

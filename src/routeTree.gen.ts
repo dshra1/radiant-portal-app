@@ -29,6 +29,8 @@ import { Route as FinancialIngestionRouteImport } from './routes/financial-inges
 import { Route as InventoryControlRouteImport } from './routes/inventory-control'
 import { Route as LandownersInvestmentRouteImport } from './routes/landowners-investment'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
+import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as PmcScopeRouteImport } from './routes/pmc-scope'
 import { Route as PoCreateRouteImport } from './routes/po-create'
 import { Route as PourCardsRouteImport } from './routes/pour-cards'
@@ -148,6 +150,16 @@ const LandownersInvestmentRoute = LandownersInvestmentRouteImport.update({
 const MediaUploadStudioRoute = MediaUploadStudioRouteImport.update({
   id: '/media-upload-studio',
   path: '/media-upload-studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PmcScopeRoute = PmcScopeRouteImport.update({
@@ -272,6 +284,8 @@ export interface FileRoutesByFullPath {
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
+  '/messages': typeof MessagesRoute
+  '/notifications': typeof NotificationsRoute
   '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
@@ -314,6 +328,8 @@ export interface FileRoutesByTo {
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
+  '/messages': typeof MessagesRoute
+  '/notifications': typeof NotificationsRoute
   '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
@@ -357,6 +373,8 @@ export interface FileRoutesById {
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
+  '/messages': typeof MessagesRoute
+  '/notifications': typeof NotificationsRoute
   '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
@@ -401,6 +419,8 @@ export interface FileRouteTypes {
     | '/inventory-control'
     | '/landowners-investment'
     | '/media-upload-studio'
+    | '/messages'
+    | '/notifications'
     | '/pmc-scope'
     | '/po-create'
     | '/pour-cards'
@@ -443,6 +463,8 @@ export interface FileRouteTypes {
     | '/inventory-control'
     | '/landowners-investment'
     | '/media-upload-studio'
+    | '/messages'
+    | '/notifications'
     | '/pmc-scope'
     | '/po-create'
     | '/pour-cards'
@@ -485,6 +507,8 @@ export interface FileRouteTypes {
     | '/inventory-control'
     | '/landowners-investment'
     | '/media-upload-studio'
+    | '/messages'
+    | '/notifications'
     | '/pmc-scope'
     | '/po-create'
     | '/pour-cards'
@@ -528,6 +552,8 @@ export interface RootRouteChildren {
   InventoryControlRoute: typeof InventoryControlRoute
   LandownersInvestmentRoute: typeof LandownersInvestmentRoute
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
+  MessagesRoute: typeof MessagesRoute
+  NotificationsRoute: typeof NotificationsRoute
   PmcScopeRoute: typeof PmcScopeRoute
   PoCreateRoute: typeof PoCreateRoute
   PourCardsRoute: typeof PourCardsRoute
@@ -690,6 +716,20 @@ declare module '@tanstack/react-router' {
       path: '/media-upload-studio'
       fullPath: '/media-upload-studio'
       preLoaderRoute: typeof MediaUploadStudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pmc-scope': {
@@ -856,6 +896,8 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryControlRoute: InventoryControlRoute,
   LandownersInvestmentRoute: LandownersInvestmentRoute,
   MediaUploadStudioRoute: MediaUploadStudioRoute,
+  MessagesRoute: MessagesRoute,
+  NotificationsRoute: NotificationsRoute,
   PmcScopeRoute: PmcScopeRoute,
   PoCreateRoute: PoCreateRoute,
   PourCardsRoute: PourCardsRoute,

@@ -11,6 +11,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Bell,
+  MessagesSquare,
   Search,
   Home,
   Sun,
@@ -90,7 +91,20 @@ export function Shell({
       return data ?? [];
     },
   });
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["notifications", "unread-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("is_read", false);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 20000,
+  });
   const current = projects[0];
+
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -315,16 +329,27 @@ export function Shell({
             >
               <Sun className="size-3.5" /> Sunlight
             </button>
-            <button
-              type="button"
+            <Link
+              to="/messages"
+              className="inline-flex shrink-0 items-center"
+              aria-label="Team chat"
+              title="Team chat"
+            >
+              <MessagesSquare className="size-4 text-muted-foreground hover:text-foreground" />
+            </Link>
+            <Link
+              to="/notifications"
               className="relative inline-flex shrink-0 items-center"
               aria-label="Notifications"
+              title="Action centre"
             >
-              <Bell className="size-4 text-muted-foreground" />
-              <span className="absolute -right-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-destructive text-[8px] font-bold text-destructive-foreground">
-                4
-              </span>
-            </button>
+              <Bell className="size-4 text-muted-foreground hover:text-foreground" />
+              {unreadCount > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-destructive text-[8px] font-bold text-destructive-foreground">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Link>
             <span className="grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground">
               SD
             </span>

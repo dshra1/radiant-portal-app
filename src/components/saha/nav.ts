@@ -27,6 +27,8 @@ import {
   Ruler,
   BadgeIndianRupee,
   FileSpreadsheet,
+  MessagesSquare,
+  BellRing,
 } from "lucide-react";
 
 export type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
@@ -39,6 +41,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: "/", label: "Saha OS Hub", icon: Home },
       { to: "/dashboard", label: "Command Dashboard", icon: LayoutDashboard },
+      { to: "/messages", label: "Team Chat", icon: MessagesSquare },
+      { to: "/notifications", label: "Action Centre", icon: BellRing },
       { to: "/command-operations", label: "Command Operations", icon: Radio },
       { to: "/projects", label: "Projects", icon: Building2 },
       { to: "/projects-setup", label: "Projects & Setup", icon: Settings2 },
@@ -136,7 +140,7 @@ const roleGroups: Record<Role, string[] | "all"> = {
 };
 
 /** Extra always-visible items per role (home + dashboard entry points). */
-const alwaysVisible = ["/", "/dashboard"];
+const alwaysVisible = ["/", "/dashboard", "/messages", "/notifications"];
 
 export function navForRole(role: string): NavGroup[] {
   const allowed = roleGroups[role as Role] ?? "all";
