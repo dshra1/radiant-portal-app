@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccessControlRouteImport } from './routes/access-control'
 import { Route as AiProgrammeRouteImport } from './routes/ai-programme'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BillingExpenditureRouteImport } from './routes/billing-expenditure'
@@ -59,6 +60,11 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccessControlRoute = AccessControlRouteImport.update({
+  id: '/access-control',
+  path: '/access-control',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiProgrammeRoute = AiProgrammeRouteImport.update({
@@ -289,6 +295,7 @@ const ApiChatRoute = ApiChatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/access-control': typeof AccessControlRoute
   '/ai-programme': typeof AiProgrammeRoute
   '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
@@ -337,6 +344,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/access-control': typeof AccessControlRoute
   '/ai-programme': typeof AiProgrammeRoute
   '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
@@ -386,6 +394,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/access-control': typeof AccessControlRoute
   '/ai-programme': typeof AiProgrammeRoute
   '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
@@ -436,6 +445,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/access-control'
     | '/ai-programme'
     | '/auth'
     | '/billing-expenditure'
@@ -484,6 +494,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/access-control'
     | '/ai-programme'
     | '/auth'
     | '/billing-expenditure'
@@ -532,6 +543,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/access-control'
     | '/ai-programme'
     | '/auth'
     | '/billing-expenditure'
@@ -581,6 +593,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccessControlRoute: typeof AccessControlRoute
   AiProgrammeRoute: typeof AiProgrammeRoute
   AuthRoute: typeof AuthRoute
   BillingExpenditureRoute: typeof BillingExpenditureRoute
@@ -635,6 +648,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/access-control': {
+      id: '/access-control'
+      path: '/access-control'
+      fullPath: '/access-control'
+      preLoaderRoute: typeof AccessControlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ai-programme': {
@@ -957,6 +977,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccessControlRoute: AccessControlRoute,
   AiProgrammeRoute: AiProgrammeRoute,
   AuthRoute: AuthRoute,
   BillingExpenditureRoute: BillingExpenditureRoute,

@@ -32,7 +32,12 @@ import {
   Bot,
 } from "lucide-react";
 
-export type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
+export type NavItem = {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  adminOnly?: boolean;
+};
 export type NavGroup = { id: string; label: string; items: NavItem[] };
 
 export const navGroups: NavGroup[] = [
@@ -58,6 +63,7 @@ export const navGroups: NavGroup[] = [
       { to: "/ai-programme", label: "AI Programme", icon: Sparkles },
       { to: "/project-controls", label: "Project Controls", icon: BarChart3 },
       { to: "/system-directory", label: "System Directory", icon: Settings2 },
+      { to: "/access-control", label: "Access & Permissions", icon: ShieldCheck, adminOnly: true },
     ],
   },
   {
@@ -144,23 +150,30 @@ const roleGroups: Record<Role, string[] | "all"> = {
 /** Extra always-visible items per role (home + dashboard entry points). */
 const alwaysVisible = ["/", "/dashboard", "/messages", "/notifications", "/ai"];
 
-export function navForRole(role: string): NavGroup[] {
+export function navForRole(role: string, isAdmin = false): NavGroup[] {
   const allowed = roleGroups[role as Role] ?? "all";
-  if (allowed === "all") return navGroups;
+  const strip = (group: NavGroup): NavGroup => ({
+    ...group,
+    items: group.items.filter((i) => !i.adminOnly || isAdmin),
+  });
+  if (allowed === "all") return navGroups.map(strip).filter((g) => g.items.length > 0);
   const result: NavGroup[] = [];
   for (const group of navGroups) {
     if (allowed.includes(group.id)) {
-      result.push(group);
+      result.push(strip(group));
       continue;
     }
-    const items = group.items.filter((i) => alwaysVisible.includes(i.to));
+    const items = strip(group).items.filter((i) => alwaysVisible.includes(i.to));
     if (items.length && !result.some((g) => g.id === "quick")) {
       result.push({ id: "quick", label: "Quick access", items });
     }
   }
-  return result.sort((a, b) => (a.id === "quick" ? -1 : b.id === "quick" ? 1 : 0));
+  return result
+    .filter((g) => g.items.length > 0)
+    .sort((a, b) => (a.id === "quick" ? -1 : b.id === "quick" ? 1 : 0));
 }
 
-export function canAccess(role: string, path: string): boolean {
-  return navForRole(role).some((g) => g.items.some((i) => i.to === path));
+export function canAccess(role: string, path: string, isAdmin = false): boolean {
+  return navForRole(role, isAdmin).some((g) => g.items.some((i) => i.to === path));
 }
+

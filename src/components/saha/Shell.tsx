@@ -35,6 +35,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 import { navForRole, roles, type NavItem } from "@/components/saha/nav";
+import { useAccess } from "@/lib/access";
+
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -94,10 +96,21 @@ export function Shell({
   children: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const { access } = useAccess();
+  const isAdmin = access?.isAdmin ?? false;
+  /** Roles the admin assigned to this account; admins may preview any role. */
+  const allowedRoles = useMemo<string[]>(
+    () => (isAdmin ? [...roles] : (access?.labels ?? [])),
+    [isAdmin, access?.labels],
+  );
   const [role, setRole] = useState<string>(() => {
     if (typeof window === "undefined") return "Admin / Owner";
     return window.localStorage.getItem("saha-role") ?? "Admin / Owner";
   });
+
+  useEffect(() => {
+    if (allowedRoles.length && !allowedRoles.includes(role)) setRole(allowedRoles[0]!);
+  }, [allowedRoles, role]);
 
   useEffect(() => {
     if (typeof window !== "undefined") window.localStorage.setItem("saha-role", role);
@@ -107,7 +120,8 @@ export function Shell({
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const groups = useMemo(() => navForRole(role), [role]);
+  const groups = useMemo(() => navForRole(role, isAdmin), [role, isAdmin]);
+
 
   const activeGroup = useMemo(
     () => groups.find((g) => g.items.some((i) => i.to === pathname))?.id ?? groups[0]?.id ?? "planning",
@@ -183,7 +197,7 @@ export function Shell({
                 onChange={(e) => setRole(e.target.value)}
                 className="mt-1 h-8 w-full rounded bg-sidebar-accent/60 px-2 text-[13px] font-medium text-sidebar-accent-foreground"
               >
-                {roles.map((r) => (
+                {(allowedRoles.length ? allowedRoles : roles).map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>
