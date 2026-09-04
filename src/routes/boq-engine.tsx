@@ -169,7 +169,22 @@ function Page() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<BoqRow> }) => {
+    mutationFn: async ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: {
+        category?: string;
+        description?: string;
+        unit?: string;
+        quantity?: number;
+        rate?: number;
+        brand?: string;
+        supplier?: string;
+        stage?: string;
+      };
+    }) => {
       const { error } = await supabase.from("boq_items").update(patch).eq("id", id);
       if (error) throw error;
     },
