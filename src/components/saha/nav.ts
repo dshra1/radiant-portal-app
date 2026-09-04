@@ -30,6 +30,7 @@ import {
   MessagesSquare,
   BellRing,
   Bot,
+  ListChecks,
 } from "lucide-react";
 
 export type NavItem = {
@@ -50,6 +51,7 @@ export const navGroups: NavGroup[] = [
       { to: "/messages", label: "Team Chat", icon: MessagesSquare },
       { to: "/ai", label: "Saha AI Assistant", icon: Bot },
       { to: "/notifications", label: "Action Centre", icon: BellRing },
+      { to: "/tasks", label: "Task Tracker", icon: ListChecks },
       { to: "/command-operations", label: "Command Operations", icon: Radio },
       { to: "/projects", label: "Projects", icon: Building2 },
       { to: "/projects-setup", label: "Projects & Setup", icon: Settings2 },
