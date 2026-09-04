@@ -26,7 +26,7 @@ export const Route = createFileRoute("/tasks")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: TaskTracker;
+  component: TaskTracker,
 });
 
 type Task = {
