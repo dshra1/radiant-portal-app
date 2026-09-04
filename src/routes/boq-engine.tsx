@@ -1,12 +1,51 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { generateBoqEstimate } from "@/lib/boq.functions";
+import {
+  findProductImage,
+  generateBoqEstimate,
+  suggestBrandOptions,
+  type BrandSuggestion,
+} from "@/lib/boq.functions";
+import { brandLogoUrl } from "@/lib/brand-images";
 import { inr, inrCompact, num } from "@/data/saha";
-import { Download, Plus, RefreshCw, Sparkles, Trash2, Upload } from "lucide-react";
+import {
+  Download,
+  ImagePlus,
+  Lightbulb,
+  Plus,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload,
+} from "lucide-react";
+
+function BrandMark({ brand }: { brand: string }) {
+  const [failed, setFailed] = useState(false);
+  const url = brandLogoUrl(brand);
+  const initials = (brand || "?").trim().slice(0, 2).toUpperCase();
+  if (!url || failed) {
+    return (
+      <span className="flex size-8 shrink-0 items-center justify-center rounded border border-border bg-secondary text-[10px] font-bold text-muted-foreground">
+        {initials}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={url}
+      alt={`${brand} logo`}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="size-8 shrink-0 rounded border border-border bg-card object-contain p-0.5"
+    />
+  );
+}
+
 
 export const Route = createFileRoute("/boq-engine")({
   head: () => ({
@@ -45,7 +84,50 @@ type BoqRow = {
   notes: string;
   source: string;
   sort_order: number;
+  image_url?: string | null;
+  image_source?: string | null;
 };
+
+/** Resolves a stored image reference: an https URL, or `storage:<path>` in the private bucket. */
+function ProductImage({ value, alt }: { value: string | null | undefined; alt: string }) {
+  const [resolved, setResolved] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const ref = value ?? "";
+
+  useEffect(() => {
+    setFailed(false);
+    if (!ref) {
+      setResolved(null);
+      return;
+    }
+    if (!ref.startsWith("storage:")) {
+      setResolved(ref);
+      return;
+    }
+    let alive = true;
+    supabase.storage
+      .from("boq-images")
+      .createSignedUrl(ref.slice("storage:".length), 60 * 60)
+      .then(({ data }) => alive && setResolved(data?.signedUrl ?? null));
+    return () => {
+      alive = false;
+    };
+  }, [ref]);
+
+  if (!resolved || failed) return null;
+  return (
+    <a href={resolved} target="_blank" rel="noreferrer">
+      <img
+        src={resolved}
+        alt={alt}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="size-14 rounded border border-border bg-card object-contain p-0.5"
+      />
+    </a>
+  );
+}
+
 
 const CSV_HEADERS = [
   "stage",
@@ -121,7 +203,85 @@ function Page() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("");
   const [brief, setBrief] = useState("");
+  const [suggestions, setSuggestions] = useState<Record<string, BrandSuggestion>>({});
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
   const generate = useServerFn(generateBoqEstimate);
+  const suggestBrands = useServerFn(suggestBrandOptions);
+  const findImage = useServerFn(findProductImage);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [imageTargetId, setImageTargetId] = useState<string>("");
+  const [imageBusyId, setImageBusyId] = useState<string>("");
+
+  const suggestMutation = useMutation({
+    mutationFn: async (itemIds: string[]) => {
+      setPendingIds(itemIds);
+      return suggestBrands({ data: { itemIds } });
+    },
+    onSuccess: (res) => {
+      setPendingIds([]);
+      if (!res.suggestions.length) {
+        setStatus("No brand alternatives returned — try again or refine the item description.");
+        return;
+      }
+      setSuggestions((prev) => {
+        const next = { ...prev };
+        for (const s of res.suggestions) next[s.itemId] = s;
+        return next;
+      });
+      setStatus(`Brand options ready for ${res.suggestions.length} line item(s).`);
+    },
+    onError: (e: Error) => {
+      setPendingIds([]);
+      setStatus(`Brand options failed: ${e.message}`);
+    },
+  });
+
+  const findImageMutation = useMutation({
+    mutationFn: async ({ id, query }: { id: string; query: string }) => {
+      setImageBusyId(id);
+      return findImage({ data: { itemId: id, query } });
+    },
+    onSuccess: async (res) => {
+      setImageBusyId("");
+      if (res.found) {
+        setStatus(`Product image found for “${res.searchText}”.`);
+        await refresh();
+      } else {
+        setStatus(
+          `No verified product image found for “${res.searchText}”. Use “Upload image” to add your own photo or catalogue cut-sheet.`,
+        );
+      }
+    },
+    onError: (e: Error) => {
+      setImageBusyId("");
+      setStatus(`Image search failed: ${e.message}`);
+    },
+  });
+
+  const uploadImageMutation = useMutation({
+    mutationFn: async ({ id, file }: { id: string; file: File }) => {
+      setImageBusyId(id);
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${activeId}/${id}-${Date.now()}.${ext}`;
+      const up = await supabase.storage.from("boq-images").upload(path, file, { upsert: true });
+      if (up.error) throw up.error;
+      const { error } = await supabase
+        .from("boq_items")
+        .update({ image_url: `storage:${path}`, image_source: "upload" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setImageBusyId("");
+      setStatus("Product image uploaded.");
+      await refresh();
+    },
+    onError: (e: Error) => {
+      setImageBusyId("");
+      setStatus(`Image upload failed: ${e.message}`);
+    },
+  });
+
 
   const projectsQuery = useQuery({
     queryKey: ["site_projects", "boq-engine"],
@@ -186,6 +346,8 @@ function Page() {
         brand?: string;
         supplier?: string;
         stage?: string;
+        image_url?: string;
+        image_source?: string;
       };
     }) => {
       const { error } = await supabase.from("boq_items").update(patch).eq("id", id);
@@ -354,6 +516,24 @@ function Page() {
             </button>
 
             <button
+              disabled={items.length === 0 || suggestMutation.isPending}
+              onClick={() => {
+                const top = [...items]
+                  .sort((a, b) => lineTotal(b) - lineTotal(a))
+                  .slice(0, 8)
+                  .map((it) => it.id);
+                setStatus("Scanning the highest-cost items for cheaper brand options…");
+                suggestMutation.mutate(top);
+              }}
+              className="inline-flex h-9 items-center gap-2 rounded border border-primary bg-primary-soft px-3 text-sm font-semibold text-primary disabled:opacity-50"
+            >
+              <Lightbulb className="size-4" />
+              {suggestMutation.isPending ? "Scanning…" : "Value-engineering scan"}
+            </button>
+
+
+
+            <button
               disabled={!activeId}
               onClick={() => fileRef.current?.click()}
               className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
@@ -361,6 +541,17 @@ function Page() {
               <Upload className="size-4" />
               {uploadMutation.isPending ? "Uploading…" : "Upload BOQ (CSV)"}
             </button>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f && imageTargetId) uploadImageMutation.mutate({ id: imageTargetId, file: f });
+                e.target.value = "";
+              }}
+            />
             <input
               ref={fileRef}
               type="file"
@@ -512,7 +703,10 @@ function Page() {
                 </thead>
                 <tbody>
                   {visible.map((it) => (
-                    <tr key={it.id} className="border-t border-border align-top">
+                    <Fragment key={it.id}>
+                    <tr className="border-t border-border align-top">
+
+
                       <td className="px-2 py-2">
                         <div className="text-[11px] font-semibold uppercase text-primary">
                           {it.stage}
@@ -540,6 +734,42 @@ function Page() {
                           className="w-72 rounded border border-transparent bg-transparent px-1 py-0.5 hover:border-input focus:border-input"
                         />
                         <div className="px-1 text-[11px] text-muted-foreground">{it.item_code}</div>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <ProductImage value={it.image_url} alt={`${it.brand} ${it.description}`} />
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={() =>
+                                findImageMutation.mutate({
+                                  id: it.id,
+                                  query: `${it.brand} ${it.description}`.trim(),
+                                })
+                              }
+                              disabled={imageBusyId === it.id}
+                              className="inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold disabled:opacity-50"
+                            >
+                              <Search className="size-3" />
+                              {imageBusyId === it.id ? "Searching…" : "Find image"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setImageTargetId(it.id);
+                                imageInputRef.current?.click();
+                              }}
+                              className="inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold"
+                            >
+                              <ImagePlus className="size-3" />
+                              Upload image
+                            </button>
+                            <a
+                              href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${it.brand} ${it.description}`.trim())}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-1.5 text-[11px] font-semibold text-primary underline"
+                            >
+                              Search online
+                            </a>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-2 py-2">
                         <input
@@ -579,22 +809,40 @@ function Page() {
                         {inr(lineTotal(it))}
                       </td>
                       <td className="px-2 py-2">
-                        <input
-                          defaultValue={it.brand}
-                          onBlur={(e) =>
-                            e.target.value !== it.brand &&
-                            updateMutation.mutate({ id: it.id, patch: { brand: e.target.value } })
-                          }
-                          className="w-40 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
-                        />
-                        <input
-                          defaultValue={it.supplier}
-                          onBlur={(e) =>
-                            e.target.value !== it.supplier &&
-                            updateMutation.mutate({ id: it.id, patch: { supplier: e.target.value } })
-                          }
-                          className="mt-1 w-40 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
-                        />
+                        <div className="flex items-start gap-2">
+                          <BrandMark brand={it.brand} />
+                          <div>
+                            <input
+                              defaultValue={it.brand}
+                              onBlur={(e) =>
+                                e.target.value !== it.brand &&
+                                updateMutation.mutate({ id: it.id, patch: { brand: e.target.value } })
+                              }
+                              placeholder="Brand / make"
+                              className="w-36 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
+                            />
+                            <input
+                              defaultValue={it.supplier}
+                              onBlur={(e) =>
+                                e.target.value !== it.supplier &&
+                                updateMutation.mutate({
+                                  id: it.id,
+                                  patch: { supplier: e.target.value },
+                                })
+                              }
+                              placeholder="Supplier"
+                              className="mt-1 w-36 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => suggestMutation.mutate([it.id])}
+                          disabled={suggestMutation.isPending}
+                          className="mt-1.5 inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold text-primary disabled:opacity-50"
+                        >
+                          <Lightbulb className="size-3" />
+                          {pendingIds.includes(it.id) ? "Finding…" : "Brand options"}
+                        </button>
                       </td>
                       <td className="px-2 py-2 text-xs text-muted-foreground">
                         <div className="max-w-[220px]">{it.notes}</div>
@@ -612,7 +860,85 @@ function Page() {
                         </button>
                       </td>
                     </tr>
+                    {suggestions[it.id] && (
+                      <tr className="border-t border-dashed border-primary/30 bg-primary-soft/30">
+                        <td colSpan={9} className="px-3 py-3">
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <span className="label-caps text-primary">
+                              Brand alternatives — {it.description}
+                            </span>
+                            <button
+                              onClick={() =>
+                                setSuggestions((s) => {
+                                  const next = { ...s };
+                                  delete next[it.id];
+                                  return next;
+                                })
+                              }
+                              className="text-[11px] font-semibold text-muted-foreground"
+                            >
+                              Hide
+                            </button>
+                          </div>
+                          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                            {suggestions[it.id]!.options.map((opt) => {
+                              const delta = (opt.rate - toNum(it.rate)) * toNum(it.quantity);
+                              return (
+                                <div
+                                  key={`${opt.brand}-${opt.rate}`}
+                                  className="rounded-lg border border-border bg-card p-2"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <BrandMark brand={opt.brand} />
+                                    <div className="min-w-0">
+                                      <div className="truncate text-[13px] font-bold text-foreground">
+                                        {opt.brand}
+                                      </div>
+                                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                                        {opt.tier}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                                    <span className="text-sm font-semibold tnum">
+                                      {inr(opt.rate)} / {it.unit}
+                                    </span>
+                                    <span
+                                      className={`text-[11px] font-bold tnum ${delta < 0 ? "text-primary" : delta > 0 ? "text-destructive" : "text-muted-foreground"}`}
+                                    >
+                                      {delta === 0
+                                        ? "same"
+                                        : `${delta < 0 ? "saves " : "adds "}${inrCompact(Math.abs(delta))}`}
+                                    </span>
+                                  </div>
+                                  {opt.why && (
+                                    <p className="mt-1 text-[11px] text-muted-foreground">{opt.why}</p>
+                                  )}
+                                  <button
+                                    onClick={() =>
+                                      updateMutation.mutate({
+                                        id: it.id,
+                                        patch: {
+                                          brand: opt.brand,
+                                          supplier: opt.supplier || it.supplier,
+                                          rate: opt.rate,
+                                        },
+                                      })
+                                    }
+                                    className="mt-2 h-7 w-full rounded bg-primary text-[12px] font-semibold text-primary-foreground"
+                                  >
+                                    Use this brand
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   ))}
+
                 </tbody>
               </table>
             )}

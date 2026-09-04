@@ -61,3 +61,11 @@
 - [x] AI pre-drawing full-project estimate (site prep to handover) from project inputs; fix schema-mismatch failure with batched tolerant JSON parsing
 - [x] AI BOQ must cover all 25 construction trade categories (Preliminaries → Miscellaneous), batched generation
 - [ ] Live project identity everywhere: replace hardcoded 'Cyber Enclave - Phase 2'/Madhapur/G+3 headers in imported Stitch screens with the selected project's saved details
+
+## BOQ brand optimisation & product images (in progress)
+- [x] AI brand alternatives per BOQ line item (3-4 real Indian makes, tier, rate, saving) with one-click apply
+- [x] Value-engineering scan across the highest-cost line items
+- [ ] Product image next to each brand/item in the BOQ (e.g. "July series Kohler diverter/spout")
+  - [ ] `boq_items.image_url` column
+  - [ ] Auto-find a product image from the internet for the entered brand + item text
+  - [ ] Manual upload fallback when no image is found (private project storage)
