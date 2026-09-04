@@ -637,7 +637,12 @@ function Projects() {
       ) : (
         <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           {rows.map((p) => {
-            const burn = p.target_budget ? Math.round((p.spend / p.target_budget) * 100) : 0;
+            const n = (v: unknown) => Number(v ?? 0) || 0;
+            const floors = n(p.cellar_floors) + n(p.stilt_floors) + n(p.typical_floors);
+            const builtUp = n(p.total_built_up_sft) || n(p.single_floor_slab_sft) * floors;
+            const slab =
+              n(p.total_slab_sft) || n(p.single_floor_slab_sft) * (floors ? floors + 1 : 0);
+            const burn = n(p.target_budget) ? Math.round((n(p.spend) / n(p.target_budget)) * 100) : 0;
             const phases = Array.isArray(p.phases) ? p.phases : DEFAULT_PHASES;
             const mapHref =
               p.map_link ||
