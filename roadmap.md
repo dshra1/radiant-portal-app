@@ -35,3 +35,6 @@
 
 ## BOQ
 - [x] Upload + Export per BOQ category/stage
+
+## Typography
+- [ ] Single professional font across app; bold subtle-colored headings; caps for main headings; fluid responsive sizes

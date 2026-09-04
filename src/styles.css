@@ -268,20 +268,20 @@
   --text-display-lg--line-height: 40px;
   --text-display-lg--letter-spacing: -0.02em;
   --text-display-lg--font-weight: 700;
-  --font-body-md: "Work Sans";
-  --font-label-sm: "Work Sans";
-  --font-tabular-metric: "Work Sans";
-  --font-title-md: "Work Sans";
-  --font-body-sm: "Work Sans";
-  --font-body-lg: "Work Sans";
-  --font-tabular-metric-sm: "Work Sans";
-  --font-headline-sm: "Work Sans";
-  --font-label-md: "Work Sans";
-  --font-headline-lg: "Instrument Serif";
-  --font-headline-md: "Work Sans";
-  --font-display-lg: "Instrument Serif";
-  --font-sans: "Work Sans", system-ui, sans-serif;
-  --font-display: "Instrument Serif", Georgia, serif;
+  --font-body-md: "Plus Jakarta Sans";
+  --font-label-sm: "Plus Jakarta Sans";
+  --font-tabular-metric: "Plus Jakarta Sans";
+  --font-title-md: "Plus Jakarta Sans";
+  --font-body-sm: "Plus Jakarta Sans";
+  --font-body-lg: "Plus Jakarta Sans";
+  --font-tabular-metric-sm: "Plus Jakarta Sans";
+  --font-headline-sm: "Plus Jakarta Sans";
+  --font-label-md: "Plus Jakarta Sans";
+  --font-headline-lg: "Plus Jakarta Sans";
+  --font-headline-md: "Plus Jakarta Sans";
+  --font-display-lg: "Plus Jakarta Sans";
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
 }
 
@@ -291,9 +291,9 @@
 }
 
 @utility label-caps {
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 500;
+  font-size: clamp(10px, 9.4px + 0.15vw, 11.5px);
+  line-height: 1.3;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -328,6 +328,14 @@
     touch-action: pan-x pan-y pinch-zoom;
     -webkit-overflow-scrolling: touch;
   }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    color: var(--color-foreground);
+  }
+  h2 { font-size: clamp(1rem, 0.94rem + 0.4vw, 1.3rem); }
+  h3 { font-size: clamp(0.9rem, 0.87rem + 0.25vw, 1.08rem); }
   main > :first-child { margin-top: 0 !important; }
   main > :last-child { margin-bottom: 0 !important; }
   ::-webkit-scrollbar { display: none; }
@@ -364,10 +372,23 @@
 
 @utility display-title {
   font-family: var(--font-display);
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.12;
+  font-size: clamp(1.15rem, 1.05rem + 0.9vw, 1.9rem);
+  color: var(--color-brand-mid);
 }
+
+@utility section-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  font-size: clamp(0.95rem, 0.9rem + 0.35vw, 1.2rem);
+  color: var(--color-brand-mid);
+}
+
 
 @utility hero-surface {
   background-image: var(--gradient-hero);

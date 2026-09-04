@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      notifications: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string
+          priority: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string
+          priority?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string
+          priority?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_projects: {
         Row: {
           cellar_floors: number
@@ -67,6 +103,36 @@ export type Database = {
           total_slab_sft?: number
           type?: string
           typical_floors?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      team_messages: {
+        Row: {
+          author_name: string
+          author_role: string
+          body: string
+          channel: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          author_name?: string
+          author_role?: string
+          body: string
+          channel?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          author_name?: string
+          author_role?: string
+          body?: string
+          channel?: string
+          created_at?: string
+          id?: string
           updated_at?: string
         }
         Relationships: []
