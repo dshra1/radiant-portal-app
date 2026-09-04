@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { inrCompact, num } from "@/data/saha";
-import { useAccess } from "@/lib/access";
+import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 import { cn } from "@/lib/utils";
 import {
