@@ -134,7 +134,7 @@ export function Shell({
   }, [activeGroup]);
 
   const { data: projects = [] } = useQuery({
-    queryKey: ["site_projects"],
+    queryKey: ["site_projects", "navigation-summary"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
