@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 import { navForRole, roles, type NavItem } from "@/components/saha/nav";
-import { useAccess } from "@/lib/access";
+import { useAccess, useSessionUser } from "@/lib/access";
 import { SAMPLE_DATA_ROUTES } from "@/components/saha/sample-data";
 
 
@@ -100,6 +100,7 @@ export function Shell({
 }) {
   const [expanded, setExpanded] = useState(true);
   const { access } = useAccess();
+  const user = useSessionUser();
   const isAdmin = access?.isAdmin ?? false;
   /** Roles the admin assigned to this account; admins may preview any role. */
   const allowedRoles = useMemo<string[]>(
@@ -148,12 +149,16 @@ export function Shell({
     },
   });
   const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["notifications", "unread-count"],
+    queryKey: ["notifications", "unread-count", user?.id],
     queryFn: async () => {
-      const { count, error } = await supabase
+      let q = supabase
         .from("notifications")
         .select("id", { count: "exact", head: true })
         .eq("is_read", false);
+      if (user?.id) {
+        q = q.or(`recipient_id.eq.${user.id},recipient_id.is.null`);
+      }
+      const { count, error } = await q;
       if (error) throw error;
       return count ?? 0;
     },
