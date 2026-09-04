@@ -1,6 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { inrCompact, num } from "@/data/saha";
 import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
+
+
 
 
 export const Route = createFileRoute("/")({
@@ -180,6 +185,31 @@ function Index() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<string | null>(null);
 
+  const { data: liveProjects } = useQuery({
+    queryKey: ["hub-projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_projects")
+        .select("id,target_budget,total_staff,health");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const stats = useMemo(() => {
+    const rows = liveProjects ?? [];
+    const budget = rows.reduce((s, r) => s + Number(r.target_budget ?? 0), 0);
+    const staff = rows.reduce((s, r) => s + Number(r.total_staff ?? 0), 0);
+    const atRisk = rows.filter((r) => r.health !== "On Track").length;
+    return [
+      [String(rows.length), "Active sites"],
+      [inrCompact(budget), "Committed budget"],
+      [num(staff), "Workforce on site"],
+      [String(atRisk), "Sites needing attention"],
+    ] as [string, string][];
+  }, [liveProjects]);
+
+
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
@@ -227,12 +257,7 @@ function Index() {
           </div>
 
           <dl className="grid grid-cols-2 gap-5 lg:mb-2">
-            {[
-              ["3", "Active sites"],
-              ["₹22.70 Cr", "Committed budget"],
-              ["412", "Workforce on site"],
-              ["8", "Open QA defects"],
-            ].map(([v, l]) => (
+            {stats.map(([v, l]) => (
               <div
                 key={l}
                 className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 backdrop-blur-sm"

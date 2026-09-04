@@ -637,7 +637,12 @@ function Projects() {
       ) : (
         <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           {rows.map((p) => {
-            const burn = p.target_budget ? Math.round((p.spend / p.target_budget) * 100) : 0;
+            const n = (v: unknown) => Number(v ?? 0) || 0;
+            const floors = n(p.cellar_floors) + n(p.stilt_floors) + n(p.typical_floors);
+            const builtUp = n(p.total_built_up_sft) || n(p.single_floor_slab_sft) * floors;
+            const slab =
+              n(p.total_slab_sft) || n(p.single_floor_slab_sft) * (floors ? floors + 1 : 0);
+            const burn = n(p.target_budget) ? Math.round((n(p.spend) / n(p.target_budget)) * 100) : 0;
             const phases = Array.isArray(p.phases) ? p.phases : DEFAULT_PHASES;
             const mapHref =
               p.map_link ||
@@ -689,7 +694,7 @@ function Projects() {
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {p.type && <StatusBadge tone="slate">{p.type}</StatusBadge>}
                   <StatusBadge tone="sky">
-                    {p.cellar_floors}C + {p.stilt_floors}S + {p.typical_floors}T
+                    {n(p.cellar_floors)}C + {n(p.stilt_floors)}S + {n(p.typical_floors)}T
                   </StatusBadge>
                   {p.steel_grade && <StatusBadge tone="slate">{p.steel_grade}</StatusBadge>}
                   {p.blockwork_type && <StatusBadge tone="slate">{p.blockwork_type}</StatusBadge>}
@@ -704,12 +709,12 @@ function Projects() {
                   <Cell
                     icon={<Ruler className="size-3" />}
                     label="Built-up"
-                    value={`${num(p.total_built_up_sft)} sft`}
+                    value={`${num(builtUp)} sft`}
                   />
                   <Cell
                     icon={<Layers className="size-3" />}
                     label="Total slab"
-                    value={`${num(p.total_slab_sft)} sft`}
+                    value={`${num(slab)} sft`}
                   />
                   <Cell label="Start" value={p.start_date || "—"} />
                   <Cell label="Target handover" value={p.target_handover_date || "—"} />
