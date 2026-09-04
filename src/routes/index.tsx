@@ -257,12 +257,7 @@ function Index() {
           </div>
 
           <dl className="grid grid-cols-2 gap-5 lg:mb-2">
-            {[
-              ["3", "Active sites"],
-              ["₹22.70 Cr", "Committed budget"],
-              ["412", "Workforce on site"],
-              ["8", "Open QA defects"],
-            ].map(([v, l]) => (
+            {stats.map(([v, l]) => (
               <div
                 key={l}
                 className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 backdrop-blur-sm"
