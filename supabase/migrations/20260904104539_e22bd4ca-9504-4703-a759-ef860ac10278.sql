@@ -1,0 +1,3 @@
+CREATE POLICY "Approved members read chat attachments" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'chat-attachments' AND public.is_approved(auth.uid()));
+CREATE POLICY "Approved members upload chat attachments" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'chat-attachments' AND public.is_approved(auth.uid()));
+CREATE POLICY "Approved members delete chat attachments" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'chat-attachments' AND public.is_approved(auth.uid()));

@@ -162,7 +162,24 @@ export function Shell({
       if (error) throw error;
       return count ?? 0;
     },
-    refetchInterval: 20000,
+    refetchInterval: 6000,
+    refetchOnWindowFocus: true,
+  });
+  const { data: unreadChats = 0 } = useQuery({
+    queryKey: ["notifications", "unread-chat-count", user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("is_read", false)
+        .eq("recipient_id", user!.id)
+        .in("category", ["Chat", "Task"]);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 6000,
+    refetchOnWindowFocus: true,
   });
   const current = projects[0];
 
@@ -403,11 +420,16 @@ export function Shell({
             </button>
             <Link
               to="/messages"
-              className="inline-flex shrink-0 items-center"
+              className="relative inline-flex shrink-0 items-center"
               aria-label="Team chat"
               title="Team chat"
             >
               <MessagesSquare className="size-4 text-muted-foreground hover:text-foreground" />
+              {unreadChats > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-destructive text-[8px] font-bold text-destructive-foreground">
+                  {unreadChats > 9 ? "9+" : unreadChats}
+                </span>
+              )}
             </Link>
             <Link
               to="/notifications"
