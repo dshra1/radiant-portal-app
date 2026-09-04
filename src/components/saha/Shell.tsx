@@ -43,6 +43,20 @@ const mobileNav: NavItem[] = [
   { to: "/qa", label: "QA", icon: ScanEye },
 ];
 
+const groupTones: Record<string, string> = {
+  quick: "oklch(0.72 0.17 152)",
+  planning: "oklch(0.72 0.14 250)",
+  site: "oklch(0.78 0.15 70)",
+  stock: "oklch(0.75 0.16 152)",
+  accounts: "oklch(0.75 0.13 200)",
+  money: "oklch(0.74 0.15 300)",
+  qa: "oklch(0.78 0.14 100)",
+};
+
+function groupTone(id: string) {
+  return groupTones[id] ?? "oklch(0.75 0.12 152)";
+}
+
 export function Shell({
   title,
   subtitle,
@@ -164,7 +178,15 @@ export function Shell({
                     onClick={() => setOpen((p) => ({ ...p, [group.id]: !p[group.id] }))}
                     className="flex w-full items-center justify-between gap-2 rounded px-3 py-2 text-left text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                   >
-                    <span className="label-caps">{group.label}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span
+                        className="h-3.5 w-[3px] shrink-0 rounded-full"
+                        style={{ background: groupTone(group.id) }}
+                      />
+                      <span className="label-caps truncate" style={{ color: groupTone(group.id) }}>
+                        {group.label}
+                      </span>
+                    </span>
                     {isOpen ? (
                       <ChevronDown className="size-3.5 shrink-0" />
                     ) : (
