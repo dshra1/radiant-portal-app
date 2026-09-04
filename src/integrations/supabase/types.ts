@@ -569,6 +569,7 @@ export type Database = {
       }
       team_messages: {
         Row: {
+          attachments: Json
           author_name: string
           author_role: string
           body: string
@@ -583,6 +584,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attachments?: Json
           author_name?: string
           author_role?: string
           body: string
@@ -597,6 +599,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attachments?: Json
           author_name?: string
           author_role?: string
           body?: string
