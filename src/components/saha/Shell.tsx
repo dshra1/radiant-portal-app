@@ -263,6 +263,9 @@ export function Shell({
             <Home className="size-4" />
           </Link>
 
+          <SignOutButton />
+
+
           <div className="relative hidden min-w-0 sm:block">
             <button
               type="button"
