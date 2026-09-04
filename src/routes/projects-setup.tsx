@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Shell } from "@/components/saha/Shell";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { inrCompact } from "@/data/saha";
 
 export const Route = createFileRoute("/projects-setup")({
   head: () => ({
@@ -20,36 +23,67 @@ export const Route = createFileRoute("/projects-setup")({
 
 function Page() {
   const navigate = useNavigate();
-  const [geometry, setGeometry] = useState({ slabSft: 2000, cellar: 0, stilt: 1, typical: 5 });
+  const queryClient = useQueryClient();
+  const [activeProjectId, setActiveProjectId] = useState("");
+  const [geometry, setGeometry] = useState({ slabSft: 0, cellar: 0, stilt: 0, typical: 0 });
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const { data: projects = [], isLoading } = useQuery({
+    queryKey: ["site_projects", "full"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_projects")
+        .select("*")
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const project = projects.find((item) => item.id === activeProjectId) ?? projects[0];
+
   useEffect(() => {
-    const saved = window.localStorage.getItem("saha-project-setup-draft");
-    if (!saved) return;
-    try {
-      const draft = JSON.parse(saved) as Partial<typeof geometry>;
-      const restored = {
-        slabSft: Number(draft.slabSft) || 2000,
-        cellar: Math.max(0, Number(draft.cellar) || 0),
-        stilt: Math.max(0, Number(draft.stilt) || 0),
-        typical: Math.max(1, Number(draft.typical) || 1),
-      };
-      setGeometry(restored);
-    } catch {
-      window.localStorage.removeItem("saha-project-setup-draft");
-    }
-  }, []);
+    if (!project) return;
+    setActiveProjectId(project.id);
+    setGeometry({
+      slabSft: Math.max(0, Number(project.single_floor_slab_sft) || 0),
+      cellar: Math.max(0, Number(project.cellar_floors) || 0),
+      stilt: Math.max(0, Number(project.stilt_floors) || 0),
+      typical: Math.max(0, Number(project.typical_floors) || 0),
+    });
+  }, [project?.id, project?.single_floor_slab_sft, project?.cellar_floors, project?.stilt_floors, project?.typical_floors]);
 
   const totalFloors = geometry.cellar + geometry.stilt + geometry.typical;
-  const slabCount = totalFloors + 1;
-  const builtupArea = totalFloors * geometry.slabSft;
+  const slabCount = totalFloors;
+  const builtupArea = geometry.typical * geometry.slabSft;
   const castingArea = slabCount * geometry.slabSft;
   const concreteVolume = Math.round(castingArea * 0.035);
   const rebarWeight = Math.round((castingArea * 3) / 1000);
 
-  const saveDraft = () => {
-    window.localStorage.setItem("saha-project-setup-draft", JSON.stringify(geometry));
-    toast.success("Project setup draft saved");
+  const saveGeometry = async () => {
+    if (!project) throw new Error("Add a project before configuring its geometry.");
+    const { error } = await supabase
+      .from("site_projects")
+      .update({
+        single_floor_slab_sft: geometry.slabSft,
+        cellar_floors: geometry.cellar,
+        stilt_floors: geometry.stilt,
+        typical_floors: geometry.typical,
+        total_built_up_sft: builtupArea,
+        total_slab_sft: castingArea,
+      })
+      .eq("id", project.id);
+    if (error) throw error;
+    await queryClient.invalidateQueries({ queryKey: ["site_projects"] });
+  };
+
+  const saveDraft = async () => {
+    try {
+      await saveGeometry();
+      toast.success("Project geometry saved to the workspace");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Project geometry could not be saved");
+    }
   };
 
   const recalculate = () => {
@@ -58,14 +92,18 @@ function Page() {
 
   const generateBoq = async () => {
     setIsGenerating(true);
-    const next = { ...geometry };
-    window.localStorage.setItem("saha-project-setup-draft", JSON.stringify(next));
-    window.localStorage.setItem(
-      "saha-generated-boq-input",
-      JSON.stringify({ ...next, generatedAt: new Date().toISOString() }),
-    );
-    toast.success("Stage-wise BOQ blueprint generated");
-    await navigate({ to: "/boq-engine" });
+    try {
+      await saveGeometry();
+      window.localStorage.setItem(
+        "saha-generated-boq-input",
+        JSON.stringify({ ...geometry, projectId: project?.id, generatedAt: new Date().toISOString() }),
+      );
+      toast.success("Stage-wise BOQ blueprint generated");
+      await navigate({ to: "/boq-engine" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "BOQ blueprint could not be generated");
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -80,7 +118,7 @@ function Page() {
 <span className="material-symbols-outlined text-space-sm leading-none">chevron_right</span>
 <span className="text-on-surface-variant font-medium">New Project Setup</span>
 <span className="material-symbols-outlined text-space-sm leading-none">chevron_right</span>
-<span className="text-primary font-semibold">Cyber Enclave (Madhapur)</span>
+<span className="text-primary font-semibold">{project ? `${project.name} (${project.location || "Location pending"})` : "No project selected"}</span>
 </div>
 <div className="flex items-center gap-space-sm">
 <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Project Setup &amp; Structural Geometry Wizard</h1>
@@ -163,46 +201,49 @@ function Page() {
 <p className="font-body-sm text-body-sm text-on-surface-variant">Core civil registry and target contract parameters</p>
 </div>
 </div>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm font-semibold">PRJ-HYD-044</span>
+<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm font-semibold">{project ? `PRJ-${project.id.slice(0, 8).toUpperCase()}` : "NO PROJECT"}</span>
 </div>
 <div className="space-y-space-md">
+
+<div className="flex flex-col gap-space-2xs">
+<label className="font-label-md text-label-md text-on-surface font-semibold" htmlFor="setupProject">Project</label>
+<select id="setupProject" value={project?.id ?? ""} onChange={(event) => setActiveProjectId(event.target.value)} disabled={isLoading || projects.length === 0} className="w-full px-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary focus:outline-none transition-all">
+{projects.map((item) => <option key={item.id} value={item.id}>{item.name} — {item.location || "Location pending"}</option>)}
+{projects.length === 0 && <option value="">No projects available</option>}
+</select>
+</div>
 
 <div className="flex flex-col gap-space-2xs">
 <label className="font-label-md text-label-md text-on-surface font-semibold flex items-center justify-between">
 <span>Project Name</span>
 <span className="text-on-surface-variant font-normal font-label-sm text-label-sm">Official RERA Name</span>
 </label>
-<input className="w-full px-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary focus:outline-none transition-all" type="text" defaultValue="Cyber Enclave - Phase 2" />
-<span className="font-body-sm text-body-sm text-on-surface-variant">Subtitle: Multi-Unit Luxury Residential Development</span>
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-body-md text-body-md" type="text" value={project?.name ?? ""} readOnly />
+<span className="font-body-sm text-body-sm text-on-surface-variant">Type: {project?.type || "Not provided"}</span>
 </div>
 
 <div className="flex flex-col gap-space-2xs">
 <label className="font-label-md text-label-md text-on-surface font-semibold">Location &amp; Geozoning</label>
 <div className="relative flex items-center">
 <span className="material-symbols-outlined absolute left-space-md text-on-surface-variant leading-none text-space-base">location_on</span>
-<input className="w-full pl-10 pr-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary focus:outline-none transition-all" type="text" defaultValue="Madhapur, Hyderabad, Telangana, India" />
+<input className="w-full pl-10 pr-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-body-md text-body-md" type="text" value={project?.location ?? ""} readOnly />
 </div>
 <div className="flex items-center gap-space-xs text-tertiary font-label-sm text-label-sm mt-space-2xs">
 <span className="material-symbols-outlined leading-none text-space-sm">info</span>
-<span>GHMC Municipal Circle 20 (Serilingampally) • Seismic Zone II</span>
+<span>{project?.latitude != null && project?.longitude != null ? `Coordinates ${project.latitude}, ${project.longitude}` : "Map coordinates not provided"}</span>
 </div>
 </div>
 
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md pt-space-xs">
 <div className="flex flex-col gap-space-2xs">
 <label className="font-label-md text-label-md text-on-surface font-semibold">Project Typology</label>
-<select className="w-full px-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary focus:outline-none transition-all cursor-pointer">
-<option>Apartment Building</option>
-<option>Gated Villa Community</option>
-<option>Commercial Office Tower</option>
-<option>Mixed-Use Retail/Office</option>
-</select>
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-body-md text-body-md" value={project?.type ?? ""} readOnly />
 </div>
 <div className="flex flex-col gap-space-2xs">
-<label className="font-label-md text-label-md text-on-surface font-semibold">Total Habitable Units</label>
+<label className="font-label-md text-label-md text-on-surface font-semibold">Total Staff</label>
 <div className="relative flex items-center">
-<input className="w-full px-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary focus:outline-none transition-all" id="inputTotalUnits" type="number" defaultValue="20" />
-<span className="absolute right-space-md text-on-surface-variant font-label-sm text-label-sm">4 units/floor</span>
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-body-md text-body-md" type="number" value={Number(project?.total_staff ?? 0)} readOnly />
+<span className="absolute right-space-md text-on-surface-variant font-label-sm text-label-sm">people</span>
 </div>
 </div>
 </div>
@@ -210,12 +251,12 @@ function Page() {
 <div className="flex flex-col gap-space-2xs pt-space-xs">
 <label className="font-label-md text-label-md text-on-surface font-semibold flex justify-between items-center">
 <span>Target Construction Budget</span>
-<span className="text-primary font-bold font-label-sm text-label-sm">Target ₹2,500/SFT</span>
+<span className="text-primary font-bold font-label-sm text-label-sm">{builtupArea > 0 ? `Target ₹${Math.round(Number(project?.target_budget ?? 0) / builtupArea).toLocaleString("en-IN")}/SFT` : "Rate pending"}</span>
 </label>
 <div className="relative flex items-center">
 <span className="material-symbols-outlined absolute left-space-md text-primary leading-none text-space-base">currency_rupee</span>
-<input className="w-full pl-10 pr-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-headline-sm text-headline-sm font-bold tracking-tight focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary focus:outline-none transition-all" type="text" defaultValue="3,00,00,000" />
-<span className="absolute right-space-md font-label-md text-label-md px-space-xs py-space-2xs rounded bg-primary text-on-primary font-semibold">₹3.00 Cr</span>
+<input className="w-full pl-10 pr-space-md py-space-xs rounded bg-surface-container-low text-on-surface font-headline-sm text-headline-sm font-bold tracking-tight" type="text" value={Number(project?.target_budget ?? 0).toLocaleString("en-IN")} readOnly />
+<span className="absolute right-space-md font-label-md text-label-md px-space-xs py-space-2xs rounded bg-primary text-on-primary font-semibold">{inrCompact(project?.target_budget ?? 0)}</span>
 </div>
 <p className="font-body-sm text-body-sm text-on-surface-variant">Excludes land acquisition cost and pre-construction licensing fees.</p>
 </div>
@@ -245,50 +286,35 @@ function Page() {
 <span>Drawing Parsing Directives &amp; Internal Notes</span>
 <span className="text-on-surface-variant font-label-sm text-label-sm font-normal">Auto-indexes to Stage BOQs</span>
 </label>
-<textarea className="w-full p-space-md rounded bg-surface-container-low text-on-surface font-body-sm text-body-sm leading-relaxed focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary focus:outline-none transition-all" rows={4} defaultValue="Windows shown as blue rectangles; doors are 3'x7' single-leaf flush doors. Each typical floor has 4 3BHK units with 8 doors + 12 windows per unit. Roof has open terrace slab with 3' parapet wall and overhead water tank, no internal partition walls." />
+<textarea className="w-full p-space-md rounded bg-surface-container-low text-on-surface font-body-sm text-body-sm leading-relaxed" rows={4} value={project ? `${project.workflow_template} workflow. ${project.blockwork_type} blockwork, ${project.steel_grade} steel, ${project.concrete_grade} concrete. ${project.finishing_spec} finishing with ${project.flooring_spec} flooring, ${project.paint_spec} paint, ${project.plumbing_spec} plumbing and ${project.electrical_spec} electrical specifications.` : "Add or select a project to load its saved construction specifications."} readOnly />
 </div>
 
 <div className="flex flex-col gap-space-sm">
 <label className="font-label-md text-label-md text-on-surface font-semibold">Attached Architectural &amp; Structural Assets</label>
 <div className="flex flex-col gap-space-xs">
-
-<div className="flex items-center justify-between p-space-sm rounded bg-surface-container-low hover:bg-surface-container transition-colors">
-<div className="flex items-center gap-space-sm min-w-0">
-<span className="material-symbols-outlined text-tertiary text-space-lg leading-none">layers</span>
-<div className="flex flex-col min-w-0">
-<span className="font-title-md text-title-md text-on-surface truncate">architectural_floorplan_v3.dwg</span>
-<span className="font-label-sm text-label-sm text-on-surface-variant">14.8 MB • Extracted 12 layers • Layer: WALL_STRUCT</span>
-</div>
-</div>
-<div className="flex items-center gap-space-xs shrink-0">
-<span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm">Parsed</span>
-<button className="p-space-2xs text-on-surface-variant hover:text-error transition-colors">
-<span className="material-symbols-outlined text-space-base leading-none">delete</span>
-</button>
-</div>
-</div>
-
-<div className="flex items-center justify-between p-space-sm rounded bg-surface-container-low hover:bg-surface-container transition-colors">
-<div className="flex items-center gap-space-sm min-w-0">
-<span className="material-symbols-outlined text-error text-space-lg leading-none">picture_as_pdf</span>
-<div className="flex flex-col min-w-0">
-<span className="font-title-md text-title-md text-on-surface truncate">structural_framing_plan.pdf</span>
-<span className="font-label-sm text-label-sm text-on-surface-variant">8.4 MB • Column grid C1-C18 • Beams B1-B34</span>
-</div>
-</div>
-<div className="flex items-center gap-space-xs shrink-0">
-<span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm">Parsed</span>
-<button className="p-space-2xs text-on-surface-variant hover:text-error transition-colors">
-<span className="material-symbols-outlined text-space-base leading-none">delete</span>
-</button>
-</div>
-</div>
+{Array.isArray(project?.drawings) && project.drawings.length > 0 ? project.drawings.map((drawing, index) => {
+  const asset = typeof drawing === "object" && drawing !== null ? drawing as { name?: string; path?: string } : null;
+  return (
+    <div key={asset?.path ?? `${asset?.name ?? "drawing"}-${index}`} className="flex items-center justify-between p-space-sm rounded bg-surface-container-low">
+      <div className="flex items-center gap-space-sm min-w-0">
+        <span className="material-symbols-outlined text-tertiary text-space-lg leading-none">draft</span>
+        <div className="flex flex-col min-w-0">
+          <span className="font-title-md text-title-md text-on-surface truncate">{asset?.name ?? `Project drawing ${index + 1}`}</span>
+          <span className="font-label-sm text-label-sm text-on-surface-variant">Saved with {project.name}</span>
+        </div>
+      </div>
+      <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm">Available</span>
+    </div>
+  );
+}) : (
+  <div className="rounded bg-surface-container-low p-space-md font-body-sm text-body-sm text-on-surface-variant">No drawings were uploaded for this project.</div>
+)}
 </div>
 
-<button className="flex items-center justify-center gap-space-sm py-space-md px-space-base rounded bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-all">
+<Button type="button" variant="outline" onClick={() => navigate({ to: "/projects" })} className="h-auto flex items-center justify-center gap-space-sm py-space-md px-space-base">
 <span className="material-symbols-outlined text-space-base leading-none">upload_file</span>
-<span className="font-title-md text-title-md">Drop revisions or click to attach (DWG, DXF, PDF up to 100MB)</span>
-</button>
+<span className="font-title-md text-title-md">Manage drawings in Project Details</span>
+</Button>
 </div>
 </div>
 </div>
@@ -377,7 +403,7 @@ function Page() {
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-2xs mt-space-2xs">
 <span className="material-symbols-outlined text-space-sm leading-none text-primary">holiday_village</span>
-<span>Habitable apartment floors 1 to 5</span>
+<span>{geometry.typical} saved typical floor{geometry.typical === 1 ? "" : "s"}</span>
 </span>
 </div>
 </div>
@@ -388,7 +414,7 @@ function Page() {
 <span className="material-symbols-outlined text-primary text-space-base leading-none">calculate</span>
 <span className="font-label-sm text-label-sm font-bold uppercase tracking-wider text-on-surface">Calculated Civil Quantities</span>
 </div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">IS 456:2000 Structural Estimation Model</span>
+<span className="font-label-sm text-label-sm text-on-surface-variant">{project?.concrete_grade ?? "Concrete grade pending"} structural estimation model</span>
 </div>
 <div className="grid grid-cols-2 sm:grid-cols-3 gap-space-md">
 
@@ -434,7 +460,7 @@ function Page() {
 <span className="font-tabular-metric text-tabular-metric text-tertiary" id="metricConcreteVol">~{concreteVolume}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">CUM</span>
 </div>
-<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">@ 5″ slab + beams + col</span>
+<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">Saved grade: {project?.concrete_grade ?? "Not provided"}</span>
 </div>
 
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
@@ -443,7 +469,7 @@ function Page() {
 <span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricRebarWeight">~{rebarWeight}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">MT</span>
 </div>
-<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">@ 3.0 kg/SFT structural density</span>
+<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">@ {Number(project?.steel_ratio_kg_per_sft ?? 0).toLocaleString("en-IN")} kg/SFT · {project?.steel_grade ?? "Grade pending"}</span>
 </div>
 </div>
 </div>
