@@ -140,12 +140,19 @@ export type Role = (typeof roles)[number];
 const roleGroups: Record<Role, string[] | "all"> = {
   "Admin / Owner": "all",
   "Project Manager (PM)": ["planning", "site", "stock", "accounts", "qa"],
-  "Site Engineer": ["planning", "site", "qa"],
-  "Site Supervisor": ["site", "qa"],
+  "Site Engineer": ["site", "qa", "stock"],
+  "Site Supervisor": ["site", "qa", "stock"],
   "Purchase / Stores": ["stock", "accounts"],
-  Accounts: ["accounts", "stock", "money"],
-  "Landowner / Investor": ["money", "accounts"],
+  Accounts: ["stock", "accounts", "money"],
+  "Landowner / Investor": ["money", "accounts", "stock", "qa"],
 };
+
+/** Roles limited to read-only viewing. */
+export const readOnlyRoles: Role[] = ["Landowner / Investor"];
+
+export function isReadOnlyRole(role: string): boolean {
+  return readOnlyRoles.includes(role as Role);
+}
 
 /** Extra always-visible items per role (home + dashboard entry points). */
 const alwaysVisible = ["/", "/dashboard", "/messages", "/notifications", "/ai"];
