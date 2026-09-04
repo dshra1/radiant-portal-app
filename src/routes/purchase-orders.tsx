@@ -103,7 +103,13 @@ function Page() {
   const setStatus = useMutation({
     mutationFn: async ({ status, reason }: { status: PoStatus; reason?: string }) => {
       if (!selected) return;
-      const patch: Partial<PoRecord> & { status: PoStatus } = { status };
+      const patch: {
+        status: PoStatus;
+        approved_by?: string | null;
+        approved_by_name?: string;
+        approved_at?: string;
+        rejection_reason?: string;
+      } = { status };
       if (status === "approved" || status === "rejected") {
         patch.approved_by = access?.userId ?? null;
         patch.approved_by_name = access?.profile?.full_name || access?.email || "";
