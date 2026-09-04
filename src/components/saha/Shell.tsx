@@ -149,12 +149,16 @@ export function Shell({
     },
   });
   const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["notifications", "unread-count"],
+    queryKey: ["notifications", "unread-count", user?.id],
     queryFn: async () => {
-      const { count, error } = await supabase
+      let q = supabase
         .from("notifications")
         .select("id", { count: "exact", head: true })
         .eq("is_read", false);
+      if (user?.id) {
+        q = q.or(`recipient_id.eq.${user.id},recipient_id.is.null`);
+      }
+      const { count, error } = await q;
       if (error) throw error;
       return count ?? 0;
     },
