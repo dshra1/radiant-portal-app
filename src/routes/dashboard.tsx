@@ -35,7 +35,7 @@ export const Route = createFileRoute("/dashboard")({
 
 function Dashboard() {
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["site_projects"],
+    queryKey: ["site_projects", "full"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")

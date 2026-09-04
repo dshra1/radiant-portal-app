@@ -178,7 +178,7 @@ function Projects() {
 
 
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["site_projects"],
+    queryKey: ["site_projects", "full"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
@@ -375,11 +375,12 @@ function Projects() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       resetForm();
       setOpen(false);
       setError(null);
-      void qc.refetchQueries({ queryKey: ["site_projects"] });
+      await qc.invalidateQueries({ queryKey: ["site_projects"] });
+      await qc.refetchQueries({ queryKey: ["site_projects", "full"], type: "active" });
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -391,10 +392,10 @@ function Projects() {
       if (error) throw error;
     },
     onSuccess: (_d, id) => {
-      qc.setQueryData(["site_projects"], (prev: Row[] | undefined) =>
+      qc.setQueryData(["site_projects", "full"], (prev: Row[] | undefined) =>
         (prev ?? []).filter((r) => r.id !== id),
       );
-      void qc.refetchQueries({ queryKey: ["site_projects"] });
+      void qc.invalidateQueries({ queryKey: ["site_projects"] });
     },
     onError: (e: Error) => setError(e.message),
   });

@@ -186,7 +186,7 @@ function Index() {
   const [open, setOpen] = useState<string | null>(null);
 
   const { data: liveProjects } = useQuery({
-    queryKey: ["hub-projects"],
+    queryKey: ["site_projects", "hub-summary"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
