@@ -21,7 +21,6 @@ export const Route = createFileRoute("/projects-setup")({
 function Page() {
   const navigate = useNavigate();
   const [geometry, setGeometry] = useState({ slabSft: 2000, cellar: 0, stilt: 1, typical: 5 });
-  const [calculated, setCalculated] = useState(geometry);
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
@@ -36,16 +35,15 @@ function Page() {
         typical: Math.max(1, Number(draft.typical) || 1),
       };
       setGeometry(restored);
-      setCalculated(restored);
     } catch {
       window.localStorage.removeItem("saha-project-setup-draft");
     }
   }, []);
 
-  const totalFloors = calculated.cellar + calculated.stilt + calculated.typical;
+  const totalFloors = geometry.cellar + geometry.stilt + geometry.typical;
   const slabCount = totalFloors + 1;
-  const builtupArea = totalFloors * calculated.slabSft;
-  const castingArea = slabCount * calculated.slabSft;
+  const builtupArea = totalFloors * geometry.slabSft;
+  const castingArea = slabCount * geometry.slabSft;
   const concreteVolume = Math.round(castingArea * 0.035);
   const rebarWeight = Math.round((castingArea * 3) / 1000);
 
@@ -55,14 +53,12 @@ function Page() {
   };
 
   const recalculate = () => {
-    setCalculated(geometry);
     toast.success("Structural quantities recalculated");
   };
 
   const generateBoq = async () => {
     setIsGenerating(true);
     const next = { ...geometry };
-    setCalculated(next);
     window.localStorage.setItem("saha-project-setup-draft", JSON.stringify(next));
     window.localStorage.setItem(
       "saha-generated-boq-input",
@@ -319,15 +315,19 @@ function Page() {
 </div>
 </div>
 
+<div className="flex items-center gap-space-sm mb-space-md text-label-sm font-semibold">
+<span className="inline-flex items-center gap-space-2xs rounded bg-secondary-container px-space-xs py-space-2xs text-on-secondary-container"><span className="material-symbols-outlined text-space-sm">edit</span>Your input</span>
+<span className="inline-flex items-center gap-space-2xs rounded bg-primary-container px-space-xs py-space-2xs text-on-primary-container"><span className="material-symbols-outlined text-space-sm">calculate</span>App result</span>
+</div>
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-lg mb-space-xl">
 
-<div className="flex flex-col p-space-md rounded-xl bg-surface-container-low transition-all">
+<div className="flex flex-col p-space-md rounded-xl bg-secondary-container/60 border border-secondary-container transition-all">
 <div className="flex items-center justify-between mb-space-2xs">
 <label className="font-label-md text-label-md text-on-surface font-bold" htmlFor="inputSlabSft">Single-Floor Slab (SFT)</label>
 <span className="font-label-sm text-label-sm px-space-xs py-space-2xs rounded bg-surface-container text-primary font-bold">Footprint</span>
 </div>
 <div className="relative flex items-center my-space-xs">
-<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputSlabSft" min="1" type="number" value={geometry.slabSft} onChange={(event) => setGeometry((current) => ({ ...current, slabSft: Math.max(1, Number(event.target.value) || 1) }))} />
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold border border-secondary focus:outline-none focus:ring-2 focus:ring-secondary transition-all" id="inputSlabSft" min="1" type="number" value={geometry.slabSft} onChange={(event) => setGeometry((current) => ({ ...current, slabSft: Math.max(1, Number(event.target.value) || 1) }))} />
 <span className="absolute right-space-md font-label-md text-label-md text-on-surface-variant font-bold">SQ FT</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-2xs mt-space-2xs">
@@ -336,13 +336,13 @@ function Page() {
 </span>
 </div>
 
-<div className="flex flex-col p-space-md rounded-xl bg-surface-container-low transition-all">
+<div className="flex flex-col p-space-md rounded-xl bg-secondary-container/60 border border-secondary-container transition-all">
 <div className="flex items-center justify-between mb-space-2xs">
 <label className="font-label-md text-label-md text-on-surface font-bold" htmlFor="inputCellarFloors">Cellar Floors (Basement)</label>
 <span className="font-label-sm text-label-sm px-space-xs py-space-2xs rounded bg-surface-container text-secondary font-bold">Substructure</span>
 </div>
 <div className="relative flex items-center my-space-xs">
-<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputCellarFloors" min="0" type="number" value={geometry.cellar} onChange={(event) => setGeometry((current) => ({ ...current, cellar: Math.max(0, Number(event.target.value) || 0) }))} />
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold border border-secondary focus:outline-none focus:ring-2 focus:ring-secondary transition-all" id="inputCellarFloors" min="0" type="number" value={geometry.cellar} onChange={(event) => setGeometry((current) => ({ ...current, cellar: Math.max(0, Number(event.target.value) || 0) }))} />
 <span className="absolute right-space-md font-label-md text-label-md text-on-surface-variant font-bold">LEVELS</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-2xs mt-space-2xs">
@@ -351,13 +351,13 @@ function Page() {
 </span>
 </div>
 
-<div className="flex flex-col p-space-md rounded-xl bg-surface-container-low transition-all">
+<div className="flex flex-col p-space-md rounded-xl bg-secondary-container/60 border border-secondary-container transition-all">
 <div className="flex items-center justify-between mb-space-2xs">
 <label className="font-label-md text-label-md text-on-surface font-bold" htmlFor="inputStiltFloors">Parking / Stilt Floors</label>
 <span className="font-label-sm text-label-sm px-space-xs py-space-2xs rounded bg-surface-container text-tertiary font-bold">Grade</span>
 </div>
 <div className="relative flex items-center my-space-xs">
-<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputStiltFloors" min="0" type="number" value={geometry.stilt} onChange={(event) => setGeometry((current) => ({ ...current, stilt: Math.max(0, Number(event.target.value) || 0) }))} />
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold border border-secondary focus:outline-none focus:ring-2 focus:ring-secondary transition-all" id="inputStiltFloors" min="0" type="number" value={geometry.stilt} onChange={(event) => setGeometry((current) => ({ ...current, stilt: Math.max(0, Number(event.target.value) || 0) }))} />
 <span className="absolute right-space-md font-label-md text-label-md text-on-surface-variant font-bold">LEVELS</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-2xs mt-space-2xs">
@@ -366,13 +366,13 @@ function Page() {
 </span>
 </div>
 
-<div className="flex flex-col p-space-md rounded-xl bg-surface-container-low transition-all">
+<div className="flex flex-col p-space-md rounded-xl bg-secondary-container/60 border border-secondary-container transition-all">
 <div className="flex items-center justify-between mb-space-2xs">
 <label className="font-label-md text-label-md text-on-surface font-bold" htmlFor="inputTypicalFloors">Sellable / Typical Floors</label>
 <span className="font-label-sm text-label-sm px-space-xs py-space-2xs rounded bg-surface-container text-primary font-bold">Superstructure</span>
 </div>
 <div className="relative flex items-center my-space-xs">
-<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputTypicalFloors" min="1" type="number" value={geometry.typical} onChange={(event) => setGeometry((current) => ({ ...current, typical: Math.max(1, Number(event.target.value) || 1) }))} />
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold border border-secondary focus:outline-none focus:ring-2 focus:ring-secondary transition-all" id="inputTypicalFloors" min="1" type="number" value={geometry.typical} onChange={(event) => setGeometry((current) => ({ ...current, typical: Math.max(1, Number(event.target.value) || 1) }))} />
 <span className="absolute right-space-md font-label-md text-label-md text-on-surface-variant font-bold">LEVELS</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-2xs mt-space-2xs">
@@ -382,7 +382,7 @@ function Page() {
 </div>
 </div>
 
-<div className="p-space-lg rounded-xl bg-surface-container-low mb-space-xl">
+<div className="p-space-lg rounded-xl bg-primary-container/15 border border-primary/20 mb-space-xl">
 <div className="flex items-center justify-between mb-space-md">
 <div className="flex items-center gap-space-xs">
 <span className="material-symbols-outlined text-primary text-space-base leading-none">calculate</span>
@@ -398,7 +398,7 @@ function Page() {
 <span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricTotalFloors">{totalFloors}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">Floors</span>
 </div>
-<span className="font-body-sm text-body-sm text-primary font-medium mt-space-2xs truncate" id="metricFloorBreakdown">{calculated.cellar > 0 ? `${calculated.cellar} Cellar + ` : ""}{calculated.stilt} Stilt + {calculated.typical} Typical</span>
+<span className="font-body-sm text-body-sm text-primary font-medium mt-space-2xs truncate" id="metricFloorBreakdown">{geometry.cellar > 0 ? `${geometry.cellar} Cellar + ` : ""}{geometry.stilt} Stilt + {geometry.typical} Typical</span>
 </div>
 
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
@@ -416,7 +416,7 @@ function Page() {
 <span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricBuiltupArea">{builtupArea.toLocaleString("en-IN")}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">SFT</span>
 </div>
-<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate" id="metricBuiltupCalc">{totalFloors} floors × {calculated.slabSft.toLocaleString("en-IN")} SFT</span>
+<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate" id="metricBuiltupCalc">{totalFloors} floors × {geometry.slabSft.toLocaleString("en-IN")} SFT</span>
 </div>
 
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
@@ -425,7 +425,7 @@ function Page() {
 <span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricCastingArea">{castingArea.toLocaleString("en-IN")}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">SFT</span>
 </div>
-<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate" id="metricCastingCalc">{slabCount} slabs × {calculated.slabSft.toLocaleString("en-IN")} SFT</span>
+<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate" id="metricCastingCalc">{slabCount} slabs × {geometry.slabSft.toLocaleString("en-IN")} SFT</span>
 </div>
 
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
