@@ -1,6 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { inrCompact, num } from "@/data/saha";
 import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
+
+
 
 
 export const Route = createFileRoute("/")({
