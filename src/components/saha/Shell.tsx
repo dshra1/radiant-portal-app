@@ -420,11 +420,16 @@ export function Shell({
             </button>
             <Link
               to="/messages"
-              className="inline-flex shrink-0 items-center"
+              className="relative inline-flex shrink-0 items-center"
               aria-label="Team chat"
               title="Team chat"
             >
               <MessagesSquare className="size-4 text-muted-foreground hover:text-foreground" />
+              {unreadChats > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-destructive text-[8px] font-bold text-destructive-foreground">
+                  {unreadChats > 9 ? "9+" : unreadChats}
+                </span>
+              )}
             </Link>
             <Link
               to="/notifications"
