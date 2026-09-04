@@ -88,7 +88,7 @@ function AuthPage() {
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl backdrop-blur sm:p-8">
         <div className="flex items-center gap-3">
           <img
-            src={sahaLogo.src}
+            src={sahaLogo.url}
             alt="Saha Developers"
             className="h-11 w-11 rounded-lg bg-white object-contain p-1"
           />
