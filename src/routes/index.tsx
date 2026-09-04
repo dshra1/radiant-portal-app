@@ -15,7 +15,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Command center for Cyber Enclave Phase 2: BOQ ingestion, stage execution, QA/QC audits, price intelligence and procurement guardrails.",
+          "Command center for {project.name}: BOQ ingestion, stage execution, QA/QC audits, price intelligence and procurement guardrails.",
       },
       { property: "og:title", content: "Saha OS — Civil Project Lifecycle Command Center" },
       {
@@ -231,7 +231,7 @@ function Index() {
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-brand-bright animate-pulse" />
               <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
-                Cyber Enclave · Phase 2 · Madhapur, Hyderabad
+                {project.name} · Madhapur, Hyderabad
               </span>
             </div>
 

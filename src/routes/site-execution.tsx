@@ -6,9 +6,9 @@ export const Route = createFileRoute("/site-execution")({
   head: () => ({
     meta: [
       { title: "Site Execution & Next-Stage Planning Hub | Saha OS" },
-      { name: "description", content: "Live stage progress, field roster, material runway and next-stage readiness for Cyber Enclave Phase 2." },
+      { name: "description", content: "Live stage progress, field roster, material runway and next-stage readiness for your live project." },
       { property: "og:title", content: "Site Execution & Next-Stage Planning Hub | Saha OS" },
-      { property: "og:description", content: "Live stage progress, field roster, material runway and next-stage readiness for Cyber Enclave Phase 2." },
+      { property: "og:description", content: "Live stage progress, field roster, material runway and next-stage readiness for your live project." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
