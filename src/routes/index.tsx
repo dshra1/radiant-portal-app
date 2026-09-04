@@ -479,7 +479,6 @@ function Index() {
                         tone === "warning" && "bg-warning-soft text-warning",
                         tone === "info" && "bg-info-soft text-info",
                         tone === "success" && "bg-primary-soft text-primary",
-                        tone === "secondary" && "bg-secondary text-secondary-foreground",
                       )}
                     >
                       {tone === "warning" ? (
