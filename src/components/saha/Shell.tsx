@@ -471,7 +471,7 @@ export function Shell({
           <span className="hidden sm:inline">Saha AI Assistant</span>
         </Link>
 
-        <nav className="sticky bottom-0 z-20 grid grid-cols-6 border-t border-border bg-card md:hidden">
+        <nav className="sticky bottom-0 z-20 flex h-16 w-full items-center justify-around border-t border-border bg-card px-2 md:hidden">
           {mobileNav.map((item) => {
             const active = pathname === item.to;
             return (
@@ -480,11 +480,12 @@ export function Shell({
                 to={item.to}
                 aria-label={item.label}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2 text-[9px] font-medium",
-                  active ? "text-primary" : "text-muted-foreground",
+                  "flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-medium transition-colors",
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <item.icon className="size-4" />
+                <item.icon className="size-5" />
+                <span className="leading-none">{item.label}</span>
               </Link>
             );
           })}
