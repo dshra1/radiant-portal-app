@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Download, Upload } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { ActionButton, MetricTile, Section, StatusBadge, TrendPill } from "@/components/saha/ui";
 import { boqItems, inr, inrCompact, materialRates, num, projects } from "@/data/saha";
@@ -118,6 +118,15 @@ function Boq() {
         </>
       }
     >
+      {notice && (
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-[13px] text-primary">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice(null)} className="text-xs font-semibold underline">
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricTile label="Estimated value" value={inrCompact(estTotal)} />
         <MetricTile label="At market rate" value={inrCompact(mktTotal)} />
