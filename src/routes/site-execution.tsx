@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/site-execution")({
   head: () => ({
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/site-execution")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Site Execution & Next-Stage Planning Hub | Saha OS"}>
       <div className="m3">
@@ -34,7 +36,7 @@ function Page() {
 </div>
 <div className="flex items-baseline gap-space-sm">
 <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Site Execution &amp; Next-Stage Planning Hub</h1>
-<span className="hidden sm:inline font-body-sm text-body-sm text-on-surface-variant">Cyber Enclave - Phase 2 (G+5 Superstructure)</span>
+<span className="hidden sm:inline font-body-sm text-body-sm text-on-surface-variant">{project.name} (G+5 Superstructure)</span>
 </div>
 </div>
 

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/po-create")({
   head: () => ({
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/po-create")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Smart Purchase Order Creation Engine | Saha OS"}>
       <div className="m3">
@@ -27,7 +29,7 @@ function Page() {
 <div className="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
 <span className="hover:text-primary cursor-pointer transition-colors">Projects</span>
 <span className="material-symbols-outlined text-space-sm leading-none">chevron_right</span>
-<span className="hover:text-primary cursor-pointer transition-colors">Cyber Enclave - Phase 2</span>
+<span className="hover:text-primary cursor-pointer transition-colors">{project.name}</span>
 <span className="material-symbols-outlined text-space-sm leading-none">chevron_right</span>
 <span className="hover:text-primary cursor-pointer transition-colors">Procurement &amp; Supply Chain</span>
 <span className="material-symbols-outlined text-space-sm leading-none">chevron_right</span>

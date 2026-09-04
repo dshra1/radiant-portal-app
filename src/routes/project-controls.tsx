@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/project-controls")({
   head: () => ({
@@ -16,10 +17,11 @@ export const Route = createFileRoute("/project-controls")({
 });
 
 function Page() {
+  const project = useActiveProject();
   return (
     <Shell title={"Project Controls Cockpit"}>
       <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full">  <div className="flex flex-wrap items-center justify-between gap-space-base mb-space-2xl bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)]"> <div className="flex items-center gap-space-lg"> <div className="flex flex-col"> <span className="font-label-sm text-label-sm uppercase text-on-surface-variant tracking-wider">Project Controls Cockpit</span> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight mt-space-2xs">Cyber Enclave - Phase 2 Earned Value & Site Telemetry</h1> </div> <div className="hidden md:flex items-center gap-space-sm pl-space-lg border-l border-outline-variant/30"> <span className="px-space-sm py-space-2xs rounded bg-surface-container-low text-on-surface font-label-md text-label-md flex items-center gap-space-xs"> <span className="material-symbols-outlined text-space-base text-primary" style={{"fontVariationSettings": "'FILL' 1"}}>update</span>
+        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full">  <div className="flex flex-wrap items-center justify-between gap-space-base mb-space-2xl bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)]"> <div className="flex items-center gap-space-lg"> <div className="flex flex-col"> <span className="font-label-sm text-label-sm uppercase text-on-surface-variant tracking-wider">Project Controls Cockpit</span> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight mt-space-2xs">{project.name} Earned Value & Site Telemetry</h1> </div> <div className="hidden md:flex items-center gap-space-sm pl-space-lg border-l border-outline-variant/30"> <span className="px-space-sm py-space-2xs rounded bg-surface-container-low text-on-surface font-label-md text-label-md flex items-center gap-space-xs"> <span className="material-symbols-outlined text-space-base text-primary" style={{"fontVariationSettings": "'FILL' 1"}}>update</span>
           Last Sync: Today, 14:45 IST
         </span> <span className="px-space-sm py-space-2xs rounded bg-surface-container-low text-on-surface font-label-md text-label-md flex items-center gap-space-xs"> <span className="material-symbols-outlined text-space-base text-tertiary" style={{"fontVariationSettings": "'FILL' 1"}}>hub</span>
           Tally ERP Connected
