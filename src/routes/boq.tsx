@@ -164,7 +164,7 @@ function Boq() {
                       colSpan={8}
                       className="border-y border-border bg-secondary/40 px-3 py-1.5"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-3">
                         <span className="label-caps text-muted-foreground">{stage}</span>
                         <div className="flex items-center gap-1.5">
                           <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-input bg-card px-2 py-1 text-[11px] font-semibold hover:bg-secondary">
