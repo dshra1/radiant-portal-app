@@ -137,8 +137,8 @@ function Messages() {
     mutationFn: async () => {
       const text = body.trim();
       if (!text) return;
-      const senderId = user?.id;
-      const insert: Record<string, unknown> = {
+      const senderId = user?.id ?? null;
+      const insert = {
         channel,
         author_name: name.trim() || "Site user",
         author_role: role,
@@ -154,7 +154,6 @@ function Messages() {
 
       // Notify the assigned user
       if (recipientId && recipientId !== senderId) {
-        const recipient = members.find((m) => m.id === recipientId);
         const project = projects.find((p) => p.id === projectId);
         await supabase.from("notifications").insert({
           title: isTask ? `New task assigned by ${name.trim() || "Site user"}` : `New message from ${name.trim() || "Site user"}`,
