@@ -147,6 +147,9 @@ export type Database = {
           is_read: boolean
           link: string
           priority: string
+          project_id: string | null
+          recipient_id: string | null
+          sender_id: string | null
           title: string
           updated_at: string
         }
@@ -158,6 +161,9 @@ export type Database = {
           is_read?: boolean
           link?: string
           priority?: string
+          project_id?: string | null
+          recipient_id?: string | null
+          sender_id?: string | null
           title: string
           updated_at?: string
         }
@@ -169,10 +175,21 @@ export type Database = {
           is_read?: boolean
           link?: string
           priority?: string
+          project_id?: string | null
+          recipient_id?: string | null
+          sender_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -557,7 +574,12 @@ export type Database = {
           body: string
           channel: string
           created_at: string
+          due_date: string | null
           id: string
+          is_task: boolean
+          project_id: string | null
+          recipient_id: string | null
+          sender_id: string | null
           updated_at: string
         }
         Insert: {
@@ -566,7 +588,12 @@ export type Database = {
           body: string
           channel?: string
           created_at?: string
+          due_date?: string | null
           id?: string
+          is_task?: boolean
+          project_id?: string | null
+          recipient_id?: string | null
+          sender_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -575,10 +602,23 @@ export type Database = {
           body?: string
           channel?: string
           created_at?: string
+          due_date?: string | null
           id?: string
+          is_task?: boolean
+          project_id?: string | null
+          recipient_id?: string | null
+          sender_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "team_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
