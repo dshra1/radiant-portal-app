@@ -30,12 +30,15 @@ import {
   UnfoldVertical,
   Bot,
   LogOut,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 import { navForRole, roles, type NavItem } from "@/components/saha/nav";
 import { useAccess } from "@/lib/access";
+import { SAMPLE_DATA_ROUTES } from "@/components/saha/sample-data";
+
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
