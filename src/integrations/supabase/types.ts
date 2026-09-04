@@ -67,6 +67,71 @@ export type Database = {
         }
         Relationships: []
       }
+      boq_items: {
+        Row: {
+          brand: string
+          category: string
+          created_at: string
+          description: string
+          id: string
+          item_code: string
+          notes: string
+          project_id: string
+          quantity: number
+          rate: number
+          sort_order: number
+          source: string
+          stage: string
+          supplier: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          brand?: string
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          item_code?: string
+          notes?: string
+          project_id: string
+          quantity?: number
+          rate?: number
+          sort_order?: number
+          source?: string
+          stage?: string
+          supplier?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          item_code?: string
+          notes?: string
+          project_id?: string
+          quantity?: number
+          rate?: number
+          sort_order?: number
+          source?: string
+          stage?: string
+          supplier?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boq_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string
