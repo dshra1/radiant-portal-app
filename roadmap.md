@@ -27,3 +27,8 @@
 - [ ] Fix layout sizing: cap content width on large screens, stop Download-app button overlapping header chrome
 
 - [ ] Fix mobile touch scrolling (single-finger scroll blocked; only 2-finger pan worked)
+
+## Access control
+- [x] Role-based sidebar filtering (Admin, PM, Site Engineer, Supervisor, Purchase/Stores, Accounts, Landowner) — client-side nav filter in src/components/saha/nav.ts
+- [ ] Enforce privileges server-side (user roles table + RLS) once auth is added
+- [x] Unified shared sidebar across all pages

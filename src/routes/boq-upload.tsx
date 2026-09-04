@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Shell } from "@/components/saha/Shell";
 
 export const Route = createFileRoute("/boq-upload")({
   head: () => ({
@@ -16,63 +17,9 @@ export const Route = createFileRoute("/boq-upload")({
 
 function Page() {
   return (
-    <div className="">
-
-
-<header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 text-white" data-purpose="enterprise-top-nav">
-<div className="px-6 py-2.5 flex items-center justify-between gap-4">
-
-<div className="flex items-center gap-4">
-<div className="flex items-center gap-2.5">
-<div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-lg text-white shadow-md shadow-emerald-900/50">
-            S
-          </div>
-<div className="leading-none">
-<span className="text-sm font-bold tracking-tight text-white">SAHA <span className="text-emerald-400">OS</span></span>
-<span className="block text-[10px] uppercase font-semibold tracking-wider text-slate-400">Enterprise Build v4.2</span>
-</div>
-</div>
-<div className="h-5 w-[1px] bg-slate-700 hidden md:block"></div>
-
-<nav className="flex items-center text-xs space-x-2 text-slate-300">
-<span className="hover:text-white cursor-pointer transition-colors">BOQ Management</span>
-<span className="text-slate-500">/</span>
-<span className="text-white font-medium">Upload Excel Catalog &amp; Rates</span>
-<span className="text-slate-500">/</span>
-<div className="inline-flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1 text-slate-200">
-<span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-<span className="font-semibold text-white">Cyber Enclave A (Madhapur, HYD)</span>
-<svg className="w-3.5 h-3.5 text-slate-400 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path></svg>
-</div>
-<a className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-100 hover:bg-slate-800 transition-colors" href="/">All Screens Hub</a></nav>
-</div>
-
-<div className="flex items-center gap-3">
-
-<div className="hidden lg:flex items-center gap-2 bg-emerald-950/70 border border-emerald-800/80 rounded-md px-3 py-1 text-[11px] text-emerald-300">
-<svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path></svg>
-<span>Hyd Wholesale Index: <strong>Updated 2h ago</strong></span>
-</div>
-<button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-medium border border-slate-700 transition" type="button">
-<svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path></svg>
-<span>Download Master Template (.xlsx)</span>
-</button>
-
-<div className="flex items-center gap-2.5 pl-2 border-l border-slate-800">
-<div className="w-7 h-7 rounded-full bg-slate-700 border border-emerald-500/40 flex items-center justify-center font-bold text-xs text-emerald-300">
-            SH
-          </div>
-<div className="text-left hidden sm:block">
-<div className="text-xs font-semibold text-white leading-tight">Shravan K.</div>
-<div className="text-[10px] text-slate-400">Admin / Project Director</div>
-</div>
-</div>
-</div>
-</div>
-</header>
-
-
-<main className="flex-1 px-4 sm:px-6 py-4 max-w-[1920px] mx-auto w-full flex flex-col gap-4">
+    <Shell title={"BOQ Excel Upload & Ingestion Studio | Saha OS"}>
+      <div className="m3">
+        <main className="flex-1 px-4 sm:px-6 py-4 max-w-[1920px] mx-auto w-full flex flex-col gap-4">
 
 <section className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-4 sm:p-5" data-purpose="excel-ingestion-card">
 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
@@ -710,63 +657,7 @@ function Page() {
 </section>
 
 </main>
-
-
-<aside className="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 text-white py-3 px-6 z-40 shadow-2xl" data-purpose="sticky-bottom-summary">
-<div className="max-w-[1920px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-
-<div className="flex flex-wrap items-center gap-6 text-xs divide-x divide-slate-800">
-<div className="flex items-center gap-2">
-<span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-<div>
-<div className="text-[10px] uppercase text-slate-400 tracking-wider">Total Ingested Items</div>
-<div className="font-bold text-sm text-white font-mono">348 Lines</div>
-</div>
-</div>
-<div className="pl-6">
-<div className="text-[10px] uppercase text-slate-400 tracking-wider">Projected BOQ Total</div>
-<div className="font-bold text-sm text-white font-mono">₹2,48,60,450</div>
-</div>
-<div className="pl-6">
-<div className="text-[10px] uppercase text-emerald-400 font-semibold tracking-wider flex items-center gap-1">
-<svg className="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path clipRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" fillRule="evenodd"></path></svg>
-            Identified Alternative Savings
-          </div>
-<div className="font-bold text-sm text-emerald-400 font-mono">₹18,42,800 <span className="text-xs font-medium text-emerald-300">(-7.4%)</span></div>
-</div>
-</div>
-
-<div className="flex items-center gap-3">
-<button className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition" type="button">
-          Cancel
-        </button>
-<button className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition flex items-center gap-1.5" id="saveDraftBtn" type="button">
-<svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path></svg>
-<span>Save Draft v2.4</span>
-</button>
-<button className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/40 flex items-center gap-2" id="commitBoqBtn" type="button">
-<svg className="w-4 h-4 text-emerald-200" fill="currentColor" viewBox="0 0 20 20"><path clipRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" fillRule="evenodd"></path></svg>
-<span>Commit &amp; Merge to Master Project BOQ</span>
-</button>
-</div>
-</div>
-</aside>
-
-
-<div className="fixed top-16 right-6 transform translate-y-[-20px] opacity-0 pointer-events-none transition-all duration-300 z-50 bg-slate-900 text-white border border-emerald-500/50 shadow-2xl rounded-xl p-4 flex items-center gap-3 max-w-md" id="actionToast">
-<div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path></svg>
-</div>
-<div>
-<h4 className="text-xs font-bold text-white" id="toastTitle">Action Completed</h4>
-<p className="text-[11px] text-slate-300" id="toastMessage">File catalog synchronized successfully.</p>
-</div>
-</div>
-
-
-
-
-
-    </div>
+      </div>
+    </Shell>
   );
 }
