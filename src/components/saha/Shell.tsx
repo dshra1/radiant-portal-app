@@ -277,7 +277,7 @@ export function Shell({
             >
               <span className="min-w-0">
                 <span className="flex items-center gap-1.5">
-                  <span className="truncate text-[13px] font-semibold text-foreground">
+                  <span className="truncate text-[13px] font-semibold text-secondary-foreground">
                     {current?.name ?? "No active project"}
                   </span>
                   {current && (
@@ -286,11 +286,11 @@ export function Shell({
                     </span>
                   )}
                 </span>
-                <span className="block truncate text-xs text-muted-foreground">
+                <span className="block truncate text-xs text-secondary-foreground/75">
                   {current?.location ?? "Add a project to begin"}
                 </span>
               </span>
-              <UnfoldVertical className="size-3.5 shrink-0 text-muted-foreground" />
+              <UnfoldVertical className="size-3.5 shrink-0 text-secondary-foreground/70" />
             </button>
 
             {projectMenu && (
