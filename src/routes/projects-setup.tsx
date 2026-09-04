@@ -1,5 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Shell } from "@/components/saha/Shell";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/projects-setup")({
   head: () => ({
@@ -16,6 +19,59 @@ export const Route = createFileRoute("/projects-setup")({
 });
 
 function Page() {
+  const navigate = useNavigate();
+  const [geometry, setGeometry] = useState({ slabSft: 2000, cellar: 0, stilt: 1, typical: 5 });
+  const [calculated, setCalculated] = useState(geometry);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("saha-project-setup-draft");
+    if (!saved) return;
+    try {
+      const draft = JSON.parse(saved) as Partial<typeof geometry>;
+      const restored = {
+        slabSft: Number(draft.slabSft) || 2000,
+        cellar: Math.max(0, Number(draft.cellar) || 0),
+        stilt: Math.max(0, Number(draft.stilt) || 0),
+        typical: Math.max(1, Number(draft.typical) || 1),
+      };
+      setGeometry(restored);
+      setCalculated(restored);
+    } catch {
+      window.localStorage.removeItem("saha-project-setup-draft");
+    }
+  }, []);
+
+  const totalFloors = calculated.cellar + calculated.stilt + calculated.typical;
+  const slabCount = totalFloors + 1;
+  const builtupArea = totalFloors * calculated.slabSft;
+  const castingArea = slabCount * calculated.slabSft;
+  const concreteVolume = Math.round(castingArea * 0.035);
+  const rebarWeight = Math.round((castingArea * 3) / 1000);
+
+  const saveDraft = () => {
+    window.localStorage.setItem("saha-project-setup-draft", JSON.stringify(geometry));
+    toast.success("Project setup draft saved");
+  };
+
+  const recalculate = () => {
+    setCalculated(geometry);
+    toast.success("Structural quantities recalculated");
+  };
+
+  const generateBoq = async () => {
+    setIsGenerating(true);
+    const next = { ...geometry };
+    setCalculated(next);
+    window.localStorage.setItem("saha-project-setup-draft", JSON.stringify(next));
+    window.localStorage.setItem(
+      "saha-generated-boq-input",
+      JSON.stringify({ ...next, generatedAt: new Date().toISOString() }),
+    );
+    toast.success("Stage-wise BOQ blueprint generated");
+    await navigate({ to: "/boq-engine" });
+  };
+
   return (
     <Shell title={"Project Setup & Structural Geometry Wizard | Saha OS"}>
       <div className="m3">
@@ -271,7 +327,7 @@ function Page() {
 <span className="font-label-sm text-label-sm px-space-xs py-space-2xs rounded bg-surface-container text-primary font-bold">Footprint</span>
 </div>
 <div className="relative flex items-center my-space-xs">
-<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputSlabSft" type="number" defaultValue="2000" />
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputSlabSft" min="1" type="number" value={geometry.slabSft} onChange={(event) => setGeometry((current) => ({ ...current, slabSft: Math.max(1, Number(event.target.value) || 1) }))} />
 <span className="absolute right-space-md font-label-md text-label-md text-on-surface-variant font-bold">SQ FT</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-2xs mt-space-2xs">
@@ -286,7 +342,7 @@ function Page() {
 <span className="font-label-sm text-label-sm px-space-xs py-space-2xs rounded bg-surface-container text-secondary font-bold">Substructure</span>
 </div>
 <div className="relative flex items-center my-space-xs">
-<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputCellarFloors" min="0" type="number" defaultValue="0" />
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputCellarFloors" min="0" type="number" value={geometry.cellar} onChange={(event) => setGeometry((current) => ({ ...current, cellar: Math.max(0, Number(event.target.value) || 0) }))} />
 <span className="absolute right-space-md font-label-md text-label-md text-on-surface-variant font-bold">LEVELS</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-2xs mt-space-2xs">
@@ -301,7 +357,7 @@ function Page() {
 <span className="font-label-sm text-label-sm px-space-xs py-space-2xs rounded bg-surface-container text-tertiary font-bold">Grade</span>
 </div>
 <div className="relative flex items-center my-space-xs">
-<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputStiltFloors" min="0" type="number" defaultValue="1" />
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputStiltFloors" min="0" type="number" value={geometry.stilt} onChange={(event) => setGeometry((current) => ({ ...current, stilt: Math.max(0, Number(event.target.value) || 0) }))} />
 <span className="absolute right-space-md font-label-md text-label-md text-on-surface-variant font-bold">LEVELS</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-2xs mt-space-2xs">
@@ -316,7 +372,7 @@ function Page() {
 <span className="font-label-sm text-label-sm px-space-xs py-space-2xs rounded bg-surface-container text-primary font-bold">Superstructure</span>
 </div>
 <div className="relative flex items-center my-space-xs">
-<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputTypicalFloors" min="1" type="number" defaultValue="5" />
+<input className="w-full px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface font-headline-md text-headline-md font-bold focus:outline-none focus:ring-2 focus:ring-primary transition-all" id="inputTypicalFloors" min="1" type="number" value={geometry.typical} onChange={(event) => setGeometry((current) => ({ ...current, typical: Math.max(1, Number(event.target.value) || 1) }))} />
 <span className="absolute right-space-md font-label-md text-label-md text-on-surface-variant font-bold">LEVELS</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-2xs mt-space-2xs">
@@ -339,16 +395,16 @@ function Page() {
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
 <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Total Floors</span>
 <div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricTotalFloors">6</span>
+<span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricTotalFloors">{totalFloors}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">Floors</span>
 </div>
-<span className="font-body-sm text-body-sm text-primary font-medium mt-space-2xs truncate" id="metricFloorBreakdown">1 Stilt + 5 Typical</span>
+<span className="font-body-sm text-body-sm text-primary font-medium mt-space-2xs truncate" id="metricFloorBreakdown">{calculated.cellar > 0 ? `${calculated.cellar} Cellar + ` : ""}{calculated.stilt} Stilt + {calculated.typical} Typical</span>
 </div>
 
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
 <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Slab Count (+ Terrace)</span>
 <div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="font-tabular-metric text-tabular-metric text-primary" id="metricSlabCount">7</span>
+<span className="font-tabular-metric text-tabular-metric text-primary" id="metricSlabCount">{slabCount}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">Slabs</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">Stilt top, F1-5 + Terrace</span>
@@ -357,25 +413,25 @@ function Page() {
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
 <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Total Built-up Area</span>
 <div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricBuiltupArea">12,000</span>
+<span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricBuiltupArea">{builtupArea.toLocaleString("en-IN")}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">SFT</span>
 </div>
-<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate" id="metricBuiltupCalc">6 floors × 2,000 SFT</span>
+<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate" id="metricBuiltupCalc">{totalFloors} floors × {calculated.slabSft.toLocaleString("en-IN")} SFT</span>
 </div>
 
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
 <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Slab Casting Area</span>
 <div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricCastingArea">14,000</span>
+<span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricCastingArea">{castingArea.toLocaleString("en-IN")}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">SFT</span>
 </div>
-<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate" id="metricCastingCalc">7 slabs × 2,000 SFT</span>
+<span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate" id="metricCastingCalc">{slabCount} slabs × {calculated.slabSft.toLocaleString("en-IN")} SFT</span>
 </div>
 
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
 <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Concrete Volume (M25)</span>
 <div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="font-tabular-metric text-tabular-metric text-tertiary" id="metricConcreteVol">~490</span>
+<span className="font-tabular-metric text-tabular-metric text-tertiary" id="metricConcreteVol">~{concreteVolume}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">CUM</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">@ 5″ slab + beams + col</span>
@@ -384,7 +440,7 @@ function Page() {
 <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
 <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Estimated TMT Rebar</span>
 <div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricRebarWeight">~42</span>
+<span className="font-tabular-metric text-tabular-metric text-on-surface" id="metricRebarWeight">~{rebarWeight}</span>
 <span className="font-label-sm text-label-sm text-on-surface-variant">MT</span>
 </div>
 <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">@ 3.0 kg/SFT structural density</span>
@@ -418,7 +474,7 @@ function Page() {
 <span className="px-space-2xs py-0.5 rounded bg-primary text-on-primary font-label-sm text-[10px] uppercase font-bold">7 Slabs</span>
 </div>
 <span className="font-title-md text-title-md text-on-surface truncate font-bold">RCC Superstructure</span>
-<span className="font-body-sm text-body-sm text-on-surface-variant" id="badgeStageRCC">14,000 SFT pour cards</span>
+<span className="font-body-sm text-body-sm text-on-surface-variant" id="badgeStageRCC">{castingArea.toLocaleString("en-IN")} SFT pour cards</span>
 </div>
 
 <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-space-2xs">
@@ -470,17 +526,17 @@ function Page() {
 <span className="hidden md:inline-block font-label-sm text-label-sm text-on-surface-variant">Last autosaved 12s ago</span>
 </div>
 <div className="flex items-center gap-space-sm w-full sm:w-auto justify-end">
-<button className="px-space-md py-space-xs rounded bg-surface-container-low hover:bg-surface-container text-on-surface font-title-md text-title-md transition-colors">
+<Button type="button" variant="secondary" onClick={saveDraft} className="h-auto px-space-md py-space-xs font-title-md text-title-md">
         Save as Draft
-      </button>
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container-low hover:bg-surface-container text-on-surface font-title-md text-title-md transition-colors" id="btnRecalculate">
+      </Button>
+<Button type="button" variant="outline" onClick={recalculate} className="h-auto px-space-md py-space-xs font-title-md text-title-md" id="btnRecalculate">
 <span className="material-symbols-outlined text-space-base leading-none text-primary">sync</span>
 <span>Recalculate</span>
-</button>
-<button className="flex items-center gap-space-xs px-space-lg py-space-xs rounded bg-primary text-on-primary hover:bg-primary-container font-title-md text-title-md shadow-sm transition-all" id="btnGenerateBOQ">
+</Button>
+<Button type="button" onClick={generateBoq} disabled={isGenerating} className="h-auto px-space-lg py-space-xs font-title-md text-title-md shadow-sm" id="btnGenerateBOQ">
 <span className="material-symbols-outlined text-space-base leading-none">rocket_launch</span>
-<span>Generate Stage-Wise BOQ &amp; Execution Blueprint</span>
-</button>
+<span>{isGenerating ? "Generating…" : "Generate Stage-Wise BOQ & Execution Blueprint"}</span>
+</Button>
 </div>
 </div>
 
