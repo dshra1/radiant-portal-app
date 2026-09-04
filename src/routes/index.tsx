@@ -320,19 +320,8 @@ function Index() {
                 </span>
               )}
             </Link>
-            <Link
-              to="/notifications"
-              className="relative inline-flex shrink-0 items-center rounded-full bg-secondary p-2.5 text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
-              aria-label="Notifications"
-              title="Action centre"
-            >
-              <Bell className="size-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </Link>
+            <NotificationBell size="lg" />
+
 
             <div className="relative">
               <button
