@@ -55,3 +55,9 @@
 - [x] Edit existing projects (pencil on project card loads the full form, Update project saves)
 - [x] Command Center runs on live site_projects + notifications (no hardcoded 3 sites / ₹22.70 Cr), empty state when no projects
 - [ ] Remaining Stitch-imported screens still show static demo numbers — migrate to live data screen by screen
+
+## BOQ Master Engine (Sep 4)
+- [x] Replace static Stitch BOQ engine with live editable boq_items table (add/edit/delete, CSV upload + export, stage roll-up)
+- [x] AI pre-drawing full-project estimate (site prep to handover) from project inputs; fix schema-mismatch failure with batched tolerant JSON parsing
+- [x] AI BOQ must cover all 25 construction trade categories (Preliminaries → Miscellaneous), batched generation
+- [ ] Live project identity everywhere: replace hardcoded 'Cyber Enclave - Phase 2'/Madhapur/G+3 headers in imported Stitch screens with the selected project's saved details

@@ -1,25 +1,93 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { streamText, Output } from "ai";
-import { z } from "zod";
+import { streamText } from "ai";
 
-const ItemSchema = z.object({
-  stage: z.string(),
-  category: z.string(),
-  description: z.string(),
-  unit: z.string(),
-  quantity: z.number(),
-  rate: z.number(),
-  brand: z.string(),
-  supplier: z.string(),
-  notes: z.string(),
-});
+// The 25 construction trade categories every AI estimate must cover.
+export const BOQ_TRADES = [
+  "Preliminaries",
+  "Earthwork",
+  "Plain Cement Concrete (PCC)",
+  "RCC Works",
+  "Reinforcement (Steel)",
+  "Shuttering / Formwork",
+  "Masonry",
+  "Plastering",
+  "Waterproofing",
+  "Flooring",
+  "Wall Tiling",
+  "Granite Works",
+  "False Ceiling",
+  "Doors",
+  "Windows & Glazing",
+  "Painting",
+  "Sanitaryware",
+  "CP Fittings",
+  "Plumbing",
+  "Electrical",
+  "Fire Fighting",
+  "Lift Works",
+  "External Development",
+  "Services (Transformer / DG / STP)",
+  "Miscellaneous",
+] as const;
 
-const EstimateSchema = z.object({ items: z.array(ItemSchema) });
+type RawItem = {
+  trade?: unknown;
+  description?: unknown;
+  unit?: unknown;
+  quantity?: unknown;
+  rate?: unknown;
+  brand?: unknown;
+  supplier?: unknown;
+  notes?: unknown;
+};
+
+function toNum(v: unknown) {
+  const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function extractJsonArray(text: string): RawItem[] {
+  const cleaned = text.replace(/```json/gi, "```").split("```").join("\n");
+  const start = cleaned.indexOf("[");
+  if (start === -1) return [];
+  // Walk to the matching bracket so trailing prose does not break parsing.
+  let depth = 0;
+  let end = -1;
+  let inStr = false;
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (inStr) {
+      if (ch === "\\") i++;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === "[") depth++;
+    else if (ch === "]") {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  const slice = end === -1 ? cleaned.slice(start) : cleaned.slice(start, end + 1);
+  const attempts = [slice, slice.replace(/,\s*$/, "") + "]", slice.replace(/,[^,]*$/, "") + "]"];
+  for (const attempt of attempts) {
+    try {
+      const parsed = JSON.parse(attempt);
+      if (Array.isArray(parsed)) return parsed as RawItem[];
+    } catch {
+      /* try next repair */
+    }
+  }
+  return [];
+}
 
 export const generateBoqEstimate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { projectId: string; replaceAi?: boolean; extraBrief?: string }) => input)
+  .inputValidator((input: { projectId: string; extraBrief?: string }) => input)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
@@ -37,6 +105,7 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
 
     const { createLovableAiGatewayProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
     const gateway = createLovableAiGatewayProvider(key);
+    const model = gateway(SAHA_MODEL);
 
     const brief = {
       name: project.name,
@@ -65,66 +134,80 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
       workflowTemplate: project.workflow_template,
     };
 
-    const result = streamText({
-      model: gateway(SAHA_MODEL),
-      output: Output.object({ schema: EstimateSchema }),
-      system: [
-        "You are a senior Indian quantity surveyor preparing a pre-drawing budget estimate (concept BOQ) for a Hyderabad / Telangana building project.",
-        "Produce a COMPLETE stage-wise bill of quantities from site preparation to final handover, even though architectural drawings are not yet available. Use standard thumb rules, IS codes, CPWD norms and current Hyderabad market rates in INR.",
-        "Cover every stage, using these stage names exactly:",
-        "Stage 01: Site Preparation & Enabling Works",
-        "Stage 02: Earthwork & Foundation",
-        "Stage 03: RCC Substructure & Plinth",
-        "Stage 04: RCC Superstructure",
-        "Stage 05: Masonry & Blockwork",
-        "Stage 06: Plastering & Waterproofing",
-        "Stage 07: Plumbing & Sanitary",
-        "Stage 08: Electrical & Low Voltage",
-        "Stage 09: Doors, Windows & Joinery",
-        "Stage 10: Flooring, Tiling & Cladding",
-        "Stage 11: Painting & Finishes",
-        "Stage 12: External Development & Handover",
-        "Return 120-200 line items spread across ALL stages. Quantities must be derived from the given geometry (built-up sft, slab sft, floor counts) and be internally consistent. rate is the per-unit rate in INR (numeric, no symbols). Use realistic Indian brands and supplier channel names. notes holds the derivation thumb rule (short).",
-      ].join("\n"),
-      prompt: [
-        `PROJECT BRIEF (JSON): ${JSON.stringify(brief)}`,
-        data.extraBrief ? `ADDITIONAL INSTRUCTIONS: ${data.extraBrief}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-    });
+    const system = [
+      "You are a senior Indian quantity surveyor preparing a pre-drawing concept BOQ / budget estimate for a Hyderabad (Telangana) building project. Architectural drawings are NOT available yet, so derive everything from standard thumb rules, IS codes, CPWD norms and current Hyderabad market rates in INR.",
+      "Return ONLY a JSON array — no prose, no markdown fences. Each element must be an object with exactly these keys:",
+      '{"trade":string,"description":string,"unit":string,"quantity":number,"rate":number,"brand":string,"supplier":string,"notes":string}',
+      "quantity and rate are plain numbers (rate = per-unit rate in INR, no symbols or commas). notes holds the short derivation thumb rule. brand/supplier use realistic Indian brands and supply channels; use \"\" where not applicable.",
+      "Quantities MUST be derived from the given geometry (built-up sft, slab sft, floor counts) and be internally consistent with the specified material grades and quality tiers.",
+    ].join("\n");
 
-    const output = await result.output;
-    const items = output.items ?? [];
-    if (items.length === 0) throw new Error("AI returned no line items");
-
-    if (data.replaceAi !== false) {
-      const del = await supabase
-        .from("boq_items")
-        .delete()
-        .eq("project_id", data.projectId)
-        .eq("source", "ai");
-      if (del.error) throw new Error(del.error.message);
+    const batches: (typeof BOQ_TRADES)[number][][] = [];
+    for (let i = 0; i < BOQ_TRADES.length; i += 5) {
+      batches.push(BOQ_TRADES.slice(i, i + 5) as (typeof BOQ_TRADES)[number][]);
     }
 
-    const rows = items.map((item, index) => ({
+    const collected: { trade: string; item: RawItem }[] = [];
+
+    for (const trades of batches) {
+      const result = streamText({
+        model,
+        system,
+        prompt: [
+          `PROJECT BRIEF (JSON): ${JSON.stringify(brief)}`,
+          `Cover ONLY these trade categories in this response, using the trade name EXACTLY as written for the "trade" field: ${trades.join(" | ")}`,
+          "Give 8-14 realistic line items for EVERY listed trade (site preparation through finishing and handover as applicable to each trade). Do not skip a trade.",
+          data.extraBrief ? `ADDITIONAL INSTRUCTIONS FROM THE OWNER: ${data.extraBrief}` : "",
+          "Respond with the JSON array only.",
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      });
+
+      const text = await result.text;
+      for (const item of extractJsonArray(text)) {
+        const trade = String(item.trade ?? "").trim();
+        const matched = trades.find((t) => t.toLowerCase() === trade.toLowerCase()) ?? trades[0]!;
+        if (!String(item.description ?? "").trim()) continue;
+        collected.push({ trade: matched, item });
+      }
+    }
+
+    if (collected.length === 0) throw new Error("AI returned no usable line items");
+
+    const del = await supabase
+      .from("boq_items")
+      .delete()
+      .eq("project_id", data.projectId)
+      .eq("source", "ai");
+    if (del.error) throw new Error(del.error.message);
+
+    const rows = collected.map(({ trade, item }, index) => ({
       project_id: data.projectId,
-      stage: item.stage || "Stage 01: Site Preparation & Enabling Works",
-      category: item.category || "General",
+      stage: trade,
+      category: trade,
       item_code: `AI-${String(index + 1).padStart(4, "0")}`,
-      description: item.description,
-      unit: item.unit || "NOS",
-      quantity: Number.isFinite(item.quantity) ? item.quantity : 0,
-      rate: Number.isFinite(item.rate) ? item.rate : 0,
-      brand: item.brand ?? "",
-      supplier: item.supplier ?? "",
-      notes: item.notes ?? "",
+      description: String(item.description ?? "").trim(),
+      unit: String(item.unit ?? "NOS").trim() || "NOS",
+      quantity: toNum(item.quantity),
+      rate: toNum(item.rate),
+      brand: String(item.brand ?? "").trim(),
+      supplier: String(item.supplier ?? "").trim(),
+      notes: String(item.notes ?? "").trim(),
       source: "ai",
       sort_order: index,
     }));
 
-    const insert = await supabase.from("boq_items").insert(rows);
-    if (insert.error) throw new Error(insert.error.message);
+    const chunk = 300;
+    for (let i = 0; i < rows.length; i += chunk) {
+      const insert = await supabase.from("boq_items").insert(rows.slice(i, i + chunk));
+      if (insert.error) throw new Error(insert.error.message);
+    }
 
-    return { inserted: rows.length };
+    const covered = new Set(rows.map((r) => r.stage));
+    return {
+      inserted: rows.length,
+      tradesCovered: covered.size,
+      tradesMissing: BOQ_TRADES.filter((t) => !covered.has(t)),
+    };
   });
