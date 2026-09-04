@@ -123,6 +123,7 @@ function priorityTone(priority: string) {
 
 function Index() {
   const { access } = useAccess();
+  const user = useSessionUser();
   const activeProject = useActiveProject();
   const setActiveProject = useActiveProjectSetter();
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
