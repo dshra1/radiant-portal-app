@@ -31,6 +31,7 @@ import {
   MoreHorizontal,
   ArrowRight,
 } from "lucide-react";
+import { NotificationBell } from "@/components/saha/NotificationBell";
 
 export const Route = createFileRoute("/")({
   head: () => ({
