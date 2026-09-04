@@ -185,6 +185,31 @@ function Index() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<string | null>(null);
 
+  const { data: liveProjects } = useQuery({
+    queryKey: ["hub-projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_projects")
+        .select("id,target_budget,total_staff,health");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const stats = useMemo(() => {
+    const rows = liveProjects ?? [];
+    const budget = rows.reduce((s, r) => s + Number(r.target_budget ?? 0), 0);
+    const staff = rows.reduce((s, r) => s + Number(r.total_staff ?? 0), 0);
+    const atRisk = rows.filter((r) => r.health !== "On Track").length;
+    return [
+      [String(rows.length), "Active sites"],
+      [inrCompact(budget), "Committed budget"],
+      [num(staff), "Workforce on site"],
+      [String(atRisk), "Sites needing attention"],
+    ] as [string, string][];
+  }, [liveProjects]);
+
+
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
