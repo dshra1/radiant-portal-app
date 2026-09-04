@@ -62,6 +62,8 @@ type Notification = {
   link: string;
   is_read: boolean;
   created_at: string;
+  project_id: string | null;
+  recipient_id: string | null;
 };
 
 type Shortcut = {
