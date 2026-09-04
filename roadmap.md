@@ -65,7 +65,7 @@
 ## BOQ brand optimisation & product images (in progress)
 - [x] AI brand alternatives per BOQ line item (3-4 real Indian makes, tier, rate, saving) with one-click apply
 - [x] Value-engineering scan across the highest-cost line items
-- [ ] Product image next to each brand/item in the BOQ (e.g. "July series Kohler diverter/spout")
-  - [ ] `boq_items.image_url` column
-  - [ ] Auto-find a product image from the internet for the entered brand + item text
-  - [ ] Manual upload fallback when no image is found (private project storage)
+- [x] Product image next to each brand/item in the BOQ (e.g. "July series Kohler diverter/spout")
+  - [x] `boq_items.image_url` / `image_source` columns
+  - [x] "Find image" — AI proposes product image URLs, server verifies they really serve an image
+  - [x] Manual upload fallback into the private `boq-images` bucket + "Search online" link
