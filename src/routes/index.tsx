@@ -655,8 +655,8 @@ function StatCard({
 }: {
   label: string;
   value: string;
-  hint?: string;
-  tone: "primary" | "success" | "info" | "warning";
+  hint?: string | undefined;
+  tone: "primary" | "success" | "info" | "warning" | "secondary";
   icon: React.ElementType;
 }) {
   return (
@@ -668,6 +668,7 @@ function StatCard({
             "grid size-8 place-items-center rounded-lg",
             tone === "primary" && "bg-primary-soft text-primary",
             tone === "success" && "bg-primary-soft text-primary",
+            tone === "secondary" && "bg-secondary text-secondary-foreground",
             tone === "info" && "bg-info-soft text-info",
             tone === "warning" && "bg-warning-soft text-warning",
           )}
@@ -676,7 +677,7 @@ function StatCard({
         </div>
       </div>
       <p className="mt-2 display-title text-2xl">{value}</p>
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
