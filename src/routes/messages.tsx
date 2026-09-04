@@ -41,7 +41,6 @@ type Message = {
   project_id: string | null;
   is_task: boolean;
   due_date: string | null;
-  recipient?: { full_name: string; email: string } | null;
 };
 
 type Member = {
