@@ -1,0 +1,16 @@
+ALTER TABLE public.site_projects
+  ADD COLUMN IF NOT EXISTS total_staff integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS engineers_count integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS labour_count integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS landowner_name text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS landowner_contact text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS landowner_share_pct numeric NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS investor_name text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS investor_contact text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS investor_amount numeric NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS company_name text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS bank_name text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS bank_account_name text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS bank_account_last4 text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS bank_ifsc text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS company_gstin text NOT NULL DEFAULT '';
