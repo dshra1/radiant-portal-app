@@ -400,7 +400,7 @@ export function Shell({
         </main>
 
         <Link
-          to="/messages"
+          to="/ai"
           aria-label="Saha AI Assistant"
           className="fixed bottom-20 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover md:bottom-6 md:right-6"
         >
