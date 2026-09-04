@@ -120,7 +120,7 @@ function Messages() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_messages")
-        .select("*, recipient:recipient_id(full_name,email)")
+        .select("*")
         .eq("channel", channel)
         .order("created_at", { ascending: true });
       if (error) throw error;
