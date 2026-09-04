@@ -534,7 +534,6 @@
 /* ============================================================
    Print — purchase orders and other documents print clean
    ============================================================ */
-.po-print { display: none; }
 @media print {
   .no-print, aside, header nav { display: none !important; }
   .po-print { display: block !important; position: absolute; inset: 0; margin: 0; max-width: none; padding: 0; }
