@@ -578,9 +578,11 @@ export type Database = {
           due_date: string | null
           id: string
           is_task: boolean
+          progress: number
           project_id: string | null
           recipient_id: string | null
           sender_id: string | null
+          status: string
           updated_at: string
         }
         Insert: {
@@ -593,9 +595,11 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_task?: boolean
+          progress?: number
           project_id?: string | null
           recipient_id?: string | null
           sender_id?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -608,9 +612,11 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_task?: boolean
+          progress?: number
           project_id?: string | null
           recipient_id?: string | null
           sender_id?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: [
