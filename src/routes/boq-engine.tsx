@@ -1,13 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { supabase } from "@/integrations/supabase/client";
+import { generateBoqEstimate } from "@/lib/boq.functions";
+import { inr, inrCompact, num } from "@/data/saha";
+import { Download, Plus, RefreshCw, Sparkles, Trash2, Upload } from "lucide-react";
 
 export const Route = createFileRoute("/boq-engine")({
   head: () => ({
     meta: [
-      { title: "BOQ Master Engine \u2014 Stage Optimization | Saha OS" },
-      { name: "description", content: "Line-item BOQ optimization with AI value engineering and spec compliance scoring." },
-      { property: "og:title", content: "BOQ Master Engine \u2014 Stage Optimization | Saha OS" },
-      { property: "og:description", content: "Line-item BOQ optimization with AI value engineering and spec compliance scoring." },
+      { title: "BOQ Master Engine — AI Project Estimate | Saha OS" },
+      {
+        name: "description",
+        content:
+          "Generate a complete stage-wise BOQ estimate from project inputs before drawings arrive, then upload, edit and export every trade line item.",
+      },
+      { property: "og:title", content: "BOQ Master Engine — AI Project Estimate | Saha OS" },
+      {
+        property: "og:description",
+        content:
+          "AI pre-drawing cost estimation from site preparation to handover, fully editable and uploadable.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -15,640 +30,620 @@ export const Route = createFileRoute("/boq-engine")({
   component: Page,
 });
 
+type BoqRow = {
+  id: string;
+  project_id: string;
+  stage: string;
+  category: string;
+  item_code: string;
+  description: string;
+  unit: string;
+  quantity: number | string;
+  rate: number | string;
+  brand: string;
+  supplier: string;
+  notes: string;
+  source: string;
+  sort_order: number;
+};
+
+const CSV_HEADERS = [
+  "stage",
+  "category",
+  "item_code",
+  "description",
+  "unit",
+  "quantity",
+  "rate",
+  "brand",
+  "supplier",
+  "notes",
+];
+
+function csvEscape(value: unknown) {
+  const s = String(value ?? "");
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else quoted = false;
+      } else cell += ch;
+      continue;
+    }
+    if (ch === '"') quoted = true;
+    else if (ch === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else if (ch !== "\r") cell += ch;
+  }
+  if (cell.length || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows.filter((r) => r.some((c) => c.trim() !== ""));
+}
+
+function toNum(v: unknown) {
+  const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function download(name: string, content: string, mime = "text/csv;charset=utf-8") {
+  const url = URL.createObjectURL(new Blob([content], { type: mime }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function Page() {
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [projectId, setProjectId] = useState<string>("");
+  const [stage, setStage] = useState<string>("ALL");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<string>("");
+  const [brief, setBrief] = useState("");
+  const generate = useServerFn(generateBoqEstimate);
+
+  const projectsQuery = useQuery({
+    queryKey: ["site_projects", "boq-engine"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_projects")
+        .select("id,name,location,type,target_budget,total_built_up_sft")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const projects = projectsQuery.data ?? [];
+  const activeId = projectId || projects[0]?.id || "";
+  const activeProject = projects.find((p) => p.id === activeId);
+
+  const itemsQuery = useQuery({
+    queryKey: ["boq_items", activeId],
+    enabled: Boolean(activeId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("boq_items")
+        .select("*")
+        .eq("project_id", activeId)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as BoqRow[];
+    },
+  });
+
+  const items = itemsQuery.data ?? [];
+
+  const refresh = async () => {
+    await qc.invalidateQueries({ queryKey: ["boq_items", activeId] });
+  };
+
+  const generateMutation = useMutation({
+    mutationFn: async () => generate({ data: { projectId: activeId, extraBrief: brief } }),
+    onSuccess: async (res) => {
+      setStatus(`AI estimate ready — ${res.inserted} line items generated.`);
+      await refresh();
+    },
+    onError: (e: Error) => setStatus(`Generation failed: ${e.message}`),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: {
+        category?: string;
+        description?: string;
+        unit?: string;
+        quantity?: number;
+        rate?: number;
+        brand?: string;
+        supplier?: string;
+        stage?: string;
+      };
+    }) => {
+      const { error } = await supabase.from("boq_items").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+    onError: (e: Error) => setStatus(`Save failed: ${e.message}`),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("boq_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("boq_items").insert({
+        project_id: activeId,
+        stage: stage === "ALL" ? "Stage 01: Site Preparation & Enabling Works" : stage,
+        category: "General",
+        item_code: `MAN-${String(items.length + 1).padStart(4, "0")}`,
+        description: "New line item",
+        unit: "NOS",
+        quantity: 0,
+        rate: 0,
+        source: "manual",
+        sort_order: items.length,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setStatus("Line item added — edit it inline.");
+      await refresh();
+    },
+    onError: (e: Error) => setStatus(`Add failed: ${e.message}`),
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const rows = parseCsv(await file.text());
+      if (rows.length < 2) throw new Error("CSV has no data rows");
+      const header = rows[0]!.map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"));
+      const idx = (key: string) => header.indexOf(key);
+      const payload = rows.slice(1).map((r, i) => ({
+        project_id: activeId,
+        stage: (r[idx("stage")] ?? "Uploaded Items").trim() || "Uploaded Items",
+        category: (r[idx("category")] ?? "").trim(),
+        item_code: (r[idx("item_code")] ?? `UPL-${String(i + 1).padStart(4, "0")}`).trim(),
+        description: (r[idx("description")] ?? "").trim(),
+        unit: (r[idx("unit")] ?? "NOS").trim(),
+        quantity: toNum(r[idx("quantity")]),
+        rate: toNum(r[idx("rate")]),
+        brand: (r[idx("brand")] ?? "").trim(),
+        supplier: (r[idx("supplier")] ?? "").trim(),
+        notes: (r[idx("notes")] ?? "").trim(),
+        source: "upload",
+        sort_order: items.length + i,
+      }));
+      const chunk = 400;
+      for (let i = 0; i < payload.length; i += chunk) {
+        const { error } = await supabase.from("boq_items").insert(payload.slice(i, i + chunk));
+        if (error) throw error;
+      }
+      return payload.length;
+    },
+    onSuccess: async (count) => {
+      setStatus(`Uploaded ${count} line items.`);
+      await refresh();
+    },
+    onError: (e: Error) => setStatus(`Upload failed: ${e.message}`),
+  });
+
+  const stages = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const it of items) map.set(it.stage, (map.get(it.stage) ?? 0) + 1);
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [items]);
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return items.filter(
+      (it) =>
+        (stage === "ALL" || it.stage === stage) &&
+        (q === "" ||
+          `${it.description} ${it.category} ${it.brand} ${it.supplier} ${it.item_code}`
+            .toLowerCase()
+            .includes(q)),
+    );
+  }, [items, stage, search]);
+
+  const lineTotal = (it: BoqRow) => toNum(it.quantity) * toNum(it.rate);
+  const grandTotal = items.reduce((s, it) => s + lineTotal(it), 0);
+  const viewTotal = visible.reduce((s, it) => s + lineTotal(it), 0);
+  const budget = toNum(activeProject?.target_budget);
+  const perSft = toNum(activeProject?.total_built_up_sft) > 0
+    ? grandTotal / toNum(activeProject?.total_built_up_sft)
+    : 0;
+
+  const exportCsv = (scope: "view" | "all") => {
+    const rows = scope === "view" ? visible : items;
+    const body = rows.map((it) => [
+      it.stage,
+      it.category,
+      it.item_code,
+      it.description,
+      it.unit,
+      toNum(it.quantity),
+      toNum(it.rate),
+      it.brand,
+      it.supplier,
+      it.notes,
+    ]);
+    const csv = [
+      [...CSV_HEADERS, "amount"].join(","),
+      ...body.map((r, i) => [...r, lineTotal(rows[i]!)].map(csvEscape).join(",")),
+    ].join("\n");
+    download(`${activeProject?.name ?? "project"}-boq-${scope}.csv`, csv);
+  };
+
+  const tile = "rounded-xl border border-border bg-card p-3";
+
   return (
-    <Shell title={"BOQ Master Engine \\u2014 Stage Optimization | Saha OS"}>
-      <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full">
+    <Shell title="BOQ Master Engine">
+      <div className="flex flex-col gap-4">
+        <header className="rounded-xl border border-border bg-card p-4">
+          <h1 className="text-lg font-bold uppercase tracking-tight text-foreground">
+            BOQ Master Engine
+          </h1>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Pre-drawing AI cost estimation — site preparation through handover — generated from the
+            project inputs you saved. Every line item is editable, deletable and exportable, and you
+            can upload your own complete trade list at any time.
+          </p>
 
-<div className="flex flex-col gap-space-sm mb-space-base">
-<div className="flex flex-wrap items-center justify-between gap-space-sm text-body-sm font-body-sm text-on-surface-variant">
-<div className="flex items-center gap-space-xs">
-<a className="text-tertiary hover:underline" href="#">Projects</a>
-<span>/</span>
-<span className="text-on-surface font-title-md text-title-md">Cyber Enclave - Phase 2</span>
-<span>/</span>
-<a className="text-tertiary hover:underline" href="#">BOQ Master Engine</a>
-<span>/</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm">Stage 04: MEP &amp; Electrical</span>
-</div>
-<div className="flex items-center gap-space-sm text-label-sm font-label-sm">
-<span className="flex items-center gap-space-2xs text-primary font-semibold">
-<span className="h-2 w-2 rounded-full bg-primary animate-ping"></span>
-          Hyderabad Electrical Wholesale Mandi Synced: 14 mins ago
-        </span>
-<span className="text-outline-variant">•</span>
-<span className="text-on-surface-variant">Revision: R3-Final-Approved</span>
-</div>
-</div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select
+              value={activeId}
+              onChange={(e) => {
+                setProjectId(e.target.value);
+                setStage("ALL");
+              }}
+              className="h-9 rounded border border-input bg-background px-2 text-sm"
+            >
+              {projects.length === 0 && <option value="">No projects yet</option>}
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — {p.location}
+                </option>
+              ))}
+            </select>
 
-<div className="grid grid-cols-2 md:grid-cols-5 gap-space-sm">
-<div className="p-space-sm rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between">
-<span className="text-label-sm font-label-sm uppercase text-on-surface-variant tracking-wider">Active Stage Items</span>
-<div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="text-tabular-metric font-tabular-metric text-on-surface">48</span>
-<span className="text-body-sm font-body-sm text-on-surface-variant">line items</span>
-</div>
-</div>
-<div className="p-space-sm rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between">
-<span className="text-label-sm font-label-sm uppercase text-on-surface-variant tracking-wider">Original Baseline</span>
-<div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="text-tabular-metric font-tabular-metric text-on-surface line-through decoration-error/50">₹54,82,400</span>
-</div>
-</div>
-<div className="p-space-sm rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between">
-<span className="text-label-sm font-label-sm uppercase text-primary font-semibold tracking-wider">AI Optimized Total</span>
-<div className="flex items-baseline gap-space-xs mt-space-2xs">
-<span className="text-tabular-metric font-tabular-metric text-primary">₹48,36,200</span>
-</div>
-</div>
-<div className="p-space-sm rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between">
-<span className="text-label-sm font-label-sm uppercase text-on-surface-variant tracking-wider">Net Line Savings (VE)</span>
-<div className="flex items-center gap-space-xs mt-space-2xs">
-<span className="text-tabular-metric font-tabular-metric text-primary">₹6,46,200</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-variant text-on-primary-fixed-variant text-label-sm font-label-sm font-bold">-11.8%</span>
-</div>
-</div>
-<div className="p-space-sm rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between col-span-2 md:col-span-1">
-<span className="text-label-sm font-label-sm uppercase text-on-surface-variant tracking-wider">Spec Compliance Score</span>
-<div className="flex items-center justify-between mt-space-2xs">
-<span className="text-tabular-metric font-tabular-metric text-tertiary">99.4%</span>
-<span className="text-label-sm font-label-sm px-space-xs py-space-2xs rounded bg-secondary-container text-on-secondary-container">CPWD / IS Code Passed</span>
-</div>
-</div>
-</div>
-</div>
+            <button
+              disabled={!activeId || generateMutation.isPending}
+              onClick={() => {
+                setStatus("Generating full stage-wise estimate with Saha AI…");
+                generateMutation.mutate();
+              }}
+              className="inline-flex h-9 items-center gap-2 rounded bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              <Sparkles className="size-4" />
+              {generateMutation.isPending ? "Generating…" : "Generate AI estimate"}
+            </button>
 
-<div className="bg-surface-container-lowest p-space-sm rounded shadow-sm flex flex-wrap items-center justify-between gap-space-md mb-space-base">
-<div className="flex flex-wrap items-center gap-space-xs">
-<button className="px-space-sm py-space-xs rounded font-title-md text-title-md bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors">
-        All Trades (128)
-      </button>
-<button className="px-space-sm py-space-xs rounded font-title-md text-title-md bg-primary text-on-primary shadow-sm flex items-center gap-space-xs">
-<span>Electrical &amp; Conduits</span>
-<span className="px-space-xs py-space-2xs rounded-full bg-primary-container text-on-primary-container text-label-sm font-label-sm">48</span>
-</button>
-<button className="px-space-sm py-space-xs rounded font-title-md text-title-md bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors">
-        Steel &amp; TMT (Fe550D)
-      </button>
-<button className="px-space-sm py-space-xs rounded font-title-md text-title-md bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors">
-        Plumbing &amp; Sanitary
-      </button>
-<button className="px-space-sm py-space-xs rounded font-title-md text-title-md bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors">
-        Tiles &amp; Granite Flooring
-      </button>
-<button className="px-space-sm py-space-xs rounded font-title-md text-title-md bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors">
-        RMC M25/M30 Concrete
-      </button>
-</div>
+            <button
+              disabled={!activeId}
+              onClick={() => fileRef.current?.click()}
+              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+            >
+              <Upload className="size-4" />
+              {uploadMutation.isPending ? "Uploading…" : "Upload BOQ (CSV)"}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadMutation.mutate(f);
+                e.target.value = "";
+              }}
+            />
 
-<div className="flex items-center gap-space-xs">
-<button className="flex items-center gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high text-label-md font-label-md transition-colors" title="Sync live pricing feeds from wholesale mandis">
-<span className="material-symbols-outlined text-space-base text-primary">sync</span>
-<span>Mandi Refresh</span>
-</button>
-<button className="flex items-center gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high text-label-md font-label-md transition-colors">
-<span className="material-symbols-outlined text-space-base text-secondary">download</span>
-<span>Export .XLSX</span>
-</button>
-<button className="flex items-center gap-space-xs px-space-sm py-space-xs rounded bg-primary-container text-on-primary-container hover:bg-primary text-label-md font-label-md transition-colors">
-<span className="material-symbols-outlined text-space-base">auto_fix_high</span>
-<span>Auto-Substitute Approved (4)</span>
-</button>
-</div>
-</div>
+            <button
+              onClick={() => download("saha-boq-template.csv", CSV_HEADERS.join(",") + "\n")}
+              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium"
+            >
+              <Download className="size-4" />
+              CSV template
+            </button>
 
-<div className="relative bg-surface-container-lowest rounded shadow-sm overflow-visible mb-space-2xl">
-<div className="overflow-x-auto min-h-[720px]">
-<table className="w-full text-left table-auto border-collapse">
+            <button
+              disabled={items.length === 0}
+              onClick={() => exportCsv("all")}
+              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+            >
+              <Download className="size-4" />
+              Export all
+            </button>
+            <button
+              disabled={visible.length === 0}
+              onClick={() => exportCsv("view")}
+              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+            >
+              <Download className="size-4" />
+              Export view
+            </button>
+            <button
+              disabled={!activeId}
+              onClick={() => addMutation.mutate()}
+              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+            >
+              <Plus className="size-4" />
+              Add line item
+            </button>
+            <button
+              onClick={refresh}
+              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium"
+            >
+              <RefreshCw className="size-4" />
+              Refresh
+            </button>
+          </div>
 
-<thead>
-<tr className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider select-none">
-<th className="py-space-sm px-space-md font-semibold">Material / Line Item</th>
-<th className="py-space-sm px-space-sm font-semibold">Unit</th>
-<th className="py-space-sm px-space-sm font-semibold text-right">Qty</th>
-<th className="py-space-sm px-space-md font-semibold">Selected Brand &amp; Spec Tier</th>
-<th className="py-space-sm px-space-md font-semibold">Primary Supplier / Channel</th>
-<th className="py-space-sm px-space-sm font-semibold text-right">Baseline (₹)</th>
-<th className="py-space-sm px-space-sm font-semibold text-right text-primary font-bold">Optimized (₹)</th>
-<th className="py-space-sm px-space-md font-semibold text-right">Total Line (₹)</th>
-<th className="py-space-sm px-space-sm font-semibold text-center">VE Action</th>
-</tr>
-</thead>
-<tbody className="divide-y divide-surface-container font-body-md text-body-md text-on-surface">
+          <textarea
+            value={brief}
+            onChange={(e) => setBrief(e.target.value)}
+            rows={2}
+            placeholder="Optional estimating instructions for the AI — e.g. include lift & DG set, exclude external compound wall, premium bathroom fittings…"
+            className="mt-3 w-full rounded border border-input bg-background p-2 text-sm"
+          />
 
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">PVC Conduits (Concealed)</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • Heavy Duty 25mm</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">RFT</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">42,000</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">AKG / Precision FRLS</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Distributor • Kukatpally
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">22</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              20
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹8,40,000
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-primary text-space-lg cursor-pointer hover:scale-110 transition-transform" title="AI Value Engineering Identified: Sudhakar Brand saves \u20b92,94,000">auto_awesome</span>
-</td>
-</tr>
+          {status && <p className="mt-2 text-sm font-medium text-primary">{status}</p>}
+        </header>
 
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">FRLS Copper Wiring (Multi-strand)</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • 1.5 sq mm / 2.5 sq mm</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">RFT</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">1,02,000</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">Polycab / Havells</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Distributor • Ranigunj
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">28</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              25
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹25,50,000
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-primary text-space-lg cursor-pointer hover:scale-110 transition-transform" title="Bulk volume tier reached: Finolex price matching available">auto_awesome</span>
-</td>
-</tr>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          <div className={tile}>
+            <span className="label-caps text-muted-foreground">Line items</span>
+            <div className="metric-figure mt-1">{num(items.length)}</div>
+          </div>
+          <div className={tile}>
+            <span className="label-caps text-muted-foreground">Estimated project cost</span>
+            <div className="metric-figure mt-1 text-primary">{inrCompact(grandTotal)}</div>
+          </div>
+          <div className={tile}>
+            <span className="label-caps text-muted-foreground">Target budget</span>
+            <div className="metric-figure mt-1">{inrCompact(budget)}</div>
+          </div>
+          <div className={tile}>
+            <span className="label-caps text-muted-foreground">Variance vs budget</span>
+            <div
+              className={`metric-figure mt-1 ${grandTotal > budget && budget > 0 ? "text-destructive" : "text-primary"}`}
+            >
+              {budget > 0 ? `${(((grandTotal - budget) / budget) * 100).toFixed(1)}%` : "—"}
+            </div>
+          </div>
+          <div className={tile}>
+            <span className="label-caps text-muted-foreground">Cost per sft</span>
+            <div className="metric-figure mt-1">{perSft > 0 ? inr(Math.round(perSft)) : "—"}</div>
+          </div>
+        </div>
 
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">Modular Switches (6A)</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • Flame-Retardant Polycarbonate</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">NOS</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">1,800</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">Legrand Myrius</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Distributor • Secunderabad
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">190</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              175
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹3,15,000
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-outline-variant text-space-lg cursor-pointer">check_circle</span>
-</td>
-</tr>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setStage("ALL")}
+              className={`h-8 rounded px-3 text-[13px] font-medium ${stage === "ALL" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+            >
+              All stages ({items.length})
+            </button>
+            {stages.map(([name, count]) => (
+              <button
+                key={name}
+                onClick={() => setStage(name)}
+                className={`h-8 rounded px-3 text-[13px] font-medium ${stage === name ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+              >
+                {name} ({count})
+              </button>
+            ))}
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search item, trade, brand…"
+              className="ml-auto h-8 w-56 rounded border border-input bg-background px-2 text-sm"
+            />
+          </div>
+        </div>
 
-<tr className="bg-surface-container-low/80 relative">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface font-bold">Modular Sockets (16A)</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • Heavy Appliance 3-Pin Shuttered</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">NOS</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm font-semibold">600</td>
+        <div className="rounded-xl border border-border bg-card">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5">
+            <h2 className="text-sm font-semibold">
+              {stage === "ALL" ? "All line items" : stage} — {visible.length} shown
+            </h2>
+            <span className="text-sm font-semibold text-primary">{inr(viewTotal)}</span>
+          </div>
 
-<td className="py-space-sm px-space-md relative">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container-highest text-on-surface font-title-md text-title-md shadow-sm w-full max-w-[210px] ring-2 ring-primary/40">
-<span className="truncate font-semibold">Legrand Myrius</span>
-<span className="material-symbols-outlined text-space-base text-primary">expand_less</span>
-</button>
+          <div className="overflow-x-auto">
+            {itemsQuery.isLoading ? (
+              <p className="p-6 text-sm text-muted-foreground">Loading BOQ…</p>
+            ) : visible.length === 0 ? (
+              <div className="p-6 text-sm text-muted-foreground">
+                {items.length === 0
+                  ? "No BOQ yet for this project. Click “Generate AI estimate” to build a complete stage-wise estimate from your project inputs, or upload your own trade list."
+                  : "No line items match this stage or search."}
+              </div>
+            ) : (
+              <table className="w-full min-w-[1100px] text-sm">
+                <thead className="bg-secondary/60 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="px-2 py-2">Stage / Trade</th>
+                    <th className="px-2 py-2">Item</th>
+                    <th className="px-2 py-2">Unit</th>
+                    <th className="px-2 py-2 text-right">Qty</th>
+                    <th className="px-2 py-2 text-right">Rate ₹</th>
+                    <th className="px-2 py-2 text-right">Amount</th>
+                    <th className="px-2 py-2">Brand / Supplier</th>
+                    <th className="px-2 py-2">Basis</th>
+                    <th className="px-2 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((it) => (
+                    <tr key={it.id} className="border-t border-border align-top">
+                      <td className="px-2 py-2">
+                        <div className="text-[11px] font-semibold uppercase text-primary">
+                          {it.stage.replace(/^Stage \d+:\s*/, "")}
+                        </div>
+                        <input
+                          defaultValue={it.category}
+                          onBlur={(e) =>
+                            e.target.value !== it.category &&
+                            updateMutation.mutate({ id: it.id, patch: { category: e.target.value } })
+                          }
+                          className="mt-1 w-32 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <textarea
+                          defaultValue={it.description}
+                          rows={2}
+                          onBlur={(e) =>
+                            e.target.value !== it.description &&
+                            updateMutation.mutate({
+                              id: it.id,
+                              patch: { description: e.target.value },
+                            })
+                          }
+                          className="w-72 rounded border border-transparent bg-transparent px-1 py-0.5 hover:border-input focus:border-input"
+                        />
+                        <div className="px-1 text-[11px] text-muted-foreground">{it.item_code}</div>
+                      </td>
+                      <td className="px-2 py-2">
+                        <input
+                          defaultValue={it.unit}
+                          onBlur={(e) =>
+                            e.target.value !== it.unit &&
+                            updateMutation.mutate({ id: it.id, patch: { unit: e.target.value } })
+                          }
+                          className="w-16 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
+                        />
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        <input
+                          defaultValue={String(toNum(it.quantity))}
+                          onBlur={(e) =>
+                            updateMutation.mutate({
+                              id: it.id,
+                              patch: { quantity: toNum(e.target.value) },
+                            })
+                          }
+                          className="w-24 rounded border border-input bg-background px-1 text-right tnum"
+                        />
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        <input
+                          defaultValue={String(toNum(it.rate))}
+                          onBlur={(e) =>
+                            updateMutation.mutate({
+                              id: it.id,
+                              patch: { rate: toNum(e.target.value) },
+                            })
+                          }
+                          className="w-24 rounded border border-input bg-background px-1 text-right tnum"
+                        />
+                      </td>
+                      <td className="px-2 py-2 text-right font-semibold tnum">
+                        {inr(lineTotal(it))}
+                      </td>
+                      <td className="px-2 py-2">
+                        <input
+                          defaultValue={it.brand}
+                          onBlur={(e) =>
+                            e.target.value !== it.brand &&
+                            updateMutation.mutate({ id: it.id, patch: { brand: e.target.value } })
+                          }
+                          className="w-40 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
+                        />
+                        <input
+                          defaultValue={it.supplier}
+                          onBlur={(e) =>
+                            e.target.value !== it.supplier &&
+                            updateMutation.mutate({ id: it.id, patch: { supplier: e.target.value } })
+                          }
+                          className="mt-1 w-40 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
+                        />
+                      </td>
+                      <td className="px-2 py-2 text-xs text-muted-foreground">
+                        <div className="max-w-[220px]">{it.notes}</div>
+                        <span className="mt-1 inline-block rounded bg-secondary px-1.5 py-0.5 text-[10px] uppercase">
+                          {it.source}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2">
+                        <button
+                          onClick={() => deleteMutation.mutate(it.id)}
+                          className="rounded p-1.5 text-destructive hover:bg-destructive-soft"
+                          aria-label="Delete line item"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
 
-<div className="absolute left-space-md top-14 z-30 w-96 bg-surface-container-lowest rounded-xl shadow-2xl p-space-md flex flex-col gap-space-sm">
-
-<div className="flex items-center justify-between pb-space-xs">
-<div className="flex flex-col">
-<span className="font-label-sm text-label-sm uppercase font-bold text-on-surface-variant tracking-wider">Brand Alternatives</span>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Value Engineering Mandi Benchmarks</span>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Live Quotes</span>
-</div>
-
-<div className="flex flex-col gap-space-xs">
-
-<div className="p-space-sm rounded bg-surface-container-low cursor-pointer hover:bg-surface-container transition-colors flex items-center justify-between">
-<div className="flex items-start gap-space-sm">
-<input className="mt-1 accent-primary" name="socket_alt" type="radio" />
-<div className="flex flex-col">
-<div className="flex items-center gap-space-xs">
-<span className="font-title-md text-title-md text-on-surface">Legrand Myrius</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm">Current Spec</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Electrical Distributor • Hyderabad</span>
-</div>
-</div>
-<div className="text-right">
-<div className="font-tabular-metric-sm text-tabular-metric-sm font-bold text-primary">₹250</div>
-<div className="font-label-sm text-label-sm text-on-surface-variant line-through">₹280</div>
-</div>
-</div>
-
-<div className="p-space-sm rounded bg-surface-container-lowest hover:bg-surface-container-low transition-colors flex items-center justify-between">
-<div className="flex items-start gap-space-sm">
-<input className="mt-1 accent-primary" name="socket_alt" type="radio" />
-<div className="flex flex-col">
-<div className="flex items-center gap-space-xs">
-<span className="font-title-md text-title-md text-on-surface">Legrand Myrius Black</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-variant text-on-surface-variant font-label-sm text-label-sm">Architectural</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Electrical Distributor • Stock 1,200</span>
-</div>
-</div>
-<div className="text-right">
-<div className="font-tabular-metric-sm text-tabular-metric-sm font-bold text-on-surface">₹300</div>
-<div className="font-label-sm text-label-sm text-on-surface-variant line-through">₹330</div>
-</div>
-</div>
-
-<div className="p-space-sm rounded bg-surface-container-low ring-1 ring-primary cursor-pointer flex items-center justify-between">
-<div className="flex items-start gap-space-sm">
-<input defaultChecked={true} className="mt-1 accent-primary" name="socket_alt" type="radio" />
-<div className="flex flex-col">
-<div className="flex items-center gap-space-xs">
-<span className="font-title-md text-title-md text-primary font-bold">Anchor Roma 16A</span>
-<span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm font-bold">VE Best Pick</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Panasonic Life Solutions Direct</span>
-<div className="flex items-center gap-space-2xs mt-space-2xs text-primary font-label-sm text-label-sm">
-<span className="material-symbols-outlined text-[13px]">verified</span>
-<span>IS 1293:2019 Compliant • Lead 2 Days</span>
-</div>
-</div>
-</div>
-<div className="text-right">
-<div className="font-tabular-metric-sm text-tabular-metric-sm font-bold text-primary">₹200</div>
-<div className="font-label-sm text-label-sm text-on-surface-variant line-through">₹220</div>
-<div className="font-label-sm text-label-sm text-primary font-semibold mt-space-2xs">Save ₹30,000</div>
-</div>
-</div>
-
-<div className="p-space-sm rounded bg-surface-container-lowest hover:bg-surface-container-low transition-colors flex items-center justify-between">
-<div className="flex items-start gap-space-sm">
-<input className="mt-1 accent-primary" name="socket_alt" type="radio" />
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">Havells Crabtree 16A</span>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Electrical Distributor • Sanathnagar</span>
-</div>
-</div>
-<div className="text-right">
-<div className="font-tabular-metric-sm text-tabular-metric-sm font-bold text-on-surface">₹220</div>
-<div className="font-label-sm text-label-sm text-on-surface-variant line-through">₹240</div>
-</div>
-</div>
-</div>
-
-<div className="p-space-sm rounded bg-surface-container-high flex flex-col gap-space-2xs">
-<div className="flex items-center justify-between font-label-sm text-label-sm">
-<span className="text-on-surface-variant">Substitution Impact:</span>
-<span className="font-bold text-primary">₹1,50,000 → ₹1,20,000</span>
-</div>
-<p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Switching to Anchor Roma unlocks ₹30,000 direct line savings with identical 100k cycles endurance rating.
-                  </p>
-</div>
-
-<div className="flex items-center justify-between pt-space-xs">
-<button className="font-label-md text-label-md text-on-surface-variant hover:text-on-surface px-space-xs py-space-xs">
-                    View Spec Sheet (.PDF)
-                  </button>
-<div className="flex items-center gap-space-xs">
-<button className="px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md">
-                      Dismiss
-                    </button>
-<button className="px-space-md py-space-xs rounded bg-primary text-on-primary hover:bg-primary-container font-title-md text-title-md shadow-sm">
-                      Apply to BOQ
-                    </button>
-</div>
-</div>
-</div>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Distributor • Secunderabad
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">280</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              250
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface font-bold">
-              ₹1,50,000
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-primary text-space-lg" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">MCB (Single/Double Pole)</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • 10kA Breaking Capacity C-Curve</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">NOS</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">40</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">Havells / L&amp;T MCB</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Distributor • Kukatpally
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">320</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              290
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹11,600
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-primary text-space-lg cursor-pointer">auto_awesome</span>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">Distribution Board (8-Way)</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • IP43 Double Door Enclosure</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">NOS</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">12</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">Havells 8-Way DB</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Distributor • Sanathnagar
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">4,800</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              4,400
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹52,800
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-primary text-space-lg cursor-pointer">auto_awesome</span>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">Meter Panel Board</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • Multi-Tenant Fabricated MS 16SWG</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">NOS</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">6</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">L&amp;T / Havells Panel</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Distributor • Jeedimetla
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">45,000</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              41,000
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹2,46,000
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-outline-variant text-space-lg">check_circle</span>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">Earthing Pit (Copper Plate)</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • 600x600x3mm Cu + Chemical Compound</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">NOS</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">3</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">Copper Plate 600x600</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Contractor • Site Fabrication
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">12,500</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              11,500
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹34,500
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-outline-variant text-space-lg">check_circle</span>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">Lightning Arrestor + Down Conductor</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • ESE Terminal 60μs Radius 107m</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">LS</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">1</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">OBO Betterman ESE</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Contractor • Specialist
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">85,000</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              78,000
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹78,000
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-outline-variant text-space-lg">check_circle</span>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">Cable Trays (Perforated GI)</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • 300mm x 50mm x 2mm Hot Dip</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">RFT</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">600</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">Legrand Cablofil</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Distributor • Balanagar
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">220</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              200
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹1,20,000
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-primary text-space-lg cursor-pointer">auto_awesome</span>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">Rising Main Cable (LT)</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • 3.5C x 185 sq mm XLPE Armoured Cu</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">RFT</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">36</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">Polycab XLPE Cu</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Distributor • Ranigunj
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">950</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              870
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹31,320
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-outline-variant text-space-lg">check_circle</span>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container-low/50 transition-colors group">
-<td className="py-space-sm px-space-md">
-<div className="font-title-md text-title-md text-on-surface">Common Area Lighting (LED)</div>
-<span className="font-label-sm text-label-sm text-on-surface-variant">Electrical • 18W Slim Recessed Downlight 4000K</span>
-</td>
-<td className="py-space-sm px-space-sm text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">NOS</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm">240</td>
-<td className="py-space-sm px-space-md">
-<button className="flex items-center justify-between gap-space-xs px-space-sm py-space-xs rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md text-body-md w-full max-w-[210px]">
-<span className="truncate">Philips / Wipro LED</span>
-<span className="material-symbols-outlined text-space-base text-on-surface-variant">expand_more</span>
-</button>
-</td>
-<td className="py-space-sm px-space-md text-on-surface-variant font-body-sm text-body-sm">
-              Electrical Distributor • Hitech City
-            </td>
-<td className="py-space-sm px-space-sm text-right text-on-surface-variant font-tabular-metric-sm text-tabular-metric-sm">
-<span className="line-through">850</span>
-</td>
-<td className="py-space-sm px-space-sm text-right font-tabular-metric-sm text-tabular-metric-sm text-primary font-bold">
-              780
-            </td>
-<td className="py-space-sm px-space-md text-right font-tabular-metric font-tabular-metric text-on-surface">
-              ₹1,87,200
-            </td>
-<td className="py-space-sm px-space-sm text-center">
-<span className="material-symbols-outlined text-primary text-space-lg cursor-pointer">auto_awesome</span>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-
-<div className="sticky bottom-space-base w-full bg-inverse-surface text-inverse-on-surface p-space-md rounded-xl shadow-2xl flex flex-wrap items-center justify-between gap-space-base z-30">
-<div className="flex items-center gap-space-xl">
-<div className="flex flex-col">
-<span className="font-label-sm text-label-sm uppercase text-outline-variant tracking-wider">Active View Summary</span>
-<span className="font-title-md text-title-md text-inverse-on-surface font-semibold">Stage 04: 10 Electrical Line Items Filtered</span>
-</div>
-<div className="h-8 w-px bg-outline-variant/30 hidden md:block"></div>
-<div className="flex flex-col">
-<span className="font-label-sm text-label-sm uppercase text-outline-variant tracking-wider">Gross Stage Value</span>
-<span className="font-tabular-metric font-tabular-metric text-inverse-on-surface">₹48,36,200</span>
-</div>
-<div className="h-8 w-px bg-outline-variant/30 hidden md:block"></div>
-<div className="flex flex-col">
-<span className="font-label-sm text-label-sm uppercase text-primary-fixed tracking-wider">Total Value Engineering Savings</span>
-<div className="flex items-baseline gap-space-xs">
-<span className="font-tabular-metric font-tabular-metric text-primary-fixed">₹6,46,200</span>
-<span className="font-label-sm text-label-sm text-primary-fixed-dim font-bold">(-11.8% Saved)</span>
-</div>
-</div>
-</div>
-
-<div className="flex items-center gap-space-sm">
-<button className="px-space-md py-space-xs rounded bg-surface-variant/20 hover:bg-surface-variant/30 text-inverse-on-surface font-title-md text-title-md transition-colors flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-space-base">tune</span>
-<span>Configure Spec Thresholds</span>
-</button>
-<button className="px-space-md py-space-xs rounded bg-surface-variant/20 hover:bg-surface-variant/30 text-inverse-on-surface font-title-md text-title-md transition-colors flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-space-base">verified_user</span>
-<span>Review QA/QC Tolerances</span>
-</button>
-<button className="px-space-lg py-space-xs rounded bg-primary text-on-primary hover:bg-primary-container font-headline-sm text-headline-sm shadow-md transition-transform active:scale-95 flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-space-lg">send</span>
-<span>Bulk Push to Procurement RFQ</span>
-</button>
-</div>
-</div>
-
-
-</div></main>
+        {stages.length > 0 && (
+          <div className="rounded-xl border border-border bg-card p-3">
+            <h2 className="mb-2 text-sm font-semibold">Stage-wise estimate roll-up</h2>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {stages.map(([name]) => {
+                const total = items
+                  .filter((it) => it.stage === name)
+                  .reduce((s, it) => s + lineTotal(it), 0);
+                const pct = grandTotal > 0 ? (total / grandTotal) * 100 : 0;
+                return (
+                  <div key={name} className="rounded border border-border p-2">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs font-semibold uppercase text-foreground">{name}</span>
+                      <span className="text-sm font-semibold tnum text-primary">
+                        {inrCompact(total)}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded bg-secondary">
+                      <div className="h-1.5 rounded bg-primary" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      {pct.toFixed(1)}% of estimate
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </Shell>
   );
