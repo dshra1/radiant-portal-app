@@ -307,6 +307,33 @@ function Index() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link
+              to="/messages"
+              className="relative inline-flex shrink-0 items-center rounded-full bg-secondary p-2.5 text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+              aria-label="Team chat"
+              title="Team chat"
+            >
+              <MessagesSquare className="size-5" />
+              {unreadChats > 0 && (
+                <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
+                  {unreadChats > 9 ? "9+" : unreadChats}
+                </span>
+              )}
+            </Link>
+            <Link
+              to="/notifications"
+              className="relative inline-flex shrink-0 items-center rounded-full bg-secondary p-2.5 text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+              aria-label="Notifications"
+              title="Action centre"
+            >
+              <Bell className="size-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Link>
+
             <div className="relative">
               <button
                 type="button"
