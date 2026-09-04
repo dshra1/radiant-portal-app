@@ -30,12 +30,15 @@ import {
   UnfoldVertical,
   Bot,
   LogOut,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 import { navForRole, roles, type NavItem } from "@/components/saha/nav";
 import { useAccess } from "@/lib/access";
+import { SAMPLE_DATA_ROUTES } from "@/components/saha/sample-data";
+
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -437,8 +440,22 @@ export function Shell({
         </div>
 
         <main className="flex-1 p-4 md:p-6">
-          <div className="mx-auto w-full max-w-none">{children}</div>
+          <div className="mx-auto w-full max-w-none">
+            {SAMPLE_DATA_ROUTES[pathname] && (
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2 text-[12px] text-warning">
+                <Info className="mt-0.5 size-3.5 shrink-0" />
+                <p>
+                  <span className="font-bold uppercase tracking-wide">Sample data</span> — the{" "}
+                  {SAMPLE_DATA_ROUTES[pathname]} shown here are illustrative placeholders, not your
+                  project&apos;s numbers. Live screens today: Project Details, Project Setup, BOQ Engine,
+                  Command Center, Notifications and Chat.
+                </p>
+              </div>
+            )}
+            {children}
+          </div>
         </main>
+
 
         <Link
           to="/ai"
