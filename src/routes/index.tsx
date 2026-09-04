@@ -182,19 +182,19 @@ function Index() {
     queryFn: async () => {
       let q = supabase
         .from("notifications")
-        .select("id,title,body,category,priority,link,is_read,created_at")
+        .select("id,title,body,category,priority,link,is_read,created_at,project_id,recipient_id")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(50);
       // Each user sees workspace-wide notifications (no recipient) plus those addressed to them
       if (user?.id) {
         q = q.or(`recipient_id.eq.${user.id},recipient_id.is.null`);
       }
-      if (activeProject.id) {
-        q = q.or(`project_id.eq.${activeProject.id},project_id.is.null`);
-      }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as Notification[];
+      const rows = (data ?? []) as Notification[];
+      // Then narrow to the active project (or workspace-wide) in memory to avoid nested OR syntax
+      if (!activeProject.id) return rows;
+      return rows.filter((n) => !n.project_id || n.project_id === activeProject.id);
     },
     enabled: true,
   });
