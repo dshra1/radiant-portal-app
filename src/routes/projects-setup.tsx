@@ -245,7 +245,7 @@ function Page() {
 <span>Drawing Parsing Directives &amp; Internal Notes</span>
 <span className="text-on-surface-variant font-label-sm text-label-sm font-normal">Auto-indexes to Stage BOQs</span>
 </label>
-<textarea className="w-full p-space-md rounded bg-surface-container-low text-on-surface font-body-sm text-body-sm leading-relaxed focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary focus:outline-none transition-all" rows={4}>Windows shown as blue rectangles; doors are 3'x7' single-leaf flush doors. Each typical floor has 4 3BHK units with 8 doors + 12 windows per unit. Roof has open terrace slab with 3' parapet wall and overhead water tank, no internal partition walls.</textarea>
+<textarea className="w-full p-space-md rounded bg-surface-container-low text-on-surface font-body-sm text-body-sm leading-relaxed focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary focus:outline-none transition-all" rows={4} defaultValue="Windows shown as blue rectangles; doors are 3'x7' single-leaf flush doors. Each typical floor has 4 3BHK units with 8 doors + 12 windows per unit. Roof has open terrace slab with 3' parapet wall and overhead water tank, no internal partition walls." />
 </div>
 
 <div className="flex flex-col gap-space-sm">

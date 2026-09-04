@@ -35,7 +35,7 @@
 
 ## BOQ
 - [x] Upload + Export per BOQ category/stage
-- [ ] Project Setup: distinguish user-entry fields from calculated/app-suggested results, with instant recalculation and working draft/generate actions
+- [x] Project Setup: distinguish user-entry fields from calculated/app-suggested results, with instant recalculation and working draft/generate actions
 
 ## Typography
 - [ ] Single professional font across app; bold subtle-colored headings; caps for main headings; fluid responsive sizes
