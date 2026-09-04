@@ -694,7 +694,7 @@ function Projects() {
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {p.type && <StatusBadge tone="slate">{p.type}</StatusBadge>}
                   <StatusBadge tone="sky">
-                    {p.cellar_floors}C + {p.stilt_floors}S + {p.typical_floors}T
+                    {n(p.cellar_floors)}C + {n(p.stilt_floors)}S + {n(p.typical_floors)}T
                   </StatusBadge>
                   {p.steel_grade && <StatusBadge tone="slate">{p.steel_grade}</StatusBadge>}
                   {p.blockwork_type && <StatusBadge tone="slate">{p.blockwork_type}</StatusBadge>}
@@ -709,12 +709,12 @@ function Projects() {
                   <Cell
                     icon={<Ruler className="size-3" />}
                     label="Built-up"
-                    value={`${num(p.total_built_up_sft)} sft`}
+                    value={`${num(builtUp)} sft`}
                   />
                   <Cell
                     icon={<Layers className="size-3" />}
                     label="Total slab"
-                    value={`${num(p.total_slab_sft)} sft`}
+                    value={`${num(slab)} sft`}
                   />
                   <Cell label="Start" value={p.start_date || "—"} />
                   <Cell label="Target handover" value={p.target_handover_date || "—"} />
