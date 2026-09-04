@@ -64,8 +64,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
             {access?.email || access?.profile?.email || "this account"}
           </span>
           .
-          An admin or project manager must approve your account and assign the screens you may
-          view before the workspace opens.
+          An admin or project manager must approve this account and assign viewing permissions
+          before the workspace opens.
         </p>
         <div className="mt-6 flex flex-col gap-2">
           <button
@@ -80,6 +80,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       </Screen>
     );
   }
+
 
   if (access.roles.length === 0) {
     return (
