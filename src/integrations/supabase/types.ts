@@ -210,6 +210,166 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_order_items: {
+        Row: {
+          brand: string
+          created_at: string
+          description: string
+          discount_pct: number
+          gst_pct: number
+          id: string
+          item_code: string
+          po_id: string
+          quantity: number
+          rate: number
+          sort_order: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          brand?: string
+          created_at?: string
+          description?: string
+          discount_pct?: number
+          gst_pct?: number
+          id?: string
+          item_code?: string
+          po_id: string
+          quantity?: number
+          rate?: number
+          sort_order?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          description?: string
+          discount_pct?: number
+          gst_pct?: number
+          id?: string
+          item_code?: string
+          po_id?: string
+          quantity?: number
+          rate?: number
+          sort_order?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_name: string
+          created_at: string
+          delivery_date: string | null
+          delivery_terms: string
+          freight_charges: number
+          id: string
+          notes: string
+          other_charges: number
+          payment_terms: string
+          po_date: string
+          po_number: string
+          project_id: string | null
+          project_name: string
+          quote_reference: string
+          raised_by: string | null
+          raised_by_name: string
+          rejection_reason: string
+          site_address: string
+          status: string
+          tax_mode: string
+          terms: string
+          updated_at: string
+          vendor_address: string
+          vendor_contact: string
+          vendor_email: string
+          vendor_gstin: string
+          vendor_name: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string
+          created_at?: string
+          delivery_date?: string | null
+          delivery_terms?: string
+          freight_charges?: number
+          id?: string
+          notes?: string
+          other_charges?: number
+          payment_terms?: string
+          po_date?: string
+          po_number: string
+          project_id?: string | null
+          project_name?: string
+          quote_reference?: string
+          raised_by?: string | null
+          raised_by_name?: string
+          rejection_reason?: string
+          site_address?: string
+          status?: string
+          tax_mode?: string
+          terms?: string
+          updated_at?: string
+          vendor_address?: string
+          vendor_contact?: string
+          vendor_email?: string
+          vendor_gstin?: string
+          vendor_name?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string
+          created_at?: string
+          delivery_date?: string | null
+          delivery_terms?: string
+          freight_charges?: number
+          id?: string
+          notes?: string
+          other_charges?: number
+          payment_terms?: string
+          po_date?: string
+          po_number?: string
+          project_id?: string | null
+          project_name?: string
+          quote_reference?: string
+          raised_by?: string | null
+          raised_by_name?: string
+          rejection_reason?: string
+          site_address?: string
+          status?: string
+          tax_mode?: string
+          terms?: string
+          updated_at?: string
+          vendor_address?: string
+          vendor_contact?: string
+          vendor_email?: string
+          vendor_gstin?: string
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_projects: {
         Row: {
           bank_account_last4: string
@@ -457,6 +617,7 @@ export type Database = {
         Returns: boolean
       }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
+      next_po_number: { Args: never; Returns: string }
     }
     Enums: {
       app_role:
