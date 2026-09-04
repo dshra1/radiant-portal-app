@@ -27,6 +27,8 @@
 - [x] Make notifications / team messages / landing stats project-scoped so 3 projects can run together
 - [x] User-assigned chat tasks + in-app notifications: messages/tasks assigned to a specific user create a notification only that user sees
 - [ ] Push/WhatsApp delivery: browser/phone push and WhatsApp messages for assigned tasks (needs provider setup)
+- [ ] Fix: sahadeveloperz@gmail.com admin sign-in still landing on pending-approval screen
+
 
 - [ ] Fix layout sizing: cap content width on large screens, stop Download-app button overlapping header chrome
 
