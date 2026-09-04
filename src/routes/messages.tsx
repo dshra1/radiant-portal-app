@@ -262,11 +262,14 @@ function Messages() {
                       <CheckSquare className="size-3" /> Task
                     </span>
                   )}
-                  {m.recipient && (
-                    <span className="inline-flex items-center gap-1 rounded bg-info-soft px-1.5 py-0.5 text-[10px] font-semibold text-info">
-                      <User className="size-3" /> For {m.recipient.full_name || m.recipient.email}
-                    </span>
-                  )}
+                  {(() => {
+                    const r = members.find((x) => x.id === m.recipient_id);
+                    return r ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-info-soft px-1.5 py-0.5 text-[10px] font-semibold text-info">
+                        <User className="size-3" /> For {r.full_name || r.email}
+                      </span>
+                    ) : null;
+                  })()}
                   <span className="text-[11px] text-muted-foreground">{timeOf(m.created_at)}</span>
                   <button
                     type="button"
