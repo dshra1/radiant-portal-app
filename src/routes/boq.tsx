@@ -24,16 +24,76 @@ export const Route = createFileRoute("/boq")({
   component: Boq,
 });
 
+type BoqRow = (typeof boqItems)[number];
+
 function Boq() {
   const [projectId, setProjectId] = useState<string>("all");
   const [openRow, setOpenRow] = useState<string | null>(null);
+  const [uploaded, setUploaded] = useState<BoqRow[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const items = boqItems.filter((i) => projectId === "all" || i.projectId === projectId);
+  const items = [...boqItems, ...uploaded].filter(
+    (i) => projectId === "all" || i.projectId === projectId,
+  );
   const estTotal = items.reduce((s, i) => s + i.quantity * i.estimatedRate, 0);
   const mktTotal = items.reduce((s, i) => s + i.quantity * i.marketRate, 0);
   const variance = ((mktTotal - estTotal) / estTotal) * 100;
 
   const stages = [...new Set(items.map((i) => i.stage))];
+
+  const exportStage = (stage: string) => {
+    const rows = items.filter((i) => i.stage === stage);
+    const header = ["Code", "Description", "Unit", "Qty", "Est rate", "Market rate", "Amount"];
+    const csv = [
+      header.join(","),
+      ...rows.map((i) =>
+        [
+          i.itemCode,
+          `"${i.description.replace(/"/g, '""')}"`,
+          i.unit,
+          i.quantity,
+          i.estimatedRate,
+          i.marketRate,
+          i.quantity * i.marketRate,
+        ].join(","),
+      ),
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `BOQ-${stage.replace(/\s+/g, "-").toLowerCase()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setNotice(`Exported ${rows.length} line items from ${stage}.`);
+  };
+
+  const uploadStage = async (stage: string, file: File) => {
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const body = lines.slice(/code/i.test(lines[0] ?? "") ? 1 : 0);
+    const parsed: BoqRow[] = body.map((line, idx) => {
+      const cells = line.match(/("([^"]|"")*"|[^,]*)/g)?.filter((_, k) => k % 2 === 0) ?? [];
+      const cell = (n: number) => (cells[n] ?? "").replace(/^"|"$/g, "").replace(/""/g, '"').trim();
+      const est = Number(cell(4)) || 0;
+      const mkt = Number(cell(5)) || est;
+      return {
+        ...(boqItems[0] as BoqRow),
+        id: `upl-${stage}-${Date.now()}-${idx}`,
+        projectId: projectId === "all" ? boqItems[0]!.projectId : projectId,
+        stage,
+        itemCode: cell(0) || `NEW-${idx + 1}`,
+        description: cell(1) || "Uploaded line item",
+        unit: cell(2) || "nos",
+        quantity: Number(cell(3)) || 0,
+        estimatedRate: est,
+        marketRate: mkt,
+        alternatives: [],
+      } as BoqRow;
+    });
+    setUploaded((prev) => [...prev, ...parsed]);
+    setNotice(`Uploaded ${parsed.length} line items into ${stage}.`);
+  };
+
 
   return (
     <Shell
