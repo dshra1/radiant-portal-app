@@ -165,10 +165,12 @@ export type Database = {
           investor_amount: number
           investor_contact: string
           investor_name: string
+          investors: Json
           labour_count: number
           landowner_contact: string
           landowner_name: string
           landowner_share_pct: number
+          landowners: Json
           latitude: number | null
           location: string
           longitude: number | null
@@ -222,10 +224,12 @@ export type Database = {
           investor_amount?: number
           investor_contact?: string
           investor_name?: string
+          investors?: Json
           labour_count?: number
           landowner_contact?: string
           landowner_name?: string
           landowner_share_pct?: number
+          landowners?: Json
           latitude?: number | null
           location?: string
           longitude?: number | null
@@ -279,10 +283,12 @@ export type Database = {
           investor_amount?: number
           investor_contact?: string
           investor_name?: string
+          investors?: Json
           labour_count?: number
           landowner_contact?: string
           landowner_name?: string
           landowner_share_pct?: number
+          landowners?: Json
           latitude?: number | null
           location?: string
           longitude?: number | null

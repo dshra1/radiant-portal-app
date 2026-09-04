@@ -49,3 +49,9 @@
 ## Typography
 - [ ] Single professional font across app; bold subtle-colored headings; caps for main headings; fluid responsive sizes
 - [ ] Data freshness: projects/list views must refresh instantly after add/delete (no stale or NaN values)
+
+## Live data (Sep 4)
+- [x] Multiple landowners/investors per project (count input + dynamic name/contact/share rows), stored in landowners/investors JSON columns
+- [x] Edit existing projects (pencil on project card loads the full form, Update project saves)
+- [x] Command Center runs on live site_projects + notifications (no hardcoded 3 sites / ₹22.70 Cr), empty state when no projects
+- [ ] Remaining Stitch-imported screens still show static demo numbers — migrate to live data screen by screen
