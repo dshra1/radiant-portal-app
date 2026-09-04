@@ -7,7 +7,6 @@ export const SAMPLE_DATA_ROUTES: Record<string, string> = {
   "/pour-cards": "pour card schedule and approvals",
   "/procurement": "procurement pipeline and vendor quotes",
   "/purchasing-center": "purchase requests and order values",
-  "/purchase-orders": "purchase order values and statuses",
   "/price-intelligence": "mandi / market rate feeds",
   "/brand-benchmark": "brand comparison rates",
   "/tender-comparison": "tender bids and comparisons",

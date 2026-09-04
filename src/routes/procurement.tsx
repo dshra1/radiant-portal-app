@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
-import { ActionButton, MetricTile, Section, StatusBadge } from "@/components/saha/ui";
+import { MetricTile, Section, StatusBadge } from "@/components/saha/ui";
 import { inrCompact, projects, purchaseOrders } from "@/data/saha";
 
 export const Route = createFileRoute("/procurement")({
@@ -38,7 +38,14 @@ function Procurement() {
     <Shell
       title="Procurement"
       subtitle="Multi-vendor purchase orders with market price guardrails"
-      actions={<ActionButton>Raise PO</ActionButton>}
+      actions={
+        <Link
+          to="/po-create"
+          className="inline-flex items-center gap-2 rounded bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+        >
+          Raise PO
+        </Link>
+      }
     >
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricTile label="Open PO value" value={inrCompact(value)} />

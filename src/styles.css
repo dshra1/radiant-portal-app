@@ -530,3 +530,14 @@
   main table { width: 100%; }
   main .min-w-0, main [class*="grid-cols-"] > * { min-width: 0; }
 }
+
+/* ============================================================
+   Print — purchase orders and other documents print clean
+   ============================================================ */
+@media print {
+  .no-print, aside, header nav { display: none !important; }
+  .po-print { display: block !important; position: absolute; inset: 0; margin: 0; max-width: none; padding: 0; }
+  .po-print .panel { border: none; box-shadow: none; }
+  body { background: #fff; }
+  @page { size: A4; margin: 12mm; }
+}
