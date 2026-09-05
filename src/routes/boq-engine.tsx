@@ -900,6 +900,7 @@ function Page() {
                           className="w-72 rounded border border-transparent bg-transparent px-1 py-0.5 hover:border-input focus:border-input"
                         />
                         <div className="px-1 text-[11px] text-muted-foreground">{it.item_code}</div>
+                        {it.stage !== LABOUR_SECTION && (
                         <div className="mt-1.5 flex items-center gap-2">
                           <ProductImage value={it.image_url} alt={`${it.brand} ${it.description}`} />
                           <div className="flex flex-col gap-1">
@@ -936,6 +937,7 @@ function Page() {
                             </a>
                           </div>
                         </div>
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <input
