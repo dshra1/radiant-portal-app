@@ -954,16 +954,32 @@ function Page() {
                                     <p className="mt-1 text-[11px] text-muted-foreground">{opt.why}</p>
                                   )}
                                   <button
-                                    onClick={() =>
-                                      updateMutation.mutate({
+                                    onClick={async () => {
+                                      await updateMutation.mutateAsync({
                                         id: it.id,
                                         patch: {
                                           brand: opt.brand,
                                           supplier: opt.supplier || it.supplier,
                                           rate: opt.rate,
                                         },
-                                      })
-                                    }
+                                      });
+                                      setStatus(
+                                        `${opt.brand} applied at ${inr(opt.rate)} / ${it.unit}.`,
+                                      );
+                                      const siblings = items.filter(
+                                        (o) => o.stage === it.stage && o.id !== it.id,
+                                      ).length;
+                                      const current = toNum(it.rate);
+                                      if (siblings > 0) {
+                                        setApplyAll({
+                                          stageName: it.stage,
+                                          brand: opt.brand,
+                                          supplier: opt.supplier || "",
+                                          ratio: current > 0 ? opt.rate / current : 0,
+                                          count: siblings + 1,
+                                        });
+                                      }
+                                    }}
                                     className="mt-2 h-7 w-full rounded bg-primary text-[12px] font-semibold text-primary-foreground"
                                   >
                                     Use this brand
