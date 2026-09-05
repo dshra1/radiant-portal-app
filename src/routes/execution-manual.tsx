@@ -96,7 +96,7 @@ function Page() {
         is_task: true,
         status: "Open",
         progress: 0,
-        project_id: project.id ?? null,
+        project_id: project.id || null,
         sender_id: senderId,
       });
       if (error) throw error;
@@ -106,7 +106,7 @@ function Page() {
         category: "QA",
         priority: "High",
         link: "/tasks",
-        project_id: project.id ?? null,
+        project_id: project.id || null,
         sender_id: senderId,
       });
       setNote("Checklist sent to the field team — it now shows in Task Tracker and Action Centre on their phones.");
@@ -145,18 +145,21 @@ function Page() {
 </div>
 
 <div className="flex items-center gap-space-xs shrink-0 flex-wrap">
-<button className="inline-flex items-center gap-space-xs px-space-sm py-space-xs rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-colors shadow-sm font-title-md text-title-md">
+<button onClick={() => window.print()} className="inline-flex items-center gap-space-xs px-space-sm py-space-xs rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-colors shadow-sm font-title-md text-title-md">
 <span className="material-symbols-outlined text-primary text-space-base">picture_as_pdf</span>
 <span>Export Manual (.PDF)</span>
 </button>
-<button className="inline-flex items-center gap-space-xs px-space-sm py-space-xs rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-colors shadow-sm font-title-md text-title-md">
+<button onClick={() => downloadText("Gang-Pocket-Card-Stage-07.txt", POCKET_CARD)} className="inline-flex items-center gap-space-xs px-space-sm py-space-xs rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-colors shadow-sm font-title-md text-title-md">
 <span className="material-symbols-outlined text-tertiary text-space-base">print</span>
 <span>Gang Pocket Card</span>
 </button>
-<button className="inline-flex items-center gap-space-xs px-space-sm py-space-xs rounded bg-primary text-on-primary hover:bg-primary-container transition-colors font-title-md text-title-md shadow-sm">
+<button onClick={pushToField} disabled={pushing} className="inline-flex items-center gap-space-xs px-space-sm py-space-xs rounded bg-primary text-on-primary hover:bg-primary-container transition-colors font-title-md text-title-md shadow-sm disabled:opacity-60">
 <span className="material-symbols-outlined text-space-base">sync</span>
-<span>Push to Mobile QA App</span>
+<span>{pushing ? "Sending…" : "Push to Mobile QA App"}</span>
 </button>
+</div>
+{note ? <p className="w-full mt-space-xs px-space-sm py-space-xs rounded bg-primary-container text-on-primary-container font-body-sm text-body-sm">{note}</p> : null}
+<div className="hidden">
 </div>
 </div>
 
@@ -235,67 +238,23 @@ function Page() {
 <span className="font-label-sm text-label-sm text-primary font-semibold cursor-pointer">View Macro Workflow Matrix →</span>
 </div>
 <div className="flex items-center gap-space-xs whitespace-nowrap pt-space-2xs">
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">01</span>
-<span className="font-body-sm text-body-sm">Piling &amp; Earthwork</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">02</span>
-<span className="font-body-sm text-body-sm">Raft &amp; Isolated Footings</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">03</span>
-<span className="font-body-sm text-body-sm">Plinth Beams</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">04</span>
-<span className="font-body-sm text-body-sm">Columns &amp; Shear Walls</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">05</span>
-<span className="font-body-sm text-body-sm">Shuttering &amp; BBS</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">06</span>
-<span className="font-body-sm text-body-sm">Pre-Pour Clearence</span>
-</button>
-
-<button className="px-space-sm py-space-2xs rounded text-left bg-primary text-on-primary flex items-center gap-space-xs shadow-sm">
-<span className="font-label-sm text-label-sm opacity-80">07</span>
-<span className="font-title-md text-title-md font-bold">RCC Slab Casting &amp; Curing</span>
-<span className="w-2 h-2 rounded-full bg-primary-fixed animate-ping"></span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">08</span>
-<span className="font-body-sm text-body-sm">AAC Block Masonry</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">09</span>
-<span className="font-body-sm text-body-sm">MEP Chasing &amp; Wall Conduits</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">10</span>
-<span className="font-body-sm text-body-sm">Cement Plastering</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">11</span>
-<span className="font-body-sm text-body-sm">Waterproofing</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">12</span>
-<span className="font-body-sm text-body-sm">Tiling &amp; Flooring</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">13</span>
-<span className="font-body-sm text-body-sm">Finishes &amp; Joinery</span>
-</button>
-<button className="px-space-sm py-space-2xs rounded text-left bg-surface-container text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm text-on-surface-variant">14</span>
-<span className="font-body-sm text-body-sm">Final Snags &amp; Handover</span>
-</button>
+{LIFECYCLE_STAGES.map((label, i) => {
+  const n = i + 1;
+  const active = n === stage;
+  return (
+    <button key={label} onClick={() => setStage(n)} className={`px-space-sm py-space-2xs rounded text-left flex items-center gap-space-xs transition-colors ${active ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container text-on-surface hover:bg-surface-variant"}`}>
+      <span className={`font-label-sm text-label-sm ${active ? "opacity-80" : "text-on-surface-variant"}`}>{String(n).padStart(2, "0")}</span>
+      <span className={active ? "font-title-md text-title-md font-bold" : "font-body-sm text-body-sm"}>{label}</span>
+      {active ? <span className="w-2 h-2 rounded-full bg-primary-fixed animate-ping"></span> : null}
+    </button>
+  );
+})}
 </div>
 </div>
 
+<div className="mb-space-base px-space-sm py-space-xs rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm">
+Selected stage: <strong>{String(stage).padStart(2, "0")} · {LIFECYCLE_STAGES[stage - 1]}</strong>{stage !== 7 ? " — the detailed written protocol below is authored for Stage 07 (RCC slab casting). Checklist pushes and pocket cards use the stage you selected." : ""}
+</div>
 <div className="grid grid-cols-1 xl:grid-cols-12 gap-space-base items-start">
 
 <div className="xl:col-span-8 flex flex-col gap-space-base">
@@ -773,13 +732,13 @@ function Page() {
 </div>
 <div className="relative mt-space-xs">
 <span className="material-symbols-outlined absolute left-space-xs top-2 text-on-surface-variant text-space-base">search</span>
-<input className="w-full pl-8 pr-space-sm py-space-xs rounded bg-surface-container-low text-on-surface placeholder:text-on-surface-variant font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="e.g. Slump tolerance, Column lap length, PPC curing..." type="text" />
+<input value={term} onChange={(e) => setTerm(e.target.value)} className="w-full pl-8 pr-space-sm py-space-xs rounded bg-surface-container-low text-on-surface placeholder:text-on-surface-variant font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="e.g. Slump tolerance, Column lap length, PPC curing..." type="text" />
 </div>
 <div className="flex flex-wrap gap-space-2xs pt-space-sm">
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Beam 135° Hook</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Cold Joint Remedy</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">50d Tension Lap</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Waterproofing Bunds</span>
+<button onClick={() => setTerm("Beam 135° Hook".split(" ").slice(-1)[0])} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Beam 135° Hook</button>
+<button onClick={() => setTerm("Cold Joint Remedy".split(" ").slice(-1)[0])} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Cold Joint Remedy</button>
+<button onClick={() => setTerm("50d Tension Lap".split(" ").slice(-1)[0])} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">50d Tension Lap</button>
+<button onClick={() => setTerm("Waterproofing Bunds".split(" ").slice(-1)[0])} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Waterproofing Bunds</button>
 </div>
 </div>
 
@@ -800,14 +759,14 @@ function Page() {
 <span className="font-title-md text-title-md text-on-surface block">Dr. A. K. Varma (Structural Lead)</span>
 <span className="font-body-sm text-body-sm text-on-surface-variant">+91 98480 23114 • Priority 1</span>
 </div>
-<button className="px-space-sm py-space-2xs rounded bg-error text-on-error font-label-sm text-label-sm font-semibold">Call</button>
+<a href="tel:+919848023114" className="px-space-sm py-space-2xs rounded bg-error text-on-error font-label-sm text-label-sm font-semibold">Call</a>
 </div>
 <div className="p-space-xs bg-surface-container-low rounded flex items-center justify-between">
 <div>
 <span className="font-title-md text-title-md text-on-surface block">N. Chandra (Chief QC Auditor)</span>
 <span className="font-body-sm text-body-sm text-on-surface-variant">+91 94401 55902 • Lab Head</span>
 </div>
-<button className="px-space-sm py-space-2xs rounded bg-surface-container text-on-surface font-label-sm text-label-sm">Alert</button>
+<a href="tel:+919440155902" className="px-space-sm py-space-2xs rounded bg-surface-container text-on-surface font-label-sm text-label-sm">Call</a>
 </div>
 </div>
 </div>
