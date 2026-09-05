@@ -478,14 +478,25 @@ function Page() {
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return items.filter(
-      (it) =>
-        (stage === "ALL" || it.stage === stage) &&
-        (q === "" ||
-          `${it.description} ${it.category} ${it.brand} ${it.supplier} ${it.item_code}`
-            .toLowerCase()
-            .includes(q)),
-    );
+    const rank = (name: string) => {
+      const i = (BOQ_TRADES as readonly string[]).indexOf(name);
+      return i === -1 ? 999 : i;
+    };
+    return items
+      .filter(
+        (it) =>
+          (stage === "ALL" || it.stage === stage) &&
+          (q === "" ||
+            `${it.description} ${it.category} ${it.brand} ${it.supplier} ${it.item_code}`
+              .toLowerCase()
+              .includes(q)),
+      )
+      .sort(
+        (a, b) =>
+          rank(a.stage) - rank(b.stage) ||
+          a.stage.localeCompare(b.stage) ||
+          (a.sort_order ?? 0) - (b.sort_order ?? 0),
+      );
   }, [items, stage, search]);
 
   const lineTotal = (it: BoqRow) => toNum(it.quantity) * toNum(it.rate);
@@ -1082,6 +1093,14 @@ function Page() {
                     </div>
                     <span className="text-[11px] text-muted-foreground">
                       {pct.toFixed(1)}% of estimate
+                      {sellableSft > 0 && (
+                        <>
+                          {" · "}
+                          <b className="tnum text-foreground">
+                            ₹{(total / sellableSft).toFixed(2)}/sft
+                          </b>
+                        </>
+                      )}
                     </span>
                   </div>
                 );
