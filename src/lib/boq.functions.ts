@@ -47,6 +47,28 @@ function toNum(v: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
+const SFT_PER_SQM = 10.7639;
+const RFT_PER_M = 3.28084;
+
+/**
+ * Indian site practice: areas in sft, lengths in rft. If the model answers in
+ * metric, convert the quantity and rate so the line amount stays identical.
+ * Only ever applied to freshly generated AI rows, never to saved/edited data.
+ */
+function toSiteUnits(unit: string, quantity: number, rate: number) {
+  const u = unit.toLowerCase().replace(/[\s.]/g, "");
+  const area = ["sqm", "sqmt", "sqmts", "sqmtr", "sqmtrs", "m2", "sqmeter", "sqmetre", "squaremetre", "squaremeter"];
+  const length = ["m", "mtr", "mtrs", "rm", "rmt", "meter", "metre", "runningmetre", "runningmeter"];
+  if (area.includes(u)) {
+    return { unit: "SFT", quantity: quantity * SFT_PER_SQM, rate: rate / SFT_PER_SQM };
+  }
+  if (length.includes(u)) {
+    return { unit: "RFT", quantity: quantity * RFT_PER_M, rate: rate / RFT_PER_M };
+  }
+  return { unit, quantity, rate };
+}
+
+
 function extractJsonArray(text: string): RawItem[] {
   const cleaned = text.replace(/```json/gi, "```").split("```").join("\n");
   const start = cleaned.indexOf("[");
@@ -140,6 +162,9 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
       '{"trade":string,"description":string,"unit":string,"quantity":number,"rate":number,"brand":string,"supplier":string,"notes":string}',
       "quantity and rate are plain numbers (rate = per-unit rate in INR, no symbols or commas). notes holds the short derivation thumb rule. brand/supplier use realistic Indian brands and supply channels; use \"\" where not applicable.",
       "Quantities MUST be derived from the given geometry (built-up sft, slab sft, floor counts) and be internally consistent with the specified material grades and quality tiers.",
+      "UNITS: use Indian site units only — areas in SFT (never SQM / sq mt / m2), lengths in RFT, concrete in CUM, steel in KG or MT, counts in NOS, cement in BAGS. Flooring, wall tiling, granite, plastering, painting, waterproofing and false ceiling MUST be quoted in SFT with a per-SFT rate.",
+      "AREA DETAIL: for every finishing trade (Flooring, Wall Tiling, Granite Works, False Ceiling, Painting, Waterproofing, Sanitaryware, CP Fittings) the description MUST name the room/location it applies to, e.g. \"Vitrified tile flooring 800x800 — living & dining\", \"Anti-skid flooring — bathroom floor\", \"Ceramic dado up to 7ft — bathroom wall\", \"Granite — kitchen platform\", \"Flooring — bedrooms\", \"Flooring — balcony\", \"Flooring — staircase & lobby\", \"Flooring — utility\". Split each finishing trade into separate line items per area instead of one lumped item.",
+
     ].join("\n");
 
     const batches: (typeof BOQ_TRADES)[number][][] = [];
@@ -182,21 +207,29 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
       .eq("source", "ai");
     if (del.error) throw new Error(del.error.message);
 
-    const rows = collected.map(({ trade, item }, index) => ({
-      project_id: data.projectId,
-      stage: trade,
-      category: trade,
-      item_code: `AI-${String(index + 1).padStart(4, "0")}`,
-      description: String(item.description ?? "").trim(),
-      unit: String(item.unit ?? "NOS").trim() || "NOS",
-      quantity: toNum(item.quantity),
-      rate: toNum(item.rate),
-      brand: String(item.brand ?? "").trim(),
-      supplier: String(item.supplier ?? "").trim(),
-      notes: String(item.notes ?? "").trim(),
-      source: "ai",
-      sort_order: index,
-    }));
+    const rows = collected.map(({ trade, item }, index) => {
+      const site = toSiteUnits(
+        String(item.unit ?? "NOS").trim() || "NOS",
+        toNum(item.quantity),
+        toNum(item.rate),
+      );
+      return {
+        project_id: data.projectId,
+        stage: trade,
+        category: trade,
+        item_code: `AI-${String(index + 1).padStart(4, "0")}`,
+        description: String(item.description ?? "").trim(),
+        unit: site.unit,
+        quantity: Math.round(site.quantity * 100) / 100,
+        rate: Math.round(site.rate * 100) / 100,
+        brand: String(item.brand ?? "").trim(),
+        supplier: String(item.supplier ?? "").trim(),
+        notes: String(item.notes ?? "").trim(),
+        source: "ai",
+        sort_order: index,
+      };
+    });
+
 
     const chunk = 300;
     for (let i = 0; i < rows.length; i += chunk) {
