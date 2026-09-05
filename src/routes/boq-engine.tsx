@@ -1129,7 +1129,7 @@ function Page() {
         </div>
 
         <div className="rounded-xl border border-border bg-card">
-          <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-2.5">
             <h2 className="text-sm font-semibold">
               {stage === "ALL" ? "All line items" : stage} — {visible.length} shown
             </h2>
