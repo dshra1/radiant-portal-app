@@ -709,6 +709,9 @@ function Page() {
       const payload = rows.slice(1).map((r, i) => ({
         project_id: activeId,
         stage: (r[idx("stage")] ?? "Uploaded Items").trim() || "Uploaded Items",
+        work_scope: (r[idx("work_scope")] ?? "").trim().toLowerCase() === "individual"
+          ? "individual"
+          : "common",
         category: (r[idx("category")] ?? "").trim(),
         item_code: (r[idx("item_code")] ?? `UPL-${String(i + 1).padStart(4, "0")}`).trim(),
         description: (r[idx("description")] ?? "").trim(),
