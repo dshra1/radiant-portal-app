@@ -97,7 +97,73 @@ type BoqRow = {
   sort_order: number;
   image_url?: string | null;
   image_source?: string | null;
+  work_scope?: string | null;
 };
+
+/** "common" = shared building-wide work, "individual" = per flat / unit work. */
+const SCOPES = [
+  { key: "common", label: "Common works" },
+  { key: "individual", label: "Individual works" },
+] as const;
+
+function scopeOf(it: { work_scope?: string | null }) {
+  return it.work_scope === "individual" ? "individual" : "common";
+}
+
+/**
+ * Inline editable cell that keeps what you type locally and commits on blur / Enter,
+ * so a background refetch can never wipe the value you are entering.
+ */
+function Cell({
+  value,
+  onCommit,
+  className,
+  placeholder,
+  multiline,
+  rows,
+}: {
+  value: string;
+  onCommit: (next: string) => void;
+  className?: string;
+  placeholder?: string;
+  multiline?: boolean;
+  rows?: number;
+}) {
+  const [text, setText] = useState(value);
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setText(value);
+  }, [value, focused]);
+
+  const commit = () => {
+    setFocused(false);
+    if (text !== value) onCommit(text);
+  };
+
+  const shared = {
+    value: text,
+    placeholder,
+    className,
+    onFocus: () => setFocused(true),
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setText(e.target.value),
+    onBlur: commit,
+  };
+
+  if (multiline) return <textarea {...shared} rows={rows ?? 2} />;
+  return (
+    <input
+      {...shared}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
+    />
+  );
+}
 
 /** Resolves a stored image reference: an https URL, or `storage:<path>` in the private bucket. */
 function ProductImage({ value, alt }: { value: string | null | undefined; alt: string }) {
@@ -142,6 +208,7 @@ function ProductImage({ value, alt }: { value: string | null | undefined; alt: s
 
 const CSV_HEADERS = [
   "stage",
+  "work_scope",
   "category",
   "item_code",
   "description",
@@ -211,6 +278,7 @@ function Page() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [projectId, setProjectId] = useState<string>("");
   const [stage, setStage] = useState<string>("ALL");
+  const [workScope, setWorkScope] = useState<"ALL" | "common" | "individual">("ALL");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("");
   const [brief, setBrief] = useState("");
@@ -371,6 +439,7 @@ function Page() {
         brand?: string;
         supplier?: string;
         stage?: string;
+        work_scope?: string;
         image_url?: string;
         image_source?: string;
       };
@@ -573,6 +642,7 @@ function Page() {
       const { error } = await supabase.from("boq_items").insert({
         project_id: activeId,
         stage: stage === "ALL" ? "Preliminaries" : stage,
+        work_scope: workScope === "ALL" ? "common" : workScope,
         category: "General",
         item_code: `MAN-${String(items.length + 1).padStart(4, "0")}`,
         description: "New line item",
@@ -640,6 +710,9 @@ function Page() {
       const payload = rows.slice(1).map((r, i) => ({
         project_id: activeId,
         stage: (r[idx("stage")] ?? "Uploaded Items").trim() || "Uploaded Items",
+        work_scope: (r[idx("work_scope")] ?? "").trim().toLowerCase() === "individual"
+          ? "individual"
+          : "common",
         category: (r[idx("category")] ?? "").trim(),
         item_code: (r[idx("item_code")] ?? `UPL-${String(i + 1).padStart(4, "0")}`).trim(),
         description: (r[idx("description")] ?? "").trim(),
@@ -689,6 +762,7 @@ function Page() {
       .filter(
         (it) =>
           (stage === "ALL" || it.stage === stage) &&
+          (workScope === "ALL" || scopeOf(it) === workScope) &&
           (q === "" ||
             `${it.description} ${it.category} ${it.brand} ${it.supplier} ${it.item_code}`
               .toLowerCase()
@@ -700,11 +774,15 @@ function Page() {
           a.stage.localeCompare(b.stage) ||
           (a.sort_order ?? 0) - (b.sort_order ?? 0),
       );
-  }, [items, stage, search]);
+  }, [items, stage, workScope, search]);
 
   const lineTotal = (it: BoqRow) => toNum(it.quantity) * toNum(it.rate);
   const grandTotal = items.reduce((s, it) => s + lineTotal(it), 0);
   const viewTotal = visible.reduce((s, it) => s + lineTotal(it), 0);
+  const commonItems = items.filter((it) => scopeOf(it) === "common");
+  const individualItems = items.filter((it) => scopeOf(it) === "individual");
+  const commonTotal = commonItems.reduce((s, it) => s + lineTotal(it), 0);
+  const individualTotal = individualItems.reduce((s, it) => s + lineTotal(it), 0);
   const budget = toNum(activeProject?.target_budget);
   const sellableSft = toNum(activeProject?.total_built_up_sft);
   const perSft = sellableSft > 0 ? grandTotal / sellableSft : 0;
@@ -713,6 +791,7 @@ function Page() {
     const rows = scope === "view" ? visible : items;
     const body = rows.map((it) => [
       it.stage,
+      scopeOf(it),
       it.category,
       it.item_code,
       it.description,
@@ -953,6 +1032,45 @@ function Page() {
 
         <div className="rounded-xl border border-border bg-card p-3">
           <div className="flex flex-wrap items-center gap-2">
+            <span className="label-caps text-muted-foreground">Works split</span>
+            {([
+              { key: "ALL" as const, label: "All works", count: items.length, total: grandTotal },
+              {
+                key: "common" as const,
+                label: "Common works",
+                count: commonItems.length,
+                total: commonTotal,
+              },
+              {
+                key: "individual" as const,
+                label: "Individual works",
+                count: individualItems.length,
+                total: individualTotal,
+              },
+            ]).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setWorkScope(t.key)}
+                className={`h-9 rounded px-3 text-[13px] font-semibold ${workScope === t.key ? "bg-primary text-primary-foreground" : "border border-primary/30 bg-primary-soft text-primary hover:bg-primary/15"}`}
+              >
+                {t.label} ({t.count}) · {inrCompact(t.total)}
+                {sellableSft > 0 && (
+                  <span className="ml-1 font-medium opacity-80">
+                    ₹{(t.total / sellableSft).toFixed(0)}/sft
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[12px] text-muted-foreground">
+            Common works are shared, building-wide items (structure, lift, DG, external development).
+            Individual works are flat / unit specific items (flooring, fittings, painting inside
+            units). Tag each line in the Stage column and use these tabs to price them separately.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setStage("ALL")}
               className={`h-8 rounded px-3 text-[13px] font-semibold ${stage === "ALL" ? "bg-primary text-primary-foreground" : "border border-primary/30 bg-primary-soft text-primary hover:bg-primary/15"}`}
@@ -1046,25 +1164,41 @@ function Page() {
                         <div className="text-[11px] font-semibold uppercase text-primary">
                           {it.stage}
                         </div>
-                        <input
-                          defaultValue={it.category}
-                          onBlur={(e) =>
-                            e.target.value !== it.category &&
-                            updateMutation.mutate({ id: it.id, patch: { category: e.target.value } })
+                        <Cell
+                          value={it.category}
+                          onCommit={(v) =>
+                            updateMutation.mutate({ id: it.id, patch: { category: v } })
                           }
                           className="mt-1 w-32 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
                         />
-                      </td>
-                      <td className="px-2 py-2">
-                        <textarea
-                          defaultValue={it.description}
-                          rows={2}
-                          onBlur={(e) =>
-                            e.target.value !== it.description &&
+                        <select
+                          value={scopeOf(it)}
+                          onChange={(e) =>
                             updateMutation.mutate({
                               id: it.id,
-                              patch: { description: e.target.value },
+                              patch: { work_scope: e.target.value },
                             })
+                          }
+                          className={`mt-1 w-32 rounded border px-1 text-[11px] font-semibold ${
+                            scopeOf(it) === "individual"
+                              ? "border-amber-500/50 bg-amber-500/10 text-amber-700"
+                              : "border-sky-500/50 bg-sky-500/10 text-sky-700"
+                          }`}
+                        >
+                          {SCOPES.map((s) => (
+                            <option key={s.key} value={s.key}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-2 py-2">
+                        <Cell
+                          multiline
+                          rows={2}
+                          value={it.description}
+                          onCommit={(v) =>
+                            updateMutation.mutate({ id: it.id, patch: { description: v } })
                           }
                           className="w-72 rounded border border-transparent bg-transparent px-1 py-0.5 hover:border-input focus:border-input"
                         />
@@ -1109,37 +1243,26 @@ function Page() {
                         )}
                       </td>
                       <td className="px-2 py-2">
-                        <input
-                          defaultValue={it.unit}
-                          onBlur={(e) =>
-                            e.target.value !== it.unit &&
-                            updateMutation.mutate({ id: it.id, patch: { unit: e.target.value } })
-                          }
+                        <Cell
+                          value={it.unit}
+                          onCommit={(v) => updateMutation.mutate({ id: it.id, patch: { unit: v } })}
                           className="w-16 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
                         />
                       </td>
                       <td className="px-2 py-2 text-right">
-                        <input
-                          key={`qty-${toNum(it.quantity)}`}
-                          defaultValue={String(toNum(it.quantity))}
-                          onBlur={(e) =>
-                            updateMutation.mutate({
-                              id: it.id,
-                              patch: { quantity: toNum(e.target.value) },
-                            })
+                        <Cell
+                          value={String(toNum(it.quantity))}
+                          onCommit={(v) =>
+                            updateMutation.mutate({ id: it.id, patch: { quantity: toNum(v) } })
                           }
                           className="w-24 rounded border border-input bg-background px-1 text-right tnum"
                         />
                       </td>
                       <td className="px-2 py-2 text-right">
-                        <input
-                          key={`rate-${toNum(it.rate)}`}
-                          defaultValue={String(toNum(it.rate))}
-                          onBlur={(e) =>
-                            updateMutation.mutate({
-                              id: it.id,
-                              patch: { rate: toNum(e.target.value) },
-                            })
+                        <Cell
+                          value={String(toNum(it.rate))}
+                          onCommit={(v) =>
+                            updateMutation.mutate({ id: it.id, patch: { rate: toNum(v) } })
                           }
                           className="w-24 rounded border border-input bg-background px-1 text-right tnum"
                         />
@@ -1151,25 +1274,18 @@ function Page() {
                         <div className="flex items-start gap-2">
                           <BrandMark brand={it.brand} />
                           <div>
-                            <input
-                              key={`brand-${it.brand}`}
-                              defaultValue={it.brand}
-                              onBlur={(e) =>
-                                e.target.value !== it.brand &&
-                                updateMutation.mutate({ id: it.id, patch: { brand: e.target.value } })
+                            <Cell
+                              value={it.brand}
+                              onCommit={(v) =>
+                                updateMutation.mutate({ id: it.id, patch: { brand: v } })
                               }
                               placeholder="Brand / make"
                               className="w-36 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
                             />
-                            <input
-                              key={`supplier-${it.supplier}`}
-                              defaultValue={it.supplier}
-                              onBlur={(e) =>
-                                e.target.value !== it.supplier &&
-                                updateMutation.mutate({
-                                  id: it.id,
-                                  patch: { supplier: e.target.value },
-                                })
+                            <Cell
+                              value={it.supplier}
+                              onCommit={(v) =>
+                                updateMutation.mutate({ id: it.id, patch: { supplier: v } })
                               }
                               placeholder="Supplier"
                               className="mt-1 w-36 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
