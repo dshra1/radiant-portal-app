@@ -278,6 +278,7 @@ function Page() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [projectId, setProjectId] = useState<string>("");
   const [stage, setStage] = useState<string>("ALL");
+  const [workScope, setWorkScope] = useState<"ALL" | "common" | "individual">("ALL");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("");
   const [brief, setBrief] = useState("");
