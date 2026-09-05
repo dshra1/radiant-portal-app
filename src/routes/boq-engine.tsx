@@ -492,9 +492,8 @@ function Page() {
   const grandTotal = items.reduce((s, it) => s + lineTotal(it), 0);
   const viewTotal = visible.reduce((s, it) => s + lineTotal(it), 0);
   const budget = toNum(activeProject?.target_budget);
-  const perSft = toNum(activeProject?.total_built_up_sft) > 0
-    ? grandTotal / toNum(activeProject?.total_built_up_sft)
-    : 0;
+  const sellableSft = toNum(activeProject?.total_built_up_sft);
+  const perSft = sellableSft > 0 ? grandTotal / sellableSft : 0;
 
   const exportCsv = (scope: "view" | "all") => {
     const rows = scope === "view" ? visible : items;
