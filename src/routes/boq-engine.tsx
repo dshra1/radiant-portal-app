@@ -347,6 +347,8 @@ function Page() {
     mutationFn: async ({
       id,
       patch,
+      source,
+      note,
     }: {
       id: string;
       patch: {
@@ -361,11 +363,58 @@ function Page() {
         image_url?: string;
         image_source?: string;
       };
+      source?: string;
+      note?: string;
     }) => {
+      const row = items.find((it) => it.id === id);
+      if (gateOn && row && isCommercialPatch(patch)) {
+        const commercial: Record<string, unknown> = {};
+        const descriptive: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(patch)) {
+          if ((["quantity", "rate", "brand", "supplier"] as string[]).includes(k)) commercial[k] = v;
+          else descriptive[k] = v;
+        }
+        if (Object.keys(descriptive).length > 0) {
+          const { error } = await supabase.from("boq_items").update(descriptive).eq("id", id);
+          if (error) throw error;
+        }
+        await raiseChangeRequest({
+          projectId: activeId,
+          itemId: id,
+          trade: row.stage,
+          description: row.description,
+          unit: row.unit,
+          quantity: toNum(row.quantity),
+          currentValues: {
+            quantity: toNum(row.quantity),
+            rate: toNum(row.rate),
+            brand: row.brand,
+            supplier: row.supplier,
+          },
+          proposedValues: {
+            quantity: toNum(commercial.quantity ?? row.quantity),
+            rate: toNum(commercial.rate ?? row.rate),
+            brand: String(commercial.brand ?? row.brand),
+            supplier: String(commercial.supplier ?? row.supplier),
+          },
+          source: source ?? "boq-engine",
+          note: note ?? "",
+          requestedBy: decider.id,
+          requestedByName: decider.name,
+        });
+        return "requested" as const;
+      }
       const { error } = await supabase.from("boq_items").update(patch).eq("id", id);
       if (error) throw error;
+      return "saved" as const;
     },
-    onSuccess: refresh,
+    onSuccess: async (result) => {
+      if (result === "requested") {
+        setStatus("Sent for partner approval — the BOQ line stays unchanged until it is approved.");
+        await qc.invalidateQueries({ queryKey: ["boq_change_requests"] });
+      }
+      await refresh();
+    },
     onError: (e: Error) => setStatus(`Save failed: ${e.message}`),
   });
 
@@ -385,6 +434,33 @@ function Page() {
       const targets = items.filter((it) => it.stage === stageName);
       for (const it of targets) {
         const nextRate = ratio > 0 ? Math.round(toNum(it.rate) * ratio) : toNum(it.rate);
+        if (gateOn) {
+          await raiseChangeRequest({
+            projectId: activeId,
+            itemId: it.id,
+            trade: it.stage,
+            description: it.description,
+            unit: it.unit,
+            quantity: toNum(it.quantity),
+            currentValues: {
+              quantity: toNum(it.quantity),
+              rate: toNum(it.rate),
+              brand: it.brand,
+              supplier: it.supplier,
+            },
+            proposedValues: {
+              quantity: toNum(it.quantity),
+              rate: nextRate,
+              brand,
+              supplier: supplier || it.supplier,
+            },
+            source: "trade-optimizer",
+            note: `Apply ${brand} across ${stageName}`,
+            requestedBy: decider.id,
+            requestedByName: decider.name,
+          });
+          continue;
+        }
         const { error } = await supabase
           .from("boq_items")
           .update({ brand, supplier: supplier || it.supplier, rate: nextRate })
@@ -394,8 +470,13 @@ function Page() {
       return targets.length;
     },
     onSuccess: async (count) => {
-      setStatus(`Applied to ${count} line item(s) in this trade.`);
+      setStatus(
+        gateOn
+          ? `${count} line item(s) sent for partner approval.`
+          : `Applied to ${count} line item(s) in this trade.`,
+      );
       setApplyAll(null);
+      await qc.invalidateQueries({ queryKey: ["boq_change_requests"] });
       await refresh();
     },
     onError: (e: Error) => setStatus(`Bulk apply failed: ${e.message}`),
