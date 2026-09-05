@@ -156,6 +156,26 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
       workflowTemplate: project.workflow_template,
     };
 
+    // Owner-declared brand preferences (set on the Brand Preferences screen).
+    const prefs = Array.isArray(project.brand_preferences)
+      ? (project.brand_preferences as Record<string, unknown>[])
+          .map((p) => ({
+            material: String(p?.["material"] ?? "").trim(),
+            brand: String(p?.["brand"] ?? "").trim(),
+            series: String(p?.["series"] ?? "").trim(),
+            supplier: String(p?.["supplier"] ?? "").trim(),
+            notes: String(p?.["notes"] ?? "").trim(),
+          }))
+          .filter((p) => p.material && p.brand)
+      : [];
+
+    const prefLines = prefs
+      .map(
+        (p) =>
+          `- ${p.material}: ${p.brand}${p.series ? ` (${p.series})` : ""}${p.supplier ? ` — supplier ${p.supplier}` : ""}${p.notes ? ` — ${p.notes}` : ""}`,
+      )
+      .join("\n");
+
     const system = [
       "You are a senior Indian quantity surveyor preparing a pre-drawing concept BOQ / budget estimate for a Hyderabad (Telangana) building project. Architectural drawings are NOT available yet, so derive everything from standard thumb rules, IS codes, CPWD norms and current Hyderabad market rates in INR.",
       "Return ONLY a JSON array — no prose, no markdown fences. Each element must be an object with exactly these keys:",
@@ -164,8 +184,17 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
       "Quantities MUST be derived from the given geometry (built-up sft, slab sft, floor counts) and be internally consistent with the specified material grades and quality tiers.",
       "UNITS: use Indian site units only — areas in SFT (never SQM / sq mt / m2), lengths in RFT, concrete in CUM, steel in KG or MT, counts in NOS, cement in BAGS. Flooring, wall tiling, granite, plastering, painting, waterproofing and false ceiling MUST be quoted in SFT with a per-SFT rate.",
       "AREA DETAIL: for every finishing trade (Flooring, Wall Tiling, Granite Works, False Ceiling, Painting, Waterproofing, Sanitaryware, CP Fittings) the description MUST name the room/location it applies to, e.g. \"Vitrified tile flooring 800x800 — living & dining\", \"Anti-skid flooring — bathroom floor\", \"Ceramic dado up to 7ft — bathroom wall\", \"Granite — kitchen platform\", \"Flooring — bedrooms\", \"Flooring — balcony\", \"Flooring — staircase & lobby\", \"Flooring — utility\". Split each finishing trade into separate line items per area instead of one lumped item.",
+      prefLines
+        ? [
+            "OWNER'S APPROVED BRANDS — these are mandatory. For any item belonging to one of these materials you MUST set \"brand\" to exactly the make named below (append the series/grade when given) and price the item at that brand's realistic Hyderabad rate. Never substitute a different make for these, and never leave the brand blank for them. Copy the supplier when one is given.",
+            prefLines,
+            "For materials NOT listed above, propose a suitable realistic Indian brand as usual.",
+          ].join("\n")
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
-    ].join("\n");
 
     const batches: (typeof BOQ_TRADES)[number][][] = [];
     for (let i = 0; i < BOQ_TRADES.length; i += 5) {

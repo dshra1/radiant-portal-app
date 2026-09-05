@@ -1,0 +1,1 @@
+ALTER TABLE public.site_projects ADD COLUMN IF NOT EXISTS pmc_scope jsonb NOT NULL DEFAULT '{}'::jsonb;

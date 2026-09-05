@@ -29,9 +29,6 @@ export const SAMPLE_DATA_ROUTES: Record<string, string> = {
   "/media-upload-studio": "uploaded media samples",
   "/site-media": "site media samples",
   "/scope-brief": "scope brief content",
-  "/pmc-scope": "PMC scope items",
-  "/ai-programme": "programme schedule sample",
   "/system-directory": "directory records",
-  "/boq-upload": "sample BOQ upload rows",
   "/roles-access": "sample role assignments",
 };

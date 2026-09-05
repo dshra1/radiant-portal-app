@@ -1,13 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { CalendarClock, Sparkles, Download, Gauge } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { supabase } from "@/integrations/supabase/client";
+import { generateProgramme, type ProgrammeTask } from "@/lib/programme.functions";
 
 export const Route = createFileRoute("/ai-programme")({
   head: () => ({
     meta: [
-      { title: "AI Project Programme & Workstream Overlap Engine — Saha OS" },
-      { name: "description", content: "Labor-matched autonomous scheduling combining BOQ scale, IS 456 curing constraints and parallel trade fronts." },
-      { property: "og:title", content: "AI Project Programme & Workstream Overlap Engine — Saha OS" },
-      { property: "og:description", content: "Labor-matched autonomous scheduling combining BOQ scale, IS 456 curing constraints and parallel trade fronts." },
+      { title: "AI Project Programme — Saha OS" },
+      {
+        name: "description",
+        content:
+          "Generate a realistic construction programme from your project inputs and BOQ: activity-wise durations, curing periods, parallel fronts and handover date.",
+      },
+      { property: "og:title", content: "AI Project Programme — Saha OS" },
+      {
+        property: "og:description",
+        content: "Activity-wise construction schedule generated from your project and BOQ data.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -15,11 +28,380 @@ export const Route = createFileRoute("/ai-programme")({
   component: Page,
 });
 
-function Page() {
+function toNum(v: unknown) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fmtDate(v: string) {
+  if (!v) return "—";
+  const d = new Date(`${v}T00:00:00Z`);
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
-    <Shell title={"AI Project Programme & Workstream Overlap Engine"}>
-      <div className="m3">
-        <main className="w-full  px-gutter-normal pb-gutter-expanded bg-surface"><div className="flex flex-col w-full gap-space-lg"> <div className="flex flex-col gap-space-2xs"> <div className="flex items-center gap-space-xs text-secondary text-body-sm"> <span>Project Controls</span> <span className="material-symbols-outlined text-[14px]">chevron_right</span> <span>BOQ baseline</span> <span className="material-symbols-outlined text-[14px]">chevron_right</span> <span>procurement actuals</span> <span className="material-symbols-outlined text-[14px]">chevron_right</span> <span>savings</span> <span className="material-symbols-outlined text-[14px]">chevron_right</span> <span className="text-on-surface font-medium">programme</span> </div> </div> <div className="grid grid-cols-1 md:grid-cols-4 gap-space-md"> <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-secondary uppercase">AI / BOQ Baseline</span> <span className="material-symbols-outlined text-primary text-[18px]">psychology</span> </div> <div className="mt-space-sm"> <span className="font-tabular-metric text-tabular-metric text-on-surface">365 Days</span> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="px-space-2xs py-0.5 bg-[#ECFDF5] text-[#059669] rounded font-label-sm text-[11px]">Strict Feasibility</span> <span className="text-body-sm text-secondary">Optimized</span> </div> </div> </div> <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-secondary uppercase">Target Budget</span> <span className="material-symbols-outlined text-primary text-[18px]">account_balance_wallet</span> </div> <div className="mt-space-sm"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹5.00 Cr</span> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="px-space-2xs py-0.5 bg-[#ECFDF5] text-[#059669] rounded font-label-sm text-[11px]">+0.8% Buffer</span> <span className="text-body-sm text-secondary">Approved</span> </div> </div> </div> <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-secondary uppercase">Procurement Committed</span> <span className="material-symbols-outlined text-primary text-[18px]">local_shipping</span> </div> <div className="mt-space-sm"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹3.82 Cr</span> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="px-space-2xs py-0.5 bg-surface-container text-on-surface font-label-sm text-[11px]">76.4% Locked</span> <span className="text-body-sm text-secondary">14-day lead</span> </div> </div> </div> <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-secondary uppercase">Savings / Variance</span> <span className="material-symbols-outlined text-primary text-[18px]">trending_down</span> </div> <div className="mt-space-sm"> <span className="font-tabular-metric text-tabular-metric text-primary">₹34.5 L</span> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="px-space-2xs py-0.5 bg-[#ECFDF5] text-[#059669] rounded font-label-sm text-[11px]">Under Baseline</span> <span className="text-body-sm text-secondary">Optimal</span> </div> </div> </div> </div> <div className="bg-inverse-surface text-inverse-on-surface p-space-lg rounded-xl shadow-md relative overflow-hidden flex flex-col gap-space-md"><div className="absolute right-0 top-0 w-96 h-full bg-gradient-to-l from-primary/20 to-transparent pointer-events-none" /><div className="flex items-center justify-between relative z-10"><div className="flex items-center gap-space-sm"><div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-on-primary shadow-sm"><span className="material-symbols-outlined">auto_graph</span></div><div><h2 className="font-headline-md text-headline-md text-inverse-on-surface">AI Project Programme & Autonomous Workstream Overlap Engine</h2><p className="font-body-sm text-body-sm text-secondary-fixed-dim">Labor-matched scheduling engine combining BOQ scale, IS 456 curing constraints, and parallel trade fronts.</p></div></div><div className="flex items-center gap-space-xs px-space-md py-space-xs bg-inverse-surface/80 rounded-lg border border-outline/20"><span className="w-2 h-2 rounded-full bg-primary-fixed animate-ping" /><span className="font-label-sm text-label-sm text-primary-fixed">Engine Active</span></div></div><p className="font-body-md text-body-md text-secondary-fixed-dim max-w-4xl relative z-10">Saha OS independently calculates realistic baselines using BOQ scale, floors, active labor headcount (140 formwork, 98 steel fixers, 60 masonry), mandated curing periods, night restrictions, and monsoon allowances.</p></div> <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col gap-space-md"> <div className="flex items-center justify-between pb-space-sm border-b border-surface-container"> <div className="flex items-center gap-space-sm"> <span className="material-symbols-outlined text-primary">tune</span> <h3 className="font-headline-sm text-headline-sm text-on-surface">Interactive Parameter Controls Grid</h3> </div> <span className="font-label-sm text-label-sm text-secondary">Real-time Recalculation Engine</span> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md"> <div className="flex flex-col gap-space-xs"> <label className="font-label-md text-label-md text-on-surface">Project Start Date</label> <div className="flex items-center bg-surface-container-low px-space-md py-space-sm rounded-lg border border-outline-variant/30"> <span className="material-symbols-outlined text-secondary text-[18px] mr-space-xs">calendar_today</span> <input className="bg-transparent font-body-md text-body-md text-on-surface outline-none w-full" type="date" defaultValue="2026-09-04" /> </div> </div> <div className="flex flex-col gap-space-xs"> <label className="font-label-md text-label-md text-on-surface">Target Completion Date</label> <div className="flex items-center bg-surface-container-low px-space-md py-space-sm rounded-lg border border-outline-variant/30"> <span className="material-symbols-outlined text-secondary text-[18px] mr-space-xs">event_available</span> <input className="bg-transparent font-body-md text-body-md text-on-surface outline-none w-full" type="date" defaultValue="2027-09-04" /> </div> </div> <div className="flex flex-col gap-space-xs"> <label className="font-label-md text-label-md text-on-surface">Floors</label> <div className="flex items-center bg-surface-container-low px-space-md py-space-sm rounded-lg border border-outline-variant/30"> <span className="material-symbols-outlined text-secondary text-[18px] mr-space-xs">domain</span> <input className="bg-transparent font-body-md text-body-md text-on-surface outline-none w-full" type="number" defaultValue="5" /> </div> </div> <div className="flex flex-col gap-space-xs"> <label className="font-label-md text-label-md text-on-surface">Parallel Work Fronts</label> <div className="flex items-center bg-surface-container-low px-space-md py-space-sm rounded-lg border border-outline-variant/30"> <span className="material-symbols-outlined text-secondary text-[18px] mr-space-xs">account_tree</span> <input className="bg-transparent font-body-md text-body-md text-on-surface outline-none w-full" type="number" defaultValue="2" /> </div> </div> <div className="flex flex-col gap-space-xs"> <label className="font-label-md text-label-md text-on-surface">Working Days / Week</label> <div className="flex items-center bg-surface-container-low px-space-md py-space-sm rounded-lg border border-outline-variant/30"> <span className="material-symbols-outlined text-secondary text-[18px] mr-space-xs">schedule</span> <input className="bg-transparent font-body-md text-body-md text-on-surface outline-none w-full" type="number" defaultValue="6" /> </div> </div> <div className="flex flex-col gap-space-xs"> <label className="font-label-md text-label-md text-on-surface">Public Holidays / Year</label> <div className="flex items-center bg-surface-container-low px-space-md py-space-sm rounded-lg border border-outline-variant/30"> <span className="material-symbols-outlined text-secondary text-[18px] mr-space-xs">celebration</span> <input className="bg-transparent font-body-md text-body-md text-on-surface outline-none w-full" type="number" defaultValue="12" /> </div> </div> <div className="flex flex-col gap-space-xs"> <label className="font-label-md text-label-md text-on-surface">Procurement Buffer (Days)</label> <div className="flex items-center bg-surface-container-low px-space-md py-space-sm rounded-lg border border-outline-variant/30"> <span className="material-symbols-outlined text-secondary text-[18px] mr-space-xs">timer</span> <input className="bg-transparent font-body-md text-body-md text-on-surface outline-none w-full" type="number" defaultValue="14" /> </div> </div> <div className="flex flex-col gap-space-xs justify-center"> <label className="font-label-md text-label-md text-on-surface mb-space-2xs">Night Work Status</label> <div className="flex items-center justify-between bg-surface-container-low px-space-md py-space-sm rounded-lg border border-outline-variant/30"> <div className="flex items-center gap-space-xs"> <span className="material-symbols-outlined text-primary text-[18px]">nights_stay</span> <span className="font-body-md text-body-md text-on-surface">Allowed (Restricted decibels)</span> </div> <input checked={true} className="w-4 h-4 accent-primary cursor-pointer" type="checkbox" /> </div> </div> <div className="flex flex-col gap-space-xs justify-center"> <label className="font-label-md text-label-md text-on-surface mb-space-2xs">Monsoon Restriction (External)</label> <div className="flex items-center justify-between bg-surface-container-low px-space-md py-space-sm rounded-lg border border-outline-variant/30"> <div className="flex items-center gap-space-xs"> <span className="material-symbols-outlined text-primary text-[18px]">rainy</span> <span className="font-body-md text-body-md text-on-surface">Active Allowance</span> </div> <input checked={true} className="w-4 h-4 accent-primary cursor-pointer" type="checkbox" /> </div> </div> </div> </div> <div className="bg-surface-container-low p-space-md rounded-xl flex flex-col md:flex-row items-center justify-between gap-space-md border border-outline-variant/20 shadow-sm"> <div className="flex items-center gap-space-sm"> <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary"> <span className="material-symbols-outlined text-[18px]">verified</span> </div> <div> <span className="font-title-md text-title-md text-on-surface">Requested target: 365 calendar days</span> <p className="font-body-sm text-body-sm text-secondary">AI independently tests whether it is realistic based on current BOQ parameters.</p> </div> </div> <button className="bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-headline-sm px-space-lg py-space-sm rounded-lg transition-colors flex items-center gap-space-xs shadow-sm" type="button"> <span className="material-symbols-outlined text-[18px]">bolt</span> <span>Generate AI Programme</span> </button> </div> <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col gap-space-md"> <div className="flex items-center gap-space-sm pb-space-sm border-b border-surface-container"> <span className="material-symbols-outlined text-primary">help</span> <h3 className="font-headline-sm text-headline-sm text-on-surface">How SAHA OS will plan the project</h3> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md"> <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-tabular-metric text-primary">01</span> <span className="material-symbols-outlined text-secondary text-[18px]">receipt_long</span> </div> <h4 className="font-title-md text-title-md text-on-surface">Reads Populated BOQ</h4> <p className="font-body-sm text-body-sm text-secondary">Extracts detailed categories, quantities, and structural specifications from the active baseline.</p> </div> <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-tabular-metric text-primary">02</span> <span className="material-symbols-outlined text-secondary text-[18px]">schedule</span> </div> <h4 className="font-title-md text-title-md text-on-surface">Estimates Duration</h4> <p className="font-body-sm text-body-sm text-secondary">Uses construction logic, total scale, floor counts, and parallel work fronts to compute realistic timelines.</p> </div> <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-tabular-metric text-primary">03</span> <span className="material-symbols-outlined text-secondary text-[18px]">hourglass_top</span> </div> <h4 className="font-title-md text-title-md text-on-surface">Preserves Fixed Periods</h4> <p className="font-body-sm text-body-sm text-secondary">Protects mandatory technical timelines such as concrete curing and non-destructive structural testing.</p> </div> <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-tabular-metric text-primary">04</span> <span className="material-symbols-outlined text-secondary text-[18px]">layers</span> </div> <h4 className="font-title-md text-title-md text-on-surface">Finds Sensible Overlaps</h4> <p className="font-body-sm text-body-sm text-secondary">Optimizes overlapping work streams instead of forcing every category to run in strict sequential order.</p> </div> <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-tabular-metric text-primary">05</span> <span className="material-symbols-outlined text-secondary text-[18px]">flag</span> </div> <h4 className="font-title-md text-title-md text-on-surface">Flags Uncertain Activities</h4> <p className="font-body-sm text-body-sm text-secondary">Identifies bottleneck tasks and prompts project managers for custom duration adjustments.</p> </div> <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-tabular-metric text-primary">06</span> <span className="material-symbols-outlined text-secondary text-[18px]">sync</span> </div> <h4 className="font-title-md text-title-md text-on-surface">Feeds Core Modules</h4> <p className="font-body-sm text-body-sm text-secondary">Seamlessly integrates approved programmes into Workflow, Procurement, and AI Daily Site Plans.</p> </div> </div> </div> </div></main>
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+const inputClass =
+  "rounded-xl border border-sky-500/40 bg-sky-500/5 px-3 py-2 text-sm text-foreground outline-none focus:border-sky-500";
+
+function Page() {
+  const [projectId, setProjectId] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [targetDate, setTargetDate] = useState("");
+  const [floors, setFloors] = useState(5);
+  const [fronts, setFronts] = useState(2);
+  const [workingDays, setWorkingDays] = useState(6);
+  const [holidays, setHolidays] = useState(12);
+  const [buffer, setBuffer] = useState(14);
+  const [nightWork, setNightWork] = useState(true);
+  const [monsoon, setMonsoon] = useState(true);
+  const [loadedFor, setLoadedFor] = useState("");
+  const [status, setStatus] = useState("");
+  const [result, setResult] = useState<{
+    tasks: ProgrammeTask[];
+    totalWorkingDays: number;
+    totalCalendarDays: number;
+    finishDate: string;
+    requestedCalendarDays: number;
+    feasible: boolean;
+    boqLineItems: number;
+  } | null>(null);
+
+  const run = useServerFn(generateProgramme);
+
+  const projectsQuery = useQuery({
+    queryKey: ["site_projects", "ai-programme"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_projects")
+        .select(
+          "id,name,location,start_date,target_handover_date,cellar_floors,stilt_floors,typical_floors,working_days_per_week,procurement_lead_days,total_built_up_sft",
+        )
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const projects = projectsQuery.data ?? [];
+  const activeId = projectId || projects[0]?.id || "";
+  const project = projects.find((p) => p.id === activeId);
+
+  useEffect(() => {
+    if (!project || loadedFor === activeId) return;
+    setStartDate(project.start_date ?? new Date().toISOString().slice(0, 10));
+    setTargetDate(project.target_handover_date ?? "");
+    setFloors(
+      Math.max(
+        1,
+        toNum(project.cellar_floors) + toNum(project.stilt_floors) + toNum(project.typical_floors),
+      ),
+    );
+    setWorkingDays(toNum(project.working_days_per_week) || 6);
+    setBuffer(toNum(project.procurement_lead_days) || 14);
+    setLoadedFor(activeId);
+    setResult(null);
+  }, [project, activeId, loadedFor]);
+
+  const mutation = useMutation({
+    mutationFn: async () =>
+      run({
+        data: {
+          projectId: activeId,
+          startDate,
+          targetDate,
+          floors,
+          parallelFronts: fronts,
+          workingDaysPerWeek: workingDays,
+          holidaysPerYear: holidays,
+          procurementBufferDays: buffer,
+          nightWork,
+          monsoonAllowance: monsoon,
+        },
+      }),
+    onSuccess: (res) => {
+      setResult(res);
+      setStatus(
+        `Programme ready — ${res.tasks.length} activities, ${res.totalCalendarDays} calendar days, handover ${fmtDate(res.finishDate)}.`,
+      );
+    },
+    onError: (e: Error) => setStatus(`Programme generation failed: ${e.message}`),
+  });
+
+  const phases = useMemo(() => {
+    const map = new Map<string, ProgrammeTask[]>();
+    for (const t of result?.tasks ?? []) {
+      const list = map.get(t.phase) ?? [];
+      list.push(t);
+      map.set(t.phase, list);
+    }
+    return [...map.entries()];
+  }, [result]);
+
+  const exportCsv = () => {
+    if (!result) return;
+    const header = "Phase,Activity,Start day,Duration (working days),Start,Finish,Crew,Depends on,Notes";
+    const rows = result.tasks.map((t) =>
+      [t.phase, t.activity, t.startDay, t.durationDays, t.startDate, t.endDate, t.crew, t.dependency, t.notes]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(","),
+    );
+    const url = URL.createObjectURL(
+      new Blob([[header, ...rows].join("\n")], { type: "text/csv;charset=utf-8" }),
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${project?.name ?? "project"}-programme.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Shell title="AI Project Programme">
+      <div className="space-y-6">
+        <header className="space-y-2">
+          <h1 className="flex items-center gap-3 text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
+            <CalendarClock className="h-7 w-7 text-primary" />
+            AI Project Programme
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Reads your saved project details and BOQ, then plans the job activity by activity —
+            curing periods, slab cycles, monsoon and night-work limits, procurement lead time and
+            the number of work fronts you run.
+          </p>
+        </header>
+
+        <div className="grid gap-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Project
+            </span>
+            <select
+              value={activeId}
+              onChange={(e) => {
+                setProjectId(e.target.value);
+                setLoadedFor("");
+                setStatus("");
+              }}
+              className="min-w-[220px] rounded-xl border border-border bg-background px-3 py-2 text-sm"
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} {p.location ? `· ${p.location}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="Project start date">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Target handover date">
+              <input
+                type="date"
+                value={targetDate}
+                onChange={(e) => setTargetDate(e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Floors">
+              <input
+                type="number"
+                min={1}
+                value={floors}
+                onChange={(e) => setFloors(toNum(e.target.value))}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Parallel work fronts">
+              <input
+                type="number"
+                min={1}
+                value={fronts}
+                onChange={(e) => setFronts(toNum(e.target.value))}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Working days / week">
+              <input
+                type="number"
+                min={1}
+                max={7}
+                value={workingDays}
+                onChange={(e) => setWorkingDays(toNum(e.target.value))}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Public holidays / year">
+              <input
+                type="number"
+                min={0}
+                value={holidays}
+                onChange={(e) => setHolidays(toNum(e.target.value))}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Procurement buffer (days)">
+              <input
+                type="number"
+                min={0}
+                value={buffer}
+                onChange={(e) => setBuffer(toNum(e.target.value))}
+                className={inputClass}
+              />
+            </Field>
+            <label className="flex items-center gap-3 self-end rounded-xl border border-border bg-background px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                checked={nightWork}
+                onChange={(e) => setNightWork(e.target.checked)}
+              />
+              Night work allowed
+            </label>
+            <label className="flex items-center gap-3 self-end rounded-xl border border-border bg-background px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                checked={monsoon}
+                onChange={(e) => setMonsoon(e.target.checked)}
+              />
+              Monsoon allowance
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => mutation.mutate()}
+              disabled={!activeId || mutation.isPending}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              <Sparkles className="h-4 w-4" />
+              {mutation.isPending ? "Planning…" : "Generate AI Programme"}
+            </button>
+            {result ? (
+              <button
+                type="button"
+                onClick={exportCsv}
+                className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
+              >
+                <Download className="h-4 w-4" />
+                Export programme
+              </button>
+            ) : null}
+            {projects.length === 0 ? (
+              <span className="text-sm text-muted-foreground">Add a project first.</span>
+            ) : null}
+          </div>
+
+          {status ? (
+            <p className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+              {status}
+            </p>
+          ) : null}
+        </div>
+
+        {result ? (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { label: "Activities planned", value: String(result.tasks.length) },
+                { label: "Working days", value: String(result.totalWorkingDays) },
+                { label: "Calendar days", value: String(result.totalCalendarDays) },
+                { label: "Projected handover", value: fmtDate(result.finishDate) },
+              ].map((c) => (
+                <div
+                  key={c.label}
+                  className="rounded-2xl border border-emerald-600/30 bg-emerald-600/5 p-4"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                    {c.label}
+                  </p>
+                  <p className="mt-1 text-xl font-bold text-foreground">{c.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div
+              className={`flex items-start gap-3 rounded-2xl border p-4 text-sm ${
+                result.feasible
+                  ? "border-emerald-600/30 bg-emerald-600/5 text-foreground"
+                  : "border-amber-500/40 bg-amber-500/10 text-foreground"
+              }`}
+            >
+              <Gauge className="mt-0.5 h-5 w-5 text-primary" />
+              <p>
+                {result.requestedCalendarDays > 0
+                  ? result.feasible
+                    ? `Your target of ${result.requestedCalendarDays} calendar days is achievable with these inputs — the plan finishes in ${result.totalCalendarDays} days.`
+                    : `Your target of ${result.requestedCalendarDays} calendar days is not realistic with these inputs — the plan needs ${result.totalCalendarDays} days. Add work fronts, allow night work, or move the handover date.`
+                  : `Plan runs ${result.totalCalendarDays} calendar days from the start date. Set a target handover date to check it against your deadline.`}
+                {result.boqLineItems === 0
+                  ? " Note: no BOQ items saved for this project yet, so scope was assumed — generate the BOQ for a sharper plan."
+                  : ` Based on ${result.boqLineItems} BOQ line items.`}
+              </p>
+            </div>
+
+            {phases.map(([phase, tasks]) => (
+              <div key={phase} className="overflow-hidden rounded-2xl border border-border bg-card">
+                <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-primary">
+                    {phase}
+                  </h2>
+                  <span className="text-xs text-muted-foreground">{tasks.length} activities</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[820px] text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-4 py-2">Activity</th>
+                        <th className="px-4 py-2">Start</th>
+                        <th className="px-4 py-2">Finish</th>
+                        <th className="px-4 py-2">Days</th>
+                        <th className="px-4 py-2">Crew</th>
+                        <th className="px-4 py-2">Depends on</th>
+                        <th className="px-4 py-2">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tasks.map((t, i) => (
+                        <tr key={`${t.activity}-${i}`} className="border-b border-border/60">
+                          <td className="px-4 py-2 font-medium text-foreground">{t.activity}</td>
+                          <td className="px-4 py-2 whitespace-nowrap">{fmtDate(t.startDate)}</td>
+                          <td className="px-4 py-2 whitespace-nowrap">{fmtDate(t.endDate)}</td>
+                          <td className="px-4 py-2">{t.durationDays}</td>
+                          <td className="px-4 py-2">{t.crew || "—"}</td>
+                          <td className="px-4 py-2">{t.dependency || "—"}</td>
+                          <td className="px-4 py-2 text-muted-foreground">{t.notes || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </>
+        ) : null}
       </div>
     </Shell>
   );

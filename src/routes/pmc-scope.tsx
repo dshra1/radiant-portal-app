@@ -1,13 +1,24 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ruler, Save, Calculator, CheckSquare, Square } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/pmc-scope")({
   head: () => ({
     meta: [
       { title: "PMC Appointment Scope & Investment — Saha OS" },
-      { name: "description", content: "Define itemized work packages, PMC scope boundaries and capital allocation for common vs individual development." },
+      {
+        name: "description",
+        content:
+          "Pick the work packages your PMC handles, set the fee and see allocated, committed and balance cost against your live BOQ.",
+      },
       { property: "og:title", content: "PMC Appointment Scope & Investment — Saha OS" },
-      { property: "og:description", content: "Define itemized work packages, PMC scope boundaries and capital allocation for common vs individual development." },
+      {
+        property: "og:description",
+        content: "Live PMC scope, fee and cost allocation driven by your project BOQ.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -15,11 +26,374 @@ export const Route = createFileRoute("/pmc-scope")({
   component: Page,
 });
 
+const SCOPE_MODES = ["Common only", "Individual only", "Common + Individual"] as const;
+
+function toNum(v: unknown) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function inr(v: number) {
+  return `₹${Math.round(v).toLocaleString("en-IN")}`;
+}
+
+function crore(v: number) {
+  return `₹${(v / 10000000).toFixed(2)} Cr`;
+}
+
+type SavedScope = {
+  mode?: string;
+  feePct?: number;
+  includedTrades?: string[];
+};
+
 function Page() {
+  const qc = useQueryClient();
+  const [projectId, setProjectId] = useState("");
+  const [mode, setMode] = useState<string>(SCOPE_MODES[0]);
+  const [feePct, setFeePct] = useState(3);
+  const [included, setIncluded] = useState<string[]>([]);
+  const [loadedFor, setLoadedFor] = useState("");
+  const [status, setStatus] = useState("");
+
+  const projectsQuery = useQuery({
+    queryKey: ["site_projects", "pmc-scope"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_projects")
+        .select("id,name,location,target_budget,total_built_up_sft,pmc_scope")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const projects = projectsQuery.data ?? [];
+  const activeId = projectId || projects[0]?.id || "";
+  const project = projects.find((p) => p.id === activeId);
+
+  const boqQuery = useQuery({
+    queryKey: ["boq_items", "pmc-scope", activeId],
+    enabled: Boolean(activeId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("boq_items")
+        .select("stage,quantity,rate")
+        .eq("project_id", activeId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const poQuery = useQuery({
+    queryKey: ["purchase_orders", "pmc-scope", activeId],
+    enabled: Boolean(activeId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .select("id,status,freight_charges,other_charges,purchase_order_items(quantity,rate,discount_pct,gst_pct)")
+        .eq("project_id", activeId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const packages = useMemo(() => {
+    const map = new Map<string, { cost: number; items: number }>();
+    for (const it of boqQuery.data ?? []) {
+      const key = String(it.stage ?? "Miscellaneous");
+      const prev = map.get(key) ?? { cost: 0, items: 0 };
+      map.set(key, {
+        cost: prev.cost + toNum(it.quantity) * toNum(it.rate),
+        items: prev.items + 1,
+      });
+    }
+    return [...map.entries()]
+      .map(([trade, v]) => ({ trade, ...v }))
+      .sort((a, b) => b.cost - a.cost);
+  }, [boqQuery.data]);
+
+  useEffect(() => {
+    if (!project || loadedFor === activeId) return;
+    const saved = (project.pmc_scope ?? {}) as SavedScope;
+    setMode(saved.mode && SCOPE_MODES.includes(saved.mode as never) ? saved.mode : SCOPE_MODES[0]);
+    setFeePct(toNum(saved.feePct) || 3);
+    setIncluded(Array.isArray(saved.includedTrades) ? saved.includedTrades.map(String) : []);
+    setLoadedFor(activeId);
+  }, [project, activeId, loadedFor]);
+
+  // Default to everything in scope the first time, once the BOQ has loaded.
+  useEffect(() => {
+    if (loadedFor !== activeId) return;
+    const saved = (project?.pmc_scope ?? {}) as SavedScope;
+    if (!Array.isArray(saved.includedTrades) && packages.length > 0 && included.length === 0) {
+      setIncluded(packages.map((p) => p.trade));
+    }
+  }, [packages, loadedFor, activeId, project, included.length]);
+
+  const committed = useMemo(() => {
+    let total = 0;
+    for (const po of poQuery.data ?? []) {
+      if (String(po.status ?? "").toLowerCase() === "rejected") continue;
+      const lines = (po.purchase_order_items ?? []) as {
+        quantity: number;
+        rate: number;
+        discount_pct: number;
+        gst_pct: number;
+      }[];
+      for (const l of lines) {
+        const base = toNum(l.quantity) * toNum(l.rate);
+        const afterDisc = base * (1 - toNum(l.discount_pct) / 100);
+        total += afterDisc * (1 + toNum(l.gst_pct) / 100);
+      }
+      total += toNum(po.freight_charges) + toNum(po.other_charges);
+    }
+    return total;
+  }, [poQuery.data]);
+
+  const inScopeCost = packages
+    .filter((p) => included.includes(p.trade))
+    .reduce((sum, p) => sum + p.cost, 0);
+  const totalBoq = packages.reduce((sum, p) => sum + p.cost, 0);
+  const pmcFee = (inScopeCost * feePct) / 100;
+  const budget = toNum(project?.target_budget);
+  const sft = toNum(project?.total_built_up_sft);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("site_projects")
+        .update({ pmc_scope: { mode, feePct, includedTrades: included } })
+        .eq("id", activeId);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setStatus("PMC scope saved for this project.");
+      await qc.invalidateQueries({ queryKey: ["site_projects"] });
+    },
+    onError: (e: Error) => setStatus(`Save failed: ${e.message}`),
+  });
+
+  const toggle = (trade: string) =>
+    setIncluded((prev) =>
+      prev.includes(trade) ? prev.filter((t) => t !== trade) : [...prev, trade],
+    );
+
   return (
-    <Shell title={"PMC Appointment Scope & Investment"}>
-      <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full gap-space-xl">  <div className="flex items-center gap-space-sm bg-surface-container-lowest p-space-xs rounded shadow-sm w-fit"> <button className="px-space-md py-space-xs rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors font-title-md text-title-md">Investment</button> <button className="px-space-md py-space-xs rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors font-title-md text-title-md">Owner Report</button> <button className="px-space-md py-space-xs rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors font-title-md text-title-md">Demand & Reconciliation</button> <button className="px-space-md py-space-xs rounded bg-primary text-on-primary font-title-md text-title-md shadow-sm">PMC Scope</button> </div>  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-base bg-surface-container-lowest p-space-xl rounded shadow-sm"> <div className="flex flex-col gap-space-2xs"> <div className="flex items-center gap-space-sm"> <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider font-bold">Module 04 // Cost Planning & Scope</span> <span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm">Active Enclave</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface">PMC Appointment Scope & Investment</h1> <p className="font-body-md text-body-md text-on-surface-variant">Define itemized work packages, assign project scope boundaries, and monitor capital allocation.</p> </div> <div className="flex items-center gap-space-base"> <div className="flex flex-col bg-surface-container-low px-space-md py-space-sm rounded cursor-pointer hover:bg-surface-container transition-colors"> <span className="font-label-sm text-label-sm text-on-surface-variant">Selected Project Selector</span> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="font-title-md text-title-md text-on-surface">PRJ-779687 • cyber enclave A</span> <span className="material-symbols-outlined text-on-surface-variant text-space-base">unfold_more</span> </div> </div> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg"> <div className="bg-surface-container-lowest p-space-xl rounded shadow-sm flex flex-col justify-between"> <div className="flex flex-col gap-space-xs"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Assigned PMC Scope</span> <label className="sr-only" htmlFor="scope-select">Assigned PMC scope</label> <div className="relative mt-space-xs"> <select className="w-full appearance-none bg-surface-container-low px-space-base py-space-md rounded font-title-md text-title-md text-on-surface focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer" id="scope-select"><option value="common">Common only</option><option value="individual">Individual only</option><option value="both">Both</option></select> <span className="material-symbols-outlined absolute right-space-md top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span> </div> </div> <div className="mt-space-lg pt-space-base bg-surface-container-low/50 p-space-md rounded flex items-center gap-space-sm"> <span className="material-symbols-outlined text-primary">info</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Filter updates downstream BOQ calculations instantly.</span> </div> </div> <div className="bg-surface-container-lowest p-space-xl rounded shadow-sm flex flex-col justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Total Allocated Cost</span> <div className="flex items-baseline gap-space-sm"> <span className="font-display-lg text-display-lg text-on-surface">₹ 42.85 Cr</span> <span className="px-space-xs py-space-2xs rounded bg-primary/10 text-primary font-label-sm text-label-sm font-bold">+4.2% vs baseline</span> </div> <div className="w-full bg-surface-container-low h-2 rounded-full overflow-hidden mt-space-base"> <div className="bg-primary h-full rounded-full" style={{"width": "78%"}} /> </div> <div className="flex justify-between items-center mt-space-xs font-body-sm text-body-sm text-on-surface-variant"> <span>Committed: ₹33.4 Cr</span> <span>Balance: ₹9.45 Cr</span> </div> </div> <div className="bg-surface-container-lowest p-space-xl rounded shadow-sm flex flex-col justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Work Package Coverage</span> <div className="flex items-center gap-space-lg my-auto"> <div className="flex flex-col"> <span className="font-tabular-metric text-tabular-metric text-on-surface">15 / 15</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Active Packages</span> </div> <div className="flex flex-col"> <span className="font-tabular-metric text-tabular-metric text-primary">100%</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Verification Rate</span> </div> </div> <div className="flex items-center gap-space-xs text-primary font-title-md text-title-md cursor-pointer hover:underline"> <span>View cost breakdown matrix</span> <span className="material-symbols-outlined text-space-base">arrow_forward</span> </div> </div> </div>  <div className="bg-surface-container-lowest rounded shadow-sm overflow-hidden flex flex-col">  <div className="flex items-center bg-surface-container-low px-space-xl pt-space-base gap-space-lg"> <button className="pb-space-md font-title-md text-title-md text-primary border-b-2 border-primary transition-all flex items-center gap-space-xs" id="tab-common"> <span className="material-symbols-outlined text-space-base">domain</span> <span>Common Development Scope</span> </button> <button className="pb-space-md font-title-md text-title-md text-on-surface-variant hover:text-on-surface transition-all flex items-center gap-space-xs" id="tab-individual"> <span className="material-symbols-outlined text-space-base">apartment</span> <span>Individual Development Scope</span> </button> </div>  <div className="flex flex-col p-space-xl gap-space-base" id="content-common"> <div className="flex items-center justify-between pb-space-sm bg-surface-container-low/30 px-space-base py-space-sm rounded"> <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Work Package Item</span> <div className="flex items-center gap-space-3xl"> <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Est. Cost (INR)</span> <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">PMC Assignment</span> </div> </div>  <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input checked={true} className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Preliminaries / Site Establishment</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Temporary fencing, site offices, power & water connections</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 1,25,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase">Included</span> </div> </div>  <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input checked={true} className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Structure (Foundation, Columns, Slabs)</span> <span className="font-body-sm text-body-sm text-on-surface-variant">RCC grade M35/M40, formwork, reinforcement steel</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 14,50,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase">Included</span> </div> </div>  <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input checked={true} className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Masonry & Plaster</span> <span className="font-body-sm text-body-sm text-on-surface-variant">AAC blocks, internal and external plastering works</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 4,80,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase">Included</span> </div> </div>  <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input checked={true} className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">External / Façade</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Glazing, ACP cladding, exterior texture finish</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 6,20,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase">Included</span> </div> </div>  <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input checked={true} className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Common Electrical & MEP</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Transformers, DG sets, public area lighting, fire fighting</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 5,10,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase">Included</span> </div> </div>  <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input checked={true} className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Lift / Vertical Transport</span> <span className="font-body-sm text-body-sm text-on-surface-variant">High-speed passenger & service elevators</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 3,00,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase">Included</span> </div> </div>  <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input checked={true} className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">External Development</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Driveways, landscaping, boundary wall, STP</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 2,00,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase">Included</span> </div> </div>  <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input checked={true} className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Testing / Commissioning</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Third-party structural load tests, statutory approvals</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 1,00,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase">Included</span> </div> </div> </div>  <div className="hidden flex-col p-space-xl gap-space-base" id="content-individual"> <div className="flex items-center justify-between pb-space-sm bg-surface-container-low/30 px-space-base py-space-sm rounded"> <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Work Package Item (Individual)</span> <div className="flex items-center gap-space-3xl"> <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Est. Cost (INR)</span> <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">PMC Assignment</span> </div> </div> <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Individual Flat Civil & Finishes</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Internal flooring, skirting, wall tiling</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 3,50,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase">Excluded</span> </div> </div> <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Doors / Windows & Hardware</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Teak wood frames, flush shutters, UPVC sliding doors</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 2,10,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase">Excluded</span> </div> </div> <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Kitchen / Utility</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Granite platform, stainless steel sink, exhaust provisions</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 1,50,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase">Excluded</span> </div> </div> <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Sanitary & CP Fittings</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Wall-hung closets, diverters, basins of premium make</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 1,80,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase">Excluded</span> </div> </div> <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Individual Electrical</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Modular switches, concealed copper wiring, DB boxes</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 2,40,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase">Excluded</span> </div> </div> <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Painting / Final Finishes</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Plastic emulsion over putty for walls, enamel for grills</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 1,10,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase">Excluded</span> </div> </div> <div className="flex items-center justify-between p-space-base rounded bg-surface-container-low/50 hover:bg-surface-container-low transition-colors"> <div className="flex items-center gap-space-md"> <input className="w-5 h-5 accent-primary rounded cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Wardrobes / Fixed Interiors</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Modular bedroom wardrobes and loft covers</span> </div> </div> <div className="flex items-center gap-space-3xl"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 2,90,00,000</span> <span className="px-space-sm py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase">Excluded</span> </div> </div> </div> </div>  <div className="bg-surface-container-high p-space-xl rounded shadow-sm flex items-center justify-between gap-space-lg"> <div className="flex items-center gap-space-md"> <span className="material-symbols-outlined text-primary text-2xl">verified_user</span> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Scope Boundary Enforcement Active</span> <span className="font-body-md text-body-md text-on-surface-variant">Selected scope: Common only. Downstream BOQ / budgeting / timeline modules should filter their calculations by this assignment.</span> </div> </div> <button className="px-space-xl py-space-sm rounded bg-primary text-on-primary hover:bg-primary-container font-title-md text-title-md shadow-sm transition-colors whitespace-nowrap">Apply Scope to Engine</button> </div> </div> </main>
+    <Shell title="PMC Appointment Scope & Investment">
+      <div className="space-y-6">
+        <header className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+            Cost planning & scope
+          </p>
+          <h1 className="flex items-center gap-3 text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
+            <Ruler className="h-7 w-7 text-primary" />
+            PMC Appointment Scope
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Tick the work packages your PMC is appointed for. Costs come straight from this
+            project's BOQ, and committed value from its approved purchase orders.
+          </p>
+        </header>
+
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Project
+          </span>
+          <select
+            value={activeId}
+            onChange={(e) => {
+              setProjectId(e.target.value);
+              setLoadedFor("");
+              setIncluded([]);
+              setStatus("");
+            }}
+            className="min-w-[220px] rounded-xl border border-border bg-background px-3 py-2 text-sm"
+          >
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} {p.location ? `· ${p.location}` : ""}
+              </option>
+            ))}
+          </select>
+
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Assigned scope
+          </span>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+            className="rounded-xl border border-sky-500/40 bg-sky-500/5 px-3 py-2 text-sm"
+          >
+            {SCOPE_MODES.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            PMC fee %
+            <input
+              type="number"
+              step="0.1"
+              min={0}
+              value={feePct}
+              onChange={(e) => setFeePct(toNum(e.target.value))}
+              className="w-20 rounded-xl border border-sky-500/40 bg-sky-500/5 px-2 py-1.5 text-sm font-normal normal-case text-foreground"
+            />
+          </label>
+
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => saveMutation.mutate()}
+              disabled={!activeId || saveMutation.isPending}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" />
+              {saveMutation.isPending ? "Saving…" : "Save scope"}
+            </button>
+            <Link
+              to="/boq-engine"
+              className="inline-flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary"
+            >
+              <Calculator className="h-4 w-4" />
+              Open BOQ Engine
+            </Link>
+          </div>
+        </div>
+
+        {status ? (
+          <p className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+            {status}
+          </p>
+        ) : null}
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: "Cost in PMC scope",
+              value: crore(inScopeCost),
+              sub: `${included.length} of ${packages.length} packages`,
+            },
+            {
+              label: `PMC fee @ ${feePct}%`,
+              value: inr(pmcFee),
+              sub: sft > 0 ? `${(pmcFee / sft).toFixed(2)} /sft` : "—",
+            },
+            {
+              label: "Committed via POs",
+              value: crore(committed),
+              sub: totalBoq > 0 ? `${((committed / totalBoq) * 100).toFixed(1)}% of BOQ` : "No BOQ yet",
+            },
+            {
+              label: "Balance vs budget",
+              value: budget > 0 ? crore(budget - committed) : "—",
+              sub: budget > 0 ? `Budget ${crore(budget)}` : "Set a target budget",
+            },
+          ].map((c) => (
+            <div key={c.label} className="rounded-2xl border border-emerald-600/30 bg-emerald-600/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                {c.label}
+              </p>
+              <p className="mt-1 text-xl font-bold text-foreground">{c.value}</p>
+              <p className="text-xs text-muted-foreground">{c.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-3">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-primary">
+              Work packages
+            </h2>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIncluded(packages.map((p) => p.trade))}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
+              >
+                Select all
+              </button>
+              <button
+                type="button"
+                onClick={() => setIncluded([])}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          {packages.length === 0 ? (
+            <p className="p-6 text-sm text-muted-foreground">
+              No BOQ items for this project yet — generate or upload the BOQ and the work packages
+              appear here with their costs.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-2">In PMC scope</th>
+                    <th className="px-4 py-2">Work package</th>
+                    <th className="px-4 py-2 text-right">Line items</th>
+                    <th className="px-4 py-2 text-right">Est. cost</th>
+                    <th className="px-4 py-2 text-right">₹/sft</th>
+                    <th className="px-4 py-2 text-right">Share</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {packages.map((p) => {
+                    const on = included.includes(p.trade);
+                    return (
+                      <tr key={p.trade} className="border-b border-border/60">
+                        <td className="px-4 py-2">
+                          <button
+                            type="button"
+                            onClick={() => toggle(p.trade)}
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-foreground"
+                          >
+                            {on ? (
+                              <CheckSquare className="h-5 w-5 text-primary" />
+                            ) : (
+                              <Square className="h-5 w-5 text-muted-foreground" />
+                            )}
+                            {on ? "Included" : "Excluded"}
+                          </button>
+                        </td>
+                        <td className="px-4 py-2 font-medium text-foreground">{p.trade}</td>
+                        <td className="px-4 py-2 text-right">{p.items}</td>
+                        <td className="px-4 py-2 text-right font-semibold">{inr(p.cost)}</td>
+                        <td className="px-4 py-2 text-right">
+                          {sft > 0 ? (p.cost / sft).toFixed(2) : "—"}
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          {totalBoq > 0 ? `${((p.cost / totalBoq) * 100).toFixed(1)}%` : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-muted/30 font-bold">
+                    <td className="px-4 py-3" />
+                    <td className="px-4 py-3">Total BOQ</td>
+                    <td className="px-4 py-3 text-right">
+                      {packages.reduce((s, p) => s + p.items, 0)}
+                    </td>
+                    <td className="px-4 py-3 text-right">{inr(totalBoq)}</td>
+                    <td className="px-4 py-3 text-right">
+                      {sft > 0 ? (totalBoq / sft).toFixed(2) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right">100%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </Shell>
   );
