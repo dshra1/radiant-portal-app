@@ -178,7 +178,7 @@ function Page() {
           <p className="max-w-3xl text-sm text-muted-foreground">
             The app suggests cheaper but buildable items and brands for your highest-cost lines.
             These are suggestions only — your entered quantities, units and rates stay untouched
-            until you tick the ones your partners approve and press Apply.
+            until your partners approve the ones you send for sign-off.
           </p>
         </header>
 
@@ -297,7 +297,11 @@ function Page() {
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
               >
                 <Check className="h-4 w-4" />
-                {apply.isPending ? "Applying…" : `Apply ${picked.length} approved`}
+                {apply.isPending
+                  ? "Sending…"
+                  : gateOn
+                    ? `Send ${picked.length} for partner approval`
+                    : `Apply ${picked.length} selected`}
               </button>
             </div>
           </div>
