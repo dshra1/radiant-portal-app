@@ -47,6 +47,28 @@ function toNum(v: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
+const SFT_PER_SQM = 10.7639;
+const RFT_PER_M = 3.28084;
+
+/**
+ * Indian site practice: areas in sft, lengths in rft. If the model answers in
+ * metric, convert the quantity and rate so the line amount stays identical.
+ * Only ever applied to freshly generated AI rows, never to saved/edited data.
+ */
+function toSiteUnits(unit: string, quantity: number, rate: number) {
+  const u = unit.toLowerCase().replace(/[\s.]/g, "");
+  const area = ["sqm", "sqmt", "sqmts", "sqmtr", "sqmtrs", "m2", "sqmeter", "sqmetre", "squaremetre", "squaremeter"];
+  const length = ["m", "mtr", "mtrs", "rm", "rmt", "meter", "metre", "runningmetre", "runningmeter"];
+  if (area.includes(u)) {
+    return { unit: "SFT", quantity: quantity * SFT_PER_SQM, rate: rate / SFT_PER_SQM };
+  }
+  if (length.includes(u)) {
+    return { unit: "RFT", quantity: quantity * RFT_PER_M, rate: rate / RFT_PER_M };
+  }
+  return { unit, quantity, rate };
+}
+
+
 function extractJsonArray(text: string): RawItem[] {
   const cleaned = text.replace(/```json/gi, "```").split("```").join("\n");
   const start = cleaned.indexOf("[");
