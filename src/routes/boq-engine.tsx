@@ -216,6 +216,7 @@ function Page() {
   const [brief, setBrief] = useState("");
   const [suggestions, setSuggestions] = useState<Record<string, BrandSuggestion>>({});
   const [pendingIds, setPendingIds] = useState<string[]>([]);
+  const [applyingAlternativeId, setApplyingAlternativeId] = useState<string>("");
   const [applyAll, setApplyAll] = useState<{
     stageName: string;
     brand: string;
@@ -432,6 +433,68 @@ function Page() {
     },
     onError: (e: Error) => setStatus(`Save failed: ${e.message}`),
   });
+
+  const applyAlternative = async (item: BoqRow, option: BrandSuggestion["options"][number]) => {
+    if (applyingAlternativeId) return;
+    setApplyingAlternativeId(item.id);
+    setStatus(`Applying ${option.brand}…`);
+    try {
+      const result = await updateMutation.mutateAsync({
+        id: item.id,
+        patch: {
+          brand: option.brand,
+          supplier: option.supplier || item.supplier,
+          rate: option.rate,
+        },
+        source: "brand-optimizer",
+        note: `Selected ${option.brand} from the BOQ price optimizer`,
+      });
+
+      if (result === "saved") {
+        qc.setQueryData<BoqRow[]>(["boq_items", activeId], (current) =>
+          (current ?? []).map((row) =>
+            row.id === item.id
+              ? {
+                  ...row,
+                  brand: option.brand,
+                  supplier: option.supplier || row.supplier,
+                  rate: option.rate,
+                }
+              : row,
+          ),
+        );
+        setSuggestions((current) => {
+          const next = { ...current };
+          delete next[item.id];
+          return next;
+        });
+        setStatus(`${option.brand} selected and saved at ${inr(option.rate)} / ${item.unit}.`);
+
+        const siblings = items.filter(
+          (row) => row.stage === item.stage && row.id !== item.id,
+        ).length;
+        const currentRate = toNum(item.rate);
+        if (siblings > 0) {
+          setApplyAll({
+            stageName: item.stage,
+            brand: option.brand,
+            supplier: option.supplier || "",
+            ratio: currentRate > 0 ? option.rate / currentRate : 0,
+            count: siblings + 1,
+          });
+        }
+      } else {
+        setStatus(
+          `${option.brand} was sent for partner approval. The current BOQ stays unchanged until approved.`,
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Please try again.";
+      setStatus(`Could not apply ${option.brand}: ${message}`);
+    } finally {
+      setApplyingAlternativeId("");
+    }
+  };
 
   /** Applies a chosen brand (and proportional rate) to every line item of one trade. */
   const applyStageMutation = useMutation({
@@ -949,28 +1012,6 @@ function Page() {
             </div>
           </div>
 
-          {applyAll && (
-            <div className="flex flex-wrap items-center gap-3 border-b border-border bg-warning-soft px-3 py-2.5">
-              <span className="text-[13px] font-semibold text-foreground">
-                Use <b>{applyAll.brand}</b> for all {applyAll.count} items in{" "}
-                {applyAll.stageName}? Rates will be re-priced in the same proportion.
-              </span>
-              <button
-                disabled={applyStageMutation.isPending}
-                onClick={() => applyStageMutation.mutate(applyAll)}
-                className="h-8 rounded bg-primary px-3 text-[12px] font-semibold text-primary-foreground disabled:opacity-50"
-              >
-                {applyStageMutation.isPending ? "Applying…" : "Yes, apply to whole trade"}
-              </button>
-              <button
-                onClick={() => setApplyAll(null)}
-                className="h-8 rounded border border-input bg-card px-3 text-[12px] font-semibold"
-              >
-                No, this item only
-              </button>
-            </div>
-          )}
-
           <div className="overflow-x-auto">
             {itemsQuery.isLoading ? (
               <p className="p-6 text-sm text-muted-foreground">Loading BOQ…</p>
@@ -1215,37 +1256,14 @@ function Page() {
                                     <p className="mt-1 text-[11px] text-muted-foreground">{opt.why}</p>
                                   )}
                                   <button
-                                    onClick={async () => {
-                                      await updateMutation.mutateAsync({
-                                        id: it.id,
-                                        patch: {
-                                          brand: opt.brand,
-                                          supplier: opt.supplier || it.supplier,
-                                          rate: opt.rate,
-                                        },
-                                      });
-                                      setStatus(
-                                        gateOn
-                                          ? `${opt.brand} at ${inr(opt.rate)} / ${it.unit} sent for partner approval.`
-                                          : `${opt.brand} applied at ${inr(opt.rate)} / ${it.unit}.`,
-                                      );
-                                      const siblings = items.filter(
-                                        (o) => o.stage === it.stage && o.id !== it.id,
-                                      ).length;
-                                      const current = toNum(it.rate);
-                                      if (siblings > 0) {
-                                        setApplyAll({
-                                          stageName: it.stage,
-                                          brand: opt.brand,
-                                          supplier: opt.supplier || "",
-                                          ratio: current > 0 ? opt.rate / current : 0,
-                                          count: siblings + 1,
-                                        });
-                                      }
-                                    }}
-                                    className="mt-2 h-7 w-full rounded bg-primary text-[12px] font-semibold text-primary-foreground"
+                                    type="button"
+                                    disabled={Boolean(applyingAlternativeId)}
+                                    onClick={() => void applyAlternative(it, opt)}
+                                    className="mt-2 h-9 w-full rounded bg-primary text-[12px] font-semibold text-primary-foreground disabled:cursor-wait disabled:opacity-60"
                                   >
-                                    Use this brand
+                                    {applyingAlternativeId === it.id
+                                      ? `Applying ${opt.brand}…`
+                                      : "Use this brand"}
                                   </button>
                                 </div>
                               );
@@ -1262,6 +1280,43 @@ function Page() {
             )}
           </div>
         </div>
+
+        {applyAll && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-overlay/60 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="apply-trade-title"
+              className="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl"
+            >
+              <h2 id="apply-trade-title" className="text-base font-bold text-foreground">
+                Apply this choice to the whole trade?
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                <b className="text-foreground">{applyAll.brand}</b> is already saved for the item you
+                selected. Apply it to all {applyAll.count} items in {applyAll.stageName}, with rates
+                adjusted in the same proportion?
+              </p>
+              <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setApplyAll(null)}
+                  className="h-10 rounded border border-input bg-card px-4 text-sm font-semibold text-foreground"
+                >
+                  No, keep this item only
+                </button>
+                <button
+                  type="button"
+                  disabled={applyStageMutation.isPending}
+                  onClick={() => applyStageMutation.mutate(applyAll)}
+                  className="h-10 rounded bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                >
+                  {applyStageMutation.isPending ? "Applying…" : "Yes, apply to whole trade"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {stages.length > 0 && (
           <div className="rounded-xl border border-border bg-card p-3">
