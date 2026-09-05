@@ -1031,6 +1031,45 @@ function Page() {
 
         <div className="rounded-xl border border-border bg-card p-3">
           <div className="flex flex-wrap items-center gap-2">
+            <span className="label-caps text-muted-foreground">Works split</span>
+            {([
+              { key: "ALL" as const, label: "All works", count: items.length, total: grandTotal },
+              {
+                key: "common" as const,
+                label: "Common works",
+                count: commonItems.length,
+                total: commonTotal,
+              },
+              {
+                key: "individual" as const,
+                label: "Individual works",
+                count: individualItems.length,
+                total: individualTotal,
+              },
+            ]).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setWorkScope(t.key)}
+                className={`h-9 rounded px-3 text-[13px] font-semibold ${workScope === t.key ? "bg-primary text-primary-foreground" : "border border-primary/30 bg-primary-soft text-primary hover:bg-primary/15"}`}
+              >
+                {t.label} ({t.count}) · {inrCompact(t.total)}
+                {sellableSft > 0 && (
+                  <span className="ml-1 font-medium opacity-80">
+                    ₹{(t.total / sellableSft).toFixed(0)}/sft
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[12px] text-muted-foreground">
+            Common works are shared, building-wide items (structure, lift, DG, external development).
+            Individual works are flat / unit specific items (flooring, fittings, painting inside
+            units). Tag each line in the Stage column and use these tabs to price them separately.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setStage("ALL")}
               className={`h-8 rounded px-3 text-[13px] font-semibold ${stage === "ALL" ? "bg-primary text-primary-foreground" : "border border-primary/30 bg-primary-soft text-primary hover:bg-primary/15"}`}
