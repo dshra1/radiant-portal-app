@@ -1242,37 +1242,26 @@ function Page() {
                         )}
                       </td>
                       <td className="px-2 py-2">
-                        <input
-                          defaultValue={it.unit}
-                          onBlur={(e) =>
-                            e.target.value !== it.unit &&
-                            updateMutation.mutate({ id: it.id, patch: { unit: e.target.value } })
-                          }
+                        <Cell
+                          value={it.unit}
+                          onCommit={(v) => updateMutation.mutate({ id: it.id, patch: { unit: v } })}
                           className="w-16 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
                         />
                       </td>
                       <td className="px-2 py-2 text-right">
-                        <input
-                          key={`qty-${toNum(it.quantity)}`}
-                          defaultValue={String(toNum(it.quantity))}
-                          onBlur={(e) =>
-                            updateMutation.mutate({
-                              id: it.id,
-                              patch: { quantity: toNum(e.target.value) },
-                            })
+                        <Cell
+                          value={String(toNum(it.quantity))}
+                          onCommit={(v) =>
+                            updateMutation.mutate({ id: it.id, patch: { quantity: toNum(v) } })
                           }
                           className="w-24 rounded border border-input bg-background px-1 text-right tnum"
                         />
                       </td>
                       <td className="px-2 py-2 text-right">
-                        <input
-                          key={`rate-${toNum(it.rate)}`}
-                          defaultValue={String(toNum(it.rate))}
-                          onBlur={(e) =>
-                            updateMutation.mutate({
-                              id: it.id,
-                              patch: { rate: toNum(e.target.value) },
-                            })
+                        <Cell
+                          value={String(toNum(it.rate))}
+                          onCommit={(v) =>
+                            updateMutation.mutate({ id: it.id, patch: { rate: toNum(v) } })
                           }
                           className="w-24 rounded border border-input bg-background px-1 text-right tnum"
                         />
@@ -1284,25 +1273,18 @@ function Page() {
                         <div className="flex items-start gap-2">
                           <BrandMark brand={it.brand} />
                           <div>
-                            <input
-                              key={`brand-${it.brand}`}
-                              defaultValue={it.brand}
-                              onBlur={(e) =>
-                                e.target.value !== it.brand &&
-                                updateMutation.mutate({ id: it.id, patch: { brand: e.target.value } })
+                            <Cell
+                              value={it.brand}
+                              onCommit={(v) =>
+                                updateMutation.mutate({ id: it.id, patch: { brand: v } })
                               }
                               placeholder="Brand / make"
                               className="w-36 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
                             />
-                            <input
-                              key={`supplier-${it.supplier}`}
-                              defaultValue={it.supplier}
-                              onBlur={(e) =>
-                                e.target.value !== it.supplier &&
-                                updateMutation.mutate({
-                                  id: it.id,
-                                  patch: { supplier: e.target.value },
-                                })
+                            <Cell
+                              value={it.supplier}
+                              onCommit={(v) =>
+                                updateMutation.mutate({ id: it.id, patch: { supplier: v } })
                               }
                               placeholder="Supplier"
                               className="mt-1 w-36 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
