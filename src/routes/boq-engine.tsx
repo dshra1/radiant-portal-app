@@ -299,6 +299,7 @@ function Page() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imageTargetId, setImageTargetId] = useState<string>("");
   const [imageBusyId, setImageBusyId] = useState<string>("");
+  const [convertingUnits, setConvertingUnits] = useState(false);
   const { gateOn, canDecide, setApprovalMode, decider } = useApprovalGate();
 
   const suggestMutation = useMutation({
@@ -776,6 +777,38 @@ function Page() {
       );
   }, [items, stage, workScope, search]);
 
+  const SQM_TO_SFT = 10.7639;
+  const isMetricArea = (u: string) =>
+    ["sqm", "sq m", "sq.m", "sqmt", "sq mt", "sqmts", "m2", "sq.mt"].includes(
+      (u ?? "").trim().toLowerCase().replace(/\s+/g, " "),
+    );
+  const metricRows = visible.filter((it) => isMetricArea(it.unit));
+
+  const convertSqmToSft = async () => {
+    if (metricRows.length === 0 || convertingUnits) return;
+    setConvertingUnits(true);
+    setStatus(`Converting ${metricRows.length} line(s) from sqm to sft…`);
+    try {
+      for (const it of metricRows) {
+        const qty = Number((toNum(it.quantity) * SQM_TO_SFT).toFixed(2));
+        const rate = Number((toNum(it.rate) / SQM_TO_SFT).toFixed(2));
+        const { error } = await supabase
+          .from("boq_items")
+          .update({ unit: "SFT", quantity: qty, rate })
+          .eq("id", it.id);
+        if (error) throw error;
+      }
+      await refresh();
+      setStatus(
+        `Converted ${metricRows.length} line(s) to SFT — quantities and rates adjusted, line amounts unchanged.`,
+      );
+    } catch (e) {
+      setStatus(`Conversion failed: ${(e as Error).message}`);
+    } finally {
+      setConvertingUnits(false);
+    }
+  };
+
   const lineTotal = (it: BoqRow) => toNum(it.quantity) * toNum(it.rate);
   const grandTotal = items.reduce((s, it) => s + lineTotal(it), 0);
   const viewTotal = visible.reduce((s, it) => s + lineTotal(it), 0);
@@ -1116,6 +1149,17 @@ function Page() {
             >
               <Lightbulb className="size-3.5" />
               {suggestMutation.isPending ? "Optimizing…" : "Price optimizer"}
+            </button>
+            <button
+              type="button"
+              disabled={metricRows.length === 0 || convertingUnits}
+              onClick={convertSqmToSft}
+              className="inline-flex h-8 items-center rounded border border-primary/40 bg-primary-soft px-3 text-[12px] font-semibold text-primary disabled:opacity-40"
+              title="Converts quantity and rate together so each line amount stays exactly the same"
+            >
+              {convertingUnits
+                ? "Converting…"
+                : `Convert SQM → SFT${metricRows.length ? ` (${metricRows.length})` : ""}`}
             </button>
             <div className="text-right">
               <span className="text-sm font-semibold text-primary">{inr(viewTotal)}</span>
