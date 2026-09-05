@@ -77,3 +77,4 @@
   - [x] Manual upload fallback into the private `boq-images` bucket + "Search online" link
 
 - [ ] BOQ: order trades in construction stage sequence (not alphabetical)
+- [ ] BOQ: per-trade Price optimizer button on every trade view
