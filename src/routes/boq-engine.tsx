@@ -1082,6 +1082,14 @@ function Page() {
                     </div>
                     <span className="text-[11px] text-muted-foreground">
                       {pct.toFixed(1)}% of estimate
+                      {sellableSft > 0 && (
+                        <>
+                          {" · "}
+                          <b className="tnum text-foreground">
+                            ₹{(total / sellableSft).toFixed(2)}/sft
+                          </b>
+                        </>
+                      )}
                     </span>
                   </div>
                 );
