@@ -6,6 +6,7 @@ import { IndianRupee, Sparkles, Check, ShieldCheck } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { suggestBudgetFit, type BudgetSwap } from "@/lib/budget.functions";
+import { raiseChangeRequest, useApprovalGate } from "@/lib/approvals";
 
 export const Route = createFileRoute("/budget-fit")({
   head: () => ({
@@ -45,6 +46,7 @@ function Page() {
   const [projectId, setProjectId] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const [status, setStatus] = useState("");
+  const { gateOn, decider } = useApprovalGate();
 
   const projectsQuery = useQuery({
     queryKey: ["site_projects", "budget-fit"],
@@ -103,6 +105,33 @@ function Page() {
     mutationFn: async () => {
       const chosen = swaps.filter((s) => picked.includes(s.itemId));
       for (const s of chosen) {
+        if (gateOn) {
+          await raiseChangeRequest({
+            projectId: activeId,
+            itemId: s.itemId,
+            trade: s.trade,
+            description: s.description,
+            unit: s.unit,
+            quantity: s.quantity,
+            currentValues: {
+              quantity: s.quantity,
+              rate: s.currentRate,
+              brand: s.currentBrand,
+              supplier: "",
+            },
+            proposedValues: {
+              quantity: s.quantity,
+              rate: s.suggestedRate,
+              brand: s.suggestedBrand,
+              supplier: s.suggestedSupplier || s.suggestedBrand,
+            },
+            source: "budget-fit",
+            note: s.why,
+            requestedBy: decider.id,
+            requestedByName: decider.name,
+          });
+          continue;
+        }
         const { error } = await supabase
           .from("boq_items")
           .update({
@@ -116,10 +145,15 @@ function Page() {
       return chosen.length;
     },
     onSuccess: async (n) => {
-      setStatus(`${n} approved change${n === 1 ? "" : "s"} applied to the BOQ.`);
+      setStatus(
+        gateOn
+          ? `${n} suggestion${n === 1 ? "" : "s"} sent to partners for approval — the BOQ is unchanged until they approve.`
+          : `${n} change${n === 1 ? "" : "s"} applied to the BOQ.`,
+      );
       setSwaps((prev) => prev.filter((s) => !picked.includes(s.itemId)));
       setPicked([]);
       await qc.invalidateQueries({ queryKey: ["boq_items"] });
+      await qc.invalidateQueries({ queryKey: ["boq_change_requests"] });
     },
     onError: (e: Error) => setStatus(`Could not apply: ${e.message}`),
   });

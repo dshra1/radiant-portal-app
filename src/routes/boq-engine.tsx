@@ -1220,7 +1220,9 @@ function Page() {
                                         },
                                       });
                                       setStatus(
-                                        `${opt.brand} applied at ${inr(opt.rate)} / ${it.unit}.`,
+                                        gateOn
+                                          ? `${opt.brand} at ${inr(opt.rate)} / ${it.unit} sent for partner approval.`
+                                          : `${opt.brand} applied at ${inr(opt.rate)} / ${it.unit}.`,
                                       );
                                       const siblings = items.filter(
                                         (o) => o.stage === it.stage && o.id !== it.id,
