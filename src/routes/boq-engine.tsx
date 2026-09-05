@@ -8,6 +8,7 @@ import {
   BOQ_TRADES,
   BOQ_SECTIONS,
   LABOUR_SECTION,
+  generateLabourRates,
   findProductImage,
   generateBoqEstimate,
   suggestBrandOptions,
@@ -216,6 +217,7 @@ function Page() {
     count: number;
   } | null>(null);
   const generate = useServerFn(generateBoqEstimate);
+  const genLabour = useServerFn(generateLabourRates);
   const suggestBrands = useServerFn(suggestBrandOptions);
   const findImage = useServerFn(findProductImage);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -457,6 +459,19 @@ function Page() {
     onError: (e: Error) => setStatus(`Add failed: ${e.message}`),
   });
 
+  // Market labour rates (labour-only contract rates) for the Labour Contracts section.
+  const labourRatesMutation = useMutation({
+    mutationFn: async () => genLabour({ data: { projectId: activeId } }),
+    onSuccess: async (res) => {
+      setStage(LABOUR_SECTION);
+      setStatus(
+        `${res.inserted} labour packages priced at estimated Hyderabad market rates — edit any rate or vendor name to your agreed contract.`,
+      );
+      await refresh();
+    },
+    onError: (e: Error) => setStatus(`Labour rates failed: ${e.message}`),
+  });
+
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const rows = parseCsv(await file.text());
@@ -683,6 +698,14 @@ function Page() {
               Add line item
             </button>
             <button
+              disabled={!activeId || labourRatesMutation.isPending}
+              onClick={() => labourRatesMutation.mutate()}
+              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+            >
+              <Sparkles className="size-4" />
+              {labourRatesMutation.isPending ? "Pricing labour…" : "Labour market rates"}
+            </button>
+            <button
               disabled={!activeId}
               onClick={() => addLabourMutation.mutate()}
               className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
@@ -877,6 +900,7 @@ function Page() {
                           className="w-72 rounded border border-transparent bg-transparent px-1 py-0.5 hover:border-input focus:border-input"
                         />
                         <div className="px-1 text-[11px] text-muted-foreground">{it.item_code}</div>
+                        {it.stage !== LABOUR_SECTION && (
                         <div className="mt-1.5 flex items-center gap-2">
                           <ProductImage value={it.image_url} alt={`${it.brand} ${it.description}`} />
                           <div className="flex flex-col gap-1">
@@ -913,6 +937,7 @@ function Page() {
                             </a>
                           </div>
                         </div>
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <input
