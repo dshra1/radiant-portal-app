@@ -1,27 +1,25 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { ChevronDown, Download, Upload } from "lucide-react";
-import { Shell } from "@/components/saha/Shell";
-import { ActionButton, MetricTile, Section, StatusBadge, TrendPill } from "@/components/saha/ui";
-import { boqItems, inr, inrCompact, materialRates, num, projects } from "@/data/saha";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/boq")({
+  beforeLoad: () => {
+    throw redirect({ to: "/boq-engine" });
+  },
   head: () => ({
     meta: [
-      { title: "BOQ & Rate Intelligence — Saha OS Next" },
+      { title: "BOQ Engine — Saha OS Next" },
       {
         name: "description",
         content:
-          "Dynamic bill of quantities with live Hyderabad market rates, brand alternatives, variance analysis and stage-wise cost roll-ups.",
+          "Project-specific bill of quantities with AI estimates, price optimizer and live rate intelligence.",
       },
-      { property: "og:title", content: "BOQ & Rate Intelligence — Saha OS Next" },
+      { property: "og:title", content: "BOQ Engine — Saha OS Next" },
       {
         property: "og:description",
-        content: "Stage-wise BOQ with live Hyderabad market rates and brand-level variance analysis.",
+        content: "Project-specific BOQ with AI estimates and price optimizer.",
       },
     ],
   }),
-  component: Boq,
+  component: () => null,
 });
 
 type BoqRow = (typeof boqItems)[number];
