@@ -721,8 +721,40 @@ function Page() {
             <h2 className="text-sm font-semibold">
               {stage === "ALL" ? "All line items" : stage} — {visible.length} shown
             </h2>
-            <span className="text-sm font-semibold text-primary">{inr(viewTotal)}</span>
+            <div className="text-right">
+              <span className="text-sm font-semibold text-primary">{inr(viewTotal)}</span>
+              {sellableSft > 0 && (
+                <div className="text-[11px] font-medium tnum text-muted-foreground">
+                  {inr(viewTotal)} / {num(sellableSft)} sft (sellable) ={" "}
+                  <span className="font-bold text-foreground">
+                    ₹{(viewTotal / sellableSft).toFixed(2)}/sft
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
+
+          {applyAll && (
+            <div className="flex flex-wrap items-center gap-3 border-b border-border bg-warning-soft px-3 py-2.5">
+              <span className="text-[13px] font-semibold text-foreground">
+                Use <b>{applyAll.brand}</b> for all {applyAll.count} items in{" "}
+                {applyAll.stageName}? Rates will be re-priced in the same proportion.
+              </span>
+              <button
+                disabled={applyStageMutation.isPending}
+                onClick={() => applyStageMutation.mutate(applyAll)}
+                className="h-8 rounded bg-primary px-3 text-[12px] font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                {applyStageMutation.isPending ? "Applying…" : "Yes, apply to whole trade"}
+              </button>
+              <button
+                onClick={() => setApplyAll(null)}
+                className="h-8 rounded border border-input bg-card px-3 text-[12px] font-semibold"
+              >
+                No, this item only
+              </button>
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             {itemsQuery.isLoading ? (
