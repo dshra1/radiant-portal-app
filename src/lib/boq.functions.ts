@@ -31,6 +31,13 @@ export const BOQ_TRADES = [
   "Miscellaneous",
 ] as const;
 
+// Labour is contracted vendor-wise and is NOT part of the AI material estimate.
+// It is a separate BOQ section where each labour vendor / contract is added manually.
+export const LABOUR_SECTION = "Labour Contracts";
+
+// Display order for BOQ sections: the 25 material trades, then labour contracts.
+export const BOQ_SECTIONS = [...BOQ_TRADES, LABOUR_SECTION] as const;
+
 type RawItem = {
   trade?: unknown;
   description?: unknown;
