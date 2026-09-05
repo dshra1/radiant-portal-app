@@ -378,14 +378,17 @@ function Page() {
     }) => {
       const row = items.find((it) => it.id === id);
       if (gateOn && row && isCommercialPatch(patch)) {
-        const commercial: Record<string, unknown> = {};
-        const descriptive: Record<string, unknown> = {};
+        const commercial: Record<string, string | number | undefined> = {};
+        const descriptive: Record<string, string | number | undefined> = {};
         for (const [k, v] of Object.entries(patch)) {
           if ((["quantity", "rate", "brand", "supplier"] as string[]).includes(k)) commercial[k] = v;
           else descriptive[k] = v;
         }
         if (Object.keys(descriptive).length > 0) {
-          const { error } = await supabase.from("boq_items").update(descriptive).eq("id", id);
+          const { error } = await supabase
+            .from("boq_items")
+            .update(descriptive as never)
+            .eq("id", id);
           if (error) throw error;
         }
         await raiseChangeRequest({
@@ -402,10 +405,10 @@ function Page() {
             supplier: row.supplier,
           },
           proposedValues: {
-            quantity: toNum(commercial.quantity ?? row.quantity),
-            rate: toNum(commercial.rate ?? row.rate),
-            brand: String(commercial.brand ?? row.brand),
-            supplier: String(commercial.supplier ?? row.supplier),
+            quantity: toNum(commercial["quantity"] ?? row.quantity),
+            rate: toNum(commercial["rate"] ?? row.rate),
+            brand: String(commercial["brand"] ?? row.brand),
+            supplier: String(commercial["supplier"] ?? row.supplier),
           },
           source: source ?? "boq-engine",
           note: note ?? "",

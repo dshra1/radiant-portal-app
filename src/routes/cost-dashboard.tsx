@@ -300,6 +300,7 @@ function Page() {
             </p>
             <Link
               to="/purchase-orders"
+              search={{ po: undefined }}
               className="mt-3 inline-block text-xs font-semibold text-primary underline"
             >
               Open purchase orders

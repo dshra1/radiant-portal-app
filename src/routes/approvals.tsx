@@ -39,12 +39,13 @@ function inr(v: number) {
 }
 
 function Values({ values }: { values: Record<string, unknown> }) {
+  const get = (k: string) => values[k];
   const parts = [
-    values.brand ? `Brand ${String(values.brand)}` : "",
-    values.supplier ? `Supplier ${String(values.supplier)}` : "",
-    values.rate !== undefined && values.rate !== null ? `Rate ${inr(num(values.rate))}` : "",
-    values.quantity !== undefined && values.quantity !== null
-      ? `Qty ${num(values.quantity).toLocaleString("en-IN")}`
+    get("brand") ? `Brand ${String(get("brand"))}` : "",
+    get("supplier") ? `Supplier ${String(get("supplier"))}` : "",
+    get("rate") !== undefined && get("rate") !== null ? `Rate ${inr(num(get("rate")))}` : "",
+    get("quantity") !== undefined && get("quantity") !== null
+      ? `Qty ${num(get("quantity")).toLocaleString("en-IN")}`
       : "",
   ].filter(Boolean);
   return <span>{parts.length ? parts.join(" · ") : "—"}</span>;

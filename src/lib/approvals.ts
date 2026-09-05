@@ -104,14 +104,17 @@ export async function approveChangeRequest(
   note = "",
 ) {
   if (req.boq_item_id) {
-    const patch: Record<string, unknown> = {};
+    const patch: Record<string, string | number> = {};
     for (const field of COMMERCIAL_FIELDS) {
-      const value = req.proposed_values?.[field];
+      const value = (req.proposed_values ?? {})[field];
       if (value === undefined || value === null) continue;
       patch[field] = field === "quantity" || field === "rate" ? num(value) : String(value);
     }
     if (Object.keys(patch).length > 0) {
-      const { error } = await supabase.from("boq_items").update(patch).eq("id", req.boq_item_id);
+      const { error } = await supabase
+        .from("boq_items")
+        .update(patch as never)
+        .eq("id", req.boq_item_id);
       if (error) throw error;
     }
   }
