@@ -465,7 +465,14 @@ function Page() {
   const stages = useMemo(() => {
     const map = new Map<string, number>();
     for (const it of items) map.set(it.stage, (map.get(it.stage) ?? 0) + 1);
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    // Construction-stage order (site preparation → finishing → handover), not alphabetical.
+    const rank = (name: string) => {
+      const i = (BOQ_TRADES as readonly string[]).indexOf(name);
+      return i === -1 ? 999 : i;
+    };
+    return [...map.entries()].sort(
+      (a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]),
+    );
   }, [items]);
 
   const visible = useMemo(() => {
