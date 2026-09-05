@@ -854,6 +854,7 @@ function Page() {
                           <BrandMark brand={it.brand} />
                           <div>
                             <input
+                              key={`brand-${it.brand}`}
                               defaultValue={it.brand}
                               onBlur={(e) =>
                                 e.target.value !== it.brand &&
