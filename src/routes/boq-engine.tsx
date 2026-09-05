@@ -97,7 +97,73 @@ type BoqRow = {
   sort_order: number;
   image_url?: string | null;
   image_source?: string | null;
+  work_scope?: string | null;
 };
+
+/** "common" = shared building-wide work, "individual" = per flat / unit work. */
+const SCOPES = [
+  { key: "common", label: "Common works" },
+  { key: "individual", label: "Individual works" },
+] as const;
+
+function scopeOf(it: { work_scope?: string | null }) {
+  return it.work_scope === "individual" ? "individual" : "common";
+}
+
+/**
+ * Inline editable cell that keeps what you type locally and commits on blur / Enter,
+ * so a background refetch can never wipe the value you are entering.
+ */
+function Cell({
+  value,
+  onCommit,
+  className,
+  placeholder,
+  multiline,
+  rows,
+}: {
+  value: string;
+  onCommit: (next: string) => void;
+  className?: string;
+  placeholder?: string;
+  multiline?: boolean;
+  rows?: number;
+}) {
+  const [text, setText] = useState(value);
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setText(value);
+  }, [value, focused]);
+
+  const commit = () => {
+    setFocused(false);
+    if (text !== value) onCommit(text);
+  };
+
+  const shared = {
+    value: text,
+    placeholder,
+    className,
+    onFocus: () => setFocused(true),
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setText(e.target.value),
+    onBlur: commit,
+  };
+
+  if (multiline) return <textarea {...shared} rows={rows ?? 2} />;
+  return (
+    <input
+      {...shared}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
+    />
+  );
+}
 
 /** Resolves a stored image reference: an https URL, or `storage:<path>` in the private bucket. */
 function ProductImage({ value, alt }: { value: string | null | undefined; alt: string }) {
