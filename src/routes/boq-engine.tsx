@@ -720,6 +720,23 @@ function Page() {
             <h2 className="text-sm font-semibold">
               {stage === "ALL" ? "All line items" : stage} — {visible.length} shown
             </h2>
+            <button
+              disabled={visible.length === 0 || suggestMutation.isPending}
+              onClick={() => {
+                const ids = [...visible]
+                  .sort((a, b) => lineTotal(b) - lineTotal(a))
+                  .slice(0, 10)
+                  .map((it) => it.id);
+                setStatus(
+                  `Price optimizer — finding cheaper brand options for ${stage === "ALL" ? "the highest-cost items" : stage}…`,
+                );
+                suggestMutation.mutate(ids);
+              }}
+              className="ml-auto inline-flex h-8 items-center gap-1.5 rounded border border-primary bg-primary-soft px-3 text-[12px] font-semibold text-primary disabled:opacity-50"
+            >
+              <Lightbulb className="size-3.5" />
+              {suggestMutation.isPending ? "Optimizing…" : "Price optimizer"}
+            </button>
             <div className="text-right">
               <span className="text-sm font-semibold text-primary">{inr(viewTotal)}</span>
               {sellableSft > 0 && (
