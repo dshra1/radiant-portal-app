@@ -1117,6 +1117,17 @@ function Page() {
               <Lightbulb className="size-3.5" />
               {suggestMutation.isPending ? "Optimizing…" : "Price optimizer"}
             </button>
+            <button
+              type="button"
+              disabled={metricRows.length === 0 || convertingUnits}
+              onClick={convertSqmToSft}
+              className="inline-flex h-8 items-center rounded border border-primary/40 bg-primary-soft px-3 text-[12px] font-semibold text-primary disabled:opacity-40"
+              title="Converts quantity and rate together so each line amount stays exactly the same"
+            >
+              {convertingUnits
+                ? "Converting…"
+                : `Convert SQM → SFT${metricRows.length ? ` (${metricRows.length})` : ""}`}
+            </button>
             <div className="text-right">
               <span className="text-sm font-semibold text-primary">{inr(viewTotal)}</span>
               {sellableSft > 0 && (
