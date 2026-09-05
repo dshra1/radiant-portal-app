@@ -314,7 +314,7 @@ Selected stage: <strong>{String(stage).padStart(2, "0")} · {LIFECYCLE_STAGES[st
 </div>
 <div className="flex flex-col gap-space-md">
 
-<div className="flex gap-space-sm p-space-sm bg-surface-container-low rounded-lg">
+<div style={{ display: show("shuttering formwork leveling rigidity plywood props camber ply joints") ? undefined : "none" }} className="flex gap-space-sm p-space-sm bg-surface-container-low rounded-lg">
 <div className="w-8 h-8 rounded bg-primary text-on-primary font-tabular-metric-sm text-tabular-metric-sm flex items-center justify-center shrink-0">
               01
             </div>
@@ -333,7 +333,7 @@ Selected stage: <strong>{String(stage).padStart(2, "0")} · {LIFECYCLE_STAGES[st
 </div>
 </div>
 
-<div className="flex gap-space-sm p-space-sm bg-surface-container-low rounded-lg">
+<div style={{ display: show("rebar cage binding chair cover blocks bbs stirrup hook lap tmt fe550d") ? undefined : "none" }} className="flex gap-space-sm p-space-sm bg-surface-container-low rounded-lg">
 <div className="w-8 h-8 rounded bg-primary text-on-primary font-tabular-metric-sm text-tabular-metric-sm flex items-center justify-center shrink-0">
               02
             </div>
@@ -352,7 +352,7 @@ Selected stage: <strong>{String(stage).padStart(2, "0")} · {LIFECYCLE_STAGES[st
 </div>
 </div>
 
-<div className="flex gap-space-sm p-space-sm bg-surface-container-low rounded-lg">
+<div style={{ display: show("mep electrical conduit junction box sleeve clearance conduits") ? undefined : "none" }} className="flex gap-space-sm p-space-sm bg-surface-container-low rounded-lg">
 <div className="w-8 h-8 rounded bg-primary text-on-primary font-tabular-metric-sm text-tabular-metric-sm flex items-center justify-center shrink-0">
               03
             </div>
@@ -367,7 +367,7 @@ Selected stage: <strong>{String(stage).padStart(2, "0")} · {LIFECYCLE_STAGES[st
 </div>
 </div>
 
-<div className="flex gap-space-sm p-space-sm bg-surface-container-low rounded-lg">
+<div style={{ display: show("formwork cleaning shutter oil slurry flush release agent") ? undefined : "none" }} className="flex gap-space-sm p-space-sm bg-surface-container-low rounded-lg">
 <div className="w-8 h-8 rounded bg-primary text-on-primary font-tabular-metric-sm text-tabular-metric-sm flex items-center justify-center shrink-0">
               04
             </div>
@@ -382,7 +382,7 @@ Selected stage: <strong>{String(stage).padStart(2, "0")} · {LIFECYCLE_STAGES[st
 </div>
 </div>
 
-<div className="flex gap-space-sm p-space-sm bg-surface-container-low rounded-lg">
+<div style={{ display: show("concrete discharge compaction vibrator pour layer leveling slump") ? undefined : "none" }} className="flex gap-space-sm p-space-sm bg-surface-container-low rounded-lg">
 <div className="w-8 h-8 rounded bg-primary text-on-primary font-tabular-metric-sm text-tabular-metric-sm flex items-center justify-center shrink-0">
               05
             </div>
@@ -788,7 +788,7 @@ Selected stage: <strong>{String(stage).padStart(2, "0")} · {LIFECYCLE_STAGES[st
 <span className="font-label-sm text-label-sm text-on-surface-variant">Form 104 • 2.4 MB</span>
 </div>
 </div>
-<span className="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer text-space-base">download</span>
+<button onClick={() => downloadText("Gang-Pocket-Card-Stage-07.txt", POCKET_CARD)} className="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer text-space-base">download</button>
 </div>
 <div className="flex items-center justify-between p-space-xs bg-surface-container-low rounded">
 <div className="flex items-center gap-space-xs">
@@ -798,7 +798,7 @@ Selected stage: <strong>{String(stage).padStart(2, "0")} · {LIFECYCLE_STAGES[st
 <span className="font-label-sm text-label-sm text-on-surface-variant">SP-34 Code • 840 KB</span>
 </div>
 </div>
-<span className="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer text-space-base">download</span>
+<button onClick={() => downloadText("Gang-Pocket-Card-Stage-07.txt", POCKET_CARD)} className="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer text-space-base">download</button>
 </div>
 <div className="flex items-center justify-between p-space-xs bg-surface-container-low rounded">
 <div className="flex items-center gap-space-xs">
@@ -808,7 +808,7 @@ Selected stage: <strong>{String(stage).padStart(2, "0")} · {LIFECYCLE_STAGES[st
 <span className="font-label-sm text-label-sm text-on-surface-variant">QC Field Track • 1.1 MB</span>
 </div>
 </div>
-<span className="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer text-space-base">download</span>
+<button onClick={() => downloadText("Gang-Pocket-Card-Stage-07.txt", POCKET_CARD)} className="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer text-space-base">download</button>
 </div>
 </div>
 </div>
