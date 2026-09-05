@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccessControlRouteImport } from './routes/access-control'
 import { Route as AiProgrammeRouteImport } from './routes/ai-programme'
+import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BillingExpenditureRouteImport } from './routes/billing-expenditure'
 import { Route as BillsPaymentsRouteImport } from './routes/bills-payments'
@@ -73,6 +74,11 @@ const AccessControlRoute = AccessControlRouteImport.update({
 const AiProgrammeRoute = AiProgrammeRouteImport.update({
   id: '/ai-programme',
   path: '/ai-programme',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApprovalsRoute = ApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -315,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
   '/ai-programme': typeof AiProgrammeRoute
+  '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
@@ -367,6 +374,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
   '/ai-programme': typeof AiProgrammeRoute
+  '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
@@ -420,6 +428,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
   '/ai-programme': typeof AiProgrammeRoute
+  '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
@@ -474,6 +483,7 @@ export interface FileRouteTypes {
     | '/'
     | '/access-control'
     | '/ai-programme'
+    | '/approvals'
     | '/auth'
     | '/billing-expenditure'
     | '/bills-payments'
@@ -526,6 +536,7 @@ export interface FileRouteTypes {
     | '/'
     | '/access-control'
     | '/ai-programme'
+    | '/approvals'
     | '/auth'
     | '/billing-expenditure'
     | '/bills-payments'
@@ -578,6 +589,7 @@ export interface FileRouteTypes {
     | '/'
     | '/access-control'
     | '/ai-programme'
+    | '/approvals'
     | '/auth'
     | '/billing-expenditure'
     | '/bills-payments'
@@ -631,6 +643,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccessControlRoute: typeof AccessControlRoute
   AiProgrammeRoute: typeof AiProgrammeRoute
+  ApprovalsRoute: typeof ApprovalsRoute
   AuthRoute: typeof AuthRoute
   BillingExpenditureRoute: typeof BillingExpenditureRoute
   BillsPaymentsRoute: typeof BillsPaymentsRoute
@@ -701,6 +714,13 @@ declare module '@tanstack/react-router' {
       path: '/ai-programme'
       fullPath: '/ai-programme'
       preLoaderRoute: typeof AiProgrammeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/approvals': {
+      id: '/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof ApprovalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -1039,6 +1059,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccessControlRoute: AccessControlRoute,
   AiProgrammeRoute: AiProgrammeRoute,
+  ApprovalsRoute: ApprovalsRoute,
   AuthRoute: AuthRoute,
   BillingExpenditureRoute: BillingExpenditureRoute,
   BillsPaymentsRoute: BillsPaymentsRoute,
