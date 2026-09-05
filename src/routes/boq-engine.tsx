@@ -761,6 +761,7 @@ function Page() {
       .filter(
         (it) =>
           (stage === "ALL" || it.stage === stage) &&
+          (workScope === "ALL" || scopeOf(it) === workScope) &&
           (q === "" ||
             `${it.description} ${it.category} ${it.brand} ${it.supplier} ${it.item_code}`
               .toLowerCase()
@@ -772,11 +773,15 @@ function Page() {
           a.stage.localeCompare(b.stage) ||
           (a.sort_order ?? 0) - (b.sort_order ?? 0),
       );
-  }, [items, stage, search]);
+  }, [items, stage, workScope, search]);
 
   const lineTotal = (it: BoqRow) => toNum(it.quantity) * toNum(it.rate);
   const grandTotal = items.reduce((s, it) => s + lineTotal(it), 0);
   const viewTotal = visible.reduce((s, it) => s + lineTotal(it), 0);
+  const commonItems = items.filter((it) => scopeOf(it) === "common");
+  const individualItems = items.filter((it) => scopeOf(it) === "individual");
+  const commonTotal = commonItems.reduce((s, it) => s + lineTotal(it), 0);
+  const individualTotal = individualItems.reduce((s, it) => s + lineTotal(it), 0);
   const budget = toNum(activeProject?.target_budget);
   const sellableSft = toNum(activeProject?.total_built_up_sft);
   const perSft = sellableSft > 0 ? grandTotal / sellableSft : 0;
@@ -785,6 +790,7 @@ function Page() {
     const rows = scope === "view" ? visible : items;
     const body = rows.map((it) => [
       it.stage,
+      scopeOf(it),
       it.category,
       it.item_code,
       it.description,
