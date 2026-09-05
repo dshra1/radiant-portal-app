@@ -735,10 +735,10 @@ Selected stage: <strong>{String(stage).padStart(2, "0")} · {LIFECYCLE_STAGES[st
 <input value={term} onChange={(e) => setTerm(e.target.value)} className="w-full pl-8 pr-space-sm py-space-xs rounded bg-surface-container-low text-on-surface placeholder:text-on-surface-variant font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="e.g. Slump tolerance, Column lap length, PPC curing..." type="text" />
 </div>
 <div className="flex flex-wrap gap-space-2xs pt-space-sm">
-<button onClick={() => setTerm("Beam 135° Hook".split(" ").slice(-1)[0])} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Beam 135° Hook</button>
-<button onClick={() => setTerm("Cold Joint Remedy".split(" ").slice(-1)[0])} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Cold Joint Remedy</button>
-<button onClick={() => setTerm("50d Tension Lap".split(" ").slice(-1)[0])} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">50d Tension Lap</button>
-<button onClick={() => setTerm("Waterproofing Bunds".split(" ").slice(-1)[0])} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Waterproofing Bunds</button>
+<button onClick={() => setTerm("hook")} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Beam 135° Hook</button>
+<button onClick={() => setTerm("cold joint")} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Cold Joint Remedy</button>
+<button onClick={() => setTerm("lap")} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">50d Tension Lap</button>
+<button onClick={() => setTerm("ponding")} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-pointer hover:bg-surface-variant">Waterproofing Bunds</button>
 </div>
 </div>
 
