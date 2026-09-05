@@ -208,6 +208,7 @@ function ProductImage({ value, alt }: { value: string | null | undefined; alt: s
 
 const CSV_HEADERS = [
   "stage",
+  "work_scope",
   "category",
   "item_code",
   "description",
