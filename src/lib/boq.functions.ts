@@ -162,6 +162,9 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
       '{"trade":string,"description":string,"unit":string,"quantity":number,"rate":number,"brand":string,"supplier":string,"notes":string}',
       "quantity and rate are plain numbers (rate = per-unit rate in INR, no symbols or commas). notes holds the short derivation thumb rule. brand/supplier use realistic Indian brands and supply channels; use \"\" where not applicable.",
       "Quantities MUST be derived from the given geometry (built-up sft, slab sft, floor counts) and be internally consistent with the specified material grades and quality tiers.",
+      "UNITS: use Indian site units only — areas in SFT (never SQM / sq mt / m2), lengths in RFT, concrete in CUM, steel in KG or MT, counts in NOS, cement in BAGS. Flooring, wall tiling, granite, plastering, painting, waterproofing and false ceiling MUST be quoted in SFT with a per-SFT rate.",
+      "AREA DETAIL: for every finishing trade (Flooring, Wall Tiling, Granite Works, False Ceiling, Painting, Waterproofing, Sanitaryware, CP Fittings) the description MUST name the room/location it applies to, e.g. \"Vitrified tile flooring 800x800 — living & dining\", \"Anti-skid flooring — bathroom floor\", \"Ceramic dado up to 7ft — bathroom wall\", \"Granite — kitchen platform\", \"Flooring — bedrooms\", \"Flooring — balcony\", \"Flooring — staircase & lobby\", \"Flooring — utility\". Split each finishing trade into separate line items per area instead of one lumped item.",
+
     ].join("\n");
 
     const batches: (typeof BOQ_TRADES)[number][][] = [];
