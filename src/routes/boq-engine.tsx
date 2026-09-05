@@ -425,6 +425,8 @@ function Page() {
       if (result === "requested") {
         setStatus("Sent for partner approval — the BOQ line stays unchanged until it is approved.");
         await qc.invalidateQueries({ queryKey: ["boq_change_requests"] });
+      } else {
+        setStatus("Saved.");
       }
       await refresh();
     },
