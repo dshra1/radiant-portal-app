@@ -78,3 +78,15 @@
 
 - [ ] BOQ: order trades in construction stage sequence (not alphabetical)
 - [ ] BOQ: per-trade Price optimizer button on every trade view
+
+## Brands (Sep 5)
+- [x] Brand Preferences page before BOQ (/brand-preferences): per-material make/series/supplier/notes saved on the project, fed as mandatory brands into the AI estimate
+- [x] Removed redundant BOQ Upload / ingestion demo page from menu (redirects to BOQ Engine)
+
+- [ ] Fix: "Generate AI Programme" button on /ai-programme does nothing (make it generate a real schedule from project + BOQ)
+
+- [ ] Fix: /pmc-scope buttons/tabs are dead (static Stitch import) — make it live per project
+
+- [ ] New page: Budget Fit — app-suggested items/brands with cheaper rates to keep BOQ within target budget, one-tap apply
+- [x] Budget Fit suggestions are read-only; apply only on explicit owner/partner approval
+- [ ] Fix: /execution-manual dead buttons (Export Manual PDF, Gang Pocket Card, Push to Mobile QA, stage selection)

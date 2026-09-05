@@ -1,0 +1,1 @@
+ALTER TABLE public.site_projects ADD COLUMN IF NOT EXISTS brand_preferences jsonb NOT NULL DEFAULT '[]'::jsonb;

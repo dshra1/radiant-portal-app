@@ -394,6 +394,7 @@ export type Database = {
           bank_ifsc: string
           bank_name: string
           blockwork_type: string
+          brand_preferences: Json
           cellar_floors: number
           cement_bags_per_sft: number
           company_gstin: string
@@ -427,6 +428,7 @@ export type Database = {
           paint_spec: string
           phases: Json
           plumbing_spec: string
+          pmc_scope: Json
           procurement_lead_days: number
           sanitaryware_spec: string
           single_floor_slab_sft: number
@@ -453,6 +455,7 @@ export type Database = {
           bank_ifsc?: string
           bank_name?: string
           blockwork_type?: string
+          brand_preferences?: Json
           cellar_floors?: number
           cement_bags_per_sft?: number
           company_gstin?: string
@@ -486,6 +489,7 @@ export type Database = {
           paint_spec?: string
           phases?: Json
           plumbing_spec?: string
+          pmc_scope?: Json
           procurement_lead_days?: number
           sanitaryware_spec?: string
           single_floor_slab_sft?: number
@@ -512,6 +516,7 @@ export type Database = {
           bank_ifsc?: string
           bank_name?: string
           blockwork_type?: string
+          brand_preferences?: Json
           cellar_floors?: number
           cement_bags_per_sft?: number
           company_gstin?: string
@@ -545,6 +550,7 @@ export type Database = {
           paint_spec?: string
           phases?: Json
           plumbing_spec?: string
+          pmc_scope?: Json
           procurement_lead_days?: number
           sanitaryware_spec?: string
           single_floor_slab_sft?: number

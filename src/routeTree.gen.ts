@@ -19,6 +19,8 @@ import { Route as BoqRouteImport } from './routes/boq'
 import { Route as BoqEngineRouteImport } from './routes/boq-engine'
 import { Route as BoqUploadRouteImport } from './routes/boq-upload'
 import { Route as BrandBenchmarkRouteImport } from './routes/brand-benchmark'
+import { Route as BrandPreferencesRouteImport } from './routes/brand-preferences'
+import { Route as BudgetFitRouteImport } from './routes/budget-fit'
 import { Route as CapitalLedgerRouteImport } from './routes/capital-ledger'
 import { Route as CommandOperationsRouteImport } from './routes/command-operations'
 import { Route as ContractorsLabourRouteImport } from './routes/contractors-labour'
@@ -106,6 +108,16 @@ const BoqUploadRoute = BoqUploadRouteImport.update({
 const BrandBenchmarkRoute = BrandBenchmarkRouteImport.update({
   id: '/brand-benchmark',
   path: '/brand-benchmark',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrandPreferencesRoute = BrandPreferencesRouteImport.update({
+  id: '/brand-preferences',
+  path: '/brand-preferences',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BudgetFitRoute = BudgetFitRouteImport.update({
+  id: '/budget-fit',
+  path: '/budget-fit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CapitalLedgerRoute = CapitalLedgerRouteImport.update({
@@ -310,6 +322,8 @@ export interface FileRoutesByFullPath {
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/brand-preferences': typeof BrandPreferencesRoute
+  '/budget-fit': typeof BudgetFitRoute
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
@@ -360,6 +374,8 @@ export interface FileRoutesByTo {
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/brand-preferences': typeof BrandPreferencesRoute
+  '/budget-fit': typeof BudgetFitRoute
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
@@ -411,6 +427,8 @@ export interface FileRoutesById {
   '/boq-engine': typeof BoqEngineRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
+  '/brand-preferences': typeof BrandPreferencesRoute
+  '/budget-fit': typeof BudgetFitRoute
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
@@ -463,6 +481,8 @@ export interface FileRouteTypes {
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/brand-preferences'
+    | '/budget-fit'
     | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
@@ -513,6 +533,8 @@ export interface FileRouteTypes {
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/brand-preferences'
+    | '/budget-fit'
     | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
@@ -563,6 +585,8 @@ export interface FileRouteTypes {
     | '/boq-engine'
     | '/boq-upload'
     | '/brand-benchmark'
+    | '/brand-preferences'
+    | '/budget-fit'
     | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
@@ -614,6 +638,8 @@ export interface RootRouteChildren {
   BoqEngineRoute: typeof BoqEngineRoute
   BoqUploadRoute: typeof BoqUploadRoute
   BrandBenchmarkRoute: typeof BrandBenchmarkRoute
+  BrandPreferencesRoute: typeof BrandPreferencesRoute
+  BudgetFitRoute: typeof BudgetFitRoute
   CapitalLedgerRoute: typeof CapitalLedgerRoute
   CommandOperationsRoute: typeof CommandOperationsRoute
   ContractorsLabourRoute: typeof ContractorsLabourRoute
@@ -724,6 +750,20 @@ declare module '@tanstack/react-router' {
       path: '/brand-benchmark'
       fullPath: '/brand-benchmark'
       preLoaderRoute: typeof BrandBenchmarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brand-preferences': {
+      id: '/brand-preferences'
+      path: '/brand-preferences'
+      fullPath: '/brand-preferences'
+      preLoaderRoute: typeof BrandPreferencesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/budget-fit': {
+      id: '/budget-fit'
+      path: '/budget-fit'
+      fullPath: '/budget-fit'
+      preLoaderRoute: typeof BudgetFitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/capital-ledger': {
@@ -1006,6 +1046,8 @@ const rootRouteChildren: RootRouteChildren = {
   BoqEngineRoute: BoqEngineRoute,
   BoqUploadRoute: BoqUploadRoute,
   BrandBenchmarkRoute: BrandBenchmarkRoute,
+  BrandPreferencesRoute: BrandPreferencesRoute,
+  BudgetFitRoute: BudgetFitRoute,
   CapitalLedgerRoute: CapitalLedgerRoute,
   CommandOperationsRoute: CommandOperationsRoute,
   ContractorsLabourRoute: ContractorsLabourRoute,

@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { Shell } from "@/components/saha/Shell";
 import { useActiveProject } from "@/hooks/useActiveProject";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/execution-manual")({
   head: () => ({
@@ -16,8 +18,104 @@ export const Route = createFileRoute("/execution-manual")({
   component: Page,
 });
 
+const LIFECYCLE_STAGES = [
+  "Piling & Earthwork",
+  "Raft & Isolated Footings",
+  "Plinth Beams",
+  "Columns & Shear Walls",
+  "Shuttering & BBS",
+  "Pre-Pour Clearance",
+  "RCC Slab Casting & Curing",
+  "AAC Block Masonry",
+  "MEP Chasing & Wall Conduits",
+  "Cement Plastering",
+  "Waterproofing",
+  "Tiling & Flooring",
+  "Finishes & Joinery",
+  "Final Snags & Handover",
+];
+
+const POCKET_CARD = [
+  "SAHA OS — GANG POCKET CARD · RCC SLAB CASTING (SOP STAGE 07)",
+  "",
+  "BEFORE POUR (all 5 must be cleared)",
+  "1. Slump 120 +/- 25 mm at spout; 6 cubes per 10 cum (3 x 7-day, 3 x 28-day).",
+  "2. Cover blocks 20 mm slab / 25 mm beam, 4-5 nos per sqm, tied.",
+  "3. Formwork line & level within +/- 3 mm; 1:500 camber over 6 m spans.",
+  "4. Rebar laps 50d, max 50% staggered at one section.",
+  "5. MEP conduits below top mesh, 50 mm clear between runs, boxes sealed.",
+  "",
+  "DURING POUR",
+  "- Discharge height max 1.5 m. Layers max 450 mm.",
+  "- Needle vibrator 10-15 s per poke at 400 mm centres. Never push concrete sideways.",
+  "- Max gap between consecutive pours 90 minutes.",
+  "",
+  "CURING (Hyderabad, 31 C ambient)",
+  "- OPC: 10 days ponding. PPC / fly-ash: 14 days ponding.",
+  "- Bunds 50 mm high within 24 hours. Potable water only, pH 6-8.",
+  "",
+  "DESHUTTERING MINIMUMS",
+  "- Column / wall / beam sides: 16-24 hours",
+  "- Slab soffit: 3 days | Beam soffit: 7 days",
+  "- Props: slab up to 4.5 m 7 days, over 4.5 m 14 days",
+  "- Props: beams up to 6 m 14 days, over 6 m 21 days",
+].join("\n");
+
+function downloadText(name: string, body: string) {
+  const url = URL.createObjectURL(new Blob([body], { type: "text/plain;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function Page() {
   const project = useActiveProject();
+  const [stage, setStage] = useState(7);
+  const [term, setTerm] = useState("");
+  const [note, setNote] = useState("");
+  const [pushing, setPushing] = useState(false);
+
+  const show = (haystack: string) =>
+    term.trim() === "" || haystack.toLowerCase().includes(term.trim().toLowerCase());
+
+  const pushToField = async () => {
+    setPushing(true);
+    setNote("");
+    try {
+      const stageName = LIFECYCLE_STAGES[stage - 1] ?? "RCC Slab Casting & Curing";
+      const { data: auth } = await supabase.auth.getUser();
+      const senderId = auth.user?.id ?? null;
+      const body = `QA/QC pre-pour checklist for SOP Stage ${String(stage).padStart(2, "0")} — ${stageName}. Clear all 5 hold gates (slump, cover, line & level, laps, MEP) before the pour is released.`;
+      const { error } = await supabase.from("team_messages").insert({
+        channel: "QA & Inspection",
+        author_name: "Execution Manual",
+        author_role: "QA",
+        body,
+        is_task: true,
+        status: "Open",
+        progress: 0,
+        project_id: project.id ?? null,
+        sender_id: senderId,
+      });
+      if (error) throw error;
+      await supabase.from("notifications").insert({
+        title: `QA checklist pushed — Stage ${String(stage).padStart(2, "0")}`,
+        body,
+        category: "QA",
+        priority: "High",
+        link: "/tasks",
+        project_id: project.id ?? null,
+        sender_id: senderId,
+      });
+      setNote("Checklist sent to the field team — it now shows in Task Tracker and Action Centre on their phones.");
+    } catch (e) {
+      setNote(`Could not send: ${(e as Error).message}`);
+    } finally {
+      setPushing(false);
+    }
+  };
   return (
     <Shell title={"Stage-Wise Field Execution Manual & QA/QC Protocols | Saha OS"}>
       <div className="m3">
