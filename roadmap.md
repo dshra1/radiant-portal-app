@@ -75,3 +75,5 @@
   - [x] `boq_items.image_url` / `image_source` columns
   - [x] "Find image" — AI proposes product image URLs, server verifies they really serve an image
   - [x] Manual upload fallback into the private `boq-images` bucket + "Search online" link
+
+- [ ] BOQ: order trades in construction stage sequence (not alphabetical)
