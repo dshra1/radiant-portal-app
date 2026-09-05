@@ -822,6 +822,7 @@ function Page() {
                       </td>
                       <td className="px-2 py-2 text-right">
                         <input
+                          key={`qty-${toNum(it.quantity)}`}
                           defaultValue={String(toNum(it.quantity))}
                           onBlur={(e) =>
                             updateMutation.mutate({
