@@ -439,6 +439,7 @@ function Page() {
         brand?: string;
         supplier?: string;
         stage?: string;
+        work_scope?: string;
         image_url?: string;
         image_source?: string;
       };
