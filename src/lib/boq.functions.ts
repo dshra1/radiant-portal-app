@@ -207,21 +207,29 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
       .eq("source", "ai");
     if (del.error) throw new Error(del.error.message);
 
-    const rows = collected.map(({ trade, item }, index) => ({
-      project_id: data.projectId,
-      stage: trade,
-      category: trade,
-      item_code: `AI-${String(index + 1).padStart(4, "0")}`,
-      description: String(item.description ?? "").trim(),
-      unit: String(item.unit ?? "NOS").trim() || "NOS",
-      quantity: toNum(item.quantity),
-      rate: toNum(item.rate),
-      brand: String(item.brand ?? "").trim(),
-      supplier: String(item.supplier ?? "").trim(),
-      notes: String(item.notes ?? "").trim(),
-      source: "ai",
-      sort_order: index,
-    }));
+    const rows = collected.map(({ trade, item }, index) => {
+      const site = toSiteUnits(
+        String(item.unit ?? "NOS").trim() || "NOS",
+        toNum(item.quantity),
+        toNum(item.rate),
+      );
+      return {
+        project_id: data.projectId,
+        stage: trade,
+        category: trade,
+        item_code: `AI-${String(index + 1).padStart(4, "0")}`,
+        description: String(item.description ?? "").trim(),
+        unit: site.unit,
+        quantity: Math.round(site.quantity * 100) / 100,
+        rate: Math.round(site.rate * 100) / 100,
+        brand: String(item.brand ?? "").trim(),
+        supplier: String(item.supplier ?? "").trim(),
+        notes: String(item.notes ?? "").trim(),
+        source: "ai",
+        sort_order: index,
+      };
+    });
+
 
     const chunk = 300;
     for (let i = 0; i < rows.length; i += chunk) {
