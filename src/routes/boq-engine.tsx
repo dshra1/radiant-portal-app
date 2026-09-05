@@ -1163,25 +1163,41 @@ function Page() {
                         <div className="text-[11px] font-semibold uppercase text-primary">
                           {it.stage}
                         </div>
-                        <input
-                          defaultValue={it.category}
-                          onBlur={(e) =>
-                            e.target.value !== it.category &&
-                            updateMutation.mutate({ id: it.id, patch: { category: e.target.value } })
+                        <Cell
+                          value={it.category}
+                          onCommit={(v) =>
+                            updateMutation.mutate({ id: it.id, patch: { category: v } })
                           }
                           className="mt-1 w-32 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
                         />
-                      </td>
-                      <td className="px-2 py-2">
-                        <textarea
-                          defaultValue={it.description}
-                          rows={2}
-                          onBlur={(e) =>
-                            e.target.value !== it.description &&
+                        <select
+                          value={scopeOf(it)}
+                          onChange={(e) =>
                             updateMutation.mutate({
                               id: it.id,
-                              patch: { description: e.target.value },
+                              patch: { work_scope: e.target.value },
                             })
+                          }
+                          className={`mt-1 w-32 rounded border px-1 text-[11px] font-semibold ${
+                            scopeOf(it) === "individual"
+                              ? "border-amber-500/50 bg-amber-500/10 text-amber-700"
+                              : "border-sky-500/50 bg-sky-500/10 text-sky-700"
+                          }`}
+                        >
+                          {SCOPES.map((s) => (
+                            <option key={s.key} value={s.key}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-2 py-2">
+                        <Cell
+                          multiline
+                          rows={2}
+                          value={it.description}
+                          onCommit={(v) =>
+                            updateMutation.mutate({ id: it.id, patch: { description: v } })
                           }
                           className="w-72 rounded border border-transparent bg-transparent px-1 py-0.5 hover:border-input focus:border-input"
                         />
