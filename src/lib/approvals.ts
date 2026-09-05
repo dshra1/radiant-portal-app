@@ -181,12 +181,12 @@ export function useApprovalGate() {
   const canDecide = Boolean(
     access?.roles.includes("admin") || access?.roles.includes("pm"),
   );
-  const [approvalMode, setMode] = useState(true);
+  const [approvalMode, setMode] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved === "off") setMode(false);
+    if (saved === "on") setMode(true);
   }, []);
 
   const setApprovalMode = (on: boolean) => {
@@ -196,6 +196,7 @@ export function useApprovalGate() {
     }
   };
 
+  // Admin / PM edits save straight away unless they switch the gate on.
   // Members without decision rights always work through approvals.
   const gateOn = canDecide ? approvalMode : true;
 
