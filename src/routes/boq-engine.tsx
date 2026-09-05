@@ -205,6 +205,13 @@ function Page() {
   const [brief, setBrief] = useState("");
   const [suggestions, setSuggestions] = useState<Record<string, BrandSuggestion>>({});
   const [pendingIds, setPendingIds] = useState<string[]>([]);
+  const [applyAll, setApplyAll] = useState<{
+    stageName: string;
+    brand: string;
+    supplier: string;
+    ratio: number;
+    count: number;
+  } | null>(null);
   const generate = useServerFn(generateBoqEstimate);
   const suggestBrands = useServerFn(suggestBrandOptions);
   const findImage = useServerFn(findProductImage);
