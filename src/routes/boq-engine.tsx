@@ -776,6 +776,38 @@ function Page() {
       );
   }, [items, stage, workScope, search]);
 
+  const SQM_TO_SFT = 10.7639;
+  const isMetricArea = (u: string) =>
+    ["sqm", "sq m", "sq.m", "sqmt", "sq mt", "sqmts", "m2", "sq.mt"].includes(
+      (u ?? "").trim().toLowerCase().replace(/\s+/g, " "),
+    );
+  const metricRows = visible.filter((it) => isMetricArea(it.unit));
+
+  const convertSqmToSft = async () => {
+    if (metricRows.length === 0 || convertingUnits) return;
+    setConvertingUnits(true);
+    setStatus(`Converting ${metricRows.length} line(s) from sqm to sft…`);
+    try {
+      for (const it of metricRows) {
+        const qty = Number((toNum(it.quantity) * SQM_TO_SFT).toFixed(2));
+        const rate = Number((toNum(it.rate) / SQM_TO_SFT).toFixed(2));
+        const { error } = await supabase
+          .from("boq_items")
+          .update({ unit: "SFT", quantity: qty, rate })
+          .eq("id", it.id);
+        if (error) throw error;
+      }
+      await refresh();
+      setStatus(
+        `Converted ${metricRows.length} line(s) to SFT — quantities and rates adjusted, line amounts unchanged.`,
+      );
+    } catch (e) {
+      setStatus(`Conversion failed: ${(e as Error).message}`);
+    } finally {
+      setConvertingUnits(false);
+    }
+  };
+
   const lineTotal = (it: BoqRow) => toNum(it.quantity) * toNum(it.rate);
   const grandTotal = items.reduce((s, it) => s + lineTotal(it), 0);
   const viewTotal = visible.reduce((s, it) => s + lineTotal(it), 0);
