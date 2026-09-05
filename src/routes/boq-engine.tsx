@@ -32,6 +32,7 @@ import {
   Sparkles,
   Trash2,
   Upload,
+  ShieldCheck,
 } from "lucide-react";
 
 function BrandMark({ brand }: { brand: string }) {
@@ -229,6 +230,7 @@ function Page() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imageTargetId, setImageTargetId] = useState<string>("");
   const [imageBusyId, setImageBusyId] = useState<string>("");
+  const { gateOn, canDecide, setApprovalMode, decider } = useApprovalGate();
 
   const suggestMutation = useMutation({
     mutationFn: async (itemIds: string[]) => {
