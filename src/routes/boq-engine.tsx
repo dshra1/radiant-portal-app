@@ -693,7 +693,7 @@ function Page() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setStage("ALL")}
-              className={`h-8 rounded px-3 text-[13px] font-medium ${stage === "ALL" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+              className={`h-8 rounded px-3 text-[13px] font-semibold ${stage === "ALL" ? "bg-primary text-primary-foreground" : "border border-primary/30 bg-primary-soft text-primary hover:bg-primary/15"}`}
             >
               All trades ({items.length})
             </button>
