@@ -6,6 +6,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BOQ_TRADES,
+  BOQ_SECTIONS,
+  LABOUR_SECTION,
   findProductImage,
   generateBoqEstimate,
   suggestBrandOptions,
@@ -428,6 +430,33 @@ function Page() {
     onError: (e: Error) => setStatus(`Add failed: ${e.message}`),
   });
 
+  // Labour is a separate, vendor-wise section: each row is one labour contract / gang.
+  const addLabourMutation = useMutation({
+    mutationFn: async () => {
+      const count = items.filter((it) => it.stage === LABOUR_SECTION).length;
+      const { error } = await supabase.from("boq_items").insert({
+        project_id: activeId,
+        stage: LABOUR_SECTION,
+        category: "Labour contract",
+        item_code: `LAB-${String(count + 1).padStart(3, "0")}`,
+        description: "New labour vendor / contract — e.g. Masonry & plastering gang",
+        unit: "SFT",
+        quantity: 0,
+        rate: 0,
+        supplier: "",
+        source: "manual",
+        sort_order: items.length,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setStage(LABOUR_SECTION);
+      setStatus("Labour vendor row added — enter the vendor name in Brand / Supplier, the scope, area and agreed rate.");
+      await refresh();
+    },
+    onError: (e: Error) => setStatus(`Add failed: ${e.message}`),
+  });
+
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const rows = parseCsv(await file.text());
@@ -468,7 +497,7 @@ function Page() {
     for (const it of items) map.set(it.stage, (map.get(it.stage) ?? 0) + 1);
     // Construction-stage order (site preparation → finishing → handover), not alphabetical.
     const rank = (name: string) => {
-      const i = (BOQ_TRADES as readonly string[]).indexOf(name);
+      const i = (BOQ_SECTIONS as readonly string[]).indexOf(name);
       return i === -1 ? 999 : i;
     };
     return [...map.entries()].sort(
@@ -479,7 +508,7 @@ function Page() {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     const rank = (name: string) => {
-      const i = (BOQ_TRADES as readonly string[]).indexOf(name);
+      const i = (BOQ_SECTIONS as readonly string[]).indexOf(name);
       return i === -1 ? 999 : i;
     };
     return items
@@ -652,6 +681,14 @@ function Page() {
             >
               <Plus className="size-4" />
               Add line item
+            </button>
+            <button
+              disabled={!activeId}
+              onClick={() => addLabourMutation.mutate()}
+              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+            >
+              <Plus className="size-4" />
+              Add labour vendor
             </button>
             <button
               onClick={refresh}
