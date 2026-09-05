@@ -318,6 +318,8 @@ function Page() {
   const projects = projectsQuery.data ?? [];
   const activeId = projectId || projects[0]?.id || "";
   const activeProject = projects.find((p) => p.id === activeId);
+  const pendingRequests = useChangeRequests(activeId, "pending");
+  const pendingCount = (pendingRequests.data ?? []).length;
 
   const itemsQuery = useQuery({
     queryKey: ["boq_items", activeId],
@@ -675,6 +677,38 @@ function Page() {
             project inputs you saved. Every line item is editable, deletable and exportable, and you
             can upload your own complete trade list at any time.
           </p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary-soft/40 px-3 py-2">
+            <ShieldCheck className="size-4 text-primary" />
+            <span className="text-[13px] font-semibold text-foreground">
+              {gateOn
+                ? "Partner approval is ON — rate, quantity, brand and supplier changes are sent for sign-off instead of committing."
+                : "Direct edit mode — your cost changes commit immediately."}
+            </span>
+            {canDecide && (
+              <label className="flex items-center gap-2 text-[12px] font-semibold text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={gateOn}
+                  onChange={(e) => setApprovalMode(e.target.checked)}
+                  className="size-4"
+                />
+                Require approval
+              </label>
+            )}
+            <Link
+              to="/approvals"
+              className="ml-auto inline-flex h-8 items-center gap-1.5 rounded bg-primary px-3 text-[12px] font-semibold text-primary-foreground"
+            >
+              Approvals ({pendingCount})
+            </Link>
+            <Link
+              to="/cost-dashboard"
+              className="inline-flex h-8 items-center gap-1.5 rounded border border-primary px-3 text-[12px] font-semibold text-primary"
+            >
+              Cost dashboard
+            </Link>
+          </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <select
