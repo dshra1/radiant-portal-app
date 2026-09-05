@@ -299,6 +299,7 @@ function Page() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imageTargetId, setImageTargetId] = useState<string>("");
   const [imageBusyId, setImageBusyId] = useState<string>("");
+  const [convertingUnits, setConvertingUnits] = useState(false);
   const { gateOn, canDecide, setApprovalMode, decider } = useApprovalGate();
 
   const suggestMutation = useMutation({
