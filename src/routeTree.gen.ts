@@ -25,6 +25,7 @@ import { Route as BudgetFitRouteImport } from './routes/budget-fit'
 import { Route as CapitalLedgerRouteImport } from './routes/capital-ledger'
 import { Route as CommandOperationsRouteImport } from './routes/command-operations'
 import { Route as ContractorsLabourRouteImport } from './routes/contractors-labour'
+import { Route as CostDashboardRouteImport } from './routes/cost-dashboard'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DrawingDecipherRouteImport } from './routes/drawing-decipher'
 import { Route as ExecutionManualRouteImport } from './routes/execution-manual'
@@ -139,6 +140,11 @@ const CommandOperationsRoute = CommandOperationsRouteImport.update({
 const ContractorsLabourRoute = ContractorsLabourRouteImport.update({
   id: '/contractors-labour',
   path: '/contractors-labour',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CostDashboardRoute = CostDashboardRouteImport.update({
+  id: '/cost-dashboard',
+  path: '/cost-dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -334,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
+  '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
@@ -387,6 +394,7 @@ export interface FileRoutesByTo {
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
+  '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
@@ -441,6 +449,7 @@ export interface FileRoutesById {
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
+  '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
@@ -496,6 +505,7 @@ export interface FileRouteTypes {
     | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
+    | '/cost-dashboard'
     | '/dashboard'
     | '/drawing-decipher'
     | '/execution-manual'
@@ -549,6 +559,7 @@ export interface FileRouteTypes {
     | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
+    | '/cost-dashboard'
     | '/dashboard'
     | '/drawing-decipher'
     | '/execution-manual'
@@ -602,6 +613,7 @@ export interface FileRouteTypes {
     | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
+    | '/cost-dashboard'
     | '/dashboard'
     | '/drawing-decipher'
     | '/execution-manual'
@@ -656,6 +668,7 @@ export interface RootRouteChildren {
   CapitalLedgerRoute: typeof CapitalLedgerRoute
   CommandOperationsRoute: typeof CommandOperationsRoute
   ContractorsLabourRoute: typeof ContractorsLabourRoute
+  CostDashboardRoute: typeof CostDashboardRoute
   DashboardRoute: typeof DashboardRoute
   DrawingDecipherRoute: typeof DrawingDecipherRoute
   ExecutionManualRoute: typeof ExecutionManualRoute
@@ -805,6 +818,13 @@ declare module '@tanstack/react-router' {
       path: '/contractors-labour'
       fullPath: '/contractors-labour'
       preLoaderRoute: typeof ContractorsLabourRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cost-dashboard': {
+      id: '/cost-dashboard'
+      path: '/cost-dashboard'
+      fullPath: '/cost-dashboard'
+      preLoaderRoute: typeof CostDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -1072,6 +1092,7 @@ const rootRouteChildren: RootRouteChildren = {
   CapitalLedgerRoute: CapitalLedgerRoute,
   CommandOperationsRoute: CommandOperationsRoute,
   ContractorsLabourRoute: ContractorsLabourRoute,
+  CostDashboardRoute: CostDashboardRoute,
   DashboardRoute: DashboardRoute,
   DrawingDecipherRoute: DrawingDecipherRoute,
   ExecutionManualRoute: ExecutionManualRoute,
