@@ -701,7 +701,7 @@ function Page() {
               <button
                 key={name}
                 onClick={() => setStage(name)}
-                className={`h-8 rounded px-3 text-[13px] font-medium ${stage === name ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+                className={`h-8 rounded px-3 text-[13px] font-semibold ${stage === name ? "bg-primary text-primary-foreground" : "border border-primary/30 bg-primary-soft text-primary hover:bg-primary/15"}`}
               >
                 {name} ({count})
               </button>
