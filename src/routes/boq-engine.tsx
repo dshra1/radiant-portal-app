@@ -357,6 +357,38 @@ function Page() {
     onError: (e: Error) => setStatus(`Save failed: ${e.message}`),
   });
 
+  /** Applies a chosen brand (and proportional rate) to every line item of one trade. */
+  const applyStageMutation = useMutation({
+    mutationFn: async ({
+      stageName,
+      brand,
+      supplier,
+      ratio,
+    }: {
+      stageName: string;
+      brand: string;
+      supplier: string;
+      ratio: number;
+    }) => {
+      const targets = items.filter((it) => it.stage === stageName);
+      for (const it of targets) {
+        const nextRate = ratio > 0 ? Math.round(toNum(it.rate) * ratio) : toNum(it.rate);
+        const { error } = await supabase
+          .from("boq_items")
+          .update({ brand, supplier: supplier || it.supplier, rate: nextRate })
+          .eq("id", it.id);
+        if (error) throw error;
+      }
+      return targets.length;
+    },
+    onSuccess: async (count) => {
+      setStatus(`Applied to ${count} line item(s) in this trade.`);
+      setApplyAll(null);
+      await refresh();
+    },
+    onError: (e: Error) => setStatus(`Bulk apply failed: ${e.message}`),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("boq_items").delete().eq("id", id);
