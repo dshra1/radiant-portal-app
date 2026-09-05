@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,6 +128,7 @@ function priorityTone(priority: string) {
 function Index() {
   const { access } = useAccess();
   const user = useSessionUser();
+  const navigate = useNavigate();
   const activeProject = useActiveProject();
   const setActiveProject = useActiveProjectSetter();
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
@@ -362,6 +363,7 @@ function Index() {
                           onClick={() => {
                             setActiveProject(p.id);
                             setProjectMenuOpen(false);
+                            void navigate({ to: "/dashboard" });
                           }}
                           className={cn(
                             "flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left hover:bg-secondary",
