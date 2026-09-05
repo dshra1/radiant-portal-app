@@ -642,6 +642,7 @@ function Page() {
       const { error } = await supabase.from("boq_items").insert({
         project_id: activeId,
         stage: stage === "ALL" ? "Preliminaries" : stage,
+        work_scope: workScope === "ALL" ? "common" : workScope,
         category: "General",
         item_code: `MAN-${String(items.length + 1).padStart(4, "0")}`,
         description: "New line item",
