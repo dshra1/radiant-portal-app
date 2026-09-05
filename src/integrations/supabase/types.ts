@@ -67,6 +67,99 @@ export type Database = {
         }
         Relationships: []
       }
+      boq_change_requests: {
+        Row: {
+          boq_item_id: string | null
+          change_type: string
+          created_at: string
+          current_amount: number
+          current_values: Json
+          decided_at: string | null
+          decided_by: string | null
+          decided_by_name: string
+          decision_note: string
+          description: string
+          id: string
+          note: string
+          project_id: string
+          proposed_amount: number
+          proposed_values: Json
+          requested_by: string | null
+          requested_by_name: string
+          saving: number
+          source: string
+          status: string
+          trade: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          boq_item_id?: string | null
+          change_type?: string
+          created_at?: string
+          current_amount?: number
+          current_values?: Json
+          decided_at?: string | null
+          decided_by?: string | null
+          decided_by_name?: string
+          decision_note?: string
+          description?: string
+          id?: string
+          note?: string
+          project_id: string
+          proposed_amount?: number
+          proposed_values?: Json
+          requested_by?: string | null
+          requested_by_name?: string
+          saving?: number
+          source?: string
+          status?: string
+          trade?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          boq_item_id?: string | null
+          change_type?: string
+          created_at?: string
+          current_amount?: number
+          current_values?: Json
+          decided_at?: string | null
+          decided_by?: string | null
+          decided_by_name?: string
+          decision_note?: string
+          description?: string
+          id?: string
+          note?: string
+          project_id?: string
+          proposed_amount?: number
+          proposed_values?: Json
+          requested_by?: string | null
+          requested_by_name?: string
+          saving?: number
+          source?: string
+          status?: string
+          trade?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boq_change_requests_boq_item_id_fkey"
+            columns: ["boq_item_id"]
+            isOneToOne: false
+            referencedRelation: "boq_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boq_change_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boq_items: {
         Row: {
           brand: string
