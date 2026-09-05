@@ -180,6 +180,7 @@ export type Database = {
           supplier: string
           unit: string
           updated_at: string
+          work_scope: string
         }
         Insert: {
           brand?: string
@@ -200,6 +201,7 @@ export type Database = {
           supplier?: string
           unit?: string
           updated_at?: string
+          work_scope?: string
         }
         Update: {
           brand?: string
@@ -220,6 +222,7 @@ export type Database = {
           supplier?: string
           unit?: string
           updated_at?: string
+          work_scope?: string
         }
         Relationships: [
           {
