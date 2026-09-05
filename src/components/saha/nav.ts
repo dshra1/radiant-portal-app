@@ -55,7 +55,6 @@ export const navGroups: NavGroup[] = [
       { to: "/command-operations", label: "Command Operations", icon: Radio },
       { to: "/projects", label: "Projects", icon: Building2 },
       { to: "/projects-setup", label: "Projects & Setup", icon: Settings2 },
-      { to: "/boq", label: "BOQ & Inventory", icon: Calculator },
       { to: "/boq-engine", label: "BOQ Engine", icon: Calculator },
       { to: "/boq-upload", label: "BOQ Upload", icon: Upload },
       { to: "/scope-brief", label: "Scope Brief", icon: BookOpen },
