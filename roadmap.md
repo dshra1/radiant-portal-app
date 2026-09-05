@@ -93,3 +93,5 @@
 - [x] /pmc-scope live (work packages from BOQ, fee, committed POs, saved scope)
 - [x] /budget-fit live suggestions with explicit apply
 - [x] /execution-manual buttons live (print, pocket card download, push checklist to field, stage selection, SOP search)
+- [x] Brand Preferences pre-filled with Cyber Enclave spec + Excel download/upload
+- [x] Home page: selecting a project opens that project's dashboard
