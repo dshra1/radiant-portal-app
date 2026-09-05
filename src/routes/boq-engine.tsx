@@ -903,6 +903,7 @@ function Page() {
                               className="w-36 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
                             />
                             <input
+                              key={`supplier-${it.supplier}`}
                               defaultValue={it.supplier}
                               onBlur={(e) =>
                                 e.target.value !== it.supplier &&
