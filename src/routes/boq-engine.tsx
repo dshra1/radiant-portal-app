@@ -1,4 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  isCommercialPatch,
+  raiseChangeRequest,
+  useApprovalGate,
+  useChangeRequests,
+} from "@/lib/approvals";
 import { Shell } from "@/components/saha/Shell";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +32,7 @@ import {
   Sparkles,
   Trash2,
   Upload,
+  ShieldCheck,
 } from "lucide-react";
 
 function BrandMark({ brand }: { brand: string }) {
@@ -223,6 +230,7 @@ function Page() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imageTargetId, setImageTargetId] = useState<string>("");
   const [imageBusyId, setImageBusyId] = useState<string>("");
+  const { gateOn, canDecide, setApprovalMode, decider } = useApprovalGate();
 
   const suggestMutation = useMutation({
     mutationFn: async (itemIds: string[]) => {
@@ -310,6 +318,8 @@ function Page() {
   const projects = projectsQuery.data ?? [];
   const activeId = projectId || projects[0]?.id || "";
   const activeProject = projects.find((p) => p.id === activeId);
+  const pendingRequests = useChangeRequests(activeId, "pending");
+  const pendingCount = (pendingRequests.data ?? []).length;
 
   const itemsQuery = useQuery({
     queryKey: ["boq_items", activeId],
@@ -347,6 +357,8 @@ function Page() {
     mutationFn: async ({
       id,
       patch,
+      source,
+      note,
     }: {
       id: string;
       patch: {
@@ -361,11 +373,61 @@ function Page() {
         image_url?: string;
         image_source?: string;
       };
+      source?: string;
+      note?: string;
     }) => {
+      const row = items.find((it) => it.id === id);
+      if (gateOn && row && isCommercialPatch(patch)) {
+        const commercial: Record<string, string | number | undefined> = {};
+        const descriptive: Record<string, string | number | undefined> = {};
+        for (const [k, v] of Object.entries(patch)) {
+          if ((["quantity", "rate", "brand", "supplier"] as string[]).includes(k)) commercial[k] = v;
+          else descriptive[k] = v;
+        }
+        if (Object.keys(descriptive).length > 0) {
+          const { error } = await supabase
+            .from("boq_items")
+            .update(descriptive as never)
+            .eq("id", id);
+          if (error) throw error;
+        }
+        await raiseChangeRequest({
+          projectId: activeId,
+          itemId: id,
+          trade: row.stage,
+          description: row.description,
+          unit: row.unit,
+          quantity: toNum(row.quantity),
+          currentValues: {
+            quantity: toNum(row.quantity),
+            rate: toNum(row.rate),
+            brand: row.brand,
+            supplier: row.supplier,
+          },
+          proposedValues: {
+            quantity: toNum(commercial["quantity"] ?? row.quantity),
+            rate: toNum(commercial["rate"] ?? row.rate),
+            brand: String(commercial["brand"] ?? row.brand),
+            supplier: String(commercial["supplier"] ?? row.supplier),
+          },
+          source: source ?? "boq-engine",
+          note: note ?? "",
+          requestedBy: decider.id,
+          requestedByName: decider.name,
+        });
+        return "requested" as const;
+      }
       const { error } = await supabase.from("boq_items").update(patch).eq("id", id);
       if (error) throw error;
+      return "saved" as const;
     },
-    onSuccess: refresh,
+    onSuccess: async (result) => {
+      if (result === "requested") {
+        setStatus("Sent for partner approval — the BOQ line stays unchanged until it is approved.");
+        await qc.invalidateQueries({ queryKey: ["boq_change_requests"] });
+      }
+      await refresh();
+    },
     onError: (e: Error) => setStatus(`Save failed: ${e.message}`),
   });
 
@@ -385,6 +447,33 @@ function Page() {
       const targets = items.filter((it) => it.stage === stageName);
       for (const it of targets) {
         const nextRate = ratio > 0 ? Math.round(toNum(it.rate) * ratio) : toNum(it.rate);
+        if (gateOn) {
+          await raiseChangeRequest({
+            projectId: activeId,
+            itemId: it.id,
+            trade: it.stage,
+            description: it.description,
+            unit: it.unit,
+            quantity: toNum(it.quantity),
+            currentValues: {
+              quantity: toNum(it.quantity),
+              rate: toNum(it.rate),
+              brand: it.brand,
+              supplier: it.supplier,
+            },
+            proposedValues: {
+              quantity: toNum(it.quantity),
+              rate: nextRate,
+              brand,
+              supplier: supplier || it.supplier,
+            },
+            source: "trade-optimizer",
+            note: `Apply ${brand} across ${stageName}`,
+            requestedBy: decider.id,
+            requestedByName: decider.name,
+          });
+          continue;
+        }
         const { error } = await supabase
           .from("boq_items")
           .update({ brand, supplier: supplier || it.supplier, rate: nextRate })
@@ -394,8 +483,13 @@ function Page() {
       return targets.length;
     },
     onSuccess: async (count) => {
-      setStatus(`Applied to ${count} line item(s) in this trade.`);
+      setStatus(
+        gateOn
+          ? `${count} line item(s) sent for partner approval.`
+          : `Applied to ${count} line item(s) in this trade.`,
+      );
       setApplyAll(null);
+      await qc.invalidateQueries({ queryKey: ["boq_change_requests"] });
       await refresh();
     },
     onError: (e: Error) => setStatus(`Bulk apply failed: ${e.message}`),
@@ -586,6 +680,38 @@ function Page() {
             project inputs you saved. Every line item is editable, deletable and exportable, and you
             can upload your own complete trade list at any time.
           </p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary-soft/40 px-3 py-2">
+            <ShieldCheck className="size-4 text-primary" />
+            <span className="text-[13px] font-semibold text-foreground">
+              {gateOn
+                ? "Partner approval is ON — rate, quantity, brand and supplier changes are sent for sign-off instead of committing."
+                : "Direct edit mode — your cost changes commit immediately."}
+            </span>
+            {canDecide && (
+              <label className="flex items-center gap-2 text-[12px] font-semibold text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={gateOn}
+                  onChange={(e) => setApprovalMode(e.target.checked)}
+                  className="size-4"
+                />
+                Require approval
+              </label>
+            )}
+            <Link
+              to="/approvals"
+              className="ml-auto inline-flex h-8 items-center gap-1.5 rounded bg-primary px-3 text-[12px] font-semibold text-primary-foreground"
+            >
+              Approvals ({pendingCount})
+            </Link>
+            <Link
+              to="/cost-dashboard"
+              className="inline-flex h-8 items-center gap-1.5 rounded border border-primary px-3 text-[12px] font-semibold text-primary"
+            >
+              Cost dashboard
+            </Link>
+          </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <select
@@ -1097,7 +1223,9 @@ function Page() {
                                         },
                                       });
                                       setStatus(
-                                        `${opt.brand} applied at ${inr(opt.rate)} / ${it.unit}.`,
+                                        gateOn
+                                          ? `${opt.brand} at ${inr(opt.rate)} / ${it.unit} sent for partner approval.`
+                                          : `${opt.brand} applied at ${inr(opt.rate)} / ${it.unit}.`,
                                       );
                                       const siblings = items.filter(
                                         (o) => o.stage === it.stage && o.id !== it.id,

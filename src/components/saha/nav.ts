@@ -59,6 +59,8 @@ export const navGroups: NavGroup[] = [
       { to: "/brand-preferences", label: "Brand Preferences", icon: Tags },
       { to: "/boq-engine", label: "BOQ Engine", icon: Calculator },
       { to: "/budget-fit", label: "Budget Fit", icon: IndianRupee },
+      { to: "/approvals", label: "Change Approvals", icon: ShieldCheck },
+      { to: "/cost-dashboard", label: "Cost Dashboard", icon: BadgeIndianRupee },
 
       { to: "/scope-brief", label: "Scope Brief", icon: BookOpen },
       { to: "/pmc-scope", label: "PMC Scope", icon: Ruler },
@@ -116,6 +118,8 @@ export const navGroups: NavGroup[] = [
       { to: "/capital-ledger", label: "Capital Ledger", icon: Wallet },
       { to: "/landowners-investment", label: "Landowners & Investment", icon: Landmark },
       { to: "/pmc-scope", label: "PMC Commercials", icon: BadgeIndianRupee },
+      { to: "/cost-dashboard", label: "Cost Dashboard", icon: BadgeIndianRupee },
+      { to: "/approvals", label: "Change Approvals", icon: ShieldCheck },
     ],
   },
   {

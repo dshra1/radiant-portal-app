@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccessControlRouteImport } from './routes/access-control'
 import { Route as AiProgrammeRouteImport } from './routes/ai-programme'
+import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BillingExpenditureRouteImport } from './routes/billing-expenditure'
 import { Route as BillsPaymentsRouteImport } from './routes/bills-payments'
@@ -24,6 +25,7 @@ import { Route as BudgetFitRouteImport } from './routes/budget-fit'
 import { Route as CapitalLedgerRouteImport } from './routes/capital-ledger'
 import { Route as CommandOperationsRouteImport } from './routes/command-operations'
 import { Route as ContractorsLabourRouteImport } from './routes/contractors-labour'
+import { Route as CostDashboardRouteImport } from './routes/cost-dashboard'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DrawingDecipherRouteImport } from './routes/drawing-decipher'
 import { Route as ExecutionManualRouteImport } from './routes/execution-manual'
@@ -73,6 +75,11 @@ const AccessControlRoute = AccessControlRouteImport.update({
 const AiProgrammeRoute = AiProgrammeRouteImport.update({
   id: '/ai-programme',
   path: '/ai-programme',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApprovalsRoute = ApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -133,6 +140,11 @@ const CommandOperationsRoute = CommandOperationsRouteImport.update({
 const ContractorsLabourRoute = ContractorsLabourRouteImport.update({
   id: '/contractors-labour',
   path: '/contractors-labour',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CostDashboardRoute = CostDashboardRouteImport.update({
+  id: '/cost-dashboard',
+  path: '/cost-dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -315,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
   '/ai-programme': typeof AiProgrammeRoute
+  '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
@@ -327,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
+  '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
@@ -367,6 +381,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
   '/ai-programme': typeof AiProgrammeRoute
+  '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
@@ -379,6 +394,7 @@ export interface FileRoutesByTo {
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
+  '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
@@ -420,6 +436,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
   '/ai-programme': typeof AiProgrammeRoute
+  '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
@@ -432,6 +449,7 @@ export interface FileRoutesById {
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
   '/contractors-labour': typeof ContractorsLabourRoute
+  '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
@@ -474,6 +492,7 @@ export interface FileRouteTypes {
     | '/'
     | '/access-control'
     | '/ai-programme'
+    | '/approvals'
     | '/auth'
     | '/billing-expenditure'
     | '/bills-payments'
@@ -486,6 +505,7 @@ export interface FileRouteTypes {
     | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
+    | '/cost-dashboard'
     | '/dashboard'
     | '/drawing-decipher'
     | '/execution-manual'
@@ -526,6 +546,7 @@ export interface FileRouteTypes {
     | '/'
     | '/access-control'
     | '/ai-programme'
+    | '/approvals'
     | '/auth'
     | '/billing-expenditure'
     | '/bills-payments'
@@ -538,6 +559,7 @@ export interface FileRouteTypes {
     | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
+    | '/cost-dashboard'
     | '/dashboard'
     | '/drawing-decipher'
     | '/execution-manual'
@@ -578,6 +600,7 @@ export interface FileRouteTypes {
     | '/'
     | '/access-control'
     | '/ai-programme'
+    | '/approvals'
     | '/auth'
     | '/billing-expenditure'
     | '/bills-payments'
@@ -590,6 +613,7 @@ export interface FileRouteTypes {
     | '/capital-ledger'
     | '/command-operations'
     | '/contractors-labour'
+    | '/cost-dashboard'
     | '/dashboard'
     | '/drawing-decipher'
     | '/execution-manual'
@@ -631,6 +655,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccessControlRoute: typeof AccessControlRoute
   AiProgrammeRoute: typeof AiProgrammeRoute
+  ApprovalsRoute: typeof ApprovalsRoute
   AuthRoute: typeof AuthRoute
   BillingExpenditureRoute: typeof BillingExpenditureRoute
   BillsPaymentsRoute: typeof BillsPaymentsRoute
@@ -643,6 +668,7 @@ export interface RootRouteChildren {
   CapitalLedgerRoute: typeof CapitalLedgerRoute
   CommandOperationsRoute: typeof CommandOperationsRoute
   ContractorsLabourRoute: typeof ContractorsLabourRoute
+  CostDashboardRoute: typeof CostDashboardRoute
   DashboardRoute: typeof DashboardRoute
   DrawingDecipherRoute: typeof DrawingDecipherRoute
   ExecutionManualRoute: typeof ExecutionManualRoute
@@ -701,6 +727,13 @@ declare module '@tanstack/react-router' {
       path: '/ai-programme'
       fullPath: '/ai-programme'
       preLoaderRoute: typeof AiProgrammeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/approvals': {
+      id: '/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof ApprovalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -785,6 +818,13 @@ declare module '@tanstack/react-router' {
       path: '/contractors-labour'
       fullPath: '/contractors-labour'
       preLoaderRoute: typeof ContractorsLabourRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cost-dashboard': {
+      id: '/cost-dashboard'
+      path: '/cost-dashboard'
+      fullPath: '/cost-dashboard'
+      preLoaderRoute: typeof CostDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -1039,6 +1079,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccessControlRoute: AccessControlRoute,
   AiProgrammeRoute: AiProgrammeRoute,
+  ApprovalsRoute: ApprovalsRoute,
   AuthRoute: AuthRoute,
   BillingExpenditureRoute: BillingExpenditureRoute,
   BillsPaymentsRoute: BillsPaymentsRoute,
@@ -1051,6 +1092,7 @@ const rootRouteChildren: RootRouteChildren = {
   CapitalLedgerRoute: CapitalLedgerRoute,
   CommandOperationsRoute: CommandOperationsRoute,
   ContractorsLabourRoute: ContractorsLabourRoute,
+  CostDashboardRoute: CostDashboardRoute,
   DashboardRoute: DashboardRoute,
   DrawingDecipherRoute: DrawingDecipherRoute,
   ExecutionManualRoute: ExecutionManualRoute,
