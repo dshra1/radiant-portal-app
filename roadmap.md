@@ -90,3 +90,6 @@
 - [ ] New page: Budget Fit — app-suggested items/brands with cheaper rates to keep BOQ within target budget, one-tap apply
 - [x] Budget Fit suggestions are read-only; apply only on explicit owner/partner approval
 - [ ] Fix: /execution-manual dead buttons (Export Manual PDF, Gang Pocket Card, Push to Mobile QA, stage selection)
+- [x] /pmc-scope live (work packages from BOQ, fee, committed POs, saved scope)
+- [x] /budget-fit live suggestions with explicit apply
+- [x] /execution-manual buttons live (print, pocket card download, push checklist to field, stage selection, SOP search)
