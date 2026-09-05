@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  BOQ_TRADES,
   findProductImage,
   generateBoqEstimate,
   suggestBrandOptions,
@@ -205,6 +206,13 @@ function Page() {
   const [brief, setBrief] = useState("");
   const [suggestions, setSuggestions] = useState<Record<string, BrandSuggestion>>({});
   const [pendingIds, setPendingIds] = useState<string[]>([]);
+  const [applyAll, setApplyAll] = useState<{
+    stageName: string;
+    brand: string;
+    supplier: string;
+    ratio: number;
+    count: number;
+  } | null>(null);
   const generate = useServerFn(generateBoqEstimate);
   const suggestBrands = useServerFn(suggestBrandOptions);
   const findImage = useServerFn(findProductImage);
@@ -357,6 +365,38 @@ function Page() {
     onError: (e: Error) => setStatus(`Save failed: ${e.message}`),
   });
 
+  /** Applies a chosen brand (and proportional rate) to every line item of one trade. */
+  const applyStageMutation = useMutation({
+    mutationFn: async ({
+      stageName,
+      brand,
+      supplier,
+      ratio,
+    }: {
+      stageName: string;
+      brand: string;
+      supplier: string;
+      ratio: number;
+    }) => {
+      const targets = items.filter((it) => it.stage === stageName);
+      for (const it of targets) {
+        const nextRate = ratio > 0 ? Math.round(toNum(it.rate) * ratio) : toNum(it.rate);
+        const { error } = await supabase
+          .from("boq_items")
+          .update({ brand, supplier: supplier || it.supplier, rate: nextRate })
+          .eq("id", it.id);
+        if (error) throw error;
+      }
+      return targets.length;
+    },
+    onSuccess: async (count) => {
+      setStatus(`Applied to ${count} line item(s) in this trade.`);
+      setApplyAll(null);
+      await refresh();
+    },
+    onError: (e: Error) => setStatus(`Bulk apply failed: ${e.message}`),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("boq_items").delete().eq("id", id);
@@ -426,7 +466,14 @@ function Page() {
   const stages = useMemo(() => {
     const map = new Map<string, number>();
     for (const it of items) map.set(it.stage, (map.get(it.stage) ?? 0) + 1);
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    // Construction-stage order (site preparation → finishing → handover), not alphabetical.
+    const rank = (name: string) => {
+      const i = (BOQ_TRADES as readonly string[]).indexOf(name);
+      return i === -1 ? 999 : i;
+    };
+    return [...map.entries()].sort(
+      (a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]),
+    );
   }, [items]);
 
   const visible = useMemo(() => {
@@ -445,9 +492,8 @@ function Page() {
   const grandTotal = items.reduce((s, it) => s + lineTotal(it), 0);
   const viewTotal = visible.reduce((s, it) => s + lineTotal(it), 0);
   const budget = toNum(activeProject?.target_budget);
-  const perSft = toNum(activeProject?.total_built_up_sft) > 0
-    ? grandTotal / toNum(activeProject?.total_built_up_sft)
-    : 0;
+  const sellableSft = toNum(activeProject?.total_built_up_sft);
+  const perSft = sellableSft > 0 ? grandTotal / sellableSft : 0;
 
   const exportCsv = (scope: "view" | "all") => {
     const rows = scope === "view" ? visible : items;
@@ -647,7 +693,7 @@ function Page() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setStage("ALL")}
-              className={`h-8 rounded px-3 text-[13px] font-medium ${stage === "ALL" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+              className={`h-8 rounded px-3 text-[13px] font-semibold ${stage === "ALL" ? "bg-primary text-primary-foreground" : "border border-primary/30 bg-primary-soft text-primary hover:bg-primary/15"}`}
             >
               All trades ({items.length})
             </button>
@@ -655,7 +701,7 @@ function Page() {
               <button
                 key={name}
                 onClick={() => setStage(name)}
-                className={`h-8 rounded px-3 text-[13px] font-medium ${stage === name ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+                className={`h-8 rounded px-3 text-[13px] font-semibold ${stage === name ? "bg-primary text-primary-foreground" : "border border-primary/30 bg-primary-soft text-primary hover:bg-primary/15"}`}
               >
                 {name} ({count})
               </button>
@@ -674,8 +720,57 @@ function Page() {
             <h2 className="text-sm font-semibold">
               {stage === "ALL" ? "All line items" : stage} — {visible.length} shown
             </h2>
-            <span className="text-sm font-semibold text-primary">{inr(viewTotal)}</span>
+            <button
+              disabled={visible.length === 0 || suggestMutation.isPending}
+              onClick={() => {
+                const ids = [...visible]
+                  .sort((a, b) => lineTotal(b) - lineTotal(a))
+                  .slice(0, 10)
+                  .map((it) => it.id);
+                setStatus(
+                  `Price optimizer — finding cheaper brand options for ${stage === "ALL" ? "the highest-cost items" : stage}…`,
+                );
+                suggestMutation.mutate(ids);
+              }}
+              className="ml-auto inline-flex h-8 items-center gap-1.5 rounded border border-primary bg-primary-soft px-3 text-[12px] font-semibold text-primary disabled:opacity-50"
+            >
+              <Lightbulb className="size-3.5" />
+              {suggestMutation.isPending ? "Optimizing…" : "Price optimizer"}
+            </button>
+            <div className="text-right">
+              <span className="text-sm font-semibold text-primary">{inr(viewTotal)}</span>
+              {sellableSft > 0 && (
+                <div className="text-[11px] font-medium tnum text-muted-foreground">
+                  {inr(viewTotal)} / {num(sellableSft)} sft (sellable) ={" "}
+                  <span className="font-bold text-foreground">
+                    ₹{(viewTotal / sellableSft).toFixed(2)}/sft
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
+
+          {applyAll && (
+            <div className="flex flex-wrap items-center gap-3 border-b border-border bg-warning-soft px-3 py-2.5">
+              <span className="text-[13px] font-semibold text-foreground">
+                Use <b>{applyAll.brand}</b> for all {applyAll.count} items in{" "}
+                {applyAll.stageName}? Rates will be re-priced in the same proportion.
+              </span>
+              <button
+                disabled={applyStageMutation.isPending}
+                onClick={() => applyStageMutation.mutate(applyAll)}
+                className="h-8 rounded bg-primary px-3 text-[12px] font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                {applyStageMutation.isPending ? "Applying…" : "Yes, apply to whole trade"}
+              </button>
+              <button
+                onClick={() => setApplyAll(null)}
+                className="h-8 rounded border border-input bg-card px-3 text-[12px] font-semibold"
+              >
+                No, this item only
+              </button>
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             {itemsQuery.isLoading ? (
@@ -783,6 +878,7 @@ function Page() {
                       </td>
                       <td className="px-2 py-2 text-right">
                         <input
+                          key={`qty-${toNum(it.quantity)}`}
                           defaultValue={String(toNum(it.quantity))}
                           onBlur={(e) =>
                             updateMutation.mutate({
@@ -795,6 +891,7 @@ function Page() {
                       </td>
                       <td className="px-2 py-2 text-right">
                         <input
+                          key={`rate-${toNum(it.rate)}`}
                           defaultValue={String(toNum(it.rate))}
                           onBlur={(e) =>
                             updateMutation.mutate({
@@ -813,6 +910,7 @@ function Page() {
                           <BrandMark brand={it.brand} />
                           <div>
                             <input
+                              key={`brand-${it.brand}`}
                               defaultValue={it.brand}
                               onBlur={(e) =>
                                 e.target.value !== it.brand &&
@@ -822,6 +920,7 @@ function Page() {
                               className="w-36 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
                             />
                             <input
+                              key={`supplier-${it.supplier}`}
                               defaultValue={it.supplier}
                               onBlur={(e) =>
                                 e.target.value !== it.supplier &&
@@ -915,16 +1014,32 @@ function Page() {
                                     <p className="mt-1 text-[11px] text-muted-foreground">{opt.why}</p>
                                   )}
                                   <button
-                                    onClick={() =>
-                                      updateMutation.mutate({
+                                    onClick={async () => {
+                                      await updateMutation.mutateAsync({
                                         id: it.id,
                                         patch: {
                                           brand: opt.brand,
                                           supplier: opt.supplier || it.supplier,
                                           rate: opt.rate,
                                         },
-                                      })
-                                    }
+                                      });
+                                      setStatus(
+                                        `${opt.brand} applied at ${inr(opt.rate)} / ${it.unit}.`,
+                                      );
+                                      const siblings = items.filter(
+                                        (o) => o.stage === it.stage && o.id !== it.id,
+                                      ).length;
+                                      const current = toNum(it.rate);
+                                      if (siblings > 0) {
+                                        setApplyAll({
+                                          stageName: it.stage,
+                                          brand: opt.brand,
+                                          supplier: opt.supplier || "",
+                                          ratio: current > 0 ? opt.rate / current : 0,
+                                          count: siblings + 1,
+                                        });
+                                      }
+                                    }}
                                     className="mt-2 h-7 w-full rounded bg-primary text-[12px] font-semibold text-primary-foreground"
                                   >
                                     Use this brand
