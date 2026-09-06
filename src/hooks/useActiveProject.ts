@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useState } from "react";
+import { useSessionUser } from "@/lib/access";
 
 export type ActiveProject = {
   id: string;
@@ -11,6 +12,7 @@ export type ActiveProject = {
 };
 
 const STORAGE_KEY = "saha-active-project-id";
+const CHANGE_EVENT = "saha-active-project-changed";
 
 const FALLBACK: ActiveProject = {
   id: "",
@@ -21,14 +23,15 @@ const FALLBACK: ActiveProject = {
 };
 
 export function useActiveProject(): ActiveProject {
+  const user = useSessionUser();
   const { data } = useQuery({
     queryKey: ["site_projects", "active-identity"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
         .select("id,name,location,type,health")
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -38,7 +41,14 @@ export function useActiveProject(): ActiveProject {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setStoredId(window.localStorage.getItem(STORAGE_KEY));
+    const read = () => setStoredId(window.localStorage.getItem(STORAGE_KEY));
+    read();
+    window.addEventListener(CHANGE_EVENT, read);
+    window.addEventListener("storage", read);
+    return () => {
+      window.removeEventListener(CHANGE_EVENT, read);
+      window.removeEventListener("storage", read);
+    };
   }, []);
 
   const row = data?.find((r) => r.id === storedId) ?? data?.[0];
@@ -59,6 +69,7 @@ export function useActiveProjectSetter() {
     (id: string) => {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(STORAGE_KEY, id);
+        window.dispatchEvent(new Event(CHANGE_EVENT));
       }
       queryClient.invalidateQueries({ queryKey: ["site_projects", "active-identity"] });
       queryClient.invalidateQueries({ queryKey: ["site_projects", "hub-summary"] });

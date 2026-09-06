@@ -140,6 +140,7 @@ export function Shell({
 
   const { data: projects = [] } = useQuery({
     queryKey: ["site_projects", "navigation-summary"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
@@ -151,6 +152,7 @@ export function Shell({
   });
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["notifications", "unread-count", user?.id],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       let q = supabase
         .from("notifications")
