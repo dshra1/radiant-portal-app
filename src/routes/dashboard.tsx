@@ -12,6 +12,7 @@ import {
   TrendPill,
 } from "@/components/saha/ui";
 import { inrCompact, materialRates } from "@/data/saha";
+import { useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -50,6 +51,7 @@ function Dashboard() {
 
   const { data: alerts = [] } = useQuery({
     queryKey: ["notifications", "dashboard"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("notifications")
