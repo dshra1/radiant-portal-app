@@ -52,6 +52,7 @@ export function NotificationBell({
 
   const { data: notes = [] } = useQuery({
     queryKey: ["notifications", "bell-recent", user?.id],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       let q = supabase
         .from("notifications")
