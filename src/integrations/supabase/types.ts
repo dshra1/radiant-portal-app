@@ -755,6 +755,69 @@ export type Database = {
         }
         Relationships: []
       }
+      vendors: {
+        Row: {
+          brands_supplied: string
+          city: string
+          contact_person: string
+          created_at: string
+          created_by: string | null
+          credit_terms: string
+          email: string
+          gstin: string
+          id: string
+          lead_time: string
+          notes: string
+          on_time_pct: number
+          phone: string
+          quality_rating: number
+          trade_category: string
+          updated_at: string
+          vendor_code: string
+          vendor_name: string
+        }
+        Insert: {
+          brands_supplied?: string
+          city?: string
+          contact_person?: string
+          created_at?: string
+          created_by?: string | null
+          credit_terms?: string
+          email?: string
+          gstin?: string
+          id?: string
+          lead_time?: string
+          notes?: string
+          on_time_pct?: number
+          phone?: string
+          quality_rating?: number
+          trade_category?: string
+          updated_at?: string
+          vendor_code?: string
+          vendor_name?: string
+        }
+        Update: {
+          brands_supplied?: string
+          city?: string
+          contact_person?: string
+          created_at?: string
+          created_by?: string | null
+          credit_terms?: string
+          email?: string
+          gstin?: string
+          id?: string
+          lead_time?: string
+          notes?: string
+          on_time_pct?: number
+          phone?: string
+          quality_rating?: number
+          trade_category?: string
+          updated_at?: string
+          vendor_code?: string
+          vendor_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
