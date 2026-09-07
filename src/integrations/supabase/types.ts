@@ -323,6 +323,65 @@ export type Database = {
         }
         Relationships: []
       }
+      project_charges: {
+        Row: {
+          allocation: string
+          amount: number
+          authority: string
+          category: string
+          charge_date: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          notes: string
+          owner_splits: Json
+          project_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allocation?: string
+          amount?: number
+          authority?: string
+          category?: string
+          charge_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          notes?: string
+          owner_splits?: Json
+          project_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allocation?: string
+          amount?: number
+          authority?: string
+          category?: string
+          charge_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          notes?: string
+          owner_splits?: Json
+          project_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_charges_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_order_items: {
         Row: {
           brand: string
