@@ -44,47 +44,66 @@ const SYSTEM = [
   "Use empty strings and 0 where a value is not printed. No commentary, no markdown fences.",
 ];
 
-/** Reads a proforma / quotation (image or PDF) and returns structured price lines. */
+/** Reads a proforma / quotation (image or PDF) already uploaded to storage and returns structured price lines. */
 export const extractQuoteFromFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { fileName: string; mediaType: string; dataBase64: string }) => input)
-  .handler(async ({ data }): Promise<ExtractedQuote> => {
+  .inputValidator((input: { fileName: string; mediaType: string; storagePath: string }) => input)
+  .handler(async ({ data, context }): Promise<ExtractedQuote> => {
     const key = process.env["LOVABLE_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
-    const { createLovableAiGatewayProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
-    const gateway = createLovableAiGatewayProvider(key);
 
-    const bytes = Buffer.from(data.dataBase64, "base64");
+    const { data: signed, error: signErr } = await context.supabase.storage
+      .from("price-proformas")
+      .createSignedUrl(data.storagePath, 600);
+    if (signErr || !signed?.signedUrl) throw new Error("Could not open the uploaded file");
+
+    const fileRes = await fetch(signed.signedUrl);
+    if (!fileRes.ok) throw new Error("Could not download the uploaded file");
+    const bytes = Buffer.from(await fileRes.arrayBuffer());
+    if (bytes.byteLength === 0) throw new Error("The uploaded file is empty");
+
     const isImage = data.mediaType.startsWith("image/");
+    const mediaType = data.mediaType || "application/pdf";
+    const dataUrl = `data:${mediaType};base64,${bytes.toString("base64")}`;
 
-    const result = await generateText({
-      model: gateway(SAHA_MODEL),
-      messages: [
-        { role: "system", content: SYSTEM.join("\n") },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Extract the price data from this document (${data.fileName}). Return the JSON object only.`,
-            },
-            isImage
-              ? { type: "image" as const, image: bytes, mediaType: data.mediaType }
-              : {
-                  type: "file" as const,
-                  data: bytes,
-                  mediaType: data.mediaType || "application/pdf",
-                  filename: data.fileName,
-                },
-          ],
-        },
-      ],
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": key },
+      body: JSON.stringify({
+        model: "google/gemini-3.7-flash",
+        messages: [
+          { role: "system", content: SYSTEM.join("\n") },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Extract the price data from this document (${data.fileName}). Return the JSON object only.`,
+              },
+              isImage
+                ? { type: "image_url", image_url: { url: dataUrl } }
+                : { type: "file", file: { filename: data.fileName, file_data: dataUrl } },
+            ],
+          },
+        ],
+      }),
     });
 
-    const text = result.text ?? "";
+    if (res.status === 429) throw new Error("The document reader is busy right now — please try again in a minute");
+    if (res.status === 402) throw new Error("AI credits are exhausted for this workspace — please top up to keep scanning documents");
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Document reading failed (${res.status}). ${detail.slice(0, 200)}`);
+    }
+
+    const payload = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    const text = payload.choices?.[0]?.message?.content ?? "";
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");
     if (start < 0 || end <= start) throw new Error("Could not read any price data from this file");
+
 
     let parsed: Record<string, unknown>;
     try {
