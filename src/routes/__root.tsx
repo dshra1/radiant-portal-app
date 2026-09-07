@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { InstallAppButton } from "../components/InstallAppButton";
 import { AuthGate } from "../components/AuthGate";
+import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -149,6 +150,7 @@ function RootComponent() {
         <Outlet />
       </AuthGate>
       <InstallAppButton />
+      <Toaster position="top-center" richColors closeButton />
       {/* Desktop quick launcher: mobile uses the shared bottom nav in Shell */}
       <Link
         to="/"
