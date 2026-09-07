@@ -42,6 +42,7 @@ import { Route as PmcScopeRouteImport } from './routes/pmc-scope'
 import { Route as PoCreateRouteImport } from './routes/po-create'
 import { Route as PourCardsRouteImport } from './routes/pour-cards'
 import { Route as PriceIntelligenceRouteImport } from './routes/price-intelligence'
+import { Route as PriceOcrRouteImport } from './routes/price-ocr'
 import { Route as ProcurementRouteImport } from './routes/procurement'
 import { Route as ProjectControlsRouteImport } from './routes/project-controls'
 import { Route as ProjectsRouteImport } from './routes/projects'
@@ -228,6 +229,11 @@ const PriceIntelligenceRoute = PriceIntelligenceRouteImport.update({
   path: '/price-intelligence',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PriceOcrRoute = PriceOcrRouteImport.update({
+  id: '/price-ocr',
+  path: '/price-ocr',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProcurementRoute = ProcurementRouteImport.update({
   id: '/procurement',
   path: '/procurement',
@@ -363,6 +369,7 @@ export interface FileRoutesByFullPath {
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
+  '/price-ocr': typeof PriceOcrRoute
   '/procurement': typeof ProcurementRoute
   '/project-controls': typeof ProjectControlsRoute
   '/projects': typeof ProjectsRoute
@@ -418,6 +425,7 @@ export interface FileRoutesByTo {
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
+  '/price-ocr': typeof PriceOcrRoute
   '/procurement': typeof ProcurementRoute
   '/project-controls': typeof ProjectControlsRoute
   '/projects': typeof ProjectsRoute
@@ -474,6 +482,7 @@ export interface FileRoutesById {
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
+  '/price-ocr': typeof PriceOcrRoute
   '/procurement': typeof ProcurementRoute
   '/project-controls': typeof ProjectControlsRoute
   '/projects': typeof ProjectsRoute
@@ -531,6 +540,7 @@ export interface FileRouteTypes {
     | '/po-create'
     | '/pour-cards'
     | '/price-intelligence'
+    | '/price-ocr'
     | '/procurement'
     | '/project-controls'
     | '/projects'
@@ -586,6 +596,7 @@ export interface FileRouteTypes {
     | '/po-create'
     | '/pour-cards'
     | '/price-intelligence'
+    | '/price-ocr'
     | '/procurement'
     | '/project-controls'
     | '/projects'
@@ -641,6 +652,7 @@ export interface FileRouteTypes {
     | '/po-create'
     | '/pour-cards'
     | '/price-intelligence'
+    | '/price-ocr'
     | '/procurement'
     | '/project-controls'
     | '/projects'
@@ -697,6 +709,7 @@ export interface RootRouteChildren {
   PoCreateRoute: typeof PoCreateRoute
   PourCardsRoute: typeof PourCardsRoute
   PriceIntelligenceRoute: typeof PriceIntelligenceRoute
+  PriceOcrRoute: typeof PriceOcrRoute
   ProcurementRoute: typeof ProcurementRoute
   ProjectControlsRoute: typeof ProjectControlsRoute
   ProjectsRoute: typeof ProjectsRoute
@@ -952,6 +965,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PriceIntelligenceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/price-ocr': {
+      id: '/price-ocr'
+      path: '/price-ocr'
+      fullPath: '/price-ocr'
+      preLoaderRoute: typeof PriceOcrRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/procurement': {
       id: '/procurement'
       path: '/procurement'
@@ -1129,6 +1149,7 @@ const rootRouteChildren: RootRouteChildren = {
   PoCreateRoute: PoCreateRoute,
   PourCardsRoute: PourCardsRoute,
   PriceIntelligenceRoute: PriceIntelligenceRoute,
+  PriceOcrRoute: PriceOcrRoute,
   ProcurementRoute: ProcurementRoute,
   ProjectControlsRoute: ProjectControlsRoute,
   ProjectsRoute: ProjectsRoute,
