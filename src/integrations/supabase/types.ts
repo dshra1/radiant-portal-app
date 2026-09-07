@@ -849,6 +849,140 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_items: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          item_code: string
+          notes: string
+          opening_qty: number
+          project_id: string | null
+          rate: number
+          reorder_level: number
+          store_location: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          item_code?: string
+          notes?: string
+          opening_qty?: number
+          project_id?: string | null
+          rate?: number
+          reorder_level?: number
+          store_location?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          item_code?: string
+          notes?: string
+          opening_qty?: number
+          project_id?: string | null
+          rate?: number
+          reorder_level?: number
+          store_location?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          handled_by: string
+          id: string
+          item_code: string
+          item_id: string | null
+          movement_date: string
+          movement_type: string
+          party: string
+          project_id: string | null
+          quantity: number
+          rate: number
+          reference: string
+          remarks: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          handled_by?: string
+          id?: string
+          item_code?: string
+          item_id?: string | null
+          movement_date?: string
+          movement_type?: string
+          party?: string
+          project_id?: string | null
+          quantity?: number
+          rate?: number
+          reference?: string
+          remarks?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          handled_by?: string
+          id?: string
+          item_code?: string
+          item_id?: string | null
+          movement_date?: string
+          movement_type?: string
+          party?: string
+          project_id?: string | null
+          quantity?: number
+          rate?: number
+          reference?: string
+          remarks?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_messages: {
         Row: {
           attachments: Json
