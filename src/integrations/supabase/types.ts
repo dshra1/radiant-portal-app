@@ -287,6 +287,127 @@ export type Database = {
           },
         ]
       }
+      price_quote_items: {
+        Row: {
+          brand: string
+          created_at: string
+          description: string
+          discount_pct: number
+          gst_pct: number
+          id: string
+          item_code: string
+          net_rate: number
+          quantity: number
+          quote_id: string
+          rate: number
+          sort_order: number
+          trade: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          brand?: string
+          created_at?: string
+          description?: string
+          discount_pct?: number
+          gst_pct?: number
+          id?: string
+          item_code?: string
+          net_rate?: number
+          quantity?: number
+          quote_id: string
+          rate?: number
+          sort_order?: number
+          trade?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          description?: string
+          discount_pct?: number
+          gst_pct?: number
+          id?: string
+          item_code?: string
+          net_rate?: number
+          quantity?: number
+          quote_id?: string
+          rate?: number
+          sort_order?: number
+          trade?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "price_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_quotes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          notes: string
+          project_id: string | null
+          quote_date: string | null
+          quote_ref: string
+          source_file: string
+          trade: string
+          updated_at: string
+          vendor_contact: string
+          vendor_gstin: string
+          vendor_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          notes?: string
+          project_id?: string | null
+          quote_date?: string | null
+          quote_ref?: string
+          source_file?: string
+          trade?: string
+          updated_at?: string
+          vendor_contact?: string
+          vendor_gstin?: string
+          vendor_name?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          notes?: string
+          project_id?: string | null
+          quote_date?: string | null
+          quote_ref?: string
+          source_file?: string
+          trade?: string
+          updated_at?: string
+          vendor_contact?: string
+          vendor_gstin?: string
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_quotes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           approved_at: string | null
