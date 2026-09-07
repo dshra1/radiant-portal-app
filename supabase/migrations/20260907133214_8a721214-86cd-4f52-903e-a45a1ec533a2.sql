@@ -1,0 +1,3 @@
+CREATE POLICY "Approved members upload proformas" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'price-proformas' AND public.is_approved(auth.uid()));
+CREATE POLICY "Approved members read proformas" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'price-proformas' AND public.is_approved(auth.uid()));
+CREATE POLICY "Approved members delete proformas" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'price-proformas' AND public.is_approved(auth.uid()));
