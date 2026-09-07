@@ -82,6 +82,21 @@ function Page() {
     },
   });
 
+  const chargesQuery = useQuery({
+    queryKey: ["project_charges", "cost-dashboard", activeId],
+    enabled: Boolean(activeId),
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_charges")
+        .select("id,category,amount")
+        .eq("project_id", activeId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const statutory = (chargesQuery.data ?? []).reduce((s, c) => s + num(c.amount), 0);
+
   const pending = useChangeRequests(activeId, "pending");
 
   const rows = boqQuery.data ?? [];
