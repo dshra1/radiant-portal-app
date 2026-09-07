@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { IndianRupee, PieChart, ShieldCheck, HardHat, Ruler } from "lucide-react";
+import { IndianRupee, PieChart, ShieldCheck, HardHat, Ruler, Landmark } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { LABOUR_SECTION } from "@/lib/boq.functions";
