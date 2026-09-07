@@ -1,14 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
+import { useAccess, useSessionUser } from "@/lib/access";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import * as XLSX from "xlsx";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/bills-payments")({
   head: () => ({
     meta: [
-      { title: "Bills & Payments — Subcontractor RA Bills | Saha OS" },
-      { name: "description", content: "Certified milestones, retentions held, disbursements and SLA compliance for subcontractor RA bills." },
-      { property: "og:title", content: "Bills & Payments — Subcontractor RA Bills | Saha OS" },
-      { property: "og:description", content: "Certified milestones, retentions held, disbursements and SLA compliance for subcontractor RA bills." },
+      { title: "Bills & Payments | Saha OS" },
+      { name: "description", content: "Log vendor bills, verify and approve them, record payments against each bill and track outstanding dues per project." },
+      { property: "og:title", content: "Bills & Payments | Saha OS" },
+      { property: "og:description", content: "Log vendor bills, verify and approve them, record payments against each bill and track outstanding dues per project." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -16,37 +22,468 @@ export const Route = createFileRoute("/bills-payments")({
   component: Page,
 });
 
+export type Bill = {
+  id: string;
+  project_id: string | null;
+  bill_number: string;
+  bill_date: string | null;
+  due_date: string | null;
+  vendor_name: string;
+  vendor_gstin: string;
+  category: string;
+  description: string;
+  basic_amount: number;
+  gst_amount: number;
+  other_charges: number;
+  retention_amount: number;
+  deductions: number;
+  status: string;
+  notes: string;
+};
+
+type Payment = {
+  id: string;
+  bill_id: string;
+  payment_date: string;
+  amount: number;
+  mode: string;
+  reference: string;
+  paid_from: string;
+  remarks: string;
+};
+
+type BillDraft = Omit<Bill, "id" | "project_id">;
+
+const STATUSES = ["draft", "verified", "approved", "paid"] as const;
+const MODES = ["bank transfer", "cheque", "cash", "UPI", "RTGS/NEFT"];
+
+function num(v: unknown): number {
+  const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+function inr(n: number): string {
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+}
+export function billGross(b: Bill): number {
+  return b.basic_amount + b.gst_amount + b.other_charges;
+}
+function billPayable(b: Bill): number {
+  return billGross(b) - b.retention_amount - b.deductions;
+}
+
+function emptyBill(): BillDraft {
+  return {
+    bill_number: "",
+    bill_date: new Date().toISOString().slice(0, 10),
+    due_date: null,
+    vendor_name: "",
+    vendor_gstin: "",
+    category: "",
+    description: "",
+    basic_amount: 0,
+    gst_amount: 0,
+    other_charges: 0,
+    retention_amount: 0,
+    deductions: 0,
+    status: "draft",
+    notes: "",
+  };
+}
+
 function Page() {
   const project = useActiveProject();
+  const user = useSessionUser();
+  const access = useAccess();
+  const canApprove = access.data?.isAdmin || access.data?.roles.includes("pm");
+  const queryClient = useQueryClient();
+
+  const [draft, setDraft] = useState<BillDraft | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [payFor, setPayFor] = useState<Bill | null>(null);
+  const [payDraft, setPayDraft] = useState({ payment_date: new Date().toISOString().slice(0, 10), amount: 0, mode: MODES[0]!, reference: "", paid_from: "", remarks: "" });
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
+
+  const enabled = Boolean(user?.id) && Boolean(project.id);
+
+  const { data: bills = [], isPending } = useQuery({
+    queryKey: ["bills", project.id],
+    enabled,
+    queryFn: async (): Promise<Bill[]> => {
+      const { data, error } = await supabase
+        .from("bills")
+        .select("id,project_id,bill_number,bill_date,due_date,vendor_name,vendor_gstin,category,description,basic_amount,gst_amount,other_charges,retention_amount,deductions,status,notes")
+        .eq("project_id", project.id)
+        .order("bill_date", { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map((r) => ({
+        ...r,
+        basic_amount: num(r.basic_amount),
+        gst_amount: num(r.gst_amount),
+        other_charges: num(r.other_charges),
+        retention_amount: num(r.retention_amount),
+        deductions: num(r.deductions),
+      })) as Bill[];
+    },
+  });
+
+  const { data: payments = [] } = useQuery({
+    queryKey: ["bill_payments", project.id],
+    enabled,
+    queryFn: async (): Promise<Payment[]> => {
+      const { data, error } = await supabase
+        .from("bill_payments")
+        .select("id,bill_id,payment_date,amount,mode,reference,paid_from,remarks")
+        .eq("project_id", project.id)
+        .order("payment_date", { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map((r) => ({ ...r, amount: num(r.amount) })) as Payment[];
+    },
+  });
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["bills", project.id] });
+    queryClient.invalidateQueries({ queryKey: ["bill_payments", project.id] });
+  };
+
+  const paidByBill = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of payments) map.set(p.bill_id, (map.get(p.bill_id) ?? 0) + p.amount);
+    return map;
+  }, [payments]);
+
+  const saveBill = useMutation({
+    mutationFn: async (payload: { draft: BillDraft; id: string | null }) => {
+      const row = {
+        ...payload.draft,
+        bill_date: payload.draft.bill_date || null,
+        due_date: payload.draft.due_date || null,
+        project_id: project.id,
+        created_by: user?.id ?? null,
+      };
+      if (payload.id) {
+        const { error } = await supabase.from("bills").update(row).eq("id", payload.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("bills").insert(row);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Bill saved");
+      setDraft(null);
+      setEditingId(null);
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const setStatusMut = useMutation({
+    mutationFn: async (p: { id: string; status: string }) => {
+      const { error } = await supabase.from("bills").update({ status: p.status }).eq("id", p.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Status updated"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteBill = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("bills").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Bill deleted"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const savePayment = useMutation({
+    mutationFn: async (bill: Bill) => {
+      const { error } = await supabase.from("bill_payments").insert({
+        ...payDraft,
+        bill_id: bill.id,
+        project_id: project.id,
+        created_by: user?.id ?? null,
+      });
+      if (error) throw error;
+      const paid = (paidByBill.get(bill.id) ?? 0) + payDraft.amount;
+      if (paid >= billPayable(bill) - 1) {
+        await supabase.from("bills").update({ status: "paid" }).eq("id", bill.id);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Payment recorded");
+      setPayFor(null);
+      setPayDraft({ payment_date: new Date().toISOString().slice(0, 10), amount: 0, mode: MODES[0]!, reference: "", paid_from: "", remarks: "" });
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return bills.filter((b) => {
+      if (status !== "all" && b.status !== status) return false;
+      if (!q) return true;
+      return [b.bill_number, b.vendor_name, b.category, b.description].join(" ").toLowerCase().includes(q);
+    });
+  }, [bills, search, status]);
+
+  const totals = useMemo(() => {
+    const payable = bills.reduce((s, b) => s + billPayable(b), 0);
+    const paid = payments.reduce((s, p) => s + p.amount, 0);
+    const retention = bills.reduce((s, b) => s + b.retention_amount, 0);
+    const pendingApproval = bills.filter((b) => b.status === "draft" || b.status === "verified").length;
+    return { payable, paid, outstanding: payable - paid, retention, pendingApproval };
+  }, [bills, payments]);
+
+  const exportAll = () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(
+        bills.length
+          ? bills.map((b) => ({
+              Bill_No: b.bill_number,
+              Bill_Date: b.bill_date ?? "",
+              Due_Date: b.due_date ?? "",
+              Vendor: b.vendor_name,
+              GSTIN: b.vendor_gstin,
+              Category: b.category,
+              Basic: b.basic_amount,
+              GST: b.gst_amount,
+              Other: b.other_charges,
+              Retention: b.retention_amount,
+              Deductions: b.deductions,
+              Payable: billPayable(b),
+              Paid: paidByBill.get(b.id) ?? 0,
+              Balance: billPayable(b) - (paidByBill.get(b.id) ?? 0),
+              Status: b.status,
+            }))
+          : [{ Bill_No: "", Vendor: "", Basic: "" }],
+      ),
+      "Bills",
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(
+        payments.length
+          ? payments.map((p) => ({
+              Date: p.payment_date,
+              Bill_No: bills.find((b) => b.id === p.bill_id)?.bill_number ?? "",
+              Amount: p.amount,
+              Mode: p.mode,
+              Reference: p.reference,
+              Paid_From: p.paid_from,
+              Remarks: p.remarks,
+            }))
+          : [{ Date: "", Amount: "" }],
+      ),
+      "Payments",
+    );
+    XLSX.writeFile(wb, `bills-${(project.name || "project").replace(/\s+/g, "-").toLowerCase()}.xlsx`);
+    toast.success("Exported");
+  };
+
+  const FIELDS: { key: keyof BillDraft; label: string; type?: string }[] = [
+    { key: "bill_number", label: "Bill / Invoice No" },
+    { key: "vendor_name", label: "Vendor" },
+    { key: "vendor_gstin", label: "Vendor GSTIN" },
+    { key: "category", label: "Category" },
+    { key: "bill_date", label: "Bill date", type: "date" },
+    { key: "due_date", label: "Due date", type: "date" },
+    { key: "basic_amount", label: "Basic amount", type: "number" },
+    { key: "gst_amount", label: "GST amount", type: "number" },
+    { key: "other_charges", label: "Other charges", type: "number" },
+    { key: "retention_amount", label: "Retention held", type: "number" },
+    { key: "deductions", label: "Deductions / advance", type: "number" },
+    { key: "description", label: "Work / material description" },
+    { key: "notes", label: "Notes" },
+  ];
+
   return (
-    <Shell title={"Bills & Payments"}>
-      <div className="m3">
-        <main className="flex flex-col relative w-full px-gutter-normal pt-16 pb-24 bg-surface flex-grow"><div className="flex flex-col w-full text-on-surface">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-xl bg-surface-container-low p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex items-center gap-space-md"> <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary"> <span className="material-symbols-outlined text-[28px]">payments</span> </div> <div> <div className="flex items-center gap-space-xs text-label-sm text-outline uppercase tracking-wider"> <span>SAHA OS</span> <span>/</span> <span>PRJ-0001 {project.name}</span> <span>/</span> <span className="text-primary font-bold">Bills & Payments</span> </div> <h2 className="font-headline-lg text-on-surface">Subcontractor RA Bills & Certified Milestones</h2> </div> </div> <div className="flex items-center gap-space-sm flex-wrap"> <button className="bg-surface text-on-surface px-space-md py-space-sm rounded-lg text-label-md flex items-center gap-space-xs shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] hover:bg-surface-container transition-all"> <span className="material-symbols-outlined text-[18px]">download</span>
-        Export Tally Sync
-      </button> <button className="bg-primary text-on-primary px-space-md py-space-sm rounded-lg text-label-md flex items-center gap-space-xs hover:bg-primary-container transition-all shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <span className="material-symbols-outlined text-[18px]">add</span>
-        + New RA Bill / Work Order Bill
-      </button> </div> </div>  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-xl">  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex justify-between items-start mb-space-md"> <span className="text-label-sm text-outline uppercase tracking-wider">Total Certified Value</span> <span className="p-space-2xs bg-primary/10 text-primary rounded flex items-center justify-center"> <span className="material-symbols-outlined text-[16px]">trending_up</span> </span> </div> <div> <div className="font-tabular-metric text-[24px] text-on-surface mb-space-2xs">₹ 4,82,50,000</div> <div className="flex items-center gap-space-2xs text-label-sm text-primary"> <span className="font-bold">+12.4%</span> <span className="text-outline">vs last milestone cycle</span> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex justify-between items-start mb-space-md"> <span className="text-label-sm text-outline uppercase tracking-wider">Pending Approvals</span> <span className="p-space-2xs bg-tertiary/10 text-tertiary rounded flex items-center justify-center"> <span className="material-symbols-outlined text-[16px]">pending_actions</span> </span> </div> <div> <div className="font-tabular-metric text-[24px] text-on-surface mb-space-2xs">₹ 78,40,000</div> <div className="flex items-center gap-space-2xs text-label-sm text-tertiary font-bold"> <span>4 Bills in Audit Queue</span> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex justify-between items-start mb-space-md"> <span className="text-label-sm text-outline uppercase tracking-wider">Retentions Held</span> <span className="p-space-2xs bg-surface-container-highest text-on-surface-variant rounded flex items-center justify-center"> <span className="material-symbols-outlined text-[16px]">lock</span> </span> </div> <div> <div className="font-tabular-metric text-[24px] text-on-surface mb-space-2xs">₹ 24,12,500</div> <div className="flex items-center gap-space-2xs text-label-sm text-outline"> <span>5% standard defect liability</span> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex justify-between items-start mb-space-md"> <span className="text-label-sm text-outline uppercase tracking-wider">Disbursed YTD</span> <span className="p-space-2xs bg-primary/10 text-primary rounded flex items-center justify-center"> <span className="material-symbols-outlined text-[16px]">verified</span> </span> </div> <div> <div className="font-tabular-metric text-[24px] text-on-surface mb-space-2xs">₹ 3,79,97,500</div> <div className="flex items-center gap-space-2xs text-label-sm text-primary"> <span className="font-bold">99.2%</span> <span className="text-outline">SLA compliance rate</span> </div> </div> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">  <div className="lg:col-span-8 flex flex-col gap-space-md">  <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col md:flex-row gap-space-md items-center justify-between"> <div className="relative w-full md:w-72"> <span className="material-symbols-outlined absolute left-3 top-2.5 text-outline text-[18px]">search</span> <input className="w-full bg-surface pl-10 pr-space-md py-2 rounded-lg text-body-md text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Search contractor, ID or package..." type="text" /> </div> <div className="flex items-center gap-space-sm w-full md:w-auto overflow-x-auto pb-1 md:pb-0"> <select className="bg-surface text-on-surface px-space-md py-2 rounded-lg text-body-md focus:outline-none focus:ring-1 focus:ring-primary"><option>All Packages</option><option>Masonry & Plaster</option><option>RMC Pouring</option><option>Formwork & Scaffolding</option><option>Electrical 1st Fix</option></select> <select className="bg-surface text-on-surface px-space-md py-2 rounded-lg text-body-md focus:outline-none focus:ring-1 focus:ring-primary"><option>All Statuses</option><option>Draft</option><option>PM Certified</option><option>Accounts Audit</option><option>Paid</option></select> </div> </div>  <div className="bg-surface-container-lowest rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] overflow-hidden"> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="bg-surface-container-low text-label-sm text-outline uppercase tracking-wider"><th className="py-space-md px-space-md">Bill ID & Subcontractor</th><th className="py-space-md px-space-md">Package</th><th className="py-space-md px-space-md text-right">Gross Amount</th><th className="py-space-md px-space-md text-right">Net Payable</th><th className="py-space-md px-space-md text-center">Status</th><th className="py-space-md px-space-md text-right">Action</th></tr></thead><tbody className="divide-y divide-surface-container"><tr className="bg-surface-container hover:bg-surface-container-high transition-all cursor-pointer"><td className="py-space-md px-space-md"> <div className="font-headline-sm text-on-surface">RA-2026-042</div> <div className="text-body-sm text-on-surface-variant">Apex Civil Contractors</div> </td><td className="py-space-md px-space-md"> <div className="text-body-md font-medium">RMC Pouring</div> <div className="text-label-sm text-outline">Tower A - Slab 14</div> </td><td className="py-space-md px-space-md text-right"> <div className="font-tabular-metric-sm text-on-surface">₹ 42,50,000</div> <div className="text-label-sm text-outline">Ret: ₹ 2,12,500</div> </td><td className="py-space-md px-space-md text-right"> <div className="font-tabular-metric-sm text-primary">₹ 38,20,000</div> <div className="text-label-sm text-outline">Adj: ₹ 2,17,500</div> </td><td className="py-space-md px-space-md text-center"> <span className="inline-flex items-center px-space-sm py-space-2xs rounded text-label-sm font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
-                    Accounts Audit
-                  </span> </td><td className="py-space-md px-space-md text-right"> <div className="flex items-center justify-end gap-space-xs"> <button className="p-space-xs bg-surface hover:bg-surface-container-highest rounded text-on-surface transition-all" title="View Measurement Sheet"> <span className="material-symbols-outlined text-[18px]">rule</span> </button> <button className="p-space-xs bg-surface hover:bg-surface-container-highest rounded text-on-surface transition-all" title="Audit OCR"> <span className="material-symbols-outlined text-[18px]">document_scanner</span> </button> <button className="p-space-xs bg-primary text-on-primary hover:bg-primary-container rounded transition-all" title="Approve Payment"> <span className="material-symbols-outlined text-[18px]">check</span> </button> </div> </td></tr><tr className="hover:bg-surface-container-high transition-all cursor-pointer"><td className="py-space-md px-space-md"> <div className="font-headline-sm text-on-surface">RA-2026-041</div> <div className="text-body-sm text-on-surface-variant">Vanguard Formwork Ltd</div> </td><td className="py-space-md px-space-md"> <div className="text-body-md font-medium">Formwork & Scaffolding</div> <div className="text-label-sm text-outline">Podium Level 2</div> </td><td className="py-space-md px-space-md text-right"> <div className="font-tabular-metric-sm text-on-surface">₹ 28,10,000</div> <div className="text-label-sm text-outline">Ret: ₹ 1,40,500</div> </td><td className="py-space-md px-space-md text-right"> <div className="font-tabular-metric-sm text-primary">₹ 25,19,500</div> <div className="text-label-sm text-outline">Adj: ₹ 1,50,000</div> </td><td className="py-space-md px-space-md text-center"> <span className="inline-flex items-center px-space-sm py-space-2xs rounded text-label-sm font-bold bg-primary-fixed text-on-primary-fixed">
-                    PM Certified
-                  </span> </td><td className="py-space-md px-space-md text-right"> <div className="flex items-center justify-end gap-space-xs"> <button className="p-space-xs bg-surface hover:bg-surface-container-highest rounded text-on-surface transition-all" title="View Measurement Sheet"> <span className="material-symbols-outlined text-[18px]">rule</span> </button> <button className="p-space-xs bg-surface hover:bg-surface-container-highest rounded text-on-surface transition-all" title="Audit OCR"> <span className="material-symbols-outlined text-[18px]">document_scanner</span> </button> <button className="p-space-xs bg-primary text-on-primary hover:bg-primary-container rounded transition-all" title="Approve Payment"> <span className="material-symbols-outlined text-[18px]">check</span> </button> </div> </td></tr><tr className="hover:bg-surface-container-high transition-all cursor-pointer"><td className="py-space-md px-space-md"> <div className="font-headline-sm text-on-surface">RA-2026-040</div> <div className="text-body-sm text-on-surface-variant">Stellar MEP Engineers</div> </td><td className="py-space-md px-space-md"> <div className="text-body-md font-medium">Electrical 1st Fix</div> <div className="text-label-sm text-outline">Tower B - Blocks 1-4</div> </td><td className="py-space-md px-space-md text-right"> <div className="font-tabular-metric-sm text-on-surface">₹ 19,80,000</div> <div className="text-label-sm text-outline">Ret: ₹ 99,000</div> </td><td className="py-space-md px-space-md text-right"> <div className="font-tabular-metric-sm text-primary">₹ 18,81,000</div> <div className="text-label-sm text-outline">Adj: ₹ 0</div> </td><td className="py-space-md px-space-md text-center"> <span className="inline-flex items-center px-space-sm py-space-2xs rounded text-label-sm font-bold bg-error-container text-on-error-container">
-                    Hold / QA Risk
-                  </span> </td><td className="py-space-md px-space-md text-right"> <div className="flex items-center justify-end gap-space-xs"> <button className="p-space-xs bg-surface hover:bg-surface-container-highest rounded text-on-surface transition-all" title="View Measurement Sheet"> <span className="material-symbols-outlined text-[18px]">rule</span> </button> <button className="p-space-xs bg-surface hover:bg-surface-container-highest rounded text-on-surface transition-all" title="Audit OCR"> <span className="material-symbols-outlined text-[18px]">document_scanner</span> </button> <button className="p-space-xs bg-surface hover:bg-surface-container-highest text-outline rounded cursor-not-allowed" title="Approve Payment"> <span className="material-symbols-outlined text-[18px]">block</span> </button> </div> </td></tr><tr className="hover:bg-surface-container-high transition-all cursor-pointer"><td className="py-space-md px-space-md"> <div className="font-headline-sm text-on-surface">RA-2026-039</div> <div className="text-body-sm text-on-surface-variant">Delta Masonry Corp</div> </td><td className="py-space-md px-space-md"> <div className="text-body-md font-medium">Masonry & Plaster</div> <div className="text-label-sm text-outline">Tower A - Levels 8-10</div> </td><td className="py-space-md px-space-md text-right"> <div className="font-tabular-metric-sm text-on-surface">₹ 34,20,000</div> <div className="text-label-sm text-outline">Ret: ₹ 1,71,000</div> </td><td className="py-space-md px-space-md text-right"> <div className="font-tabular-metric-sm text-primary">₹ 31,49,000</div> <div className="text-label-sm text-outline">Adj: ₹ 1,00,000</div> </td><td className="py-space-md px-space-md text-center"> <span className="inline-flex items-center px-space-sm py-space-2xs rounded text-label-sm font-bold bg-surface-container-highest text-on-secondary-fixed-variant">
-                    Paid
-                  </span> </td><td className="py-space-md px-space-md text-right"> <div className="flex items-center justify-end gap-space-xs"> <button className="p-space-xs bg-surface hover:bg-surface-container-highest rounded text-on-surface transition-all" title="View Measurement Sheet"> <span className="material-symbols-outlined text-[18px]">rule</span> </button> <button className="p-space-xs bg-surface hover:bg-surface-container-highest rounded text-on-surface transition-all" title="Audit OCR"> <span className="material-symbols-outlined text-[18px]">document_scanner</span> </button> <button className="p-space-xs bg-surface text-primary hover:bg-surface-container-highest rounded transition-all" title="Payment Receipt"> <span className="material-symbols-outlined text-[18px]">receipt_long</span> </button> </div> </td></tr></tbody></table> </div>  <div className="p-space-md bg-surface-container-low flex items-center justify-between text-body-sm text-outline"> <span>Showing 4 of 42 bills</span> <div className="flex items-center gap-space-sm"> <button className="px-space-sm py-1 bg-surface rounded hover:bg-surface-container transition-all">Previous</button> <span className="text-on-surface font-bold">1</span> <button className="px-space-sm py-1 bg-surface rounded hover:bg-surface-container transition-all">Next</button> </div> </div> </div> </div>  <div className="lg:col-span-4 flex flex-col gap-space-md"> <div className="bg-surface-container-lowest rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] p-space-lg flex flex-col gap-space-md sticky top-20">  <div className="flex items-start justify-between border-b border-surface-container pb-space-md"> <div> <div className="flex items-center gap-space-xs text-label-sm text-primary font-bold uppercase tracking-wider mb-space-2xs"> <span className="material-symbols-outlined text-[14px]">verified_user</span>
-              Selected Bill Inspector
-            </div> <h3 className="font-headline-md text-on-surface">RA-2026-042</h3> <p className="text-body-sm text-outline">Apex Civil Contractors — RMC Pouring</p> </div> <span className="inline-flex items-center px-space-sm py-space-2xs rounded text-label-sm font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant">
-            In Audit
-          </span> </div>  <div className="flex flex-col gap-space-sm"> <div className="flex justify-between items-center text-body-md py-1 border-b border-surface-container/50"> <span className="text-outline">Gross Bill Value</span> <span className="font-tabular-metric-sm text-on-surface">₹ 42,50,000</span> </div> <div className="flex justify-between items-center text-body-md py-1 border-b border-surface-container/50"> <span className="text-outline">Retention (5%)</span> <span className="font-tabular-metric-sm text-error">- ₹ 2,12,500</span> </div> <div className="flex justify-between items-center text-body-md py-1 border-b border-surface-container/50"> <span className="text-outline">Material Issue Deductions</span> <span className="font-tabular-metric-sm text-error">- ₹ 1,45,000</span> </div> <div className="flex justify-between items-center text-body-md py-1 border-b border-surface-container/50"> <span className="text-outline">Mobilization Adv. Recovery</span> <span className="font-tabular-metric-sm text-error">- ₹ 72,500</span> </div> <div className="flex justify-between items-center text-body-lg font-bold py-2 bg-surface-container-low px-space-sm rounded-lg"> <span className="text-on-surface">Net Payable</span> <span className="font-tabular-metric text-primary">₹ 38,20,000</span> </div> </div>  <div className="flex flex-col gap-space-sm mt-space-sm"> <span className="text-label-sm text-outline uppercase tracking-wider">Verification Signoffs</span>  <div className="flex items-center justify-between p-space-sm bg-surface rounded-lg"> <div className="flex items-center gap-space-sm"> <span className="material-symbols-outlined text-primary text-[20px]">rule</span> <div> <div className="text-body-sm font-medium">Measurement Sheet Signoff</div> <div className="text-[11px] text-outline">Verified by Site Engineer (R. Sharma)</div> </div> </div> <span className="material-symbols-outlined text-primary text-[18px]">check_circle</span> </div>  <div className="flex items-center justify-between p-space-sm bg-surface rounded-lg"> <div className="flex items-center gap-space-sm"> <span className="material-symbols-outlined text-primary text-[20px]">document_scanner</span> <div> <div className="text-body-sm font-medium">AI Invoice OCR Audit</div> <div className="text-[11px] text-primary">Match: 99.8% with Gate Entry Logs</div> </div> </div> <span className="material-symbols-outlined text-primary text-[18px]">check_circle</span> </div>  <div className="flex items-center justify-between p-space-sm bg-surface rounded-lg"> <div className="flex items-center gap-space-sm"> <span className="material-symbols-outlined text-tertiary text-[20px]">verified</span> <div> <div className="text-body-sm font-medium">QA/QC Cube Test Clearance</div> <div className="text-[11px] text-outline">28-day strength: 34.2 MPa (Pass)</div> </div> </div> <span className="material-symbols-outlined text-tertiary text-[18px]">check_circle</span> </div> </div>  <div className="flex flex-col gap-space-xs mt-space-sm"> <span className="text-label-sm text-outline uppercase tracking-wider">Site Execution Evidence</span> <div className="relative w-full h-32 rounded-lg bg-cover bg-center overflow-hidden shadow-sm" data-alt="High-density civil engineering photo showing concrete pouring operation for a multi-story foundation slab using concrete pumps and vibrators on a bustling construction site with cranes and workers wearing safety helmets and high-visibility vests under bright daylight." style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDjJ_r9zqV9v3O4Du9GUaF089hm4kuquVAbo510776nEKHjEl6xd7P9OVf1Sipzk9nXiMfTV3YoUGEIff6MAYSZ6fW5S62M19UsKWUfBmq46J7L5iY0wSlFLCkOp9LHwm1CboIklDCi198ypEP6sVq-KmgR9Q7vSWuikfJKKHohLgtVBqMzKpyof52pwtvTX8EgB8uzn-_29z9ndLy97NLzrpsxG9xMqtOMtmQQ41Y1TDKrVZVqYjev')"}}> <div className="absolute inset-0 bg-gradient-to-t from-on-background/70 via-transparent to-transparent flex items-end p-space-sm"> <span className="text-on-primary text-body-sm font-medium">Tower A - Slab 14 Pour (12 Mar 2026)</span> </div> </div> </div>  <div className="flex items-center gap-space-sm pt-space-md border-t border-surface-container mt-space-sm"> <button className="flex-1 bg-surface text-on-surface hover:bg-surface-container-highest py-2 rounded-lg text-label-md font-medium transition-all text-center">
-            Reject Bill
-          </button> <button className="flex-1 bg-primary text-on-primary hover:bg-primary-container py-2 rounded-lg text-label-md font-medium transition-all text-center flex items-center justify-center gap-space-xs"> <span className="material-symbols-outlined text-[16px]">check_circle</span>
-            Approve & Dispatch
-          </button> </div> </div> </div> </div>  <div className="fixed inset-0 z-50 bg-inverse-surface/40 backdrop-blur-sm hidden items-center justify-center p-space-md" id="newBillModal"> <div className="bg-surface-container-lowest w-full max-w-xl rounded-xl shadow-2xl p-space-xl flex flex-col gap-space-lg animate-in fade-in zoom-in-95 duration-150"> <div className="flex justify-between items-center border-b border-surface-container pb-space-md"> <div className="flex items-center gap-space-sm"> <span className="material-symbols-outlined text-primary text-[24px]">receipt_long</span> <h3 className="font-headline-lg text-on-surface">Create New RA Bill</h3> </div> <button className="text-outline hover:text-on-surface"> <span className="material-symbols-outlined text-[20px]">close</span> </button> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md"> <div className="flex flex-col gap-space-xs"> <label className="text-label-sm text-outline uppercase">Subcontractor</label> <select className="bg-surface p-2 rounded-lg text-body-md border-0 focus:ring-1 focus:ring-primary"><option>Apex Civil Contractors</option><option>Vanguard Formwork Ltd</option><option>Stellar MEP Engineers</option><option>Delta Masonry Corp</option></select> </div> <div className="flex flex-col gap-space-xs"> <label className="text-label-sm text-outline uppercase">Work Package</label> <select className="bg-surface p-2 rounded-lg text-body-md border-0 focus:ring-1 focus:ring-primary"><option>RMC Pouring</option><option>Formwork & Scaffolding</option><option>Electrical 1st Fix</option><option>Masonry & Plaster</option></select> </div> <div className="flex flex-col gap-space-xs"> <label className="text-label-sm text-outline uppercase">Bill ID / Ref</label> <input className="bg-surface p-2 rounded-lg text-body-md border-0 focus:ring-1 focus:ring-primary" type="text" defaultValue="RA-2026-043" /> </div> <div className="flex flex-col gap-space-xs"> <label className="text-label-sm text-outline uppercase">Gross Amount (₹)</label> <input className="bg-surface p-2 rounded-lg text-body-md border-0 focus:ring-1 focus:ring-primary" placeholder="500000" type="number" /> </div> </div> <div className="flex flex-col gap-space-xs"> <label className="text-label-sm text-outline uppercase">Upload Measurement Sheet (PDF/OCR)</label> <div className="border-2 border-dashed border-outline-variant rounded-xl p-space-lg text-center bg-surface hover:bg-surface-container transition-all cursor-pointer"> <span className="material-symbols-outlined text-primary text-[32px] mb-space-xs">cloud_upload</span> <div className="text-body-md font-medium text-on-surface">Click to upload or drag & drop files</div> <div className="text-body-sm text-outline">PDF, XLSX or scanned site measurement sheets up to 25MB</div> </div> </div> <div className="flex justify-end gap-space-sm pt-space-md border-t border-surface-container"> <button className="bg-surface hover:bg-surface-container text-on-surface px-space-lg py-2 rounded-lg text-label-md transition-all">
-          Cancel
-        </button> <button className="bg-primary hover:bg-primary-container text-on-primary px-space-lg py-2 rounded-lg text-label-md transition-all">
-          Generate & Run OCR Audit
-        </button> </div> </div> </div>   </div></main>
+    <Shell title="Bills & Payments">
+      <div className="w-full px-4 md:px-8 py-6 flex flex-col gap-6">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight">Bills &amp; Payments</h1>
+            <p className="text-sm text-muted-foreground mt-1">{project.name} · vendor bills, approvals, payments and outstanding dues.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={exportAll} className="px-3 py-2 rounded-lg border border-border text-sm font-semibold hover:bg-muted">Export</button>
+            <button onClick={() => { setDraft(emptyBill()); setEditingId(null); }} className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">Add Bill</button>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: "Total payable", value: inr(totals.payable) },
+            { label: "Paid", value: inr(totals.paid) },
+            { label: "Outstanding", value: inr(totals.outstanding) },
+            { label: "Retention held", value: inr(totals.retention) },
+          ].map((k) => (
+            <div key={k.label} className="rounded-xl border border-border bg-card p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{k.label}</p>
+              <p className="text-2xl font-extrabold mt-1">{k.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-3">
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bill no, vendor, category…" className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm" />
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-3 py-2 rounded-lg border border-border bg-background text-sm capitalize">
+            <option value="all">All statuses</option>
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+
+        {!project.id && <p className="text-sm text-muted-foreground">Add a project first to log bills.</p>}
+
+        <div className="rounded-xl border border-border bg-card overflow-x-auto">
+          <table className="w-full text-sm min-w-[980px]">
+            <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="text-left p-3">Bill</th>
+                <th className="text-left p-3">Vendor</th>
+                <th className="text-right p-3">Payable</th>
+                <th className="text-right p-3">Paid</th>
+                <th className="text-right p-3">Balance</th>
+                <th className="text-left p-3">Status</th>
+                <th className="text-right p-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isPending && <tr><td className="p-4 text-muted-foreground" colSpan={7}>Loading bills…</td></tr>}
+              {!isPending && !filtered.length && <tr><td className="p-4 text-muted-foreground" colSpan={7}>No bills logged yet.</td></tr>}
+              {filtered.map((b) => {
+                const paid = paidByBill.get(b.id) ?? 0;
+                const bal = billPayable(b) - paid;
+                return (
+                  <tr key={b.id} className="border-t border-border align-top">
+                    <td className="p-3">
+                      <p className="font-semibold">{b.bill_number || "—"}</p>
+                      <p className="text-xs text-muted-foreground">{b.bill_date ?? "—"}{b.due_date ? ` · due ${b.due_date}` : ""}</p>
+                      <p className="text-xs text-muted-foreground">{b.category}</p>
+                    </td>
+                    <td className="p-3">
+                      <p className="font-semibold">{b.vendor_name || "—"}</p>
+                      <p className="text-xs text-muted-foreground">{b.description}</p>
+                    </td>
+                    <td className="p-3 text-right">{inr(billPayable(b))}</td>
+                    <td className="p-3 text-right">{inr(paid)}</td>
+                    <td className={`p-3 text-right font-bold ${bal > 0 ? "text-destructive" : "text-primary"}`}>{inr(bal)}</td>
+                    <td className="p-3">
+                      <span className="px-2 py-1 rounded-full bg-muted text-xs font-semibold capitalize">{b.status}</span>
+                    </td>
+                    <td className="p-3 text-right whitespace-nowrap">
+                      {b.status === "draft" && <button onClick={() => setStatusMut.mutate({ id: b.id, status: "verified" })} className="text-primary font-semibold mr-3">Verify</button>}
+                      {b.status === "verified" && canApprove && <button onClick={() => setStatusMut.mutate({ id: b.id, status: "approved" })} className="text-primary font-semibold mr-3">Approve</button>}
+                      {(b.status === "approved" || b.status === "paid") && <button onClick={() => { setPayFor(b); setPayDraft((d) => ({ ...d, amount: Math.max(bal, 0) })); }} className="text-primary font-semibold mr-3">Pay</button>}
+                      <button onClick={() => { setDraft({ bill_number: b.bill_number, bill_date: b.bill_date, due_date: b.due_date, vendor_name: b.vendor_name, vendor_gstin: b.vendor_gstin, category: b.category, description: b.description, basic_amount: b.basic_amount, gst_amount: b.gst_amount, other_charges: b.other_charges, retention_amount: b.retention_amount, deductions: b.deductions, status: b.status, notes: b.notes }); setEditingId(b.id); }} className="font-semibold mr-3">Edit</button>
+                      <button onClick={() => { if (confirm(`Delete bill ${b.bill_number}?`)) deleteBill.mutate(b.id); }} className="text-destructive font-semibold">Delete</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <section>
+          <h2 className="text-lg font-bold mb-3">Recent payments</h2>
+          <div className="rounded-xl border border-border bg-card overflow-x-auto">
+            <table className="w-full text-sm min-w-[720px]">
+              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="text-left p-3">Date</th>
+                  <th className="text-left p-3">Bill</th>
+                  <th className="text-right p-3">Amount</th>
+                  <th className="text-left p-3">Mode / Reference</th>
+                  <th className="text-left p-3">Paid from</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!payments.length && <tr><td className="p-4 text-muted-foreground" colSpan={5}>No payments recorded yet.</td></tr>}
+                {payments.map((p) => (
+                  <tr key={p.id} className="border-t border-border">
+                    <td className="p-3">{p.payment_date}</td>
+                    <td className="p-3">{bills.find((b) => b.id === p.bill_id)?.bill_number ?? "—"}</td>
+                    <td className="p-3 text-right font-semibold">{inr(p.amount)}</td>
+                    <td className="p-3">{p.mode}{p.reference && ` · ${p.reference}`}</td>
+                    <td className="p-3">{p.paid_from || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
+
+      {draft && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-start md:items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-card rounded-xl border border-border w-full max-w-3xl p-5">
+            <h2 className="text-lg font-bold mb-4">{editingId ? "Edit bill" : "New bill"}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              {FIELDS.map((f) => (
+                <label key={f.key}>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{f.label}</span>
+                  <input
+                    type={f.type ?? "text"}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                    value={String(draft[f.key] ?? "")}
+                    onChange={(e) => setDraft({ ...draft, [f.key]: f.type === "number" ? num(e.target.value) : e.target.value })}
+                  />
+                </label>
+              ))}
+            </div>
+            <p className="text-sm mt-3">Gross <strong>{inr(draft.basic_amount + draft.gst_amount + draft.other_charges)}</strong> · Payable <strong>{inr(draft.basic_amount + draft.gst_amount + draft.other_charges - draft.retention_amount - draft.deductions)}</strong></p>
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => { setDraft(null); setEditingId(null); }} className="px-4 py-2 rounded-lg border border-border text-sm font-semibold">Cancel</button>
+              <button disabled={saveBill.isPending} onClick={() => saveBill.mutate({ draft, id: editingId })} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">{saveBill.isPending ? "Saving…" : "Save bill"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {payFor && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-start md:items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-card rounded-xl border border-border w-full max-w-xl p-5">
+            <h2 className="text-lg font-bold mb-1">Record payment</h2>
+            <p className="text-sm text-muted-foreground mb-4">{payFor.bill_number} · {payFor.vendor_name} · balance {inr(billPayable(payFor) - (paidByBill.get(payFor.id) ?? 0))}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <label>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Date</span>
+                <input type="date" className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.payment_date} onChange={(e) => setPayDraft({ ...payDraft, payment_date: e.target.value })} />
+              </label>
+              <label>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Amount</span>
+                <input type="number" className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.amount} onChange={(e) => setPayDraft({ ...payDraft, amount: num(e.target.value) })} />
+              </label>
+              <label>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Mode</span>
+                <select className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.mode} onChange={(e) => setPayDraft({ ...payDraft, mode: e.target.value })}>
+                  {MODES.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </label>
+              <label>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Reference / UTR</span>
+                <input className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.reference} onChange={(e) => setPayDraft({ ...payDraft, reference: e.target.value })} />
+              </label>
+              <label>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Paid from</span>
+                <input className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.paid_from} onChange={(e) => setPayDraft({ ...payDraft, paid_from: e.target.value })} />
+              </label>
+              <label>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Remarks</span>
+                <input className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.remarks} onChange={(e) => setPayDraft({ ...payDraft, remarks: e.target.value })} />
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => setPayFor(null)} className="px-4 py-2 rounded-lg border border-border text-sm font-semibold">Cancel</button>
+              <button disabled={savePayment.isPending} onClick={() => { if (payDraft.amount <= 0) { toast.error("Enter an amount"); return; } savePayment.mutate(payFor); }} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">{savePayment.isPending ? "Saving…" : "Record payment"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Shell>
   );
 }
