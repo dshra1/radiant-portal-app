@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { IndianRupee, PieChart, ShieldCheck, HardHat, Ruler } from "lucide-react";
+import { IndianRupee, PieChart, ShieldCheck, HardHat, Ruler, Landmark } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { LABOUR_SECTION } from "@/lib/boq.functions";
@@ -82,6 +82,21 @@ function Page() {
     },
   });
 
+  const chargesQuery = useQuery({
+    queryKey: ["project_charges", "cost-dashboard", activeId],
+    enabled: Boolean(activeId),
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_charges")
+        .select("id,category,amount")
+        .eq("project_id", activeId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const statutory = (chargesQuery.data ?? []).reduce((s, c) => s + num(c.amount), 0);
+
   const pending = useChangeRequests(activeId, "pending");
 
   const rows = boqQuery.data ?? [];
@@ -136,7 +151,7 @@ function Page() {
 
   const budget = num(project?.target_budget);
   const sft = num(project?.total_built_up_sft);
-  const projectCost = material + labour + pmcFee;
+  const projectCost = material + labour + pmcFee + statutory;
   const remaining = budget - projectCost;
   const remainingAfterPending = budget - (projectCost - pendingSaving);
 
@@ -161,6 +176,13 @@ function Page() {
       sub: `on ${crore(inScope)} in scope`,
       icon: Ruler,
       tone: "border-violet-500/40 bg-violet-500/5",
+    },
+    {
+      label: "Common & statutory charges",
+      value: crore(statutory),
+      sub: "Permissions, LRS, HMWSSB, electricity, architect",
+      icon: Landmark,
+      tone: "border-rose-500/40 bg-rose-500/5",
     },
     {
       label: "Total project cost",
@@ -319,8 +341,9 @@ function Page() {
               {[
                 ["Material BOQ", material],
                 ["Labour contracts", labour],
-                [`PMC fee @ ${feePct}%`, pmcFee],
-                ["Total project cost", projectCost],
+                 [`PMC fee @ ${feePct}%`, pmcFee],
+                 ["Permissions, LRS, HMWSSB, electricity & architect fees", statutory],
+                 ["Total project cost", projectCost],
               ].map(([label, value]) => (
                 <tr key={String(label)}>
                   <td className="px-4 py-3 font-semibold text-foreground">{String(label)}</td>

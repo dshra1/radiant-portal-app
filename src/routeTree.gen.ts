@@ -24,6 +24,7 @@ import { Route as BrandPreferencesRouteImport } from './routes/brand-preferences
 import { Route as BudgetFitRouteImport } from './routes/budget-fit'
 import { Route as CapitalLedgerRouteImport } from './routes/capital-ledger'
 import { Route as CommandOperationsRouteImport } from './routes/command-operations'
+import { Route as CommonExpensesRouteImport } from './routes/common-expenses'
 import { Route as ContractorsLabourRouteImport } from './routes/contractors-labour'
 import { Route as CostDashboardRouteImport } from './routes/cost-dashboard'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -135,6 +136,11 @@ const CapitalLedgerRoute = CapitalLedgerRouteImport.update({
 const CommandOperationsRoute = CommandOperationsRouteImport.update({
   id: '/command-operations',
   path: '/command-operations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommonExpensesRoute = CommonExpensesRouteImport.update({
+  id: '/common-expenses',
+  path: '/common-expenses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContractorsLabourRoute = ContractorsLabourRouteImport.update({
@@ -339,6 +345,7 @@ export interface FileRoutesByFullPath {
   '/budget-fit': typeof BudgetFitRoute
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
+  '/common-expenses': typeof CommonExpensesRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
@@ -393,6 +400,7 @@ export interface FileRoutesByTo {
   '/budget-fit': typeof BudgetFitRoute
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
+  '/common-expenses': typeof CommonExpensesRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
@@ -448,6 +456,7 @@ export interface FileRoutesById {
   '/budget-fit': typeof BudgetFitRoute
   '/capital-ledger': typeof CapitalLedgerRoute
   '/command-operations': typeof CommandOperationsRoute
+  '/common-expenses': typeof CommonExpensesRoute
   '/contractors-labour': typeof ContractorsLabourRoute
   '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
@@ -504,6 +513,7 @@ export interface FileRouteTypes {
     | '/budget-fit'
     | '/capital-ledger'
     | '/command-operations'
+    | '/common-expenses'
     | '/contractors-labour'
     | '/cost-dashboard'
     | '/dashboard'
@@ -558,6 +568,7 @@ export interface FileRouteTypes {
     | '/budget-fit'
     | '/capital-ledger'
     | '/command-operations'
+    | '/common-expenses'
     | '/contractors-labour'
     | '/cost-dashboard'
     | '/dashboard'
@@ -612,6 +623,7 @@ export interface FileRouteTypes {
     | '/budget-fit'
     | '/capital-ledger'
     | '/command-operations'
+    | '/common-expenses'
     | '/contractors-labour'
     | '/cost-dashboard'
     | '/dashboard'
@@ -667,6 +679,7 @@ export interface RootRouteChildren {
   BudgetFitRoute: typeof BudgetFitRoute
   CapitalLedgerRoute: typeof CapitalLedgerRoute
   CommandOperationsRoute: typeof CommandOperationsRoute
+  CommonExpensesRoute: typeof CommonExpensesRoute
   ContractorsLabourRoute: typeof ContractorsLabourRoute
   CostDashboardRoute: typeof CostDashboardRoute
   DashboardRoute: typeof DashboardRoute
@@ -811,6 +824,13 @@ declare module '@tanstack/react-router' {
       path: '/command-operations'
       fullPath: '/command-operations'
       preLoaderRoute: typeof CommandOperationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/common-expenses': {
+      id: '/common-expenses'
+      path: '/common-expenses'
+      fullPath: '/common-expenses'
+      preLoaderRoute: typeof CommonExpensesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contractors-labour': {
@@ -1091,6 +1111,7 @@ const rootRouteChildren: RootRouteChildren = {
   BudgetFitRoute: BudgetFitRoute,
   CapitalLedgerRoute: CapitalLedgerRoute,
   CommandOperationsRoute: CommandOperationsRoute,
+  CommonExpensesRoute: CommonExpensesRoute,
   ContractorsLabourRoute: ContractorsLabourRoute,
   CostDashboardRoute: CostDashboardRoute,
   DashboardRoute: DashboardRoute,
