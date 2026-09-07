@@ -151,7 +151,7 @@ function Page() {
 
   const budget = num(project?.target_budget);
   const sft = num(project?.total_built_up_sft);
-  const projectCost = material + labour + pmcFee;
+  const projectCost = material + labour + pmcFee + statutory;
   const remaining = budget - projectCost;
   const remainingAfterPending = budget - (projectCost - pendingSaving);
 
