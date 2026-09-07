@@ -78,7 +78,7 @@ function Page() {
   const qc = useQueryClient();
   const user = useSessionUser();
   const access = useAccess();
-  const canDelete = Boolean(access.data?.isAdmin || access.data?.roles.includes("pm"));
+  const canDelete = Boolean(access.access?.isAdmin || access.access?.roles.includes("pm"));
   const [projectId, setProjectId] = useState("");
   const [draft, setDraft] = useState({ ...emptyDraft });
   const [showForm, setShowForm] = useState(false);
@@ -143,7 +143,7 @@ function Page() {
   });
 
   const updateCharge = useMutation({
-    mutationFn: async (patch: { id: string; values: Record<string, unknown> }) => {
+    mutationFn: async (patch: { id: string; values: { status?: string } }) => {
       const { error } = await supabase
         .from("project_charges")
         .update(patch.values)
