@@ -1,14 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, Landmark, Plus, Save, Trash2, Upload, Users } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Shell } from "@/components/saha/Shell";
-import { useActiveProject } from "@/hooks/useActiveProject";
+import { supabase } from "@/integrations/supabase/client";
+import { useAccess, useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/landowners-investment")({
   head: () => ({
     meta: [
       { title: "Landowners & Investment Hub — Saha OS" },
-      { name: "description", content: "Owner scope, investment responsibility, stage-wise payment schedules and funding progress visibility." },
+      {
+        name: "description",
+        content:
+          "Owner scope, investment responsibility, stage-wise payment schedules and funding progress visibility.",
+      },
       { property: "og:title", content: "Landowners & Investment Hub — Saha OS" },
-      { property: "og:description", content: "Owner scope, investment responsibility, stage-wise payment schedules and funding progress visibility." },
+      {
+        property: "og:description",
+        content:
+          "Owner scope, investment responsibility, stage payments and funding progress for every landowner and investor.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -16,23 +29,492 @@ export const Route = createFileRoute("/landowners-investment")({
   component: Page,
 });
 
+type Owner = {
+  name?: string;
+  role?: string;
+  contact?: string;
+  share_pct?: number | string;
+  invested?: number | string;
+  paid?: number | string;
+  units?: string;
+  notes?: string;
+};
+
+const num = (v: unknown) => {
+  const n = typeof v === "number" ? v : Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+};
+const inr = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
+const cr = (v: number) => (v >= 10000000 ? `₹${(v / 10000000).toFixed(2)} Cr` : inr(v));
+const initials = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("") || "—";
+
+const ROLES = ["Land Holder", "Primary Investor", "Co-Developer", "Strategic Partner", "Investor"];
+
+const emptyOwner: Owner = {
+  name: "",
+  role: "Land Holder",
+  contact: "",
+  share_pct: "",
+  invested: "",
+  paid: "",
+  units: "",
+  notes: "",
+};
+
 function Page() {
-  const project = useActiveProject();
+  const qc = useQueryClient();
+  const user = useSessionUser();
+  const access = useAccess();
+  const canEdit = Boolean(access.access?.isAdmin || access.access?.roles.includes("pm"));
+
+  const [projectId, setProjectId] = useState("");
+  const [rows, setRows] = useState<Owner[]>([]);
+  const [dirty, setDirty] = useState(false);
+  const [status, setStatus] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const projectsQuery = useQuery({
+    queryKey: ["site_projects", "landowners-hub"],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_projects")
+        .select("id,name,location,target_budget,total_built_up_sft,landowners,investors")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const projects = projectsQuery.data ?? [];
+  const activeId = projectId || projects[0]?.id || "";
+  const project = projects.find((p) => p.id === activeId);
+
+  useEffect(() => {
+    if (!project) return;
+    const owners = Array.isArray(project.landowners) ? (project.landowners as Owner[]) : [];
+    const investors = Array.isArray(project.investors) ? (project.investors as Owner[]) : [];
+    const merged: Owner[] = [
+      ...owners.map((o) => ({ role: "Land Holder", ...o })),
+      ...investors
+        .filter((i) => i && (i.name ?? "").toString().trim())
+        .map((i) => ({ role: "Investor", ...i })),
+    ];
+    setRows(merged);
+    setDirty(false);
+    setStatus("");
+  }, [activeId, projectsQuery.dataUpdatedAt]);
+
+  const chargesQuery = useQuery({
+    queryKey: ["project_charges", "owners-hub", activeId],
+    enabled: Boolean(activeId && user?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_charges")
+        .select("amount,allocation,status")
+        .eq("project_id", activeId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const charges = chargesQuery.data ?? [];
+  const statutoryTotal = charges.reduce((s, c) => s + num(c.amount), 0);
+
+  const save = useMutation({
+    mutationFn: async (next: Owner[]) => {
+      const clean = next
+        .filter((o) => (o.name ?? "").toString().trim())
+        .map((o) => ({
+          name: (o.name ?? "").toString().trim(),
+          role: o.role || "Land Holder",
+          contact: (o.contact ?? "").toString().trim(),
+          share_pct: num(o.share_pct),
+          invested: num(o.invested),
+          paid: num(o.paid),
+          units: (o.units ?? "").toString().trim(),
+          notes: (o.notes ?? "").toString().trim(),
+        }));
+      const { error } = await supabase
+        .from("site_projects")
+        .update({ landowners: clean, investors: [] })
+        .eq("id", activeId);
+      if (error) throw error;
+      return clean;
+    },
+    onSuccess: async () => {
+      setDirty(false);
+      setStatus("Saved to the project record.");
+      await qc.invalidateQueries({ queryKey: ["site_projects"] });
+    },
+    onError: (e: unknown) => setStatus(e instanceof Error ? e.message : "Could not save"),
+  });
+
+  const budget = num(project?.target_budget);
+  const totals = useMemo(() => {
+    const share = rows.reduce((s, o) => s + num(o.share_pct), 0);
+    const invested = rows.reduce((s, o) => s + num(o.invested), 0);
+    const paid = rows.reduce((s, o) => s + num(o.paid), 0);
+    return { share, invested, paid, outstanding: Math.max(budget - paid, 0) };
+  }, [rows, budget]);
+
+  const update = (i: number, patch: Partial<Owner>) => {
+    setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+    setDirty(true);
+  };
+
+  const exportExcel = () => {
+    const sheet = XLSX.utils.json_to_sheet(
+      rows.map((o) => ({
+        Name: o.name ?? "",
+        Role: o.role ?? "",
+        Contact: o.contact ?? "",
+        "Share %": num(o.share_pct),
+        "Investment committed": num(o.invested),
+        "Amount paid": num(o.paid),
+        "Assigned units": o.units ?? "",
+        Notes: o.notes ?? "",
+      })),
+    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, "Owners");
+    XLSX.writeFile(wb, `owners-${(project?.name || "project").replace(/\s+/g, "-")}.xlsx`);
+    setStatus("Owner sheet downloaded.");
+  };
+
+  const downloadTemplate = () => {
+    const sheet = XLSX.utils.json_to_sheet([
+      {
+        Name: "Vijay Kumar",
+        Role: "Primary Investor",
+        Contact: "98xxxxxxx",
+        "Share %": 30,
+        "Investment committed": 5000000,
+        "Amount paid": 2500000,
+        "Assigned units": "Flat 302, 304",
+        Notes: "Land sharing agreement",
+      },
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, "Owners");
+    XLSX.writeFile(wb, "owners-template.xlsx");
+    setStatus("Template downloaded.");
+  };
+
+  const importExcel = async (file: File) => {
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf);
+      const first = wb.SheetNames[0];
+      if (!first) throw new Error("Empty file");
+      const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[first]!);
+      const imported: Owner[] = json
+        .map((r) => ({
+          name: String(r["Name"] ?? r["name"] ?? "").trim(),
+          role: String(r["Role"] ?? r["role"] ?? "Land Holder"),
+          contact: String(r["Contact"] ?? r["contact"] ?? ""),
+          share_pct: num(r["Share %"] ?? r["share_pct"]),
+          invested: num(r["Investment committed"] ?? r["invested"]),
+          paid: num(r["Amount paid"] ?? r["paid"]),
+          units: String(r["Assigned units"] ?? r["units"] ?? ""),
+          notes: String(r["Notes"] ?? r["notes"] ?? ""),
+        }))
+        .filter((o) => o.name);
+      if (imported.length === 0) throw new Error("No owner rows found");
+      setRows(imported);
+      setDirty(true);
+      setStatus(`${imported.length} owners loaded — press Save to store them.`);
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Could not read that file");
+    }
+  };
+
+  const shareWarning = rows.length > 0 && Math.abs(totals.share - 100) > 0.01;
+
   return (
-    <Shell title={"Landowners & Investment Hub"}>
-      <div className="m3">
-        <main className="w-full  px-gutter-normal pb-gutter-expanded bg-surface"><div className="flex flex-col w-full gap-space-xl">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md"> <div className="flex flex-col"> <div className="flex items-center gap-space-xs text-primary font-label-md uppercase tracking-wider"> <span>Governance</span> <span>/</span> <span>Landowners & Investment</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight mt-space-2xs">Landowners & Investment Hub</h1> <p className="font-body-md text-body-md text-on-surface-variant mt-space-2xs">Owner scope, investment responsibility, stage payments and progress visibility.</p> </div>  <div className="flex items-center flex-wrap gap-space-sm"> <button className="flex items-center gap-space-xs px-space-md py-space-xs bg-surface-container-lowest text-on-surface font-label-md rounded-lg shadow-sm hover:bg-surface-container transition-colors" type="button"> <span className="material-symbols-outlined text-[16px]">description</span> <span>Template</span> </button> <button className="flex items-center gap-space-xs px-space-md py-space-xs bg-surface-container-lowest text-on-surface font-label-md rounded-lg shadow-sm hover:bg-surface-container transition-colors" type="button"> <span className="material-symbols-outlined text-[16px]">download</span> <span>Export Excel</span> </button> <button className="flex items-center gap-space-xs px-space-md py-space-xs bg-surface-container-lowest text-on-surface font-label-md rounded-lg shadow-sm hover:bg-surface-container transition-colors" type="button"> <span className="material-symbols-outlined text-[16px]">upload</span> <span>Import Excel</span> </button> <button className="flex items-center gap-space-xs px-space-md py-space-xs bg-surface-container-lowest text-on-surface font-label-md rounded-lg shadow-sm hover:bg-surface-container transition-colors" type="button"> <span className="material-symbols-outlined text-[16px]">library_books</span> <span>Upload Work Library</span> </button> <button className="flex items-center gap-space-xs px-space-md py-space-xs bg-primary text-on-primary font-label-md rounded-lg shadow-sm hover:bg-primary-container transition-colors" type="button"> <span className="material-symbols-outlined text-[16px]">person_add</span> <span>Add Owner</span> </button> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-stretch">  <div className="lg:col-span-3 bg-surface-container-lowest rounded-xl p-space-base shadow-sm flex flex-col justify-between"> <div className="flex flex-col gap-space-xs"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Active Context</span> <div className="flex items-center justify-between"> <span className="font-title-md text-title-md text-on-surface">{project.name}</span> <span className="material-symbols-outlined text-primary">expand_more</span> </div> </div> <div className="mt-space-md pt-space-md" style={{"borderTop": "1px solid #E2E8F0"}}> <div className="flex justify-between items-center text-body-sm text-on-surface-variant"> <span>Sub-project:</span> <span className="font-title-md text-on-surface">{project.name}</span> </div> </div> </div>  <div className="lg:col-span-9 grid grid-cols-2 sm:grid-cols-5 gap-space-md">  <div className="bg-surface-container-lowest rounded-xl p-space-base shadow-sm flex flex-col justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Project Budget</span> <div className="mt-space-xs"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹6.0 Cr</span> <div className="mt-space-2xs"><span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-container text-on-surface">Fixed Cap</span></div> </div> </div>  <div className="bg-surface-container-lowest rounded-xl p-space-base shadow-sm flex flex-col justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Suggested Share</span> <div className="mt-space-xs"> <span className="font-tabular-metric text-tabular-metric text-on-surface">100.0%</span> <div className="mt-space-2xs"><span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#ECFDF5] text-[#059669]">Balanced</span></div> </div> </div>  <div className="bg-surface-container-lowest rounded-xl p-space-base shadow-sm flex flex-col justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Recorded Inv.</span> <div className="mt-space-xs"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹0</span> <div className="mt-space-2xs"><span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#FEF2F2] text-[#DC2626]">0% Funded</span></div> </div> </div>  <div className="bg-surface-container-lowest rounded-xl p-space-base shadow-sm flex flex-col justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Paid Amount</span> <div className="mt-space-xs"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹0</span> <div className="mt-space-2xs"><span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-container text-on-surface">0 Disbursed</span></div> </div> </div>  <div className="bg-surface-container-lowest rounded-xl p-space-base shadow-sm flex flex-col justify-between col-span-2 sm:col-span-1"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Outstanding</span> <div className="mt-space-xs"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹6.0 Cr</span> <div className="mt-space-2xs"><span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#FEF2F2] text-[#DC2626]">Pending</span></div> </div> </div> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-start">  <div className="lg:col-span-4 bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col"> <div className="p-space-base flex items-center justify-between" style={{"borderBottom": "1px solid #E2E8F0"}}> <h2 className="font-headline-sm text-headline-sm text-on-surface">Stakeholders / Owners</h2> <span className="text-xs font-label-md text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">4 Active</span> </div> <div className="flex flex-col divide-y" style={{}}>  <div className="p-space-base flex items-center justify-between bg-surface-container-low cursor-pointer transition-colors"> <div className="flex items-center gap-space-sm"> <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-title-md">
-              VK
-            </div> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Vijay Kumar</span> <span className="font-body-sm text-on-surface-variant">Primary Investor</span> </div> </div> <div className="text-right flex flex-col items-end"> <span className="font-tabular-metric-sm text-tabular-metric-sm text-primary">30% Share</span> <span className="font-body-sm text-on-surface-variant">₹0 Inv.</span> </div> </div>  <div className="p-space-base flex items-center justify-between hover:bg-surface-container-low cursor-pointer transition-colors"> <div className="flex items-center gap-space-sm"> <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-title-md">
-              SN
-            </div> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Shivanand</span> <span className="font-body-sm text-on-surface-variant">Co-Developer</span> </div> </div> <div className="text-right flex flex-col items-end"> <span className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface">10% Share</span> <span className="font-body-sm text-on-surface-variant">₹0 Inv.</span> </div> </div>  <div className="p-space-base flex items-center justify-between hover:bg-surface-container-low cursor-pointer transition-colors"> <div className="flex items-center gap-space-sm"> <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-title-md">
-              RM
-            </div> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Ramana</span> <span className="font-body-sm text-on-surface-variant">Land Holder</span> </div> </div> <div className="text-right flex flex-col items-end"> <span className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface">10% Share</span> <span className="font-body-sm text-on-surface-variant">₹0 Inv.</span> </div> </div>  <div className="p-space-base flex items-center justify-between hover:bg-surface-container-low cursor-pointer transition-colors"> <div className="flex items-center gap-space-sm"> <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-title-md">
-              GT
-            </div> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Geeta</span> <span className="font-body-sm text-on-surface-variant">Strategic Partner</span> </div> </div> <div className="text-right flex flex-col items-end"> <span className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface">50% Share</span> <span className="font-body-sm text-on-surface-variant">₹0 Inv.</span> </div> </div> </div> <div className="p-space-md bg-surface-container-low text-center"> <button className="text-primary font-label-md hover:underline" type="button">+ Assign New Stakeholder</button> </div> </div>  <div className="lg:col-span-8 flex flex-col gap-space-md">  <div className="bg-surface-container-lowest rounded-xl p-space-base shadow-sm">  <div className="mb-space-md p-space-md rounded-lg bg-[#FEF2F2] text-[#DC2626] flex items-center gap-space-sm"> <span className="material-symbols-outlined text-[20px]">warning</span> <span className="font-title-md text-title-md">Payment schedule is incomplete by 100.0%. Stage allocation requires attention.</span> </div> <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-space-md pb-space-md" style={{"borderBottom": "1px solid #E2E8F0"}}> <div className="flex items-center gap-space-md"> <img className="w-16 h-16 rounded-xl object-cover" data-alt="Professional headshot of an Indian male civil engineering stakeholder named Vijay Kumar in a crisp white shirt and blazer against an architectural office background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBglpxaNNVQhFa_o5SuM14OBuJ346k3mdzGZV9FrarW8M6GsR_xOhePdB1uBfyEzz38ZnUgJrxLom55WWR0bPhRL_ROWd5fxDSCp-EXCXc1UcktCRyUqcJLrlCGtHGm0tAmEu81lCvK42jNeicGQ_OzwBg005RLRtbLtjPHwhtonIhBYrEKjoFycmUL-NBuQj2V2og0FEnQuG-exqeSuFi6EOoUW60TiffTszRENIVouG-VlAzDigzO" /> <div> <div className="flex items-center gap-space-xs"> <h3 className="font-headline-md text-headline-md text-on-surface">Vijay Kumar</h3> <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#ECFDF5] text-[#059669]">Primary Owner</span> </div> <p className="font-body-sm text-on-surface-variant mt-space-2xs">ID: STK-8821 • Added via Land Sharing Agreement</p> </div> </div> <div className="flex gap-space-sm"> <button className="px-space-md py-space-xs rounded-lg text-on-surface bg-surface-container font-label-md hover:bg-surface-container-high transition-colors" type="button">Edit Profile</button> <button className="px-space-md py-space-xs rounded-lg text-on-primary bg-primary font-label-md hover:bg-primary-container transition-colors" type="button">View Ledger</button> </div> </div>  <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-md mt-space-md"> <div className="p-space-sm rounded-lg bg-surface-container-low"> <span className="font-label-sm text-on-surface-variant uppercase">Stakeholder Share</span> <div className="font-tabular-metric text-on-surface mt-space-2xs">30%</div> </div> <div className="p-space-sm rounded-lg bg-surface-container-low"> <span className="font-label-sm text-on-surface-variant uppercase">Recorded Investment</span> <div className="font-tabular-metric text-on-surface mt-space-2xs">₹0</div> </div> <div className="p-space-sm rounded-lg bg-surface-container-low"> <span className="font-label-sm text-on-surface-variant uppercase">Suggested Common Share</span> <div className="font-tabular-metric text-on-surface mt-space-2xs">₹1.80 Cr</div> </div> <div className="p-space-sm rounded-lg bg-surface-container-low"> <span className="font-label-sm text-on-surface-variant uppercase">Schedule Progress</span> <div className="font-tabular-metric text-error mt-space-2xs">0.0%</div> </div> </div> </div>  <div className="bg-surface-container-lowest rounded-xl p-space-base shadow-sm"> <div className="flex items-center justify-between mb-space-md"> <h3 className="font-headline-sm text-headline-sm text-on-surface">Scope Allocation & Deliverables</h3> <span className="text-xs text-primary font-label-md">+ Add Unit Assignment</span> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">  <div className="p-space-md rounded-lg bg-surface-container-low flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-label-md text-on-surface-variant uppercase">Assigned Flats/Units</span> <span className="material-symbols-outlined text-primary text-[18px]">domain</span> </div> <div className="font-title-md text-on-surface">Flat 302, 304, 401</div> <p className="font-body-sm text-on-surface-variant">Total Super Built-up: 4,250 sq.ft</p> </div>  <div className="p-space-md rounded-lg bg-surface-container-low flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-label-md text-on-surface-variant uppercase">Common Works</span> <span className="material-symbols-outlined text-primary text-[18px]">architecture</span> </div> <div className="font-title-md text-on-surface">Lobby & Clubhouse Finishes</div> <p className="font-body-sm text-on-surface-variant">Responsibility weight: 15%</p> </div>  <div className="p-space-md rounded-lg bg-surface-container-low flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-label-md text-on-surface-variant uppercase">Individual Works</span> <span className="material-symbols-outlined text-primary text-[18px]">engineering</span> </div> <div className="font-title-md text-on-surface">Interior Core & Electricals</div> <p className="font-body-sm text-on-surface-variant">Self-funded milestone</p> </div> </div> </div> </div> </div>  <div className="bg-surface-container-lowest rounded-xl p-space-base shadow-sm"> <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-space-md mb-space-base"> <div> <h3 className="font-headline-sm text-headline-sm text-on-surface">Stage-wise Payment Schedule</h3> <p className="font-body-sm text-on-surface-variant mt-space-2xs">Define milestone tranches for capital disbursement and stage verification.</p> </div> <div className="flex items-center gap-space-sm"> <button className="flex items-center gap-space-xs px-space-md py-space-xs bg-primary text-on-primary font-label-md rounded-lg shadow-sm hover:bg-primary-container transition-colors" type="button"> <span className="material-symbols-outlined text-[16px]">add_circle</span> <span>Add Stage</span> </button> </div> </div>  <div className="p-space-3xl rounded-xl bg-surface-container-low flex flex-col items-center justify-center text-center gap-space-md"> <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary"> <span className="material-symbols-outlined text-[24px]">receipt_long</span> </div> <div className="max-w-md"> <h4 className="font-title-md text-title-md text-on-surface">No payment stages defined yet</h4> <p className="font-body-md text-body-md text-on-surface-variant mt-space-2xs">Stage 1 should be Mobilization Advance. Set up milestones to begin tracking financial disbursements against progress.</p> </div> <button className="mt-space-xs px-space-md py-space-xs bg-surface-container-lowest text-on-surface font-label-md rounded-lg shadow-sm hover:bg-surface-container transition-colors" type="button">
-        Initialize Default Schedule (5 Stages)
-      </button> </div> </div> </div></main>
+    <Shell title="Landowners & Investment Hub">
+      <div className="w-full px-4 pb-10 space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+              Governance / Landowners & Investment
+            </p>
+            <h1 className="text-2xl font-bold text-slate-900">Landowners & Investment Hub</h1>
+            <p className="text-sm text-slate-500">
+              Owner scope, share, investment committed, payments received and outstanding funding.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={downloadTemplate}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <Download className="h-4 w-4" /> Template
+            </button>
+            <button
+              type="button"
+              onClick={exportExcel}
+              disabled={rows.length === 0}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" /> Export Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={!canEdit}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <Upload className="h-4 w-4" /> Import Excel
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void importExcel(f);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setRows((prev) => [...prev, { ...emptyOwner }]);
+                setDirty(true);
+              }}
+              disabled={!canEdit}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" /> Add Owner
+            </button>
+            <button
+              type="button"
+              onClick={() => save.mutate(rows)}
+              disabled={!canEdit || !dirty || !activeId || save.isPending}
+              className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" /> {save.isPending ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+
+        {!canEdit && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            You have view-only access here. Ask an Admin or PM to change owner records.
+          </p>
+        )}
+        {status && (
+          <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">{status}</p>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Active project
+            </p>
+            <select
+              value={activeId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm"
+            >
+              {projects.length === 0 && <option value="">No projects yet</option>}
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-3 text-sm text-slate-500">{project?.location || "—"}</p>
+            <p className="mt-1 text-xs text-slate-400">
+              Statutory & common charges recorded: {cr(statutoryTotal)}
+            </p>
+          </div>
+          <div className="lg:col-span-9 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: "Project budget", value: cr(budget), tone: "text-slate-900" },
+              {
+                label: "Share allocated",
+                value: `${totals.share.toFixed(1)}%`,
+                tone: shareWarning ? "text-rose-600" : "text-emerald-600",
+              },
+              { label: "Investment committed", value: cr(totals.invested), tone: "text-slate-900" },
+              { label: "Paid / outstanding", value: `${cr(totals.paid)} · ${cr(totals.outstanding)}`, tone: "text-slate-900" },
+            ].map((c) => (
+              <div
+                key={c.label}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  {c.label}
+                </p>
+                <p className={`mt-1 text-lg font-bold ${c.tone}`}>{c.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {shareWarning && (
+          <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+            Shares add up to {totals.share.toFixed(1)}% — adjust so the total is 100%.
+          </p>
+        )}
+
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 p-4">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+              <Users className="h-4 w-4 text-emerald-600" /> Stakeholders / Owners
+            </h2>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+              {rows.length} active
+            </span>
+          </div>
+
+          {rows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-10 text-center">
+              <Landmark className="h-8 w-8 text-slate-300" />
+              <p className="mt-2 text-sm font-medium text-slate-600">No owners recorded yet</p>
+              <p className="text-xs text-slate-400">
+                Use Add Owner or import an Excel sheet to build the stakeholder list.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-200">
+              {rows.map((o, i) => {
+                const share = num(o.share_pct);
+                const suggested = (budget * share) / 100;
+                const due = Math.max(suggested - num(o.paid), 0);
+                return (
+                  <div key={i} className="p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700">
+                        {initials(String(o.name ?? ""))}
+                      </div>
+                      <input
+                        value={String(o.name ?? "")}
+                        onChange={(e) => update(i, { name: e.target.value })}
+                        disabled={!canEdit}
+                        placeholder="Owner name"
+                        className="flex-1 rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2 text-sm font-semibold text-slate-900"
+                      />
+                      <select
+                        value={String(o.role ?? "Land Holder")}
+                        onChange={(e) => update(i, { role: e.target.value })}
+                        disabled={!canEdit}
+                        className="rounded-lg border border-blue-200 bg-blue-50/50 px-2 py-2 text-sm"
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRows((prev) => prev.filter((_, idx) => idx !== i));
+                          setDirty(true);
+                        }}
+                        disabled={!canEdit}
+                        title="Remove owner"
+                        className="rounded-lg border border-slate-200 p-2 text-rose-600 hover:bg-rose-50 disabled:opacity-40"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                      <Field
+                        label="Contact"
+                        value={String(o.contact ?? "")}
+                        onChange={(v) => update(i, { contact: v })}
+                        disabled={!canEdit}
+                      />
+                      <Field
+                        label="Share %"
+                        value={String(o.share_pct ?? "")}
+                        onChange={(v) => update(i, { share_pct: v })}
+                        disabled={!canEdit}
+                      />
+                      <Field
+                        label="Committed ₹"
+                        value={String(o.invested ?? "")}
+                        onChange={(v) => update(i, { invested: v })}
+                        disabled={!canEdit}
+                      />
+                      <Field
+                        label="Paid ₹"
+                        value={String(o.paid ?? "")}
+                        onChange={(v) => update(i, { paid: v })}
+                        disabled={!canEdit}
+                      />
+                      <Field
+                        label="Assigned units"
+                        value={String(o.units ?? "")}
+                        onChange={(v) => update(i, { units: v })}
+                        disabled={!canEdit}
+                      />
+                      <Field
+                        label="Notes"
+                        value={String(o.notes ?? "")}
+                        onChange={(v) => update(i, { notes: v })}
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-emerald-50/60 p-3 text-sm">
+                      <Metric label="Suggested share of budget" value={cr(suggested)} />
+                      <Metric label="Common charges share" value={cr((statutoryTotal * share) / 100)} />
+                      <Metric label="Balance due" value={cr(due)} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </Shell>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+      </span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="mt-1 w-full rounded-lg border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-sm"
+      />
+    </label>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800/70">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-bold text-emerald-900">{value}</p>
+    </div>
   );
 }
