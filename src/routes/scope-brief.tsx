@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { BookOpen, FileDown, Printer, CheckSquare, Square } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { useActiveProject } from "@/hooks/useActiveProject";
 
@@ -6,9 +8,9 @@ export const Route = createFileRoute("/scope-brief")({
   head: () => ({
     meta: [
       { title: "Architect & Consultant Scope Brief — Saha OS" },
-      { name: "description", content: "Generate drawing lists, technical requirements and BOQ-linked quantities for structural, MEP and specialty engineering packages." },
+      { name: "description", content: "Pick engineering packages, build the consultant drawing list and export it as CSV or a printable brief." },
       { property: "og:title", content: "Architect & Consultant Scope Brief — Saha OS" },
-      { property: "og:description", content: "Generate drawing lists, technical requirements and BOQ-linked quantities for structural, MEP and specialty engineering packages." },
+      { property: "og:description", content: "Pick engineering packages, build the consultant drawing list and export it as CSV or a printable brief." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -16,20 +18,371 @@ export const Route = createFileRoute("/scope-brief")({
   component: Page,
 });
 
+type Drawing = { code: string; title: string; scale: string; format: string; boq: string };
+type Pkg = { key: string; name: string; note: string; drawings: Drawing[] };
+
+const PACKAGES: Pkg[] = [
+  {
+    key: "A",
+    name: "Package A: Architectural",
+    note: "Floor plans, elevations, sections, finish specs",
+    drawings: [
+      { code: "A01", title: "Master Site Plan", scale: "1:500", format: "DWG / PDF", boq: "BOQ-CIV-01" },
+      { code: "A02", title: "Typical Floor Plan", scale: "1:100", format: "DWG / Revit", boq: "BOQ-CIV-04" },
+      { code: "A03", title: "Elevations & Sections", scale: "1:100", format: "DWG / PDF", boq: "BOQ-CIV-05" },
+      { code: "A04", title: "Finish Schedule", scale: "NTS", format: "PDF / XLSX", boq: "BOQ-FIN-01" },
+    ],
+  },
+  {
+    key: "B",
+    name: "Package B: Structural",
+    note: "Foundations, columns, slabs, bar bending schedule",
+    drawings: [
+      { code: "S01", title: "Piling Layout & Pile Cap Details", scale: "1:50", format: "DWG / IFC", boq: "BOQ-STR-01" },
+      { code: "S02", title: "Foundation Excavation & Raft Slab", scale: "1:100", format: "DWG / IFC", boq: "BOQ-STR-02" },
+      { code: "S03", title: "Column Layout & Schedule", scale: "1:100", format: "DWG", boq: "BOQ-STR-04" },
+      { code: "S04", title: "Bar Bending Schedule", scale: "NTS", format: "XLSX", boq: "BOQ-STR-06" },
+    ],
+  },
+  {
+    key: "C",
+    name: "Package C: Electrical",
+    note: "HT/LT schematics, lighting layouts, DB schedules",
+    drawings: [
+      { code: "E01", title: "HT Incoming Substation Layout", scale: "1:50", format: "DWG / PDF", boq: "BOQ-ELC-01" },
+      { code: "E02", title: "LT Panel & DB Schedule", scale: "NTS", format: "PDF", boq: "BOQ-ELC-03" },
+      { code: "E03", title: "Lighting & Power Layout", scale: "1:100", format: "DWG", boq: "BOQ-ELC-05" },
+    ],
+  },
+  {
+    key: "D",
+    name: "Package D: Plumbing & Fire",
+    note: "Water supply, drainage, sprinklers, riser diagrams",
+    drawings: [
+      { code: "P01", title: "Basement Drainage & Sump Sizing", scale: "1:100", format: "DWG / PDF", boq: "BOQ-PLU-01" },
+      { code: "P02", title: "Water Supply Riser Diagram", scale: "NTS", format: "DWG", boq: "BOQ-PLU-03" },
+      { code: "F01", title: "Fire Sprinkler & Hydrant Layout", scale: "1:100", format: "DWG", boq: "BOQ-FIR-01" },
+    ],
+  },
+  {
+    key: "E",
+    name: "Package E: Waterproofing",
+    note: "Basement, podium, terrace, toilet wet areas",
+    drawings: [
+      { code: "W01", title: "Basement & Retaining Wall Waterproofing", scale: "1:20", format: "PDF", boq: "BOQ-WPF-01" },
+      { code: "W02", title: "Terrace & Toilet Wet Area Details", scale: "1:20", format: "PDF", boq: "BOQ-WPF-02" },
+    ],
+  },
+  {
+    key: "F",
+    name: "Package F: Flooring & Tiling",
+    note: "Stone layouts, skirting details, tile patterns",
+    drawings: [
+      { code: "FL01", title: "Flooring Layout — Typical Unit", scale: "1:50", format: "DWG", boq: "BOQ-FLR-01" },
+      { code: "FL02", title: "Lobby Stone Setting & Skirting", scale: "1:20", format: "DWG", boq: "BOQ-FLR-03" },
+    ],
+  },
+  {
+    key: "G",
+    name: "Package G: Masonry & Plaster",
+    note: "AAC blockwork, lintel levels, external plaster grooves",
+    drawings: [
+      { code: "M01", title: "Blockwork Layout & Lintel Levels", scale: "1:100", format: "DWG", boq: "BOQ-MAS-01" },
+      { code: "M02", title: "External Plaster Groove Details", scale: "1:10", format: "PDF", boq: "BOQ-MAS-03" },
+    ],
+  },
+  {
+    key: "H",
+    name: "Package H: Painting & Finishes",
+    note: "Internal / external colour schedules, texture specs",
+    drawings: [
+      { code: "PT01", title: "External Colour Scheme", scale: "NTS", format: "PDF", boq: "BOQ-PNT-01" },
+      { code: "PT02", title: "Internal Paint Schedule", scale: "NTS", format: "XLSX", boq: "BOQ-PNT-02" },
+    ],
+  },
+  {
+    key: "I",
+    name: "Package I: False Ceiling",
+    note: "Gypsum / grid ceiling levels, cove details, HVAC integration",
+    drawings: [
+      { code: "FC01", title: "Ceiling Level & Layout Plan", scale: "1:50", format: "DWG", boq: "BOQ-CLG-01" },
+      { code: "FC02", title: "Cove & Service Integration Details", scale: "1:10", format: "PDF", boq: "BOQ-CLG-02" },
+    ],
+  },
+  {
+    key: "J",
+    name: "Package J: External Development",
+    note: "Paving, compound wall, landscape, storm water drains",
+    drawings: [
+      { code: "X01", title: "Compound Wall & Gate Details", scale: "1:50", format: "DWG", boq: "BOQ-EXT-01" },
+      { code: "X02", title: "Paving & Storm Water Drain Layout", scale: "1:200", format: "DWG", boq: "BOQ-EXT-03" },
+      { code: "X03", title: "Landscape & Planting Plan", scale: "1:200", format: "PDF", boq: "BOQ-EXT-05" },
+    ],
+  },
+  {
+    key: "K",
+    name: "Package K: Specialist / Vendor",
+    note: "Facade glazing, elevators, solar panels, STP unit",
+    drawings: [
+      { code: "SP01", title: "Facade Glazing Shop Drawings", scale: "1:20", format: "DWG", boq: "BOQ-SPL-01" },
+      { code: "SP02", title: "Elevator Shaft & Machine Room", scale: "1:50", format: "DWG", boq: "BOQ-SPL-02" },
+      { code: "SP03", title: "STP & Solar Layout", scale: "1:100", format: "DWG", boq: "BOQ-SPL-04" },
+    ],
+  },
+];
+
+const CONSULTANTS = [
+  "Ar. Vikram Aditya (Architecture)",
+  "Er. Rajesh Sharma (Structural)",
+  "Mr. K. S. Rao (Electrical / MEP)",
+  "Ms. Ananya Desai (Landscape)",
+];
+
+function download(name: string, content: string, type: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function esc(v: string) {
+  return `"${String(v).replace(/"/g, '""')}"`;
+}
+
 function Page() {
   const project = useActiveProject();
+  const [selected, setSelected] = useState<string[]>(["A", "B", "C", "D"]);
+  const [consultant, setConsultant] = useState(CONSULTANTS[0]);
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState("");
+
+  const rows = useMemo(
+    () =>
+      PACKAGES.filter((p) => selected.includes(p.key)).flatMap((p) =>
+        p.drawings.map((d) => ({ pkg: p.name, ...d })),
+      ),
+    [selected],
+  );
+
+  const toggle = (key: string) =>
+    setSelected((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+
+  const exportCsv = () => {
+    if (rows.length === 0) {
+      setStatus("Select at least one package before exporting.");
+      return;
+    }
+    const head = ["Package", "Code", "Title", "Scale", "Format", "BOQ Link"];
+    const csv = [
+      head.map(esc).join(","),
+      ...rows.map((r) => [r.pkg, r.code, r.title, r.scale, r.format, r.boq].map(esc).join(",")),
+    ].join("\n");
+    download(`scope-brief-${(project.name || "project").replace(/\s+/g, "-")}.csv`, csv, "text/csv");
+    setStatus(`Exported ${rows.length} drawing lines as CSV.`);
+  };
+
+  const printBrief = () => {
+    if (rows.length === 0) {
+      setStatus("Select at least one package before generating the brief.");
+      return;
+    }
+    const w = window.open("", "_blank");
+    if (!w) {
+      setStatus("Your browser blocked the print window — allow pop-ups and try again.");
+      return;
+    }
+    const body = rows
+      .map(
+        (r) =>
+          `<tr><td>${r.pkg}</td><td>${r.code}</td><td>${r.title}</td><td>${r.scale}</td><td>${r.format}</td><td>${r.boq}</td></tr>`,
+      )
+      .join("");
+    w.document.write(`<!doctype html><html><head><title>Scope Brief — ${project.name}</title>
+      <style>body{font-family:system-ui,sans-serif;padding:32px;color:#111}h1{font-size:20px}
+      table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
+      th,td{border:1px solid #ccc;padding:6px;text-align:left}th{background:#f1f5f9}</style></head><body>
+      <h1>Architect &amp; Consultant Scope Brief</h1>
+      <p><strong>Project:</strong> ${project.name} · ${project.location}<br/>
+      <strong>Consultant:</strong> ${consultant}<br/>
+      <strong>Packages:</strong> ${selected.sort().join(", ")} · <strong>Drawings:</strong> ${rows.length}<br/>
+      <strong>Date:</strong> ${new Date().toLocaleDateString("en-IN")}</p>
+      ${notes ? `<p><strong>Instructions:</strong> ${notes}</p>` : ""}
+      <table><thead><tr><th>Package</th><th>Code</th><th>Title</th><th>Scale</th><th>Format</th><th>BOQ Link</th></tr></thead>
+      <tbody>${body}</tbody></table></body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+    setStatus("Brief opened in a new tab — use Save as PDF in the print dialog.");
+  };
+
   return (
-    <Shell title={"Architect & Consultant Scope Brief"}>
-      <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full gap-space-2xl">  <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-surface-container-lowest p-space-xl rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] gap-space-lg"> <div className="flex flex-col max-w-2xl"> <div className="flex items-center gap-space-xs mb-space-xs"> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm uppercase">Scope Brief Hub</span> <span className="text-outline font-label-sm">• Engineering Packages A to K</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Architect & Consultant Scope Brief Export</h1> <p className="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
-        Generate and dispatch precise drawing lists, technical requirements, and BOQ-linked quantities for structural, MEP, and specialty engineering consultants.
-      </p> </div> <div className="flex items-center gap-space-sm"> <button className="flex items-center gap-space-xs px-space-base py-space-sm rounded bg-primary text-on-primary font-title-md hover:bg-primary-container transition-colors shadow-[0_1px_2px_rgba(15,23,42,0.04)]"> <span className="material-symbols-outlined text-space-base">picture_as_pdf</span> <span>Generate Formal PDF Brief</span> </button> <button className="flex items-center gap-space-xs px-space-base py-space-sm rounded bg-surface-container-low text-on-surface font-title-md hover:bg-surface-container transition-colors border border-outline-variant/30"> <span className="material-symbols-outlined text-space-base">table_view</span> <span>Export CSV</span> </button> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl">  <div className="lg:col-span-5 flex flex-col gap-space-base"> <div className="flex items-center justify-between"> <h2 className="font-headline-sm text-headline-sm text-on-surface">Select Engineering Packages</h2> <span className="font-label-sm text-label-sm text-primary font-bold bg-primary-container/40 px-space-xs py-space-2xs rounded" id="selected-count">4 Packages Active</span> </div> <div className="flex flex-col gap-space-xs bg-surface-container-lowest p-space-base rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)]">  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="A"> <div className="flex items-center gap-space-sm"> <input checked={true} className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package A: Architectural</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Floor plans, elevations, sections, finish specs</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">18 Drawings</span> </label>  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="B"> <div className="flex items-center gap-space-sm"> <input checked={true} className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package B: Structural</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Foundations, columns, slabs, bar bending schedule</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">24 Drawings</span> </label>  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="C"> <div className="flex items-center gap-space-sm"> <input checked={true} className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package C: Electrical</span> <span className="font-body-sm text-body-sm text-on-surface-variant">HT/LT schematics, lighting layouts, DB schedules</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">16 Drawings</span> </label>  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="D"> <div className="flex items-center gap-space-sm"> <input checked={true} className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package D: Plumbing & Fire</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Water supply, drainage, fire sprinklers, riser diagrams</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">14 Drawings</span> </label>  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="E"> <div className="flex items-center gap-space-sm"> <input className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package E: Waterproofing</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Basement, podium, terrace, toilet wet areas</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">8 Drawings</span> </label>  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="F"> <div className="flex items-center gap-space-sm"> <input className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package F: Flooring & Tiling</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Stone layouts, skirting details, tile patterns</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">10 Drawings</span> </label>  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="G"> <div className="flex items-center gap-space-sm"> <input className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package G: Masonry & Plaster</span> <span className="font-body-sm text-body-sm text-on-surface-variant">AAC blockwork, lintel levels, external plaster grooves</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">6 Drawings</span> </label>  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="H"> <div className="flex items-center gap-space-sm"> <input className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package H: Painting & Finishes</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Internal/external color schedules, texture specs</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">5 Drawings</span> </label>  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="I"> <div className="flex items-center gap-space-sm"> <input className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package I: False Ceiling</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Gypsum/grid ceiling levels, cove details, HVAC integration</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">9 Drawings</span> </label>  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="J"> <div className="flex items-center gap-space-sm"> <input className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package J: External Development</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Paving, compound wall, landscape, storm water drains</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">12 Drawings</span> </label>  <label className="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors package-item" data-pkg="K"> <div className="flex items-center gap-space-sm"> <input className="w-4 h-4 text-primary rounded accent-primary cursor-pointer" type="checkbox" /> <div className="flex flex-col"> <span className="font-title-md text-title-md text-on-surface">Package K: Specialist / Vendor</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Facade glazing, elevators, solar panels, STP unit</span> </div> </div> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm">15 Drawings</span> </label> </div> </div>  <div className="lg:col-span-7 flex flex-col gap-space-xl">  <div className="flex flex-col bg-surface-container-lowest rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden"> <div className="flex items-center justify-between px-space-lg py-space-base bg-surface-container-low"> <div className="flex items-center gap-space-xs"> <span className="material-symbols-outlined text-primary">preview</span> <h2 className="font-headline-sm text-headline-sm text-on-surface">Generated Brief Itemization</h2> </div> <span className="font-label-sm text-label-sm text-on-surface-variant">Total Selected Items: <strong className="text-on-surface" id="preview-total-count">72 Drawings</strong></span> </div> <div className="overflow-x-auto max-h-[420px] overflow-y-auto"> <table className="w-full text-left border-collapse"><thead><tr className="bg-surface-container-lowest sticky top-0 border-b border-surface-container-high text-on-surface-variant font-label-sm uppercase tracking-wider"><th className="p-space-md">Code & Title</th><th className="p-space-md">Scale</th><th className="p-space-md">Format</th><th className="p-space-md">BOQ Link</th></tr></thead><tbody className="divide-y divide-surface-container-high font-body-sm text-body-sm text-on-surface" id="preview-table-body"><tr><td className="p-space-md"> <div className="font-title-md text-title-md">A01 - Master Site Plan</div> <span className="text-on-surface-variant">Setbacks, vehicular entry, landscape boundary</span> </td><td className="p-space-md font-tabular-metric-sm">1:500</td><td className="p-space-md"><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">DWG / PDF</span></td><td className="p-space-md text-primary font-bold">BOQ-CIV-01</td></tr><tr><td className="p-space-md"> <div className="font-title-md text-title-md">A02 - Tower 1 Floor Plan (Typ)</div> <span className="text-on-surface-variant">Core wall layout, apartment zoning, dimensions</span> </td><td className="p-space-md font-tabular-metric-sm">1:100</td><td className="p-space-md"><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">DWG / Revit</span></td><td className="p-space-md text-primary font-bold">BOQ-CIV-04</td></tr><tr><td className="p-space-md"> <div className="font-title-md text-title-md">S01 - Piling Layout & Pile Cap Details</div> <span className="text-on-surface-variant">Bored cast-in-situ pile coordinates, reinforcement</span> </td><td className="p-space-md font-tabular-metric-sm">1:50</td><td className="p-space-md"><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">DWG / IFC</span></td><td className="p-space-md text-primary font-bold">BOQ-STR-01</td></tr><tr><td className="p-space-md"> <div className="font-title-md text-title-md">S02 - Foundation Excavation & Raft Slab</div> <span className="text-on-surface-variant">Bottom mesh, shear key details, waterstops</span> </td><td className="p-space-md font-tabular-metric-sm">1:100</td><td className="p-space-md"><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">DWG / IFC</span></td><td className="p-space-md text-primary font-bold">BOQ-STR-02</td></tr><tr><td className="p-space-md"> <div className="font-title-md text-title-md">C01 - HT Incoming Substation Layout</div> <span className="text-on-surface-variant">Transformer pad, RMU placement, earthing pit specs</span> </td><td className="p-space-md font-tabular-metric-sm">1:50</td><td className="p-space-md"><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">DWG / PDF</span></td><td className="p-space-md text-primary font-bold">BOQ-ELC-01</td></tr><tr><td className="p-space-md"> <div className="font-title-md text-title-md">D01 - Basement Drainage & Sump Sizing</div> <span className="text-on-surface-variant">Gravity lines, sewage ejector pump pits, vent pipes</span> </td><td className="p-space-md font-tabular-metric-sm">1:100</td><td className="p-space-md"><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">DWG / PDF</span></td><td className="p-space-md text-primary font-bold">BOQ-PLU-01</td></tr></tbody></table> </div> </div>  <div className="flex flex-col bg-surface-container-lowest rounded-xl p-space-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] gap-space-md"> <div className="flex items-center justify-between"> <div className="flex items-center gap-space-sm"> <span className="material-symbols-outlined text-primary">chat</span> <h3 className="font-headline-sm text-headline-sm text-on-surface">Dispatch via WhatsApp to Consultant</h3> </div> <span className="px-space-xs py-space-2xs rounded bg-[#25D366]/20 text-[#075E54] font-label-sm uppercase font-bold flex items-center gap-space-2xs"> <span className="w-2 h-2 rounded-full bg-[#25D366] animate-ping" /> Live API
-          </span> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md"> <div className="flex flex-col gap-space-2xs"> <label className="font-label-md text-label-md text-on-surface-variant">Select Recipient Consultant</label> <select className="p-space-sm rounded bg-surface-container-low text-on-surface font-body-md border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary" id="consultant-select"><option value="+919848012345">Ar. Vikram Aditya (Morphogenesis Architects)</option><option value="+919949056789">Er. Rajesh Sharma (L&T Structural Design)</option><option value="+919885098765">Mr. K. S. Rao (ElectroMech Consultants)</option><option value="+919700011223">Ms. Ananya Desai (GreenSpace Landscape)</option></select> </div> <div className="flex flex-col gap-space-2xs"> <label className="font-label-md text-label-md text-on-surface-variant">Phone Number (WhatsApp)</label> <input className="p-space-sm rounded bg-surface-container-low text-on-surface font-tabular-metric-sm border border-outline-variant/30" id="phone-input" readOnly={true} type="text" defaultValue="+91 98480 12345" /> </div> </div> <div className="flex flex-col gap-space-2xs"> <label className="font-label-md text-label-md text-on-surface-variant">Message Preview</label> <div className="p-space-md rounded bg-surface-container-low font-body-sm text-on-surface-variant border border-outline-variant/20 italic" id="whatsapp-preview-text">
-            "Dear Ar. Vikram Aditya, Saha OS has generated updated Scope Brief #CB2-A2K for {project.name}. 72 drawings linked to BOQ are now ready for review. Please acknowledge and upload revision 03 via portal link: https://sahaos.infra/brief/cb2-a2k"
-          </div> </div> <div className="flex justify-end gap-space-sm mt-space-xs"> <button className="flex items-center gap-space-xs px-space-base py-space-sm rounded bg-primary text-on-primary font-title-md hover:bg-primary-container transition-colors shadow-[0_1px_2px_rgba(15,23,42,0.04)]"> <span className="material-symbols-outlined text-space-base">send</span> <span>Dispatch Brief Instantly</span> </button> </div> </div> </div> </div>  <div className="flex flex-col bg-surface-container-lowest rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden mt-space-md"> <div className="flex items-center justify-between px-space-xl py-space-lg bg-surface-container-low"> <div className="flex items-center gap-space-xs"> <span className="material-symbols-outlined text-primary">history</span> <h2 className="font-headline-sm text-headline-sm text-on-surface">Recent Dispatches & Tracking Log</h2> </div> <div className="flex items-center gap-space-sm"> <input className="px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant font-body-md border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Search dispatches..." type="text" /> </div> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="border-b border-surface-container-high text-on-surface-variant font-label-sm uppercase tracking-wider"><th className="p-space-lg">Dispatch ID</th><th className="p-space-lg">Consultant / Firm</th><th className="p-space-lg">Packages Included</th><th className="p-space-lg">Date Sent</th><th className="p-space-lg">Status</th><th className="p-space-lg">Revisions</th><th className="p-space-lg text-right">Actions</th></tr></thead><tbody className="divide-y divide-surface-container-high font-body-md text-body-md text-on-surface"><tr className="hover:bg-surface-container-low transition-colors"><td className="p-space-lg font-tabular-metric-sm text-primary">DS-2023-891</td><td className="p-space-lg"> <div className="font-title-md text-title-md">Ar. Vikram Aditya</div> <span className="text-on-surface-variant font-body-sm">Morphogenesis Architects</span> </td><td className="p-space-lg"> <div className="flex gap-space-2xs"> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm font-bold">Pkg A</span> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm font-bold">Pkg F</span> </div> </td><td className="p-space-lg font-tabular-metric-sm">24 Oct 2023, 14:30</td><td className="p-space-lg"> <span className="px-space-sm py-space-2xs rounded bg-primary/10 text-primary font-label-sm font-bold flex items-center gap-space-2xs w-fit"> <span className="material-symbols-outlined text-[14px]">check_circle</span> Acknowledged
-              </span> </td><td className="p-space-lg font-tabular-metric-sm">Rev 02 (Uploaded)</td><td className="p-space-lg text-right"> <button className="p-space-xs rounded hover:bg-surface-container-high text-on-surface-variant transition-colors" title="View Brief"> <span className="material-symbols-outlined text-space-base">visibility</span> </button> </td></tr><tr className="hover:bg-surface-container-low transition-colors"><td className="p-space-lg font-tabular-metric-sm text-primary">DS-2023-890</td><td className="p-space-lg"> <div className="font-title-md text-title-md">Er. Rajesh Sharma</div> <span className="text-on-surface-variant font-body-sm">L&T Structural Design</span> </td><td className="p-space-lg"> <div className="flex gap-space-2xs"> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm font-bold">Pkg B</span> </div> </td><td className="p-space-lg font-tabular-metric-sm">23 Oct 2023, 11:15</td><td className="p-space-lg"> <span className="px-space-sm py-space-2xs rounded bg-tertiary-container text-on-tertiary-container font-label-sm font-bold flex items-center gap-space-2xs w-fit"> <span className="material-symbols-outlined text-[14px]">schedule</span> Pending Review
-              </span> </td><td className="p-space-lg font-tabular-metric-sm">Rev 01 (Initial)</td><td className="p-space-lg text-right"> <button className="p-space-xs rounded hover:bg-surface-container-high text-on-surface-variant transition-colors" title="View Brief"> <span className="material-symbols-outlined text-space-base">visibility</span> </button> </td></tr><tr className="hover:bg-surface-container-low transition-colors"><td className="p-space-lg font-tabular-metric-sm text-primary">DS-2023-885</td><td className="p-space-lg"> <div className="font-title-md text-title-md">Mr. K. S. Rao</div> <span className="text-on-surface-variant font-body-sm">ElectroMech Consultants</span> </td><td className="p-space-lg"> <div className="flex gap-space-2xs"> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm font-bold">Pkg C</span> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm font-bold">Pkg D</span> </div> </td><td className="p-space-lg font-tabular-metric-sm">20 Oct 2023, 09:45</td><td className="p-space-lg"> <span className="px-space-sm py-space-2xs rounded bg-primary/10 text-primary font-label-sm font-bold flex items-center gap-space-2xs w-fit"> <span className="material-symbols-outlined text-[14px]">check_circle</span> Acknowledged
-              </span> </td><td className="p-space-lg font-tabular-metric-sm">Rev 04 (Final)</td><td className="p-space-lg text-right"> <button className="p-space-xs rounded hover:bg-surface-container-high text-on-surface-variant transition-colors" title="View Brief"> <span className="material-symbols-outlined text-space-base">visibility</span> </button> </td></tr></tbody></table> </div> </div>  <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-space-xs pointer-events-none" id="toast-container" />   </div></main>
+    <Shell title="Architect & Consultant Scope Brief">
+      <div className="space-y-6">
+        <header className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+            Scope brief hub · packages A to K
+          </p>
+          <h1 className="flex items-center gap-3 text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
+            <BookOpen className="h-7 w-7 text-primary" />
+            Architect & Consultant Scope Brief
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Tick the engineering packages for {project.name}. The drawing list below builds itself and
+            can be exported as a spreadsheet or a printable brief for your consultant.
+          </p>
+        </header>
+
+        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4">
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Consultant
+            <select
+              value={consultant}
+              onChange={(e) => setConsultant(e.target.value)}
+              className="min-w-[260px] rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal normal-case text-foreground"
+            >
+              {CONSULTANTS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-1 flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Instructions to consultant (optional)
+            <input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. issue Rev 03 for tender by 20th"
+              className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal normal-case text-foreground"
+            />
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={printBrief}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+            >
+              <Printer className="h-4 w-4" />
+              Generate PDF brief
+            </button>
+            <button
+              type="button"
+              onClick={exportCsv}
+              className="inline-flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary"
+            >
+              <FileDown className="h-4 w-4" />
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        {status ? (
+          <p className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+            {status}
+          </p>
+        ) : null}
+
+        <div className="grid gap-6 lg:grid-cols-12">
+          <div className="lg:col-span-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-primary">
+                Select engineering packages
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelected(PACKAGES.map((p) => p.key))}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelected([])}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div className="divide-y divide-border rounded-2xl border border-border bg-card">
+              {PACKAGES.map((p) => {
+                const on = selected.includes(p.key);
+                return (
+                  <button
+                    key={p.key}
+                    type="button"
+                    onClick={() => toggle(p.key)}
+                    className="flex w-full items-center justify-between gap-3 p-3 text-left"
+                  >
+                    <span className="flex items-start gap-3">
+                      {on ? (
+                        <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                      ) : (
+                        <Square className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+                      )}
+                      <span>
+                        <span className="block text-sm font-semibold text-foreground">{p.name}</span>
+                        <span className="block text-xs text-muted-foreground">{p.note}</span>
+                      </span>
+                    </span>
+                    <span className="shrink-0 rounded-lg bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
+                      {p.drawings.length} dwg
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="lg:col-span-7">
+            <div className="overflow-hidden rounded-2xl border border-border bg-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/40 px-4 py-3">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-primary">
+                  Generated brief itemization
+                </h2>
+                <span className="text-xs text-muted-foreground">
+                  {selected.length} packages · <strong className="text-foreground">{rows.length} drawings</strong>
+                </span>
+              </div>
+              {rows.length === 0 ? (
+                <p className="p-6 text-sm text-muted-foreground">
+                  Pick a package on the left to build the drawing list.
+                </p>
+              ) : (
+                <div className="max-h-[520px] overflow-auto">
+                  <table className="w-full min-w-[560px] text-sm">
+                    <thead className="sticky top-0 bg-card">
+                      <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-4 py-2">Code & title</th>
+                        <th className="px-4 py-2">Scale</th>
+                        <th className="px-4 py-2">Format</th>
+                        <th className="px-4 py-2">BOQ link</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => (
+                        <tr key={r.code} className="border-b border-border/60">
+                          <td className="px-4 py-2">
+                            <span className="block font-semibold text-foreground">
+                              {r.code} — {r.title}
+                            </span>
+                            <span className="block text-xs text-muted-foreground">{r.pkg}</span>
+                          </td>
+                          <td className="px-4 py-2">{r.scale}</td>
+                          <td className="px-4 py-2">{r.format}</td>
+                          <td className="px-4 py-2 font-semibold text-primary">{r.boq}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </Shell>
   );
