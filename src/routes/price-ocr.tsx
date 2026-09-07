@@ -314,7 +314,23 @@ function Page() {
             </div>
           </div>
           {fileName ? <p className="mt-2 text-xs text-slate-500">File: {fileName}</p> : null}
+          {scan.isPending ? (
+            <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              Reading “{fileName}” — this can take up to a minute for a multi-page document.
+            </p>
+          ) : null}
+          {scan.isError ? (
+            <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              Could not read this file: {(scan.error as Error).message}. Try a clearer photo or a single-page PDF.
+            </p>
+          ) : null}
+          {saveQuote.isError ? (
+            <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              Could not save: {(saveQuote.error as Error).message}
+            </p>
+          ) : null}
         </section>
+
 
         {draft ? (
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
