@@ -334,8 +334,9 @@ function Page() {
               {[
                 ["Material BOQ", material],
                 ["Labour contracts", labour],
-                [`PMC fee @ ${feePct}%`, pmcFee],
-                ["Total project cost", projectCost],
+                 [`PMC fee @ ${feePct}%`, pmcFee],
+                 ["Permissions, LRS, HMWSSB, electricity & architect fees", statutory],
+                 ["Total project cost", projectCost],
               ].map(([label, value]) => (
                 <tr key={String(label)}>
                   <td className="px-4 py-3 font-semibold text-foreground">{String(label)}</td>
