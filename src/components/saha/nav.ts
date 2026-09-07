@@ -104,6 +104,7 @@ export const navGroups: NavGroup[] = [
     id: "accounts",
     label: "Accounts & Audit",
     items: [
+      { to: "/price-ocr", label: "Price OCR (Proformas)", icon: ScanEye },
       { to: "/bills-payments", label: "Bills & Payments", icon: Receipt },
       { to: "/billing-expenditure", label: "Billing & Expenditure", icon: Receipt },
       { to: "/financial-ingestion", label: "Financial Ingestion", icon: Upload },
