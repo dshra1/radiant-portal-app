@@ -95,7 +95,6 @@ export const navGroups: NavGroup[] = [
       { to: "/po-create", label: "Create PO", icon: FileSpreadsheet },
       { to: "/tender-comparison", label: "Tender Comparison", icon: Scale },
       { to: "/price-intelligence", label: "Price Intelligence", icon: Tags },
-      { to: "/price-intelligence", label: "Price Intelligence", icon: Tags },
       { to: "/vendor-directory", label: "Vendor Directory", icon: Store },
       { to: "/vendor-lifecycle", label: "Vendor Lifecycle", icon: Store },
       { to: "/brand-benchmark", label: "Brand Benchmark", icon: Tags },
