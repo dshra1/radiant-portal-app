@@ -67,6 +67,153 @@ export type Database = {
         }
         Relationships: []
       }
+      bill_payments: {
+        Row: {
+          amount: number
+          bill_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          mode: string
+          paid_from: string
+          payment_date: string
+          project_id: string | null
+          reference: string
+          remarks: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          bill_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mode?: string
+          paid_from?: string
+          payment_date?: string
+          project_id?: string | null
+          reference?: string
+          remarks?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          bill_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mode?: string
+          paid_from?: string
+          payment_date?: string
+          project_id?: string | null
+          reference?: string
+          remarks?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_payments_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bill_payments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bills: {
+        Row: {
+          attachment_path: string
+          basic_amount: number
+          bill_date: string | null
+          bill_number: string
+          category: string
+          created_at: string
+          created_by: string | null
+          deductions: number
+          description: string
+          due_date: string | null
+          gst_amount: number
+          id: string
+          notes: string
+          other_charges: number
+          po_id: string | null
+          project_id: string | null
+          retention_amount: number
+          status: string
+          updated_at: string
+          vendor_gstin: string
+          vendor_name: string
+        }
+        Insert: {
+          attachment_path?: string
+          basic_amount?: number
+          bill_date?: string | null
+          bill_number?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          deductions?: number
+          description?: string
+          due_date?: string | null
+          gst_amount?: number
+          id?: string
+          notes?: string
+          other_charges?: number
+          po_id?: string | null
+          project_id?: string | null
+          retention_amount?: number
+          status?: string
+          updated_at?: string
+          vendor_gstin?: string
+          vendor_name?: string
+        }
+        Update: {
+          attachment_path?: string
+          basic_amount?: number
+          bill_date?: string | null
+          bill_number?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          deductions?: number
+          description?: string
+          due_date?: string | null
+          gst_amount?: number
+          id?: string
+          notes?: string
+          other_charges?: number
+          po_id?: string | null
+          project_id?: string | null
+          retention_amount?: number
+          status?: string
+          updated_at?: string
+          vendor_gstin?: string
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bills_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boq_change_requests: {
         Row: {
           boq_item_id: string | null
