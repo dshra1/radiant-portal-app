@@ -150,6 +150,7 @@ function RootComponent() {
         <Outlet />
       </AuthGate>
       <InstallAppButton />
+      <Toaster position="top-center" richColors closeButton />
       {/* Desktop quick launcher: mobile uses the shared bottom nav in Shell */}
       <Link
         to="/"
