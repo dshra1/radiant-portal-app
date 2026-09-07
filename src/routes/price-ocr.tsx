@@ -143,20 +143,17 @@ function Page() {
 
   const scan = useMutation({
     mutationFn: async (file: File) => {
-      const buf = await file.arrayBuffer();
-      let binary = "";
-      const bytes = new Uint8Array(buf);
-      for (let i = 0; i < bytes.length; i += 8192) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-      }
-      return extract({
-        data: {
-          fileName: file.name,
-          mediaType: file.type || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
-          dataBase64: btoa(binary),
-        },
-      });
+      const mediaType =
+        file.type || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const storagePath = `${user?.id ?? "anon"}/${Date.now()}-${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from("price-proformas")
+        .upload(storagePath, file, { contentType: mediaType, upsert: true });
+      if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
+      return extract({ data: { fileName: file.name, mediaType, storagePath } });
     },
+
     onSuccess: (result) => {
       setDraft(result.items.length ? result : { ...result, items: [emptyItem()] });
       toast.success(`${result.items.length} price line${result.items.length === 1 ? "" : "s"} read from the document`);
