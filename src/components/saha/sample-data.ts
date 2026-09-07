@@ -24,10 +24,8 @@ export const SAMPLE_DATA_ROUTES: Record<string, string> = {
   "/capital-ledger": "capital ledger entries",
   "/landowners-investment": "investor payout schedules",
   "/vendor-lifecycle": "vendor scores and lifecycle stages",
-  "/drawing-decipher": "drawing takeoff results",
   "/media-upload-studio": "uploaded media samples",
   "/site-media": "site media samples",
-  "/scope-brief": "scope brief content",
   "/system-directory": "directory records",
   "/roles-access": "sample role assignments",
 };

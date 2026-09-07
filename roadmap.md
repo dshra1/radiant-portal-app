@@ -95,3 +95,6 @@
 - [x] /execution-manual buttons live (print, pocket card download, push checklist to field, stage selection, SOP search)
 - [x] Brand Preferences pre-filled with Cyber Enclave spec + Excel download/upload
 - [x] Home page: selecting a project opens that project's dashboard
+- [x] /scope-brief live (package selection, drawing list, CSV export, printable PDF brief)
+- [x] /drawing-decipher → live Drawings & Documents register (upload, open, delete, export)
+- [x] Re-checked /execution-manual buttons (print, pocket card, push to field, stage tabs) — working

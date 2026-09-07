@@ -1,13 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileText, Upload, FileDown, Trash2, ExternalLink } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveProject } from "@/hooks/useActiveProject";
+import { useAccess } from "@/lib/access";
 
 export const Route = createFileRoute("/drawing-decipher")({
   head: () => ({
     meta: [
-      { title: "AI Drawing Decipher & Material Take-Off Hub — Saha OS" },
-      { name: "description", content: "Drawing revision control, RFI tracking, OCR material invoices and BOQ-linked take-off for your live project." },
-      { property: "og:title", content: "AI Drawing Decipher & Material Take-Off Hub — Saha OS" },
-      { property: "og:description", content: "Drawing revision control, RFI tracking, OCR material invoices and BOQ-linked take-off for your live project." },
+      { title: "Drawings & Documents Register — Saha OS" },
+      { name: "description", content: "Upload drawing revisions, open and delete project documents and export the drawing register for your project." },
+      { property: "og:title", content: "Drawings & Documents Register — Saha OS" },
+      { property: "og:description", content: "Upload drawing revisions, open and delete project documents and export the drawing register." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -15,13 +21,254 @@ export const Route = createFileRoute("/drawing-decipher")({
   component: Page,
 });
 
+const BUCKET = "project-drawings";
+
+function fmtSize(bytes: number) {
+  if (!bytes) return "—";
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function esc(v: string) {
+  return `"${String(v).replace(/"/g, '""')}"`;
+}
+
 function Page() {
+  const project = useActiveProject();
+  const qc = useQueryClient();
+  const { access } = useAccess();
+  const canEdit = Boolean(access?.isAdmin || access?.roles.some((r) => r === "pm" || r === "site_engineer"));
+  const [status, setStatus] = useState("");
+  const [search, setSearch] = useState("");
+
+  const filesQuery = useQuery({
+    queryKey: ["project-drawings", project.id],
+    enabled: Boolean(project.id),
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from(BUCKET)
+        .list(project.id, { limit: 200, sortBy: { column: "created_at", order: "desc" } });
+      if (error) throw error;
+      return (data ?? []).filter((f) => f.name !== ".emptyFolderPlaceholder");
+    },
+  });
+
+  const files = (filesQuery.data ?? []).filter((f) =>
+    f.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+
+  const uploadMutation = useMutation({
+    mutationFn: async (list: FileList) => {
+      for (const file of Array.from(list)) {
+        const path = `${project.id}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
+        const { error } = await supabase.storage.from(BUCKET).upload(path, file);
+        if (error) throw error;
+      }
+      return list.length;
+    },
+    onSuccess: async (n) => {
+      setStatus(`${n} file${n > 1 ? "s" : ""} uploaded to this project.`);
+      await qc.invalidateQueries({ queryKey: ["project-drawings", project.id] });
+    },
+    onError: (e: Error) => setStatus(`Upload failed: ${e.message}`),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const { error } = await supabase.storage.from(BUCKET).remove([`${project.id}/${name}`]);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setStatus("File removed.");
+      await qc.invalidateQueries({ queryKey: ["project-drawings", project.id] });
+    },
+    onError: (e: Error) => setStatus(`Delete failed: ${e.message}`),
+  });
+
+  const open = async (name: string) => {
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(`${project.id}/${name}`, 3600);
+    if (error || !data) {
+      setStatus(error?.message ?? "Could not open this file.");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noreferrer");
+  };
+
+  const exportRegister = () => {
+    if (files.length === 0) {
+      setStatus("Nothing to export yet — upload a drawing first.");
+      return;
+    }
+    const csv = [
+      ["File", "Size", "Uploaded", "Type"].map(esc).join(","),
+      ...files.map((f) =>
+        [
+          f.name,
+          fmtSize(Number(f.metadata?.['size'] ?? 0)),
+          f.created_at ? new Date(f.created_at).toLocaleString("en-IN") : "—",
+          String(f.metadata?.['mimetype'] ?? "—"),
+        ]
+          .map(esc)
+          .join(","),
+      ),
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `drawing-register-${(project.name || "project").replace(/\s+/g, "-")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus(`Exported ${files.length} rows.`);
+  };
+
   return (
-    <Shell title={"AI Drawing Decipher & Material Take-Off Hub"}>
-      <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full"> <div className="flex items-center justify-between mb-space-2xl"> <div className="flex flex-col"> <div className="flex items-center gap-space-sm"> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm uppercase tracking-wider">Module: AI Drawing Decipher & Material Take-Off Hub</span> <span className="text-on-surface-variant font-body-sm">ID: HUB-2024-REV9</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface mt-space-xs">AI Drawing Decipher & Complete Material Take-Off Hub</h1> </div> <div className="flex items-center gap-space-md"> <button className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-surface-container-high text-on-surface hover:bg-surface-variant transition-colors font-title-md"> <span className="material-symbols-outlined text-space-base">download</span> <span>Export Audit Log</span> </button> <button className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-primary text-on-primary hover:bg-primary-container transition-colors font-title-md shadow-[0_1px_2px_rgba(15,23,42,0.04)]"> <span className="material-symbols-outlined text-space-base">upload_file</span> <span>Upload Revision</span> </button> </div> </div> <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-space-md mb-space-2xl"> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Documents</span> <span className="material-symbols-outlined text-primary text-space-lg">description</span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">12 Active</div> <div className="mt-space-2xs flex items-center gap-space-xs text-primary font-label-sm"> <span className="material-symbols-outlined text-space-base leading-none">trending_up</span> <span>+2 this week</span> </div> </div> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Drawings</span> <span className="material-symbols-outlined text-tertiary text-space-lg">architecture</span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">8 Revisions</div> <div className="mt-space-2xs flex items-center gap-space-xs text-on-surface-variant font-label-sm"> <span>Rev R0 to R2 sync</span> </div> </div> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Open RFIs</span> <span className="material-symbols-outlined text-primary text-space-lg">help</span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">0 Pending</div> <div className="mt-space-2xs flex items-center gap-space-xs text-primary font-label-sm"> <span className="material-symbols-outlined text-space-base leading-none">check_circle</span> <span>All cleared</span> </div> </div> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Approval Queue</span> <span className="material-symbols-outlined text-amber-600 text-space-lg">hourglass_top</span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">2 Review</div> <div className="mt-space-2xs flex items-center gap-space-xs text-amber-700 font-label-sm"> <span>Requires PM sign-off</span> </div> </div> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Material Invoices</span> <span className="material-symbols-outlined text-tertiary text-space-lg">receipt_long</span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">15 Scanned</div> <div className="mt-space-2xs flex items-center gap-space-xs text-primary font-label-sm"> <span>OCR 100% matched</span> </div> </div> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase">Quality Issues</span> <span className="material-symbols-outlined text-primary text-space-lg">verified_user</span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">0 Flags</div> <div className="mt-space-2xs flex items-center gap-space-xs text-primary font-label-sm"> <span>Site fully compliant</span> </div> </div> </div> </div> <div className="mb-space-2xl p-space-lg rounded-xl bg-primary text-on-primary shadow-[0_4px_6px_-1px_rgba(15,23,42,0.08)] flex flex-col md:flex-row items-start md:items-center justify-between gap-space-base"> <div className="flex items-center gap-space-lg"> <div className="h-12 w-12 rounded-full bg-on-primary/20 flex items-center justify-center shrink-0"> <span className="material-symbols-outlined text-2xl text-on-primary">verified</span> </div> <div> <div className="flex items-center gap-space-sm"> <h2 className="font-headline-md text-headline-md text-on-primary">DOCUMENT RELEASE GATE — CLEAR</h2> <span className="px-space-xs py-space-2xs rounded bg-on-primary text-primary font-label-sm uppercase font-bold">Active Pour Permitted</span> </div> <p className="text-on-primary/80 mt-space-2xs text-body-md">All structural drawings are current (Rev R2), zero RFIs pending, and QA sign-offs have been auto-verified across foundation zones.</p> </div> </div> <div className="flex items-center gap-space-sm w-full md:w-auto justify-end"> <button className="px-space-md py-space-sm rounded bg-on-primary text-primary hover:bg-surface-container-low transition-colors font-title-md text-title-md">
-        View Gate Audit Trail
-      </button> </div> </div> <div className="flex items-center gap-space-xs border-b border-surface-container-high mb-space-xl overflow-x-auto"> <button className="tab-btn px-space-lg py-space-md font-title-md text-title-md border-b-2 border-primary text-primary flex items-center gap-space-xs" id="btn-queue"> <span className="material-symbols-outlined text-space-base">hourglass_top</span> <span>Approval Queue & Gate</span> <span className="ml-space-xs px-space-xs py-space-2xs rounded-full bg-primary-container text-on-primary-container font-label-sm">2</span> </button> <button className="tab-btn px-space-lg py-space-md font-title-md text-title-md border-b-2 border-transparent text-on-surface-variant hover:text-on-surface flex items-center gap-space-xs" id="btn-drawings"> <span className="material-symbols-outlined text-space-base">architecture</span> <span>Drawings & Revisions</span> <span className="ml-space-xs px-space-xs py-space-2xs rounded-full bg-surface-container-high text-on-surface font-label-sm">8</span> </button> <button className="tab-btn px-space-lg py-space-md font-title-md text-title-md border-b-2 border-transparent text-on-surface-variant hover:text-on-surface flex items-center gap-space-xs" id="btn-media"> <span className="material-symbols-outlined text-space-base">perm_media</span> <span>Site Media & Chat Logs</span> <span className="ml-space-xs px-space-xs py-space-2xs rounded-full bg-surface-container-high text-on-surface font-label-sm">24</span> </button> <button className="tab-btn px-space-lg py-space-md font-title-md text-title-md border-b-2 border-transparent text-on-surface-variant hover:text-on-surface flex items-center gap-space-xs" id="btn-financial"> <span className="material-symbols-outlined text-space-base">receipt_long</span> <span>Financial & OCR Invoices</span> <span className="ml-space-xs px-space-xs py-space-2xs rounded-full bg-surface-container-high text-on-surface font-label-sm">15</span> </button> <button className="tab-btn px-space-lg py-space-md font-title-md text-title-md border-b-2 border-transparent text-on-surface-variant hover:text-on-surface flex items-center gap-space-xs" id="btn-rfis"> <span className="material-symbols-outlined text-space-base">help</span> <span>RFI & Technical Queries</span> <span className="ml-space-xs px-space-xs py-space-2xs rounded-full bg-surface-container-high text-on-surface font-label-sm">0</span> </button> </div> <div className="tab-pane flex flex-col gap-space-lg" id="tab-content-queue"><div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg"><div className="lg:col-span-2 flex flex-col gap-space-md"><div className="flex items-center justify-between mb-space-2xs"><h3 className="font-headline-md text-headline-md text-on-surface">Required Drawings Checklist for 100% Material Take-Off</h3><span className="text-on-surface-variant font-body-sm">6 Essential Engineering Packages</span></div><div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] grid grid-cols-1 md:grid-cols-2 gap-space-md"><div className="p-space-md rounded bg-surface-container-low flex items-center justify-between"><div className="flex items-center gap-space-sm"><span className="material-symbols-outlined text-primary">check_circle</span><span className="font-title-md">Architectural Floorplans</span></div><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm uppercase">Ready (Rev R2)</span></div><div className="p-space-md rounded bg-surface-container-low flex items-center justify-between"><div className="flex items-center gap-space-sm"><span className="material-symbols-outlined text-primary">check_circle</span><span className="font-title-md">Structural Framing & BBS</span></div><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm uppercase">Ready (Rev R2)</span></div><div className="p-space-md rounded bg-surface-container-low flex items-center justify-between"><div className="flex items-center gap-space-sm"><span className="material-symbols-outlined text-primary">check_circle</span><span className="font-title-md">Door/Window Schedules</span></div><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm uppercase">Ready (Rev R1)</span></div><div className="p-space-md rounded bg-surface-container-low flex items-center justify-between"><div className="flex items-center gap-space-sm"><span className="material-symbols-outlined text-amber-600">hourglass_top</span><span className="font-title-md">Electrical Layouts</span></div><span className="px-space-xs py-space-2xs rounded bg-amber-100 text-amber-800 font-label-sm uppercase">Pending Final</span></div><div className="p-space-md rounded bg-surface-container-low flex items-center justify-between"><div className="flex items-center gap-space-sm"><span className="material-symbols-outlined text-primary">check_circle</span><span className="font-title-md">Plumbing Riser Diagrams</span></div><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm uppercase">Ready (Rev R3)</span></div><div className="p-space-md rounded bg-surface-container-low flex items-center justify-between"><div className="flex items-center gap-space-sm"><span className="material-symbols-outlined text-amber-600">hourglass_top</span><span className="font-title-md">Finish Schedules</span></div><span className="px-space-xs py-space-2xs rounded bg-amber-100 text-amber-800 font-label-sm uppercase">In Review</span></div></div><div className="flex items-center justify-between mb-space-2xs mt-space-md"><h3 className="font-headline-md text-headline-md text-on-surface">AI Drawing Ingestion & Material Decipher Studio</h3><span className="text-on-surface-variant font-body-sm">Computed via Neural Vision Engine</span></div><div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col gap-space-md"><div className="flex items-center justify-between pb-space-sm border-b border-surface-container-high"><div className="flex items-center gap-space-sm"><span className="material-symbols-outlined text-primary">neurology</span><div><h4 className="font-title-md">Automated Take-Off Computed Quantities</h4><span className="text-body-sm text-on-surface-variant">Extracted from Block A Foundation & Podium Level drawings</span></div></div><button className="px-space-md py-space-xs rounded bg-primary text-on-primary font-title-md text-label-md">Re-Scan Drawings</button></div><div className="grid grid-cols-2 md:grid-cols-3 gap-space-md"><div className="p-space-md rounded bg-surface-container-low flex flex-col"><span className="text-label-sm text-on-surface-variant uppercase">Bricks (Wall SFT)</span><span className="font-tabular-metric text-on-surface mt-space-2xs">1,42,500 Nos</span><span className="text-primary text-body-sm mt-2">AAC Block Standard</span></div><div className="p-space-md rounded bg-surface-container-low flex flex-col"><span className="text-label-sm text-on-surface-variant uppercase">Doors & Windows</span><span className="font-tabular-metric text-on-surface mt-space-2xs">76 Units</span><span className="text-primary text-body-sm mt-2">Schedule Matched</span></div><div className="p-space-md rounded bg-surface-container-low flex flex-col"><span className="text-label-sm text-on-surface-variant uppercase">Paint Area</span><span className="font-tabular-metric text-on-surface mt-space-2xs">24,800 SFT</span><span className="text-primary text-body-sm mt-2">External Weathercoat</span></div><div className="p-space-md rounded bg-surface-container-low flex flex-col"><span className="text-label-sm text-on-surface-variant uppercase">Tiles</span><span className="font-tabular-metric text-on-surface mt-space-2xs">18,500 SFT</span><span className="text-primary text-body-sm mt-2">Vrified Anti-skid</span></div><div className="p-space-md rounded bg-surface-container-low flex flex-col"><span className="text-label-sm text-on-surface-variant uppercase">Electrical Conduits</span><span className="font-tabular-metric text-on-surface mt-space-2xs">4,200 RFT</span><span className="text-primary text-body-sm mt-2">Heavy Gauge PVC</span></div><div className="p-space-md rounded bg-surface-container-low flex flex-col"><span className="text-label-sm text-on-surface-variant uppercase">Plumbing Pipes</span><span className="font-tabular-metric text-on-surface mt-space-2xs">2,150 RFT</span><span className="text-primary text-body-sm mt-2">UPVC Schedule 80</span></div></div></div></div><div className="flex flex-col gap-space-lg"><div className="p-space-lg rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col gap-space-md"><h3 className="font-headline-md text-headline-md text-on-surface">Gate Compliance Monitor</h3><div className="flex flex-col gap-space-sm"><div className="flex justify-between items-center text-body-md"><span className="text-on-surface-variant">Drawings Up-to-Date</span><span className="text-primary font-bold">100%</span></div><div className="w-full bg-surface-container-low h-2 rounded-full overflow-hidden"><div className="bg-primary h-full w-full" /></div><div className="flex justify-between items-center text-body-md mt-space-xs"><span className="text-on-surface-variant">Take-Off Completeness</span><span className="text-primary font-bold">96.5%</span></div><div className="w-full bg-surface-container-low h-2 rounded-full overflow-hidden"><div className="bg-primary h-full w-[96.5%]" /></div><div className="flex justify-between items-center text-body-md mt-space-xs"><span className="text-on-surface-variant">Material Test Certs</span><span className="text-primary font-bold">98.5%</span></div><div className="w-full bg-surface-container-low h-2 rounded-full overflow-hidden"><div className="bg-primary h-full w-[98.5%]" /></div></div><div className="p-space-md rounded bg-surface-container-low text-body-sm text-on-surface-variant"><span>Neural OCR automatically deciphers CAD hatches and schedules for instant BOM generation.</span></div></div></div></div></div> <div className="tab-pane hidden flex flex-col gap-space-lg" id="tab-content-drawings"> <div className="flex items-center justify-between"> <h3 className="font-headline-md text-headline-md text-on-surface">Controlled Drawings & Version History</h3> <div className="flex items-center gap-space-sm"> <input className="px-space-md py-space-xs rounded bg-surface-container-low text-on-surface text-body-md focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Filter by drawing code..." type="text" /> <select className="px-space-md py-space-xs rounded bg-surface-container-low text-on-surface text-body-md focus:outline-none"><option>All Disciplines</option><option>Structural</option><option>Architectural</option><option>MEP</option></select> </div> </div> <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md"> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between gap-space-md"> <div className="w-full h-40 bg-surface-container-low rounded-lg relative overflow-hidden flex items-center justify-center"> <div className="absolute inset-0 bg-cover bg-center opacity-80" data-alt="Technical architectural blueprint schematic showing detailed floor plan and column grids for a commercial civil engineering tower project in cool slate and emerald accents" style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuC8sGpSHXzZkWPupfCD4BsVjVBEdzXvLOawcJ7EfHU3wYNH5SgqvRavUZH5biRzThx6W1UwicLLC2vc0UbnshLHKL_qJ6WsgE_ynAtOWGfhE2vAC4nI3U3BCrIhZjcMr8q0d1-kzA5wSoTrkskfMsjcAxl4oZV0ZQLt-lSMPrx5wmCHPm6CrRtolXmhWCNonhtXYXVeYjNriUDyVQm7RZkUt35W_DyHhxAqKsgXD_wDjwlFbBHc8DxV')"}} /> <span className="relative px-space-sm py-space-xs rounded bg-inverse-surface text-inverse-on-surface font-label-sm uppercase">Rev R2 • Approved</span> </div> <div> <h4 className="font-title-md text-title-md text-on-surface">STR-CYBER-001-A</h4> <p className="text-on-surface-variant text-body-sm mt-space-2xs">Foundation Footing Layout & Column Stubs</p> </div> <div className="flex items-center justify-between pt-space-xs border-t border-surface-container-high"> <span className="text-body-sm text-on-surface-variant">PDF • 14.2 MB</span> <button className="px-space-sm py-space-2xs rounded bg-primary text-on-primary text-label-md">View DWG</button> </div> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between gap-space-md"> <div className="w-full h-40 bg-surface-container-low rounded-lg relative overflow-hidden flex items-center justify-center"> <div className="absolute inset-0 bg-cover bg-center opacity-80" data-alt="Detailed MEP plumbing and electrical riser diagram blueprint in dark slate and high contrast engineering lines" style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuB5kMieYxNdqAmqtDXe_1CjHzNwj2zSik2qWNG5-Yh-0Ba_8bLV-5svBfi4G4uXgK1ajwJ-TT6uwIc_-JrIfHxTHgbWn-16hSB4V8XZPX7abNgpcWSxsGjlXtf2AzOWd3tPcvPM8BP-ippUGG2COOfjzKeub0kii6wP-2lcyCqtJnKz3H15puMPHXGZ_jav4Jwao5JTglfQ1ub0uSLUNhIMXMh57oNF2tArgmpiv7wvUJyrT7WwH6_o')"}} /> <span className="relative px-space-sm py-space-xs rounded bg-inverse-surface text-inverse-on-surface font-label-sm uppercase">Rev R1 • Approved</span> </div> <div> <h4 className="font-title-md text-title-md text-on-surface">MEP-CYBER-042-B</h4> <p className="text-on-surface-variant text-body-sm mt-space-2xs">Basement Drainage & Fire Suppression Layout</p> </div> <div className="flex items-center justify-between pt-space-xs border-t border-surface-container-high"> <span className="text-body-sm text-on-surface-variant">DWG • 28.5 MB</span> <button className="px-space-sm py-space-2xs rounded bg-primary text-on-primary text-label-md">View DWG</button> </div> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between gap-space-md"> <div className="w-full h-40 bg-surface-container-low rounded-lg relative overflow-hidden flex items-center justify-center"> <div className="absolute inset-0 bg-cover bg-center opacity-80" data-alt="Architectural facade elevation drawing with precise dimension markers and material specifications" style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBB0mIvbKS3CXvS3WDkEY0QscVPC5Ed9LLNYfJfmxsy7KzaBaa3GJV4nTYI81CJVtn_yjgK-hpAigf_0g4XDXyYi16xQLdE0QjMGML3ozoTpldy51qHXmxVDnKb44hHCEvH25EZ0IHss7fFWAYoyObZD4pi9BIUb1iv311BW7WfNenr7HIRyCItkwGfUsLtEGjNgkxLTCNatnw4nQyEXZbxXKLvMDvtsLXwH1wboTo2RDnctQhorWHO')"}} /> <span className="relative px-space-sm py-space-xs rounded bg-inverse-surface text-inverse-on-surface font-label-sm uppercase">Rev R3 • Approved</span> </div> <div> <h4 className="font-title-md text-title-md text-on-surface">ARC-CYBER-109-C</h4> <p className="text-on-surface-variant text-body-sm mt-space-2xs"> Podium Glazing & External Cladding Elevations</p> </div> <div className="flex items-center justify-between pt-space-xs border-t border-surface-container-high"> <span className="text-body-sm text-on-surface-variant">PDF • 9.8 MB</span> <button className="px-space-sm py-space-2xs rounded bg-primary text-on-primary text-label-md">View DWG</button> </div> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between gap-space-md"> <div className="w-full h-40 bg-surface-container-low rounded-lg relative overflow-hidden flex items-center justify-center"> <div className="absolute inset-0 bg-cover bg-center opacity-80" data-alt="Structural bar bending schedule spreadsheet drawing with tabular reinforcement details" style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSwAXfPafI3JyIzZ2N7QDgfXqErxzDyivTa2epn4RvfoKoCa05aC8xvVXgPrSRo-iKfqpNEq3g0xSFlIx7OwKxiJZTWGH5iJIm5o8l3Q_u_mKBi2Prj2vTNTuL_fjR6yfoeEjXNomm-_zLUFVzyk15GtI6zsllb93oyhCf-DKpT46uWIo8wuTOR6fm54D53CO0hBDCFP5MqZQ1PacFxGPV2BpyZ1KCXQjF8mZsUPjfMe5jzjEEbMQ0')"}} /> <span className="relative px-space-sm py-space-xs rounded bg-amber-100 text-amber-800 font-label-sm uppercase">Rev R2 • Pending</span> </div> <div> <h4 className="font-title-md text-title-md text-on-surface">BBS-CYBER-B2-09</h4> <p className="text-on-surface-variant text-body-sm mt-space-2xs">Basement Level-2 Slab Reinforcement Details</p> </div> <div className="flex items-center justify-between pt-space-xs border-t border-surface-container-high"> <span className="text-body-sm text-on-surface-variant">PDF • 4.1 MB</span> <button className="px-space-sm py-space-2xs rounded bg-primary text-on-primary text-label-md">View DWG</button> </div> </div> </div> </div> <div className="tab-pane hidden flex flex-col gap-space-lg" id="tab-content-media"> <div className="flex items-center justify-between"> <h3 className="font-headline-md text-headline-md text-on-surface">Field Site Media & WhatsApp Archive Sync</h3> <span className="text-on-surface-variant font-body-sm">Auto-indexed from site engineer uploads and WhatsApp field bot</span> </div> <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-space-md"> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col gap-space-sm"> <div className="w-full h-48 rounded-lg relative overflow-hidden"> <div className="absolute inset-0 bg-cover bg-center" data-alt="Construction site photograph showing concrete pour progress on foundation slab with workers in safety helmets and vests during daytime" style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDl9HVoJybBQWdoVEMW6guXKVQk8YdolAEJa81x6fpZxN6kd396ML493ownPkjSqdsr4-tiUA3yvAdDcNygkSPlln00PdSbBRuOCAi7ZK8I3b0gE5SZzvhSnutiRqTtMIgAAzgxfXuGPl7uNMOjxblKktE3pYPK0Qvxa3QK36wsXVGzRRsaT-9xaJCOaTYEUrJ1cjNJwwvfnfUVz_kBCWFiDu6d9SsATPTpn8ZDeYoza3P1DQzRO106')"}} /> <span className="absolute top-2 right-2 px-space-xs py-space-2xs rounded bg-inverse-surface/80 text-inverse-on-surface font-label-sm">Zone A • Foundation</span> </div> <div className="flex items-center justify-between"> <span className="font-title-md text-title-md text-on-surface">Pour Inspection #14</span> <span className="text-body-sm text-on-surface-variant">Today, 11:30 AM</span> </div> <p className="text-body-sm text-on-surface-variant">Logged via WhatsApp by Ramesh (Site Supervisor). Cube test results attached.</p> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col gap-space-sm"> <div className="w-full h-48 rounded-lg relative overflow-hidden"> <div className="absolute inset-0 bg-cover bg-center" data-alt="Steel rebar tying inspection at basement column junction with strict safety compliance and neat alignment" style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBFGVpytb4uF3Mq6YQL5m4Yro7njhkEtTUwyRtmg_dtRNSqyOOTJk3ldL4rk4cun1OhYx1QXjLfYskHGiF4MMcwN7VLYRFoYPpCEymw2kYi2IKs_fpA-eaXtLcnWxiO6G7fo0dJMfiGQZiNuBUADLzQ8zNHoypQPPdVU44Uke_e0QwnEEzG5gnJ3K-wfF7QPwHL4YqmetBPMEE_DnxNBXW1N5xNDvqk7VSTGx_Ax5A29LgoPswcTnpc')"}} /> <span className="absolute top-2 right-2 px-space-xs py-space-2xs rounded bg-inverse-surface/80 text-inverse-on-surface font-label-sm">Zone B • Column Stubs</span> </div> <div className="flex items-center justify-between"> <span className="font-title-md text-title-md text-on-surface">Rebar QA Check</span> <span className="text-body-sm text-on-surface-variant">Yesterday, 04:15 PM</span> </div> <p className="text-body-sm text-on-surface-variant">Verified against BBS-CYBER-B2-09. Zero spacing discrepancies found.</p> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col gap-space-sm"> <div className="w-full h-48 rounded-lg relative overflow-hidden"> <div className="absolute inset-0 bg-cover bg-center" data-alt="Tower crane lifting heavy concrete bucket over construction site at Madhapur project location" style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBpUPYaXIHw76m11CpWIyA1nVyDhCnd1nbOYw76khYz_S_P_IdmdTTvZP_pvBczpmOYv2WFL3zZzIEw4BXRIGOrlThP-291aIW-cJPDOdwqTJQUhGD4QcZyBp6ztiI8A0EKP8gDmMc3EUReu2pYQSmxs5CRKSQOFa9ScmQbOcRXFJVphbzxEmk7XEXpmV__sgZILMYtBPm_aUtUy28OqOXvo-l7gFCATmzyP_oqguNeNG7kvGW771Zd')"}} /> <span className="absolute top-2 right-2 px-space-xs py-space-2xs rounded bg-inverse-surface/80 text-inverse-on-surface font-label-sm">Tower Crane 01</span> </div> <div className="flex items-center justify-between"> <span className="font-title-md text-title-md text-on-surface">Material Hoisting</span> <span className="text-body-sm text-on-surface-variant">Oct 24, 09:00 AM</span> </div> <p className="text-body-sm text-on-surface-variant">Bulk cement bags delivery successfully offloaded and stored in warehouse.</p> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col gap-space-sm"> <div className="w-full h-48 rounded-lg relative overflow-hidden"> <div className="absolute inset-0 bg-cover bg-center" data-alt="Curing process of concrete raft foundation with water spray and burlap covers" style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDohNT2wI2rVDgUqTXL_8UCFGaAuapfZPpHkuBR2JlBT4aF4OvrhJZV22cDUZw_nMci0cwR-ZADhiaNyktGpy1_gX5ya3m4vxHkAcRPd6s6jnoUIRtu0lXlC7A0RYMTDDeqQfoKmE8Vh9sya2QuVOV6d9atGAQfaFoBho1XK6sb4WXp92heEVX2dvq8mO5xnbB_Fa0sGpRrfuXdypaUeCIyp5r2uVCmz1wii0341Pt9ka33p98YALXc')"}} /> <span className="absolute top-2 right-2 px-space-xs py-space-2xs rounded bg-inverse-surface/80 text-inverse-on-surface font-label-sm">Raft Curing</span> </div> <div className="flex items-center justify-between"> <span className="font-title-md text-title-md text-on-surface">Curing Status</span> <span className="text-body-sm text-on-surface-variant">Oct 23, 02:20 PM</span> </div> <p className="text-body-sm text-on-surface-variant">IoT temperature sensors active. Average curing temp at 28°C.</p> </div> </div> </div> <div className="tab-pane hidden flex flex-col gap-space-lg" id="tab-content-financial"> <div className="flex items-center justify-between"> <h3 className="font-headline-md text-headline-md text-on-surface">Financial & OCR Invoices</h3> <span className="text-on-surface-variant font-body-sm">Vendor bills processed and matched with purchase orders via OCR</span> </div> <div className="p-space-base rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="border-b border-surface-container-high text-on-surface-variant font-label-sm uppercase"><th className="py-space-sm px-space-md">Invoice ID</th><th className="py-space-sm px-space-md">Vendor Name</th><th className="py-space-sm px-space-md">Category</th><th className="py-space-sm px-space-md">Amount</th><th className="py-space-sm px-space-md">OCR Status</th><th className="py-space-sm px-space-md text-right">Actions</th></tr></thead><tbody className="divide-y divide-surface-container-high text-body-md text-on-surface"><tr><td className="py-space-md px-space-md font-title-md">INV-2024-889</td><td className="py-space-md px-space-md">Ultratech Cement Ltd</td><td className="py-space-md px-space-md">OPC 53 Grade Cement</td><td className="py-space-md px-space-md font-tabular-metric-sm">₹ 12,45,000</td><td className="py-space-md px-space-md"><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">Module: AI Drawing Decipher & Material Take-Off Hub</span></td><td className="py-space-md px-space-md text-right"> <button className="px-space-sm py-space-2xs rounded bg-surface-container-low text-on-surface hover:bg-surface-variant font-label-md">View Challan</button> </td></tr><tr><td className="py-space-md px-space-md font-title-md">INV-2024-890</td><td className="py-space-md px-space-md">Tata Steel Global</td><td className="py-space-md px-space-md">Fe500D TMT Bars</td><td className="py-space-md px-space-md font-tabular-metric-sm">₹ 38,20,000</td><td className="py-space-md px-space-md"><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">Module: AI Drawing Decipher & Material Take-Off Hub</span></td><td className="py-space-md px-space-md text-right"> <button className="px-space-sm py-space-2xs rounded bg-surface-container-low text-on-surface hover:bg-surface-variant font-label-md">View Challan</button> </td></tr><tr><td className="py-space-md px-space-md font-title-md">INV-2024-891</td><td className="py-space-md px-space-md">RMC Readymix India</td><td className="py-space-md px-space-md">M35 Ready Mix Concrete</td><td className="py-space-md px-space-md font-tabular-metric-sm">₹ 8,90,000</td><td className="py-space-md px-space-md"><span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">Module: AI Drawing Decipher & Material Take-Off Hub</span></td><td className="py-space-md px-space-md text-right"> <button className="px-space-sm py-space-2xs rounded bg-surface-container-low text-on-surface hover:bg-surface-variant font-label-md">View Challan</button> </td></tr></tbody></table> </div> </div> <div className="tab-pane hidden flex flex-col gap-space-lg" id="tab-content-rfis"> <div className="flex items-center justify-between"> <h3 className="font-headline-md text-headline-md text-on-surface">Request for Information (RFI) Logs</h3> <span className="text-on-surface-variant font-body-sm">All technical queries resolved. Zero active bottlenecks.</span> </div> <div className="p-space-2xl rounded-xl bg-surface-container-lowest shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col items-center justify-center text-center"> <div className="h-16 w-16 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center mb-space-md"> <span className="material-symbols-outlined text-3xl">done_all</span> </div> <h4 className="font-headline-md text-headline-md text-on-surface">Zero Pending RFIs</h4> <p className="text-on-surface-variant text-body-md max-w-md mt-space-xs">All site queries regarding drawing clarifications and material substitutions have been fully addressed and signed off by the engineering consultants.</p> </div> </div>  </div></main>
+    <Shell title="Drawings & Documents">
+      <div className="space-y-6">
+        <header className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+            Drawing register · {project.name}
+          </p>
+          <h1 className="flex items-center gap-3 text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
+            <FileText className="h-7 w-7 text-primary" />
+            Drawings & Documents
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Upload drawing revisions, tender documents and approvals for this project. Files are stored
+            privately and can be opened, downloaded or removed here.
+          </p>
+        </header>
+
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search files…"
+            className="min-w-[220px] flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
+          />
+          <button
+            type="button"
+            onClick={exportRegister}
+            className="inline-flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary"
+          >
+            <FileDown className="h-4 w-4" />
+            Export register
+          </button>
+          {canEdit ? (
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+              <Upload className="h-4 w-4" />
+              {uploadMutation.isPending ? "Uploading…" : "Upload revision"}
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                disabled={!project.id || uploadMutation.isPending}
+                onChange={(e) => {
+                  if (e.target.files?.length) uploadMutation.mutate(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          ) : (
+            <span className="text-xs text-muted-foreground">View only for your role</span>
+          )}
+        </div>
+
+        {status ? (
+          <p className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+            {status}
+          </p>
+        ) : null}
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[
+            { label: "Files on record", value: String((filesQuery.data ?? []).length) },
+            {
+              label: "Total size",
+              value: fmtSize(
+                (filesQuery.data ?? []).reduce((s, f) => s + Number(f.metadata?.['size'] ?? 0), 0),
+              ),
+            },
+            {
+              label: "Latest upload",
+              value:
+                filesQuery.data?.[0]?.created_at
+                  ? new Date(filesQuery.data[0].created_at!).toLocaleDateString("en-IN")
+                  : "—",
+            },
+          ].map((c) => (
+            <div key={c.label} className="rounded-2xl border border-emerald-600/30 bg-emerald-600/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">{c.label}</p>
+              <p className="mt-1 text-xl font-bold text-foreground">{c.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="border-b border-border bg-muted/40 px-4 py-3">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-primary">Document register</h2>
+          </div>
+          {!project.id ? (
+            <p className="p-6 text-sm text-muted-foreground">Add a project first, then upload its drawings.</p>
+          ) : filesQuery.isPending ? (
+            <p className="p-6 text-sm text-muted-foreground">Loading files…</p>
+          ) : filesQuery.error ? (
+            <p className="p-6 text-sm text-destructive">{(filesQuery.error as Error).message}</p>
+          ) : files.length === 0 ? (
+            <p className="p-6 text-sm text-muted-foreground">
+              No documents yet — use Upload revision to add drawings for {project.name}.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-2">File</th>
+                    <th className="px-4 py-2">Size</th>
+                    <th className="px-4 py-2">Uploaded</th>
+                    <th className="px-4 py-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {files.map((f) => (
+                    <tr key={f.name} className="border-b border-border/60">
+                      <td className="px-4 py-2 font-medium text-foreground">
+                        {f.name.replace(/^\d+-/, "")}
+                      </td>
+                      <td className="px-4 py-2">{fmtSize(Number(f.metadata?.['size'] ?? 0))}</td>
+                      <td className="px-4 py-2">
+                        {f.created_at ? new Date(f.created_at).toLocaleString("en-IN") : "—"}
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => open(f.name)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Open
+                          </button>
+                          {canEdit ? (
+                            <button
+                              type="button"
+                              onClick={() => deleteMutation.mutate(f.name)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </Shell>
   );
