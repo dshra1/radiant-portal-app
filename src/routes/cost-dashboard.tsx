@@ -178,6 +178,13 @@ function Page() {
       tone: "border-violet-500/40 bg-violet-500/5",
     },
     {
+      label: "Common & statutory charges",
+      value: crore(statutory),
+      sub: "Permissions, LRS, HMWSSB, electricity, architect",
+      icon: Landmark,
+      tone: "border-rose-500/40 bg-rose-500/5",
+    },
+    {
       label: "Total project cost",
       value: crore(projectCost),
       sub: sft > 0 ? `${(projectCost / sft).toFixed(0)} /sft` : "—",
