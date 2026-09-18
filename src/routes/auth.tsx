@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 
 export const Route = createFileRoute("/auth")({
@@ -77,10 +76,17 @@ function AuthPage() {
   const google = async () => {
     setError(null);
     try {
-      await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-        extraParams: { prompt: "select_account" },
+      // Native Supabase OAuth — requires the Google provider to be configured
+      // in Supabase Auth settings (Authentication > Providers > Google) with
+      // your own Google OAuth Client ID/secret.
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: { prompt: "select_account" },
+        },
       });
+      if (err) throw err;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Google sign-in failed.");
     }

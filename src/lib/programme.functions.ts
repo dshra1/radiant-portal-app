@@ -117,11 +117,11 @@ export const generateProgramme = createServerFn({ method: "POST" })
       .map(([trade, v]) => `${trade}: ₹${Math.round(v.amount)} across ${v.items} items`)
       .join("; ");
 
-    const key = process.env["LOVABLE_API_KEY"];
+    const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
 
-    const { createLovableAiGatewayProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
-    const gateway = createLovableAiGatewayProvider(key);
+    const { createAiProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
+    const gateway = createAiProvider(key);
     const model = gateway(SAHA_MODEL);
 
     const start = new Date(`${data.startDate || iso(new Date())}T00:00:00Z`);

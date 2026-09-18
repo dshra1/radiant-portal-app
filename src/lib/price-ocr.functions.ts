@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 
@@ -49,7 +50,7 @@ export const extractQuoteFromFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { fileName: string; mediaType: string; storagePath: string }) => input)
   .handler(async ({ data, context }): Promise<ExtractedQuote> => {
-    const key = process.env["LOVABLE_API_KEY"];
+    const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
 
     const { data: signed, error: signErr } = await context.supabase.storage
@@ -62,17 +63,17 @@ export const extractQuoteFromFile = createServerFn({ method: "POST" })
     const bytes = Buffer.from(await fileRes.arrayBuffer());
     if (bytes.byteLength === 0) throw new Error("The uploaded file is empty");
 
-    const isImage = data.mediaType.startsWith("image/");
     const mediaType = data.mediaType || "application/pdf";
-    const dataUrl = `data:${mediaType};base64,${bytes.toString("base64")}`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": key },
-      body: JSON.stringify({
-        model: "google/gemini-3.7-flash",
+    const { createAiProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
+    const gateway = createAiProvider(key);
+
+    let text: string;
+    try {
+      const result = await generateText({
+        model: gateway(SAHA_MODEL),
+        system: SYSTEM.join("\n"),
         messages: [
-          { role: "system", content: SYSTEM.join("\n") },
           {
             role: "user",
             content: [
@@ -80,26 +81,19 @@ export const extractQuoteFromFile = createServerFn({ method: "POST" })
                 type: "text",
                 text: `Extract the price data from this document (${data.fileName}). Return the JSON object only.`,
               },
-              isImage
-                ? { type: "image_url", image_url: { url: dataUrl } }
-                : { type: "file", file: { filename: data.fileName, file_data: dataUrl } },
+              { type: "file", data: bytes, mediaType },
             ],
           },
         ],
-      }),
-    });
-
-    if (res.status === 429) throw new Error("The document reader is busy right now — please try again in a minute");
-    if (res.status === 402) throw new Error("AI credits are exhausted for this workspace — please top up to keep scanning documents");
-    if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      throw new Error(`Document reading failed (${res.status}). ${detail.slice(0, 200)}`);
+      });
+      text = result.text;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (/429/.test(message)) throw new Error("The document reader is busy right now — please try again in a minute");
+      if (/402|quota|billing/i.test(message)) throw new Error("AI credits are exhausted for this workspace — please check your Gemini API billing");
+      throw new Error(`Document reading failed: ${message.slice(0, 200)}`);
     }
 
-    const payload = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const text = payload.choices?.[0]?.message?.content ?? "";
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");
     if (start < 0 || end <= start) throw new Error("Could not read any price data from this file");

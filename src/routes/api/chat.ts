@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { createClient } from "@supabase/supabase-js";
-import { createLovableAiGatewayProvider, SAHA_MODEL } from "@/lib/ai-gateway.server";
+import { createAiProvider, SAHA_MODEL } from "@/lib/ai-gateway.server";
 import type { Database } from "@/integrations/supabase/types";
 
 type ChatRequestBody = { messages?: unknown; threadId?: unknown };
@@ -74,12 +74,12 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("Messages are required", { status: 400 });
         }
 
-        const key = process.env["LOVABLE_API_KEY"];
+        const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
         if (!key) return new Response("AI is not configured", { status: 500 });
 
         const uiMessages = messages as UIMessage[];
         const context = await buildLiveContext(accessToken);
-        const gateway = createLovableAiGatewayProvider(key);
+        const gateway = createAiProvider(key);
 
         const result = streamText({
           model: gateway(SAHA_MODEL),

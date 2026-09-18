@@ -129,11 +129,11 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!project) throw new Error("Project not found");
 
-    const key = process.env["LOVABLE_API_KEY"];
+    const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
 
-    const { createLovableAiGatewayProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
-    const gateway = createLovableAiGatewayProvider(key);
+    const { createAiProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
+    const gateway = createAiProvider(key);
     const model = gateway(SAHA_MODEL);
 
     const brief = {
@@ -328,10 +328,10 @@ export const suggestBrandOptions = createServerFn({ method: "POST" })
       .eq("id", items[0]!.project_id)
       .maybeSingle();
 
-    const key = process.env["LOVABLE_API_KEY"];
+    const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
-    const { createLovableAiGatewayProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
-    const gateway = createLovableAiGatewayProvider(key);
+    const { createAiProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
+    const gateway = createAiProvider(key);
 
     const payload = items.map((it) => ({
       id: it.id,
@@ -426,10 +426,10 @@ export const findProductImage = createServerFn({ method: "POST" })
       (data.query ?? "").trim() || `${item.brand} ${item.description}`.trim();
     if (!searchText) return { found: false as const, searchText: "" };
 
-    const key = process.env["LOVABLE_API_KEY"];
+    const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
-    const { createLovableAiGatewayProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
-    const gateway = createLovableAiGatewayProvider(key);
+    const { createAiProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
+    const gateway = createAiProvider(key);
 
     const result = streamText({
       model: gateway(SAHA_MODEL),
@@ -493,10 +493,10 @@ export const generateLabourRates = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!project) throw new Error("Project not found");
 
-    const key = process.env["LOVABLE_API_KEY"];
+    const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
-    const { createLovableAiGatewayProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
-    const gateway = createLovableAiGatewayProvider(key);
+    const { createAiProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
+    const gateway = createAiProvider(key);
 
     const result = streamText({
       model: gateway(SAHA_MODEL),

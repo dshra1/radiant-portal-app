@@ -1,14 +1,15 @@
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-export function createLovableAiGatewayProvider(apiKey: string) {
-  return createOpenAICompatible({
-    name: "lovable",
-    baseURL: "https://ai.gateway.lovable.dev/v1",
-    headers: {
-      "Lovable-API-Key": apiKey,
-      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-    },
+/**
+ * Direct Google Gemini provider — replaces Lovable's metered AI gateway.
+ * Get a free/pay-as-you-go key at https://aistudio.google.com/apikey and set
+ * GOOGLE_GENERATIVE_AI_API_KEY in your deployment environment.
+ */
+export function createAiProvider(apiKey: string) {
+  return createGoogleGenerativeAI({
+    apiKey,
   });
 }
 
-export const SAHA_MODEL = "google/gemini-3.7-flash";
+// Same model the app was already using via the gateway — no behavior change.
+export const SAHA_MODEL = "gemini-3.7-flash";

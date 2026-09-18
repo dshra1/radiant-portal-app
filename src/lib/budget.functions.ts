@@ -107,11 +107,11 @@ export const suggestBudgetFit = createServerFn({ method: "POST" })
       return { total, budget, gap, swaps: [] as BudgetSwap[], overBudget: false };
     }
 
-    const key = process.env["LOVABLE_API_KEY"];
+    const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
 
-    const { createLovableAiGatewayProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
-    const gateway = createLovableAiGatewayProvider(key);
+    const { createAiProvider, SAHA_MODEL } = await import("@/lib/ai-gateway.server");
+    const gateway = createAiProvider(key);
     const model = gateway(SAHA_MODEL);
 
     const limit = Math.max(10, Math.min(60, data.maxItems ?? 40));
