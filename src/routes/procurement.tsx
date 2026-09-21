@@ -48,8 +48,13 @@ type Filter = "all" | PoStatus;
 function Procurement() {
   const user = useSessionUser();
   const project = useActiveProject();
-  const [filter, setFilter] = useState<Filter>("all");
+  const { status } = Route.useSearch();
+  const [filter, setFilter] = useState<Filter>(status ?? "all");
   const [q, setQ] = useState("");
+
+  useEffect(() => {
+    setFilter(status ?? "all");
+  }, [status]);
 
   const { data: orders, isPending } = useQuery({
     queryKey: ["purchase_orders", "procurement", project.id],
