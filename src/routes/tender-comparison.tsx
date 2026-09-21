@@ -150,7 +150,7 @@ function Page() {
   }
   async function removeBid(id: string) {
     const { error } = await db.from("rfq_bids").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Bid removed");
     qc.invalidateQueries({ queryKey: ["rfq-bids", rfq?.id] });
   }
@@ -203,7 +203,7 @@ function Page() {
             </select>
             {rfq && (
               <>
-                <StatusBadge tone={STATUS_TONE[rfq.status] ?? "neutral"}>{rfq.status.toUpperCase()}</StatusBadge>
+                <StatusBadge tone={STATUS_TONE[rfq.status] ?? "slate"}>{rfq.status.toUpperCase()}</StatusBadge>
                 <span className="text-sm text-muted-foreground">Budget estimate: <strong className="text-foreground">{inr(Number(rfq.budget_estimate || 0))}</strong></span>
                 {rfq.deadline && <span className="text-sm text-muted-foreground">Deadline: <strong className="text-foreground">{rfq.deadline}</strong></span>}
                 {rfq.status === "awarded" && <span className="text-sm text-primary font-semibold">Awarded to {rfq.awarded_vendor_name}</span>}
@@ -218,7 +218,7 @@ function Page() {
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <MetricTile label="Lowest bid (L1)" value={l1 ? inrCompact(l1.total) : "—"} delta={l1 ? `Vendor: ${l1.bid.vendor_name}` : "No bids yet"} tone={l1 ? "good" : "neutral"} />
             <MetricTile label="Savings vs budget" value={l1 ? inrCompact(savingsVsBudget) : "—"} tone={savingsVsBudget >= 0 ? "good" : "bad"} delta={rfq ? `Budget ${inrCompact(Number(rfq.budget_estimate || 0))}` : ""} />
-            <MetricTile label="Spread (L1 vs highest)" value={ranked.length > 1 ? inrCompact(spread) : "—"} delta={ranked.length > 1 ? `${((spread / (l1.total || 1)) * 100).toFixed(2)}% divergence` : "Need 2+ bids"} tone="warn" />
+            <MetricTile label="Spread (L1 vs highest)" value={ranked.length > 1 ? inrCompact(spread) : "—"} delta={ranked.length > 1 ? `${((spread / ((l1?.total ?? 0) || 1)) * 100).toFixed(2)}% divergence` : "Need 2+ bids"} tone="warn" />
             <MetricTile label="Quotations received" value={String(bids.length)} delta={`${items.length} line items`} />
           </div>
 
