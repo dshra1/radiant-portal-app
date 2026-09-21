@@ -168,6 +168,9 @@ function Page() {
     mutationFn: async () => {
       if (!activeId) throw new Error("Choose a project first");
       if (!form.title.trim()) throw new Error("Add a short title");
+      const privateOne = form.audience === "owner";
+      if (privateOne && !form.target_owner_name)
+        throw new Error("Choose which owner this is for");
       const uploaded: Attachment[] = [];
       for (const f of files) {
         const path = `${activeId}/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
@@ -189,6 +192,9 @@ function Page() {
           due_date: form.due_date || null,
           attachments: uploaded,
           status: "open",
+          audience: privateOne ? "owner" : "all",
+          target_owner_name: privateOne ? form.target_owner_name : "",
+          unit_label: form.unit_label.trim(),
           raised_by: user?.id ?? null,
           raised_by_name: user?.email ?? "",
         })
@@ -196,8 +202,12 @@ function Page() {
         .single();
       if (error) throw error;
 
-      if (owners.length > 0) {
-        const rows = owners.map((o) => ({
+      const recipients = privateOne
+        ? owners.filter((o) => String(o.name) === form.target_owner_name)
+        : owners;
+
+      if (recipients.length > 0) {
+        const rows = recipients.map((o) => ({
           request_id: data.id,
           project_id: activeId,
           owner_name: String(o.name),
@@ -206,9 +216,11 @@ function Page() {
         }));
         const { error: dErr } = await supabase.from("owner_decisions").insert(rows);
         if (dErr) throw dErr;
-        const notes = owners.map((o) => ({
+        const notes = recipients.map((o) => ({
           title: `Owner approval needed: ${form.title.trim()}`,
-          body: `${o.name} — please approve or reject this ${form.category}.`,
+          body: `${o.name} — please approve or reject this ${form.category}.${
+            form.unit_label.trim() ? ` Flat / unit: ${form.unit_label.trim()}.` : ""
+          }`,
           category: "approval",
           priority: form.priority === "high" ? "high" : "normal",
           link: "/owner-approvals",
