@@ -288,14 +288,14 @@ function Page() {
                   value={draft.pour_ref}
                   onChange={(e) => setDraft({ ...draft, pour_ref: e.target.value })}
                   placeholder="POUR-001"
-                  className="fld"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Element">
                 <select
                   value={draft.element}
                   onChange={(e) => setDraft({ ...draft, element: e.target.value })}
-                  className="fld"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 >
                   {["Footing", "Column", "Beam", "Slab", "Shear wall", "Staircase", "Raft", "Retaining wall"].map(
                     (o) => (
@@ -309,14 +309,14 @@ function Page() {
                   value={draft.level}
                   onChange={(e) => setDraft({ ...draft, level: e.target.value })}
                   placeholder="Block A · 3rd floor"
-                  className="fld"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Grade">
                 <select
                   value={draft.grade}
                   onChange={(e) => setDraft({ ...draft, grade: e.target.value })}
-                  className="fld"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 >
                   {["M20", "M25", "M30", "M35", "M40"].map((o) => (
                     <option key={o}>{o}</option>
@@ -328,7 +328,7 @@ function Page() {
                   type="number"
                   value={draft.quantity_cum}
                   onChange={(e) => setDraft({ ...draft, quantity_cum: num(e.target.value) })}
-                  className="fld"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Pour date">
@@ -336,14 +336,14 @@ function Page() {
                   type="date"
                   value={draft.pour_date ?? ""}
                   onChange={(e) => setDraft({ ...draft, pour_date: e.target.value || null })}
-                  className="fld"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Slump (mm)">
                 <input
                   value={draft.slump}
                   onChange={(e) => setDraft({ ...draft, slump: e.target.value })}
-                  className="fld"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Cubes cast">
@@ -351,14 +351,14 @@ function Page() {
                   type="number"
                   value={draft.cubes_cast}
                   onChange={(e) => setDraft({ ...draft, cubes_cast: num(e.target.value) })}
-                  className="fld"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Remarks">
                 <input
                   value={draft.remarks}
                   onChange={(e) => setDraft({ ...draft, remarks: e.target.value })}
-                  className="fld"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
             </div>
