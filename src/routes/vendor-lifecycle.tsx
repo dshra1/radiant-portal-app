@@ -187,7 +187,7 @@ function Page() {
             { to: "/procurement", icon: ShoppingCart, label: "Purchase orders", desc: "PO register with approvals" },
             { to: "/bills-payments", icon: Receipt, label: "Bills & payments", desc: "Verify, approve and pay vendor bills" },
           ].map((t) => (
-            <Link key={t.to} to={t.to} className="flex items-start gap-3 rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-sm">
+            <Link key={t.to} to={t.to} search={{}} className="flex items-start gap-3 rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-sm">
               <t.icon className="mt-0.5 h-5 w-5 text-primary" />
               <div>
                 <div className="text-sm font-semibold text-foreground">{t.label}</div>
