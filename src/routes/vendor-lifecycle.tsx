@@ -33,7 +33,7 @@ function Page() {
     queryKey: ["vl-vendors", project.id],
     enabled,
     queryFn: async () => {
-      const { data, error } = await supabase.from("vendors").select("*").eq("project_id", project.id!).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("vendors").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -167,7 +167,7 @@ function Page() {
                     <td className="p-3 text-foreground">{inrCompact(v.billed)}</td>
                     <td className="p-3">{v.pending > 0 ? <StatusBadge tone="amber">{inrCompact(v.pending)}</StatusBadge> : <StatusBadge tone="emerald">Clear</StatusBadge>}</td>
                     <td className="p-3 text-right">
-                      <Link to="/procurement" search={{}} className="text-xs font-medium text-primary">POs <ArrowRight className="inline h-3 w-3" /></Link>
+                      <Link to="/procurement" search={{ status: undefined }} className="text-xs font-medium text-primary">POs <ArrowRight className="inline h-3 w-3" /></Link>
                     </td>
                   </tr>
                 ))}
