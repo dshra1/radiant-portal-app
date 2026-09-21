@@ -138,15 +138,8 @@
 - financial-forecast: KPI cards link to BOQ engine, capital ledger, bills & payments, cost dashboard (Kpi gained optional `to`).
 - roles-access: replaced the static Stitch chat mock with a live members & permissions page (profiles + user_roles, stats, role breakdown, links to access-control/messages/approvals). Removed from SAMPLE_DATA_ROUTES.
 
-## Requested 2026-09-21 — apply the same "no dead buttons / live data" treatment app-wide
-All Accounts & Audit and Stock pages are project-scoped (useActiveProject + eq project_id), so they already work for both projects.
-Still fully static (no queries, no working buttons) — to be rebuilt live:
-- [ ] /site-execution (stage progress, workforce, material runway)
-- [ ] /contractors-labour (headcount, productivity)
-- [ ] /field-console (attendance, field activity)
-- [ ] /pour-cards (pour schedule + approvals)
-- [ ] /qa and /qa-inspection (inspections, defects)
-- [ ] /site-media and /media-upload-studio (project media storage)
-- [ ] /command-operations (activity feed)
-- [ ] /project-controls (schedule/cost indices)
-- [ ] /system-directory (directory records)
+## 2026-09-21 — Site Supervision, Stock, QA & Media rebuilt live
+- [x] /site-execution, /contractors-labour, /field-console, /pour-cards, /qa, /qa-inspection, /site-media, /media-upload-studio all live (new tables: site_stages, labour_entries, pour_cards, qa_inspections, project_media + private site-media bucket)
+- [ ] /command-operations and /project-controls still static — rebuild later (user wants to conserve credits)
+- [ ] /system-directory still static — rebuild later
+- [x] Typecheck clean, build OK; published to https://radiant-portal-app.lovable.app (2026-09-21)
