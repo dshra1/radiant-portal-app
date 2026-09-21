@@ -556,6 +556,7 @@ export type Database = {
       owner_requests: {
         Row: {
           attachments: Json
+          audience: string
           body: string
           category: string
           created_at: string
@@ -566,11 +567,14 @@ export type Database = {
           raised_by: string | null
           raised_by_name: string
           status: string
+          target_owner_name: string
           title: string
+          unit_label: string
           updated_at: string
         }
         Insert: {
           attachments?: Json
+          audience?: string
           body?: string
           category?: string
           created_at?: string
@@ -581,11 +585,14 @@ export type Database = {
           raised_by?: string | null
           raised_by_name?: string
           status?: string
+          target_owner_name?: string
           title?: string
+          unit_label?: string
           updated_at?: string
         }
         Update: {
           attachments?: Json
+          audience?: string
           body?: string
           category?: string
           created_at?: string
@@ -596,7 +603,9 @@ export type Database = {
           raised_by?: string | null
           raised_by_name?: string
           status?: string
+          target_owner_name?: string
           title?: string
+          unit_label?: string
           updated_at?: string
         }
         Relationships: [
@@ -1459,6 +1468,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_see_owner_request: {
+        Args: {
+          _audience: string
+          _target_owner_name: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1467,6 +1484,7 @@ export type Database = {
         Returns: boolean
       }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
+      is_pmc_team: { Args: { _user_id: string }; Returns: boolean }
       next_po_number: { Args: never; Returns: string }
     }
     Enums: {

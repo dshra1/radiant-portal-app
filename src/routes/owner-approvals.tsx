@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   FileText,
+  Lock,
   MessageSquare,
   Paperclip,
   Plus,
@@ -53,7 +54,11 @@ type Request = {
   status: string;
   raised_by_name: string;
   created_at: string;
+  audience: string;
+  target_owner_name: string;
+  unit_label: string;
 };
+
 
 type Decision = {
   id: string;
@@ -80,7 +85,11 @@ const emptyForm = () => ({
   category: "decision",
   priority: "normal",
   due_date: "",
+  audience: "all",
+  target_owner_name: "",
+  unit_label: "",
 });
+
 
 function Page() {
   const qc = useQueryClient();
@@ -125,7 +134,7 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("owner_requests")
-        .select("id,project_id,title,body,category,priority,attachments,due_date,status,raised_by_name,created_at")
+        .select("id,project_id,title,body,category,priority,attachments,due_date,status,raised_by_name,created_at,audience,target_owner_name,unit_label")
         .eq("project_id", activeId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -160,6 +169,9 @@ function Page() {
     mutationFn: async () => {
       if (!activeId) throw new Error("Choose a project first");
       if (!form.title.trim()) throw new Error("Add a short title");
+      const privateOne = form.audience === "owner";
+      if (privateOne && !form.target_owner_name)
+        throw new Error("Choose which owner this is for");
       const uploaded: Attachment[] = [];
       for (const f of files) {
         const path = `${activeId}/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
@@ -181,6 +193,9 @@ function Page() {
           due_date: form.due_date || null,
           attachments: uploaded,
           status: "open",
+          audience: privateOne ? "owner" : "all",
+          target_owner_name: privateOne ? form.target_owner_name : "",
+          unit_label: form.unit_label.trim(),
           raised_by: user?.id ?? null,
           raised_by_name: user?.email ?? "",
         })
@@ -188,8 +203,12 @@ function Page() {
         .single();
       if (error) throw error;
 
-      if (owners.length > 0) {
-        const rows = owners.map((o) => ({
+      const recipients = privateOne
+        ? owners.filter((o) => String(o.name) === form.target_owner_name)
+        : owners;
+
+      if (recipients.length > 0) {
+        const rows = recipients.map((o) => ({
           request_id: data.id,
           project_id: activeId,
           owner_name: String(o.name),
@@ -198,9 +217,11 @@ function Page() {
         }));
         const { error: dErr } = await supabase.from("owner_decisions").insert(rows);
         if (dErr) throw dErr;
-        const notes = owners.map((o) => ({
+        const notes = recipients.map((o) => ({
           title: `Owner approval needed: ${form.title.trim()}`,
-          body: `${o.name} — please approve or reject this ${form.category}.`,
+          body: `${o.name} — please approve or reject this ${form.category}.${
+            form.unit_label.trim() ? ` Flat / unit: ${form.unit_label.trim()}.` : ""
+          }`,
           category: "approval",
           priority: form.priority === "high" ? "high" : "normal",
           link: "/owner-approvals",
@@ -400,6 +421,48 @@ function Page() {
               </select>
             </label>
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Send to
+              <select
+                value={form.audience}
+                onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal normal-case tracking-normal text-foreground"
+              >
+                <option value="all">All owners</option>
+                <option value="owner">One owner only (private)</option>
+              </select>
+            </label>
+            {form.audience === "owner" ? (
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Owner
+                <select
+                  value={form.target_owner_name}
+                  onChange={(e) => setForm((f) => ({ ...f, target_owner_name: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal normal-case tracking-normal text-foreground"
+                >
+                  <option value="">Choose owner…</option>
+                  {owners.map((o) => (
+                    <option key={String(o.name)} value={String(o.name)}>
+                      {o.name} {o.role ? `· ${o.role}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Flat / unit (optional)
+              <input
+                value={form.unit_label}
+                onChange={(e) => setForm((f) => ({ ...f, unit_label: e.target.value }))}
+                placeholder="e.g. Flat 402, A block"
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal normal-case tracking-normal text-foreground"
+              />
+            </label>
+            {form.audience === "owner" ? (
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                Private: only the PMC team and this owner can see this item and the reply.
+              </p>
+            ) : null}
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Reply needed by
               <input
                 type="date"
@@ -493,6 +556,17 @@ function Page() {
                       <span className="rounded-full border border-border px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                         {r.status}
                       </span>
+                      {r.audience === "owner" ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-sky-700">
+                          <Lock className="h-3 w-3" />
+                          Private · {r.target_owner_name}
+                        </span>
+                      ) : null}
+                      {r.unit_label ? (
+                        <span className="rounded-full bg-muted px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          {r.unit_label}
+                        </span>
+                      ) : null}
                     </div>
                     <h2 className="text-lg font-bold text-foreground">{r.title}</h2>
                     {r.body ? <p className="text-sm text-muted-foreground">{r.body}</p> : null}
