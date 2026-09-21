@@ -105,3 +105,9 @@
 - [x] Fix AI SDK version mismatch typecheck errors
 - [ ] Suggest per-user monthly pricing in INR for the SaaS offering
 - OCR credit question answered in chat
+
+## Money & Owners (full pass, 2026-09-21)
+- [ ] Capital Ledger: functional rebuild (owner entries save to capital_entries)
+- [ ] Landowners & Investment: verify all buttons
+- [ ] Common Expenses: verify
+- [ ] Cost Dashboard: verify owner/statutory figures

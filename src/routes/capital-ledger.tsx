@@ -1,14 +1,35 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  BadgeIndianRupee,
+  Download,
+  Landmark,
+  Plus,
+  Trash2,
+  Users,
+  Wallet,
+} from "lucide-react";
+import * as XLSX from "xlsx";
 import { Shell } from "@/components/saha/Shell";
-import { useActiveProject } from "@/hooks/useActiveProject";
+import { supabase } from "@/integrations/supabase/client";
+import { useAccess, useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/capital-ledger")({
   head: () => ({
     meta: [
       { title: "Capital Ledger & Landowner Contributions — Saha OS" },
-      { name: "description", content: "Equity shares, capital liabilities, call schedules and common vs individual cost apportionment across investors." },
+      {
+        name: "description",
+        content:
+          "Record owner capital calls and money received, with share-wise liability, paid-to-date and pending dues per landowner.",
+      },
       { property: "og:title", content: "Capital Ledger & Landowner Contributions — Saha OS" },
-      { property: "og:description", content: "Equity shares, capital liabilities, call schedules and common vs individual cost apportionment across investors." },
+      {
+        property: "og:description",
+        content:
+          "Owner-wise capital calls, receipts, liability and pending dues for every project in Saha OS.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -16,23 +37,644 @@ export const Route = createFileRoute("/capital-ledger")({
   component: Page,
 });
 
+type Owner = {
+  name?: string;
+  role?: string;
+  contact?: string;
+  share_pct?: number | string;
+  invested?: number | string;
+  paid?: number | string;
+};
+
+type Entry = {
+  id: string;
+  project_id: string | null;
+  owner_name: string;
+  owner_role: string;
+  entry_type: string;
+  amount: number;
+  entry_date: string | null;
+  milestone: string;
+  mode: string;
+  reference: string;
+  status: string;
+  notes: string;
+};
+
+const num = (v: unknown) => {
+  const n = typeof v === "number" ? v : Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+};
+const inr = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
+const cr = (v: number) =>
+  v >= 10000000 ? `₹${(v / 10000000).toFixed(2)} Cr` : v >= 100000 ? `₹${(v / 100000).toFixed(2)} L` : inr(v);
+const initials = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("") || "—";
+const today = () => new Date().toISOString().slice(0, 10);
+
+const MODES = ["Bank transfer", "Cheque", "UPI", "Cash", "Adjustment"];
+
+type FormState = {
+  owner_name: string;
+  entry_type: "receipt" | "call";
+  amount: string;
+  entry_date: string;
+  milestone: string;
+  mode: string;
+  reference: string;
+  status: string;
+  notes: string;
+};
+
+const emptyForm = (): FormState => ({
+  owner_name: "",
+  entry_type: "receipt",
+  amount: "",
+  entry_date: today(),
+  milestone: "",
+  mode: "Bank transfer",
+  reference: "",
+  status: "received",
+  notes: "",
+});
+
 function Page() {
-  const project = useActiveProject();
+  const qc = useQueryClient();
+  const user = useSessionUser();
+  const access = useAccess();
+  const canEdit = Boolean(
+    access.access?.isAdmin ||
+      access.access?.roles.some((r) => ["pm", "accounts"].includes(r)),
+  );
+  const canDelete = Boolean(access.access?.isAdmin || access.access?.roles.includes("pm"));
+
+  const [projectId, setProjectId] = useState("");
+  const [form, setForm] = useState<FormState>(emptyForm());
+  const [showForm, setShowForm] = useState(false);
+  const [status, setStatus] = useState("");
+  const [search, setSearch] = useState("");
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const projectsQuery = useQuery({
+    queryKey: ["site_projects", "capital-ledger"],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_projects")
+        .select("id,name,location,target_budget,landowners,investors")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const projects = projectsQuery.data ?? [];
+  const activeId = projectId || projects[0]?.id || "";
+  const project = projects.find((p) => p.id === activeId);
+
+  const owners: Owner[] = useMemo(() => {
+    if (!project) return [];
+    const a = Array.isArray(project.landowners) ? (project.landowners as Owner[]) : [];
+    const b = Array.isArray(project.investors) ? (project.investors as Owner[]) : [];
+    return [...a, ...b].filter((o) => (o?.name ?? "").toString().trim());
+  }, [project]);
+
+  const entriesQuery = useQuery({
+    queryKey: ["capital_entries", activeId],
+    enabled: Boolean(activeId && user?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("capital_entries")
+        .select("*")
+        .eq("project_id", activeId)
+        .order("entry_date", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Entry[];
+    },
+  });
+  const entries = entriesQuery.data ?? [];
+
+  const addEntry = useMutation({
+    mutationFn: async (f: FormState) => {
+      if (!activeId) throw new Error("Select a project first");
+      if (!f.owner_name.trim()) throw new Error("Choose the owner / investor");
+      if (num(f.amount) <= 0) throw new Error("Enter an amount greater than zero");
+      const owner = owners.find((o) => (o.name ?? "") === f.owner_name);
+      const { error } = await supabase.from("capital_entries").insert({
+        project_id: activeId,
+        owner_name: f.owner_name.trim(),
+        owner_role: (owner?.role ?? "").toString(),
+        entry_type: f.entry_type,
+        amount: num(f.amount),
+        entry_date: f.entry_date || today(),
+        milestone: f.milestone.trim(),
+        mode: f.entry_type === "receipt" ? f.mode : "",
+        reference: f.reference.trim(),
+        status: f.entry_type === "receipt" ? "received" : f.status,
+        notes: f.notes.trim(),
+        created_by: user?.id ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setStatus("Entry saved to the capital ledger.");
+      setForm(emptyForm());
+      setShowForm(false);
+      await qc.invalidateQueries({ queryKey: ["capital_entries"] });
+    },
+    onError: (e: unknown) => setStatus(e instanceof Error ? e.message : "Could not save the entry"),
+  });
+
+  const removeEntry = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("capital_entries").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setStatus("Entry deleted.");
+      await qc.invalidateQueries({ queryKey: ["capital_entries"] });
+    },
+    onError: (e: unknown) => setStatus(e instanceof Error ? e.message : "Could not delete"),
+  });
+
+  const markReceived = useMutation({
+    mutationFn: async (row: Entry) => {
+      const { error } = await supabase
+        .from("capital_entries")
+        .update({ entry_type: "receipt", status: "received", entry_date: row.entry_date || today() })
+        .eq("id", row.id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setStatus("Capital call marked as received.");
+      await qc.invalidateQueries({ queryKey: ["capital_entries"] });
+    },
+    onError: (e: unknown) => setStatus(e instanceof Error ? e.message : "Could not update"),
+  });
+
+  const budget = num(project?.target_budget);
+
+  const ownerRows = useMemo(() => {
+    const byOwner = new Map<string, { received: number; called: number }>();
+    for (const e of entries) {
+      const key = e.owner_name || "Unassigned";
+      const cur = byOwner.get(key) ?? { received: 0, called: 0 };
+      if (e.entry_type === "receipt") cur.received += num(e.amount);
+      else cur.called += num(e.amount);
+      byOwner.set(key, cur);
+    }
+    const names = new Set<string>([
+      ...owners.map((o) => (o.name ?? "").toString()),
+      ...Array.from(byOwner.keys()),
+    ]);
+    return Array.from(names)
+      .filter(Boolean)
+      .map((name) => {
+        const owner = owners.find((o) => (o.name ?? "") === name);
+        const share = num(owner?.share_pct);
+        const agg = byOwner.get(name) ?? { received: 0, called: 0 };
+        const committed = num(owner?.invested) || (budget * share) / 100;
+        const received = agg.received + num(owner?.paid);
+        return {
+          name,
+          role: (owner?.role ?? "Investor").toString(),
+          contact: (owner?.contact ?? "").toString(),
+          share,
+          liability: committed,
+          received,
+          pending: Math.max(committed - received, 0),
+          called: agg.called,
+        };
+      })
+      .filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => b.share - a.share);
+  }, [entries, owners, budget, search]);
+
+  const totals = useMemo(() => {
+    const share = ownerRows.reduce((s, r) => s + r.share, 0);
+    const liability = ownerRows.reduce((s, r) => s + r.liability, 0);
+    const received = ownerRows.reduce((s, r) => s + r.received, 0);
+    const pending = ownerRows.reduce((s, r) => s + r.pending, 0);
+    const openCalls = entries
+      .filter((e) => e.entry_type === "call" && e.status !== "received")
+      .reduce((s, e) => s + num(e.amount), 0);
+    return { share, liability, received, pending, openCalls };
+  }, [ownerRows, entries]);
+
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(
+        ownerRows.map((r) => ({
+          Owner: r.name,
+          Role: r.role,
+          "Share %": r.share,
+          Liability: r.liability,
+          Received: r.received,
+          Pending: r.pending,
+          "Open calls": r.called,
+        })),
+      ),
+      "Owner summary",
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(
+        entries.map((e) => ({
+          Date: e.entry_date ?? "",
+          Owner: e.owner_name,
+          Type: e.entry_type === "call" ? "Capital call" : "Money received",
+          Amount: num(e.amount),
+          Milestone: e.milestone,
+          Mode: e.mode,
+          Reference: e.reference,
+          Status: e.status,
+          Notes: e.notes,
+        })),
+      ),
+      "Ledger",
+    );
+    XLSX.writeFile(wb, `capital-ledger-${(project?.name || "project").replace(/\s+/g, "-")}.xlsx`);
+    setStatus("Capital ledger downloaded.");
+  };
+
+  const openFor = (owner: string, type: "receipt" | "call") => {
+    setForm({ ...emptyForm(), owner_name: owner, entry_type: type, status: type === "call" ? "pending" : "received" });
+    setShowForm(true);
+    setStatus("");
+    window.setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  };
+
+  const set = (patch: Partial<FormState>) => setForm((p) => ({ ...p, ...patch }));
+
   return (
-    <Shell title={"Capital Ledger & Landowner Contributions"}>
-      <div className="m3">
-        <main className="w-full  px-gutter-normal pb-gutter-expanded bg-surface"><div className="flex flex-col w-full gap-space-xl">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex flex-col gap-space-2xs"> <div className="flex items-center gap-space-sm"> <span className="font-label-sm text-label-sm text-primary uppercase tracking-widest bg-surface-container px-space-sm py-space-2xs rounded-lg">PRJ-79687 • {project.name}</span> <span className="flex items-center gap-space-2xs text-secondary"><span className="material-symbols-outlined text-[14px]">verified</span> Verified Capital Ledger</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">PMC Project Scope & Investment & Landowner Contribution</h1> <p className="font-body-md text-body-md text-on-surface-variant">Owner funding • PMC scope • common vs individual cost planning</p> </div> <div className="flex items-center gap-space-sm"> <button className="flex items-center gap-space-xs bg-surface-container text-on-surface px-space-md py-space-sm rounded-lg font-label-md hover:bg-surface-container-high transition-colors" type="button"> <span className="material-symbols-outlined text-[18px]">description</span>
-        Generate Capital Demand
-      </button> <button className="flex items-center gap-space-xs bg-primary text-on-primary px-space-md py-space-sm rounded-lg font-label-md hover:bg-primary-container transition-colors shadow-sm" type="button"> <span className="material-symbols-outlined text-[18px]">add</span>
-        Add Landowner / Investor
-      </button> </div> </div>  <div className="flex items-center gap-space-sm border-b border-surface-container pb-space-xs overflow-x-auto"> <button className="px-space-md py-space-sm rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm transition-colors" type="button">Investment & Contributions</button> <button className="px-space-md py-space-sm rounded-lg text-secondary hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" type="button">Owner Report</button> <button className="px-space-md py-space-sm rounded-lg text-secondary hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" type="button">Demand & Reconciliation</button> <button className="px-space-md py-space-sm rounded-lg text-secondary hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" type="button">PMC Scope & Common Costs</button> </div>  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Active Stakeholders</span> <span className="p-space-xs bg-surface-container rounded-lg text-primary"><span className="material-symbols-outlined text-[18px]">group</span></span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">4 Owners / Investors</div> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="px-space-2xs py-0.5 rounded bg-surface-container text-primary font-label-sm">100% Share Allocated</span> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Total Investment Req.</span> <span className="p-space-xs bg-surface-container rounded-lg text-primary"><span className="material-symbols-outlined text-[18px]">account_balance_wallet</span></span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">₹ 5.00 Cr</div> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="px-space-2xs py-0.5 rounded bg-[#ecfdf5] text-primary font-label-sm">Budget On Track</span> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Committed Share</span> <span className="p-space-xs bg-surface-container rounded-lg text-primary"><span className="material-symbols-outlined text-[18px]">pie_chart</span></span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">₹ 2.10 Cr</div> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="px-space-2xs py-0.5 rounded bg-[#ecfdf5] text-primary font-label-sm">42% Landowner Pool</span> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Paid vs Pending Dues</span> <span className="p-space-xs bg-[#fef2f2] rounded-lg text-error"><span className="material-symbols-outlined text-[18px]">pending_actions</span></span> </div> <div className="mt-space-md"> <div className="flex items-baseline gap-space-xs"> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 1.45 Cr</span> <span className="font-body-sm text-secondary">Paid</span> </div> <div className="flex items-center justify-between mt-space-2xs"> <span className="font-label-sm text-error font-semibold">Pending: ₹ 65.0 L</span> <span className="text-xs text-secondary">Call #3 Due</span> </div> </div> </div> </div>  <div className="bg-surface-container-lowest rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] overflow-hidden flex flex-col"> <div className="p-space-lg flex flex-col sm:flex-row sm:items-center justify-between gap-space-md border-b border-surface-container"> <div className="flex flex-col"> <h2 className="font-headline-md text-headline-md text-on-surface">Landowner & Investor Directory</h2> <p className="font-body-sm text-secondary">Real-time tracking of equity shares, capital liabilities, and call schedules.</p> </div> <div className="flex items-center gap-space-sm"> <div className="relative"> <span className="material-symbols-outlined absolute left-space-sm top-2.5 text-outline text-[16px]">search</span> <input className="pl-8 pr-space-md py-1.5 bg-surface-container-low text-on-surface rounded-lg text-body-sm focus:outline-none" placeholder="Filter landowners..." type="text" /> </div> <button className="flex items-center gap-space-xs px-space-md py-1.5 bg-surface-container text-on-surface rounded-lg font-label-md hover:bg-surface-container-high transition-colors" type="button"> <span className="material-symbols-outlined text-[16px]">filter_list</span>
-          Filter
-        </button> </div> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="bg-surface-container-low text-on-surface-variant font-label-md text-label-md"><th className="p-space-md">Landowner Name</th><th className="p-space-md">Survey / Plot Ref</th><th className="p-space-md text-center">Ownership Share</th><th className="p-space-md text-right">Total Liability</th><th className="p-space-md text-right">Paid to Date</th><th className="p-space-md text-right">Pending Dues</th><th className="p-space-md">Payment Schedule</th><th className="p-space-md text-center">Actions</th></tr></thead><tbody className="divide-y divide-surface-container font-body-md text-on-surface"><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="p-space-md"> <div className="flex items-center gap-space-sm"> <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">SR</div> <div> <div className="font-title-md">Srikanth Reddy</div> <div className="font-body-sm text-secondary">Primary Co-Developer</div> </div> </div> </td><td className="p-space-md font-tabular-metric-sm">Sy. No. 114/part, Plot 04</td><td className="p-space-md text-center"> <span className="px-space-sm py-0.5 rounded-full bg-primary/10 text-primary font-tabular-metric-sm">35.0%</span> </td><td className="p-space-md text-right font-tabular-metric-sm">₹ 73,50,000</td><td className="p-space-md text-right font-tabular-metric-sm text-primary">₹ 60,00,000</td><td className="p-space-md text-right font-tabular-metric-sm text-error">₹ 13,50,000</td><td className="p-space-md"> <div className="flex flex-col"> <span className="font-label-md text-on-surface">Call #3 (Foundation)</span> <span className="text-xs text-error">Due in 3 days</span> </div> </td><td className="p-space-md text-center"> <div className="flex items-center justify-center gap-space-xs"> <button className="p-1.5 rounded hover:bg-surface-container text-secondary hover:text-on-surface transition-colors" title="View Ledger" type="button"> <span className="material-symbols-outlined text-[18px]">visibility</span> </button> <button className="p-1.5 rounded hover:bg-[#ecfdf5] text-primary transition-colors" title="Send WhatsApp Demand Notice" type="button"> <span className="material-symbols-outlined text-[18px]">send</span> </button> </div> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="p-space-md"> <div className="flex items-center gap-space-sm"> <div className="w-8 h-8 rounded-full bg-tertiary/10 text-tertiary flex items-center justify-center font-bold text-xs">RV</div> <div> <div className="font-title-md">Rajesh Varma</div> <div className="font-body-sm text-secondary">Joint Holder</div> </div> </div> </td><td className="p-space-md font-tabular-metric-sm">Sy. No. 115, Plot 09</td><td className="p-space-md text-center"> <span className="px-space-sm py-0.5 rounded-full bg-tertiary/10 text-tertiary font-tabular-metric-sm">25.0%</span> </td><td className="p-space-md text-right font-tabular-metric-sm">₹ 52,50,000</td><td className="p-space-md text-right font-tabular-metric-sm text-primary">₹ 40,00,000</td><td className="p-space-md text-right font-tabular-metric-sm text-error">₹ 12,50,000</td><td className="p-space-md"> <div className="flex flex-col"> <span className="font-label-md text-on-surface">Call #3 (Foundation)</span> <span className="text-xs text-error">Overdue by 2d</span> </div> </td><td className="p-space-md text-center"> <div className="flex items-center justify-center gap-space-xs"> <button className="p-1.5 rounded hover:bg-surface-container text-secondary hover:text-on-surface transition-colors" title="View Ledger" type="button"> <span className="material-symbols-outlined text-[18px]">visibility</span> </button> <button className="p-1.5 rounded hover:bg-[#ecfdf5] text-primary transition-colors" title="Send WhatsApp Demand Notice" type="button"> <span className="material-symbols-outlined text-[18px]">send</span> </button> </div> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="p-space-md"> <div className="flex items-center gap-space-sm"> <div className="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-xs">AN</div> <div> <div className="font-title-md">Anitha Naidu</div> <div className="font-body-sm text-secondary">Family Trust</div> </div> </div> </td><td className="p-space-md font-tabular-metric-sm">Sy. No. 114/part, Plot 12</td><td className="p-space-md text-center"> <span className="px-space-sm py-0.5 rounded-full bg-secondary/10 text-secondary font-tabular-metric-sm">22.0%</span> </td><td className="p-space-md text-right font-tabular-metric-sm">₹ 46,20,000</td><td className="p-space-md text-right font-tabular-metric-sm text-primary">₹ 45,00,000</td><td className="p-space-md text-right font-tabular-metric-sm text-on-surface-variant">₹ 1,20,000</td><td className="p-space-md"> <div className="flex flex-col"> <span className="font-label-md text-on-surface">Call #4 (Piling)</span> <span className="text-xs text-secondary">Upcoming</span> </div> </td><td className="p-space-md text-center"> <div className="flex items-center justify-center gap-space-xs"> <button className="p-1.5 rounded hover:bg-surface-container text-secondary hover:text-on-surface transition-colors" title="View Ledger" type="button"> <span className="material-symbols-outlined text-[18px]">visibility</span> </button> <button className="p-1.5 rounded hover:bg-[#ecfdf5] text-primary transition-colors" title="Send WhatsApp Demand Notice" type="button"> <span className="material-symbols-outlined text-[18px]">send</span> </button> </div> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="p-space-md"> <div className="flex items-center gap-space-sm"> <div className="w-8 h-8 rounded-full bg-warning/10 text-warning flex items-center justify-center font-bold text-xs">KP</div> <div> <div className="font-title-md">Kiran Prasad</div> <div className="font-body-sm text-secondary">Individual Investor</div> </div> </div> </td><td className="p-space-md font-tabular-metric-sm">Sy. No. 116, Plot 02</td><td className="p-space-md text-center"> <span className="px-space-sm py-0.5 rounded-full bg-secondary/10 text-secondary font-tabular-metric-sm">18.0%</span> </td><td className="p-space-md text-right font-tabular-metric-sm">₹ 37,80,000</td><td className="p-space-md text-right font-tabular-metric-sm text-primary">₹ 0,00,000</td><td className="p-space-md text-right font-tabular-metric-sm text-error">₹ 37,80,000</td><td className="p-space-md"> <div className="flex flex-col"> <span className="font-label-md text-error">Call #1 & #2</span> <span className="text-xs text-error">Critical Delay</span> </div> </td><td className="p-space-md text-center"> <div className="flex items-center justify-center gap-space-xs"> <button className="p-1.5 rounded hover:bg-surface-container text-secondary hover:text-on-surface transition-colors" title="View Ledger" type="button"> <span className="material-symbols-outlined text-[18px]">visibility</span> </button> <button className="p-1.5 rounded hover:bg-[#ecfdf5] text-primary transition-colors" title="Send WhatsApp Demand Notice" type="button"> <span className="material-symbols-outlined text-[18px]">send</span> </button> </div> </td></tr></tbody></table> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-md">  <div className="lg:col-span-2 bg-surface-container-lowest rounded-xl p-space-lg shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex flex-col gap-space-2xs mb-space-md"> <h3 className="font-headline-md text-headline-md text-on-surface">Common vs. Individual Cost Allocation Matrix</h3> <p className="font-body-sm text-secondary">Apportionment of structural, foundation, and fit-out expenses across stakeholder shares.</p> </div> <div className="space-y-space-md">  <div className="p-space-md bg-surface-container-low rounded-lg flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-title-md text-on-surface">Substructure & Piling (Common Pool)</span> <span className="font-tabular-metric-sm text-primary">₹ 1.80 Cr Total</span> </div> <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full rounded-full" style={{"width": "100%"}} /> </div> <div className="flex justify-between text-xs text-secondary"> <span>Shared proportionally per ownership %</span> <span>Landowner Share: ₹ 75.6 L</span> </div> </div>  <div className="p-space-md bg-surface-container-low rounded-lg flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-title-md text-on-surface">Superstructure & Core Framework (Common Pool)</span> <span className="font-tabular-metric-sm text-primary">₹ 2.20 Cr Total</span> </div> <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full rounded-full" style={{"width": "85%"}} /> </div> <div className="flex justify-between text-xs text-secondary"> <span>Progressive Milestone Billing</span> <span>Landowner Share: ₹ 92.4 L</span> </div> </div>  <div className="p-space-md bg-surface-container-low rounded-lg flex flex-col gap-space-xs"> <div className="flex items-center justify-between"> <span className="font-title-md text-on-surface">Individual Villa / Apartment Fit-outs</span> <span className="font-tabular-metric-sm text-on-surface-variant">₹ 1.00 Cr Total</span> </div> <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden"> <div className="bg-tertiary h-full rounded-full" style={{"width": "42%"}} /> </div> <div className="flex justify-between text-xs text-secondary"> <span>Directly billed per unit specification</span> <span>Landowner Share: Direct Actuals</span> </div> </div> </div> </div>  <div className="bg-inverse-surface rounded-xl p-space-lg text-inverse-on-surface flex flex-col justify-between shadow-sm"> <div className="flex flex-col gap-space-sm"> <div className="flex items-center justify-between"> <span className="font-label-sm text-secondary-fixed-dim uppercase tracking-wider">PMC Control Hub</span> <span className="w-2 h-2 rounded-full bg-primary-fixed animate-pulse" /> </div> <h3 className="font-headline-md text-inverse-on-surface">Automated Capital Calls</h3> <p className="font-body-sm text-secondary-fixed-dim">Trigger instant WhatsApp & Email demand letters linked directly with site milestone completions verified by the PMC engineer.</p> </div> <div className="my-space-lg p-space-md bg-surface/10 rounded-lg flex flex-col gap-space-xs"> <div className="flex justify-between text-sm"> <span className="text-secondary-fixed-dim">Next Milestone Trigger:</span> <span className="font-semibold text-primary-fixed">Piling Cap Complete</span> </div> <div className="flex justify-between text-sm"> <span className="text-secondary-fixed-dim">Total Due for Notice:</span> <span className="font-semibold text-inverse-on-surface">₹ 65,00,000</span> </div> </div> <button className="w-full py-space-sm px-space-md bg-primary text-on-primary rounded-lg font-label-md hover:bg-primary-container transition-colors text-center shadow-sm" type="button">
-        Generate All Pending Notices
-      </button> </div> </div>  <div className="fixed inset-0 bg-inverse-surface/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-gutter-normal" id="addOwnerModal"> <div className="bg-surface-container-lowest w-full max-w-lg rounded-xl shadow-2xl p-space-xl flex flex-col gap-space-lg"> <div className="flex items-center justify-between border-b border-surface-container pb-space-sm"> <h3 className="font-headline-md text-headline-md text-on-surface">Add Landowner / Investor</h3> <button className="p-space-xs rounded-lg text-secondary hover:bg-surface-container" type="button"> <span className="material-symbols-outlined text-[20px]">close</span> </button> </div> <div className="flex flex-col gap-space-md"> <div className="flex flex-col gap-space-2xs"> <label className="font-label-md text-on-surface">Landowner / Entity Full Name</label> <input className="p-space-sm bg-surface-container-low rounded-lg border-0 text-on-surface font-body-md focus:outline-none" placeholder="e.g. Ramesh Chandra Patel" type="text" /> </div> <div className="grid grid-cols-2 gap-space-md"> <div className="flex flex-col gap-space-2xs"> <label className="font-label-md text-on-surface">Survey / Plot Reference</label> <input className="p-space-sm bg-surface-container-low rounded-lg border-0 text-on-surface font-body-md focus:outline-none" placeholder="Sy. No. 117, Plot 14" type="text" /> </div> <div className="flex flex-col gap-space-2xs"> <label className="font-label-md text-on-surface">Ownership Share (%)</label> <input className="p-space-sm bg-surface-container-low rounded-lg border-0 text-on-surface font-body-md focus:outline-none" placeholder="15.0" type="number" /> </div> </div> <div className="flex flex-col gap-space-2xs"> <label className="font-label-md text-on-surface">Contact Phone (WhatsApp Enabled)</label> <input className="p-space-sm bg-surface-container-low rounded-lg border-0 text-on-surface font-body-md focus:outline-none" placeholder="+91 98765 43210" type="text" /> </div> </div> <div className="flex items-center justify-end gap-space-sm pt-space-md border-t border-surface-container"> <button className="px-space-md py-space-sm rounded-lg border border-outline-variant text-on-surface font-label-md hover:bg-surface-container" type="button">Cancel</button> <button className="px-space-md py-space-sm rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary-container shadow-sm" type="button">Save Landowner</button> </div> </div> </div> <div className="fixed inset-0 bg-inverse-surface/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-gutter-normal" id="demandModal"> <div className="bg-surface-container-lowest w-full max-w-md rounded-xl shadow-2xl p-space-xl flex flex-col gap-space-lg"> <div className="flex items-center justify-between border-b border-surface-container pb-space-sm"> <h3 className="font-headline-md text-headline-md text-on-surface">Generate Capital Demand Notice</h3> <button className="p-space-xs rounded-lg text-secondary hover:bg-surface-container" type="button"> <span className="material-symbols-outlined text-[20px]">close</span> </button> </div> <div className="flex flex-col gap-space-md"> <div className="p-space-md bg-surface-container-low rounded-lg flex items-center gap-space-md"> <span className="material-symbols-outlined text-primary text-[28px]">receipt_long</span> <div> <div className="font-title-md text-on-surface">Call #3 - Foundation Completion</div> <div className="font-body-sm text-secondary">Total pool amount: ₹ 65,00,000 across pending accounts.</div> </div> </div> <div className="flex flex-col gap-space-2xs"> <label className="font-label-md text-on-surface">Select Delivery Channels</label> <div className="flex items-center gap-space-md mt-space-2xs"> <label className="flex items-center gap-space-xs font-body-md text-on-surface cursor-pointer"> <input checked={true} className="rounded text-primary focus:ring-0" type="checkbox" /> WhatsApp API
-            </label> <label className="flex items-center gap-space-xs font-body-md text-on-surface cursor-pointer"> <input checked={true} className="rounded text-primary focus:ring-0" type="checkbox" /> PDF Document
-            </label> <label className="flex items-center gap-space-xs font-body-md text-on-surface cursor-pointer"> <input className="rounded text-primary focus:ring-0" type="checkbox" /> Email Broadcast
-            </label> </div> </div> </div> <div className="flex items-center justify-end gap-space-sm pt-space-md border-t border-surface-container"> <button className="px-space-md py-space-sm rounded-lg border border-outline-variant text-on-surface font-label-md hover:bg-surface-container" type="button">Cancel</button> <button className="px-space-md py-space-sm rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary-container shadow-sm" type="button">Dispatch Notices</button> </div> </div> </div>  </div></main>
+    <Shell title="Capital Ledger & Landowner Contributions">
+      <div className="w-full px-4 pb-10 space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+              Money &amp; Owners / Capital Ledger
+            </p>
+            <h1 className="text-2xl font-bold text-slate-900">Capital Ledger &amp; Landowner Contributions</h1>
+            <p className="text-sm text-slate-500">
+              Record every rupee called and received from landowners and investors, share-wise.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={activeId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+            >
+              {projects.length === 0 && <option value="">No projects yet</option>}
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={exportExcel}
+              disabled={ownerRows.length === 0}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" /> Export Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setForm(emptyForm());
+                setShowForm((v) => !v);
+                setStatus("");
+              }}
+              disabled={!canEdit || !activeId}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" /> Add owner entry
+            </button>
+          </div>
+        </div>
+
+        {!canEdit && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            You can view this ledger. Adding entries needs Admin, PM or Accounts rights.
+          </p>
+        )}
+        {status && (
+          <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">{status}</p>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {[
+            { label: "Owners / Investors", value: `${ownerRows.length}`, sub: `${totals.share.toFixed(1)}% share mapped`, icon: Users },
+            { label: "Total liability", value: cr(totals.liability), sub: `Project budget ${cr(budget)}`, icon: BadgeIndianRupee },
+            { label: "Received to date", value: cr(totals.received), sub: `${entries.filter((e) => e.entry_type === "receipt").length} receipts`, icon: Wallet },
+            { label: "Pending dues", value: cr(totals.pending), sub: `Open calls ${cr(totals.openCalls)}`, icon: Landmark },
+          ].map((c) => (
+            <div key={c.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{c.label}</span>
+                <c.icon className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="mt-2 text-xl font-bold text-slate-900">{c.value}</div>
+              <div className="text-xs text-slate-500">{c.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        {showForm && (
+          <div ref={formRef} className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
+            <h2 className="text-base font-bold text-slate-900">New capital entry</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-slate-700">Owner / investor</span>
+                {owners.length > 0 ? (
+                  <select
+                    value={form.owner_name}
+                    onChange={(e) => set({ owner_name: e.target.value })}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+                  >
+                    <option value="">Select owner</option>
+                    {owners.map((o) => (
+                      <option key={String(o.name)} value={String(o.name)}>
+                        {String(o.name)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={form.owner_name}
+                    onChange={(e) => set({ owner_name: e.target.value })}
+                    placeholder="Owner name"
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+                  />
+                )}
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-slate-700">Entry type</span>
+                <select
+                  value={form.entry_type}
+                  onChange={(e) =>
+                    set({
+                      entry_type: e.target.value as "receipt" | "call",
+                      status: e.target.value === "call" ? "pending" : "received",
+                    })
+                  }
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+                >
+                  <option value="receipt">Money received</option>
+                  <option value="call">Capital call (demand)</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-slate-700">Amount (₹)</span>
+                <input
+                  type="number"
+                  value={form.amount}
+                  onChange={(e) => set({ amount: e.target.value })}
+                  placeholder="500000"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-slate-700">Date</span>
+                <input
+                  type="date"
+                  value={form.entry_date}
+                  onChange={(e) => set({ entry_date: e.target.value })}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-slate-700">Milestone / stage</span>
+                <input
+                  value={form.milestone}
+                  onChange={(e) => set({ milestone: e.target.value })}
+                  placeholder="Call #3 — Foundation"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+                />
+              </label>
+              {form.entry_type === "receipt" && (
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium text-slate-700">Payment mode</span>
+                  <select
+                    value={form.mode}
+                    onChange={(e) => set({ mode: e.target.value })}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+                  >
+                    {MODES.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-slate-700">Reference / UTR</span>
+                <input
+                  value={form.reference}
+                  onChange={(e) => set({ reference: e.target.value })}
+                  placeholder="UTR / cheque no."
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm xl:col-span-2">
+                <span className="font-medium text-slate-700">Notes</span>
+                <input
+                  value={form.notes}
+                  onChange={(e) => set({ notes: e.target.value })}
+                  placeholder="Optional remark"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+                />
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => addEntry.mutate(form)}
+                disabled={addEntry.isPending || !canEdit}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {addEntry.isPending ? "Saving…" : "Save entry"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 p-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Owner &amp; investor directory</h2>
+              <p className="text-xs text-slate-500">
+                Share, liability, money received and pending dues — owners come from the project record.
+              </p>
+            </div>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter owners…"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="p-3">Owner</th>
+                  <th className="p-3 text-center">Share</th>
+                  <th className="p-3 text-right">Liability</th>
+                  <th className="p-3 text-right">Received</th>
+                  <th className="p-3 text-right">Pending</th>
+                  <th className="p-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {ownerRows.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-6 text-center text-slate-500">
+                      No owners yet. Add landowners and investors on the Landowners &amp; Investment page, then
+                      record their money here.
+                    </td>
+                  </tr>
+                )}
+                {ownerRows.map((r) => (
+                  <tr key={r.name} className="hover:bg-slate-50/70">
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+                          {initials(r.name)}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-900">{r.name}</div>
+                          <div className="text-xs text-slate-500">{r.role}{r.contact ? ` • ${r.contact}` : ""}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3 text-center font-medium text-slate-700">{r.share.toFixed(1)}%</td>
+                    <td className="p-3 text-right text-slate-800">{inr(r.liability)}</td>
+                    <td className="p-3 text-right font-medium text-emerald-700">{inr(r.received)}</td>
+                    <td className={`p-3 text-right font-medium ${r.pending > 0 ? "text-rose-600" : "text-slate-500"}`}>
+                      {inr(r.pending)}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openFor(r.name, "receipt")}
+                          disabled={!canEdit}
+                          className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          Add receipt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openFor(r.name, "call")}
+                          disabled={!canEdit}
+                          className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          Raise call
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-slate-200 p-4">
+            <h2 className="text-base font-bold text-slate-900">Capital ledger entries</h2>
+            <p className="text-xs text-slate-500">
+              {entriesQuery.isLoading ? "Loading…" : `${entries.length} entries for ${project?.name ?? "this project"}`}
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="p-3">Date</th>
+                  <th className="p-3">Owner</th>
+                  <th className="p-3">Type</th>
+                  <th className="p-3 text-right">Amount</th>
+                  <th className="p-3">Milestone</th>
+                  <th className="p-3">Mode / Ref</th>
+                  <th className="p-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {entries.length === 0 && !entriesQuery.isLoading && (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-slate-500">
+                      No entries yet. Use “Add owner entry” to record a receipt or raise a capital call.
+                    </td>
+                  </tr>
+                )}
+                {entries.map((e) => (
+                  <tr key={e.id} className="hover:bg-slate-50/70">
+                    <td className="p-3 text-slate-700">{e.entry_date ?? "—"}</td>
+                    <td className="p-3 font-medium text-slate-900">{e.owner_name}</td>
+                    <td className="p-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          e.entry_type === "receipt"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {e.entry_type === "receipt" ? "Received" : `Call · ${e.status}`}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right font-medium text-slate-800">{inr(num(e.amount))}</td>
+                    <td className="p-3 text-slate-600">{e.milestone || "—"}</td>
+                    <td className="p-3 text-slate-600">
+                      {[e.mode, e.reference].filter(Boolean).join(" • ") || "—"}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center justify-center gap-2">
+                        {e.entry_type === "call" && e.status !== "received" && (
+                          <button
+                            type="button"
+                            onClick={() => markReceived.mutate(e)}
+                            disabled={!canEdit}
+                            className="rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                          >
+                            Mark received
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeEntry.mutate(e.id)}
+                          disabled={!canDelete}
+                          title="Delete entry"
+                          className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </Shell>
   );
