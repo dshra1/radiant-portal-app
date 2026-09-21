@@ -1,13 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Users, IndianRupee, HardHat, CalendarDays, FileDown, Plus } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveProject } from "@/hooks/useActiveProject";
+import { useAccess, useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/contractors-labour")({
   head: () => ({
     meta: [
-      { title: "Contractors, Labour & Biometric Attendance — Saha OS" },
-      { name: "description", content: "Trade subcontractors, daily muster roll, unit rates, milestone certifications, biometric gate sync and pending payment ledgers." },
-      { property: "og:title", content: "Contractors, Labour & Biometric Attendance — Saha OS" },
-      { property: "og:description", content: "Trade subcontractors, daily muster roll, unit rates, milestone certifications, biometric gate sync and pending payment ledgers." },
+      { title: "Contractors & Labour | Saha OS" },
+      {
+        name: "description",
+        content:
+          "Daily labour log per contractor and trade with headcount, man-days, day rates and labour cost for the selected project.",
+      },
+      { property: "og:title", content: "Contractors & Labour | Saha OS" },
+      {
+        property: "og:description",
+        content: "Daily contractor and labour deployment with man-days and labour cost per project.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -15,30 +29,527 @@ export const Route = createFileRoute("/contractors-labour")({
   component: Page,
 });
 
+type Entry = {
+  id: string;
+  work_date: string;
+  contractor: string;
+  trade: string;
+  headcount: number;
+  hours: number;
+  day_rate: number;
+  work_done: string;
+  area: string;
+  supervisor: string;
+  notes: string;
+};
+
+type Draft = Omit<Entry, "id">;
+
+const TRADES = [
+  "Masonry",
+  "RCC / Shuttering",
+  "Bar bending",
+  "Plastering",
+  "Plumbing",
+  "Electrical",
+  "Painting",
+  "Flooring / Tiling",
+  "Carpentry",
+  "Helpers",
+];
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+function emptyDraft(): Draft {
+  return {
+    work_date: today(),
+    contractor: "",
+    trade: TRADES[0]!,
+    headcount: 0,
+    hours: 8,
+    day_rate: 0,
+    work_done: "",
+    area: "",
+    supervisor: "",
+    notes: "",
+  };
+}
+
+const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+const num = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
 function Page() {
+  const project = useActiveProject();
+  const user = useSessionUser();
+  const { access } = useAccess();
+  const canDelete = Boolean(access?.isAdmin || access?.roles.includes("pm"));
+  const queryClient = useQueryClient();
+  const enabled = Boolean(user?.id) && Boolean(project.id);
+
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [range, setRange] = useState<"today" | "month" | "all">("month");
+
+  const { data: entries = [], isPending } = useQuery({
+    queryKey: ["labour_entries", project.id],
+    enabled,
+    queryFn: async (): Promise<Entry[]> => {
+      const { data, error } = await supabase
+        .from("labour_entries")
+        .select(
+          "id,work_date,contractor,trade,headcount,hours,day_rate,work_done,area,supervisor,notes",
+        )
+        .eq("project_id", project.id)
+        .order("work_date", { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map((r) => ({
+        ...r,
+        headcount: num(r.headcount),
+        hours: num(r.hours),
+        day_rate: num(r.day_rate),
+      })) as Entry[];
+    },
+  });
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["labour_entries", project.id] });
+
+  const save = useMutation({
+    mutationFn: async (p: { draft: Draft; id: string | null }) => {
+      const row = { ...p.draft, project_id: project.id, created_by: user?.id ?? null };
+      if (p.id) {
+        const { error } = await supabase.from("labour_entries").update(row).eq("id", p.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("labour_entries").insert(row);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Labour entry saved");
+      setDraft(null);
+      setEditingId(null);
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("labour_entries").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Entry removed");
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const monthKey = today().slice(0, 7);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return entries.filter((e) => {
+      if (range === "today" && e.work_date !== today()) return false;
+      if (range === "month" && !e.work_date.startsWith(monthKey)) return false;
+      if (!q) return true;
+      return [e.contractor, e.trade, e.work_done, e.area, e.supervisor]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [entries, search, range, monthKey]);
+
+  const stats = useMemo(() => {
+    const todays = entries.filter((e) => e.work_date === today());
+    const month = entries.filter((e) => e.work_date.startsWith(monthKey));
+    return {
+      todayHeads: todays.reduce((s, e) => s + e.headcount, 0),
+      monthManDays: month.reduce((s, e) => s + e.headcount * (e.hours / 8), 0),
+      monthCost: month.reduce((s, e) => s + e.headcount * e.day_rate, 0),
+      contractors: new Set(entries.map((e) => e.contractor).filter(Boolean)).size,
+    };
+  }, [entries, monthKey]);
+
+  const byContractor = useMemo(() => {
+    const map = new Map<string, { manDays: number; cost: number; trades: Set<string> }>();
+    for (const e of filtered) {
+      const key = e.contractor || "Unassigned";
+      const cur = map.get(key) ?? { manDays: 0, cost: 0, trades: new Set<string>() };
+      cur.manDays += e.headcount * (e.hours / 8);
+      cur.cost += e.headcount * e.day_rate;
+      if (e.trade) cur.trades.add(e.trade);
+      map.set(key, cur);
+    }
+    return [...map.entries()].sort((a, b) => b[1].cost - a[1].cost);
+  }, [filtered]);
+
+  function exportCsv() {
+    const head = [
+      "Date",
+      "Contractor",
+      "Trade",
+      "Headcount",
+      "Hours",
+      "Day rate",
+      "Labour cost",
+      "Area",
+      "Work done",
+      "Supervisor",
+    ];
+    const rows = filtered.map((e) =>
+      [
+        e.work_date,
+        e.contractor,
+        e.trade,
+        e.headcount,
+        e.hours,
+        e.day_rate,
+        Math.round(e.headcount * e.day_rate),
+        e.area,
+        e.work_done,
+        e.supervisor,
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(","),
+    );
+    const blob = new Blob([[head.join(","), ...rows].join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `labour-${(project.name || "project").replace(/\s+/g, "-").toLowerCase()}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   return (
-    <Shell title={"Contractors, Labour & Biometric Attendance"}>
-      <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"> <div className="flex flex-col w-full">  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-space-md mb-space-2xl pt-space-lg"> <div className="flex flex-col"> <div className="flex items-center gap-space-sm mb-space-2xs"> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm uppercase">Module ID: CR-LBR-09</span> <span className="font-label-sm text-on-surface-variant">• Enterprise Construction Hub</span> </div> <h1 className="font-display-lg text-display-lg text-on-surface tracking-tight">Contractors, Labour & Biometric Gate Attendance</h1> <p className="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
-            Managing trade subcontractors, daily muster roll, unit rates, milestone stage certifications, biometric gate sync, and pending payment ledgers.
-          </p> </div>  <div className="flex flex-wrap items-center gap-space-sm"> <button className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-surface-container-lowest text-on-surface font-title-md shadow-sm hover:bg-surface-container-low transition-colors"> <span className="material-symbols-outlined text-space-base leading-none">sync</span> <span>Sync Biometric Gate Data</span> </button> <button className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-surface-container-lowest text-on-surface font-title-md shadow-sm hover:bg-surface-container-low transition-colors"> <span className="material-symbols-outlined text-space-base leading-none">download</span> <span>Export Muster Roll Excel</span> </button> <button className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-surface-container-lowest text-on-surface font-title-md shadow-sm hover:bg-surface-container-low transition-colors"> <span className="material-symbols-outlined text-space-base leading-none">receipt_long</span> <span>Certify RA Bills</span> </button> <button className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-primary text-on-primary font-title-md shadow-sm hover:bg-primary-container transition-colors"> <span className="material-symbols-outlined text-space-base leading-none">add</span> <span>Add Contractor</span> </button> <button className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-surface-container-lowest text-on-surface font-title-md shadow-sm hover:bg-surface-container-low transition-colors"> <span className="material-symbols-outlined text-space-base leading-none">description</span> <span>Contract Builder & Milestones</span> </button> </div> </div>  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-base mb-space-2xl"> <div className="p-space-xl rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden"> <div className="absolute right-0 top-0 h-full w-1 bg-primary" /> <div className="flex justify-between items-start mb-space-md"> <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold tracking-wider">Active Contractors</span> <span className="p-space-xs rounded bg-primary-container/30 text-primary flex items-center justify-center"> <span className="material-symbols-outlined text-space-lg">badge</span> </span> </div> <div> <div className="font-display-lg text-display-lg text-on-surface mb-space-2xs">14 <span className="font-body-md text-body-md text-on-surface-variant">Active</span></div> <div className="flex items-center gap-space-xs"> <span className="px-space-2xs py-0.5 rounded bg-amber-100 text-amber-800 font-label-sm">3 Pending Review</span> <span className="font-body-sm text-on-surface-variant">subcontractor agreements</span> </div> </div> </div> <div className="p-space-xl rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden"> <div className="absolute right-0 top-0 h-full w-1 bg-tertiary" /> <div className="flex justify-between items-start mb-space-md"> <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold tracking-wider">Gate Attendance</span> <span className="p-space-xs rounded bg-tertiary-container/30 text-tertiary flex items-center justify-center"> <span className="material-symbols-outlined text-space-lg">fingerprint</span> </span> </div> <div> <div className="font-display-lg text-display-lg text-on-surface mb-space-2xs">342 <span className="font-body-md text-body-md text-on-surface-variant">Workers</span></div> <div className="flex items-center gap-space-xs"> <span className="px-space-2xs py-0.5 rounded bg-primary-container text-on-primary-container font-label-sm">Live Sync</span> <span className="font-body-sm text-on-surface-variant">Checked-in at Gate 1 & 2</span> </div> </div> </div> <div className="p-space-xl rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden"> <div className="absolute right-0 top-0 h-full w-1 bg-primary" /> <div className="flex justify-between items-start mb-space-md"> <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold tracking-wider">Committed Value</span> <span className="p-space-xs rounded bg-primary-container/30 text-primary flex items-center justify-center"> <span className="material-symbols-outlined text-space-lg">payments</span> </span> </div> <div> <div className="font-display-lg text-display-lg text-on-surface mb-space-2xs" id="kpi-committed">₹1.42 Cr</div> <div className="flex items-center gap-space-xs"> <span className="text-primary font-label-sm flex items-center"> <span className="material-symbols-outlined text-sm">trending_up</span> +4.2%
-              </span> <span className="font-body-sm text-on-surface-variant">across active packages</span> </div> </div> </div> <div className="p-space-xl rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between relative overflow-hidden"> <div className="absolute right-0 top-0 h-full w-1 bg-error" /> <div className="flex justify-between items-start mb-space-md"> <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold tracking-wider">Pending RA Bills & Dues</span> <span className="p-space-xs rounded bg-error-container text-error flex items-center justify-center"> <span className="material-symbols-outlined text-space-lg">request_quote</span> </span> </div> <div> <div className="font-display-lg text-display-lg text-on-surface mb-space-2xs" id="kpi-pending-bills">₹34.23 Lakhs</div> <div className="flex items-center gap-space-xs"> <span className="px-space-2xs py-0.5 rounded bg-error-container text-error font-label-sm">8 Invoices</span> <span className="font-body-sm text-on-surface-variant">due for certification</span> </div> </div> </div> </div>  <div className="flex items-center gap-space-xs border-b border-surface-container-high mb-space-xl overflow-x-auto"> <button className="px-space-base py-space-sm font-title-md text-title-md text-primary border-b-2 border-primary whitespace-nowrap flex items-center gap-space-xs"> <span className="material-symbols-outlined text-space-base">fact_check</span> <span>Assignment Register & Biometric Sync</span> </button> <button className="px-space-base py-space-sm font-title-md text-title-md text-on-surface-variant hover:text-on-surface whitespace-nowrap flex items-center gap-space-xs transition-colors"> <span className="material-symbols-outlined text-space-base">groups</span> <span>Contractor & Labour Master Directory</span> </button> <button className="px-space-base py-space-sm font-title-md text-title-md text-on-surface-variant hover:text-on-surface whitespace-nowrap flex items-center gap-space-xs transition-colors"> <span className="material-symbols-outlined text-space-base">description</span> <span>Labour Contracts & Rate Cards</span> </button> <button className="px-space-base py-space-sm font-title-md text-title-md text-on-surface-variant hover:text-on-surface whitespace-nowrap flex items-center gap-space-xs transition-colors"> <span className="material-symbols-outlined text-space-base">calendar_month</span> <span>Daily Muster Roll & Attendance</span> </button> <button className="px-space-base py-space-sm font-title-md text-title-md text-on-surface-variant hover:text-on-surface whitespace-nowrap flex items-center gap-space-xs transition-colors"> <span className="material-symbols-outlined text-space-base">account_balance_wallet</span> <span>RA Bills & Stage Milestone Payments</span> </button> </div>  <div className="bg-surface-container-lowest rounded shadow-sm flex flex-col overflow-hidden mb-space-3xl"> <div className="p-space-base flex flex-col md:flex-row justify-between items-stretch md:items-center gap-space-md border-b border-surface-container-high"> <div className="flex items-center gap-space-md"> <h2 className="font-headline-md text-headline-md text-on-surface">Trade Subcontractor & Biometric Assignments</h2> <span className="px-space-sm py-space-2xs rounded-full bg-primary-container text-on-primary-container font-label-md">7 Active Categories</span> </div> <div className="flex items-center gap-space-sm"> <div className="relative"> <span className="material-symbols-outlined absolute left-space-sm top-2.5 text-on-surface-variant text-space-base">filter_list</span> <select className="pl-9 pr-space-base py-space-xs rounded bg-surface-container-low text-on-surface font-body-md focus:outline-none" id="trade-filter"><option value="">All Trades</option><option value="Shuttering Carpentry">Shuttering Carpentry</option><option value="Masonry">Masonry / Mestri</option><option value="Steel Fixing">Steel Fixing</option><option value="Electrical">Electrical 1st Fix</option><option value="Plumbing">Plumbing & Sanitary</option></select> </div> <div className="relative"> <span className="material-symbols-outlined absolute left-space-sm top-2.5 text-on-surface-variant text-space-base">search</span> <input className="pl-9 pr-space-base py-space-xs rounded bg-surface-container-low text-on-surface font-body-md placeholder:text-on-surface-variant focus:outline-none" id="search-contractor" placeholder="Filter by contractor..." type="text" /> </div> </div> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse" id="assignment-table"><thead><tr className="bg-surface-container-low text-on-surface-variant font-label-md uppercase tracking-wider"><th className="p-space-md font-bold">Trade Category</th><th className="p-space-md font-bold">Lead Contractor & Contact</th><th className="p-space-md font-bold">Headcount (Assigned / Req)</th><th className="p-space-md font-bold">Unit Rate</th><th className="p-space-md font-bold">Biometric Status</th><th className="p-space-md font-bold">Retention</th><th className="p-space-md font-bold">Net Outstanding</th><th className="p-space-md font-bold text-right">Quick Actions</th></tr></thead><tbody className="divide-y divide-surface-container-high text-body-md text-on-surface"><tr className="hover:bg-surface-container-low/50 transition-colors" data-contractor="Sri Lakshmi Infra" data-trade="Shuttering Carpentry"><td className="p-space-md"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Shuttering Carpentry</span> <span className="font-body-sm text-on-surface-variant">Block A & B Formwork</span> </div> </td><td className="p-space-md"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Sri Lakshmi Infra</span> <span className="font-body-sm text-on-surface-variant">+91 98480 12345 (Rao)</span> </div> </td><td className="p-space-md"> <div className="flex items-center gap-space-xs"> <span className="font-tabular-metric-sm text-primary">85</span> <span className="text-on-surface-variant">/ 90 req</span> <div className="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden ml-space-xs"> <div className="bg-primary h-full w-[94%]" /> </div> </div> </td><td className="p-space-md"> <span className="font-tabular-metric-sm">₹650 <span className="text-xs font-normal text-on-surface-variant">/ day</span></span> </td><td className="p-space-md"> <span className="biometric-badge px-space-xs py-0.5 rounded bg-emerald-100 text-emerald-800 font-label-sm inline-flex items-center gap-space-2xs"> <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Active Sync
-                  </span> </td><td className="p-space-md font-tabular-metric-sm">5.0%</td><td className="p-space-md font-tabular-metric-sm text-error net-amount" data-amount="845000">₹8.45 Lakhs</td><td className="p-space-md text-right"> <div className="flex items-center justify-end gap-space-xs"> <button className="p-space-xs rounded hover:bg-surface-container transition-colors text-on-surface-variant" title="View Muster Roll"> <span className="material-symbols-outlined text-space-base">badge</span> </button> <button className="p-space-xs rounded hover:bg-surface-container transition-colors text-on-surface-variant" title="Certify Milestone"> <span className="material-symbols-outlined text-space-base">verified</span> </button> <button className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm hover:bg-primary-container transition-colors" title="Release Payment">
-                      Pay
-                    </button> </div> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors" data-contractor="Durga Constructions" data-trade="Masonry"><td className="p-space-md"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Masonry / Mestri</span> <span className="font-body-sm text-on-surface-variant">Internal Partition Brickwork</span> </div> </td><td className="p-space-md"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Durga Constructions</span> <span className="font-body-sm text-on-surface-variant">+91 94401 88992 (Reddy)</span> </div> </td><td className="p-space-md"> <div className="flex items-center gap-space-xs"> <span className="font-tabular-metric-sm text-primary">110</span> <span className="text-on-surface-variant">/ 110 req</span> <div className="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden ml-space-xs"> <div className="bg-primary h-full w-full" /> </div> </div> </td><td className="p-space-md"> <span className="font-tabular-metric-sm">₹580 <span className="text-xs font-normal text-on-surface-variant">/ day</span></span> </td><td className="p-space-md"> <span className="biometric-badge px-space-xs py-0.5 rounded bg-emerald-100 text-emerald-800 font-label-sm inline-flex items-center gap-space-2xs"> <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Active Sync
-                  </span> </td><td className="p-space-md font-tabular-metric-sm">5.0%</td><td className="p-space-md font-tabular-metric-sm text-error net-amount" data-amount="1210000">₹12.10 Lakhs</td><td className="p-space-md text-right"> <div className="flex items-center justify-end gap-space-xs"> <button className="p-space-xs rounded hover:bg-surface-container transition-colors text-on-surface-variant" title="View Muster Roll"> <span className="material-symbols-outlined text-space-base">badge</span> </button> <button className="p-space-xs rounded hover:bg-surface-container transition-colors text-on-surface-variant" title="Certify Milestone"> <span className="material-symbols-outlined text-space-base">verified</span> </button> <button className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm hover:bg-primary-container transition-colors" title="Release Payment">
-                      Pay
-                    </button> </div> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors" data-contractor="Apex Rebar Solutions" data-trade="Steel Fixing"><td className="p-space-md"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Steel Fixing</span> <span className="font-body-sm text-on-surface-variant">Raft & Column Rebar Works</span> </div> </td><td className="p-space-md"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Apex Rebar Solutions</span> <span className="font-body-sm text-on-surface-variant">+91 97005 44332 (Kumar)</span> </div> </td><td className="p-space-md"> <div className="flex items-center gap-space-xs"> <span className="font-tabular-metric-sm text-amber-600">64</span> <span className="text-on-surface-variant">/ 75 req</span> <div className="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden ml-space-xs"> <div className="bg-amber-500 h-full w-[85%]" /> </div> </div> </td><td className="p-space-md"> <span className="font-tabular-metric-sm">₹700 <span className="text-xs font-normal text-on-surface-variant">/ day</span></span> </td><td className="p-space-md"> <span className="biometric-badge px-space-xs py-0.5 rounded bg-amber-100 text-amber-800 font-label-sm inline-flex items-center gap-space-2xs"> <span className="h-1.5 w-1.5 rounded-full bg-amber-600" /> 3 Offline
-                  </span> </td><td className="p-space-md font-tabular-metric-sm">7.5%</td><td className="p-space-md font-tabular-metric-sm text-error net-amount" data-amount="680000">₹6.80 Lakhs</td><td className="p-space-md text-right"> <div className="flex items-center justify-end gap-space-xs"> <button className="p-space-xs rounded hover:bg-surface-container transition-colors text-on-surface-variant" title="View Muster Roll"> <span className="material-symbols-outlined text-space-base">badge</span> </button> <button className="p-space-xs rounded hover:bg-surface-container transition-colors text-on-surface-variant" title="Certify Milestone"> <span className="material-symbols-outlined text-space-base">verified</span> </button> <button className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm hover:bg-primary-container transition-colors" title="Release Payment">
-                      Pay
-                    </button> </div> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors" data-contractor="VoltCraft Electricals" data-trade="Electrical"><td className="p-space-md"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Electrical 1st Fix</span> <span className="font-body-sm text-on-surface-variant">Conduit Laying & Slabs</span> </div> </td><td className="p-space-md"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">VoltCraft Electricals</span> <span className="font-body-sm text-on-surface-variant">+91 99887 66554 (Suresh)</span> </div> </td><td className="p-space-md"> <div className="flex items-center gap-space-xs"> <span className="font-tabular-metric-sm text-primary">42</span> <span className="text-on-surface-variant">/ 40 req</span> <div className="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden ml-space-xs"> <div className="bg-primary h-full w-full" /> </div> </div> </td><td className="p-space-md"> <span className="font-tabular-metric-sm">₹600 <span className="text-xs font-normal text-on-surface-variant">/ day</span></span> </td><td className="p-space-md"> <span className="biometric-badge px-space-xs py-0.5 rounded bg-emerald-100 text-emerald-800 font-label-sm inline-flex items-center gap-space-2xs"> <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Active Sync
-                  </span> </td><td className="p-space-md font-tabular-metric-sm">5.0%</td><td className="p-space-md font-tabular-metric-sm text-on-surface net-amount" data-amount="412000">₹4.12 Lakhs</td><td className="p-space-md text-right"> <div className="flex items-center justify-end gap-space-xs"> <button className="p-space-xs rounded hover:bg-surface-container transition-colors text-on-surface-variant" title="View Muster Roll"> <span className="material-symbols-outlined text-space-base">badge</span> </button> <button className="p-space-xs rounded hover:bg-surface-container transition-colors text-on-surface-variant" title="Certify Milestone"> <span className="material-symbols-outlined text-space-base">verified</span> </button> <button className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm hover:bg-primary-container transition-colors" title="Release Payment">
-                      Pay
-                    </button> </div> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors" data-contractor="HydroFlow Engineers" data-trade="Plumbing"><td className="p-space-md"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Plumbing & Sanitary</span> <span className="font-body-sm text-on-surface-variant">Drainage & Water Supply Pipes</span> </div> </td><td className="p-space-md"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">HydroFlow Engineers</span> <span className="font-body-sm text-on-surface-variant">+91 91234 56789 (Anand)</span> </div> </td><td className="p-space-md"> <div className="flex items-center gap-space-xs"> <span className="font-tabular-metric-sm text-primary">39</span> <span className="text-on-surface-variant">/ 40 req</span> <div className="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden ml-space-xs"> <div className="bg-primary h-full w-[97%]" /> </div> </div> </td><td className="p-space-md"> <span className="font-tabular-metric-sm">₹550 <span className="text-xs font-normal text-on-surface-variant">/ day</span></span> </td><td className="p-space-md"> <span className="biometric-badge px-space-xs py-0.5 rounded bg-emerald-100 text-emerald-800 font-label-sm inline-flex items-center gap-space-2xs"> <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Active Sync
-                  </span> </td><td className="p-space-md font-tabular-metric-sm">5.0%</td><td className="p-space-md font-tabular-metric-sm text-on-surface net-amount" data-amount="276000">₹2.76 Lakhs</td><td className="p-space-md text-right"> <div className="flex items-center justify-end gap-space-xs"> <button className="p-space-xs rounded hover:bg-surface-container transition-colors text-on-surface-variant" title="View Muster Roll"> <span className="material-symbols-outlined text-space-base">badge</span> </button> <button className="p-space-xs rounded hover:bg-surface-container transition-colors text-on-surface-variant" title="Certify Milestone"> <span className="material-symbols-outlined text-space-base">verified</span> </button> <button className="px-space-sm py-space-2xs rounded bg-primary text-on-primary font-label-sm hover:bg-primary-container transition-colors" title="Release Payment">
-                      Pay
-                    </button> </div> </td></tr></tbody></table> </div> <div className="p-space-base bg-surface-container-low flex flex-col sm:flex-row justify-between items-center gap-space-sm"> <span className="font-body-sm text-on-surface-variant">Showing 5 of 14 active contractor assignments • Biometric sync frequency: Every 15 mins</span> <div className="flex items-center gap-space-xs"> <button className="px-space-sm py-space-xs rounded bg-surface-container-lowest text-on-surface-variant font-label-sm hover:bg-surface-container transition-colors" disabled={true}>Previous</button> <button className="px-space-sm py-space-xs rounded bg-primary text-on-primary font-label-sm">1</button> <button className="px-space-sm py-space-xs rounded bg-surface-container-lowest text-on-surface font-label-sm hover:bg-surface-container transition-colors">2</button> <button className="px-space-sm py-space-xs rounded bg-surface-container-lowest text-on-surface font-label-sm hover:bg-surface-container transition-colors">Next</button> </div> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-base">  <div className="p-space-xl rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-base"> <h3 className="font-headline-md text-headline-md text-on-surface">AI QA & Photo Audit</h3> <span className="material-symbols-outlined text-primary">smart_toy</span> </div> <p className="font-body-md text-on-surface-variant mb-space-base">Automated site photo verification against BIM specs. Flagged honeycombing or alignment issues block RA bills. Click mark completed to unlock milestones.</p> <div className="space-y-space-sm mb-space-lg" id="qa-stages-container">  <div className="p-space-sm rounded bg-error-container/20 border border-error/30 flex items-center justify-between transition-all" id="stage-card-1"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Stage 3 Formwork (Block A)</span> <span className="font-body-sm text-error stage-status-text">Defect flagged: Minor honeycombing</span> </div> <div className="flex items-center gap-2"> <span className="px-space-xs py-0.5 rounded bg-error-container text-error font-label-sm stage-badge-1">Blocked</span> <button className="px-2 py-1 bg-primary text-on-primary rounded font-label-sm hover:bg-primary-container transition-colors">Mark Completed</button> </div> </div>  <div className="p-space-sm rounded bg-emerald-50 border border-emerald-200 flex items-center justify-between transition-all" id="stage-card-2"> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Wing B Brickwork</span> <span className="font-body-sm text-emerald-700 stage-status-text">100% QA Passed</span> </div> <div className="flex items-center gap-2"> <span className="px-space-xs py-0.5 rounded bg-emerald-100 text-emerald-800 font-label-sm stage-badge-2">Verified</span> <button className="px-2 py-1 bg-surface-container text-on-surface rounded font-label-sm opacity-60 cursor-default" disabled={true}>Completed</button> </div> </div> </div> </div> <div className="flex items-center justify-between pt-space-base border-t border-surface-container-high"> <span className="font-body-sm text-on-surface-variant">AI Model: v4.2 Pro</span> <button className="font-label-md text-primary hover:underline">Review Flagged Photos →</button> </div> </div>  <div className="p-space-xl rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-base"> <h3 className="font-headline-md text-headline-md text-on-surface">WhatsApp Dispatch Center</h3> <span className="material-symbols-outlined text-emerald-600">chat</span> </div> <p className="font-body-md text-on-surface-variant mb-space-base">Automated work orders & schedule notifications sent directly to contractor leads with exact deadlines.</p> <div className="space-y-space-sm mb-space-lg"> <div className="p-space-sm rounded bg-surface-container-low flex flex-col gap-space-2xs"> <div className="flex justify-between items-center"><span className="font-title-md text-on-surface">Sri Lakshmi Infra (Rao)</span><span className="font-label-sm text-primary">Sent 10m ago</span></div> <span className="font-body-sm text-on-surface-variant">Task: Block A Slab Pour • Due Tomorrow</span> </div> <div className="p-space-sm rounded bg-surface-container-low flex flex-col gap-space-2xs"> <div className="flex justify-between items-center"><span className="font-title-md text-on-surface">Durga Constructions (Reddy)</span><span className="font-label-sm text-emerald-600">Delivered</span></div> <span className="font-body-sm text-on-surface-variant">Task: Wing B Partition Curing • Due Today</span> </div> </div> </div> <button className="w-full py-space-sm rounded bg-surface-container-low text-on-surface font-title-md hover:bg-surface-container transition-colors">Open WhatsApp Console</button> </div>  <div className="p-space-xl rounded bg-surface-container-lowest shadow-sm flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-base"> <h3 className="font-headline-md text-headline-md text-on-surface">Material Reconciliation</h3> <span className="material-symbols-outlined text-tertiary">inventory_2</span> </div> <p className="font-body-md text-on-surface-variant mb-space-base">Track material issues vs consumption for Labour + Material contracts to prevent pilferage and wastage.</p> <div className="space-y-space-sm mb-space-lg"> <div className="p-space-sm rounded bg-surface-container-low flex flex-col gap-space-2xs"> <div className="flex justify-between items-center"><span className="font-title-md text-on-surface">Electrical Conduits (VoltCraft)</span><span className="font-tabular-metric-sm text-primary">96% Used</span></div> <span className="font-body-sm text-on-surface-variant">Issued: 1,200m • Consumed: 1,150m</span> </div> <div className="p-space-sm rounded bg-surface-container-low flex flex-col gap-space-2xs"> <div className="flex justify-between items-center"><span className="font-title-md text-on-surface">Waterproofing Compound</span><span className="font-tabular-metric-sm text-amber-600">104% Excess</span></div> <span className="font-body-sm text-on-surface-variant">Issued: 500L • Consumed: 520L</span> </div> </div> </div> <div className="flex items-center justify-between pt-space-base border-t border-surface-container-high"> <span className="font-body-sm text-on-surface-variant">Audit Status: Clear</span> <button className="font-label-md text-primary hover:underline">View Full Ledger →</button> </div> </div> </div> </div> </main>
+    <Shell title="Contractors & Labour">
+      <div className="flex flex-col gap-6 pb-16">
+        <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              {project.name} · {project.location}
+            </p>
+            <h1 className="text-2xl font-bold text-foreground">Contractors &amp; labour</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Log who worked on site each day, and the man-days and labour cost build up here.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={exportCsv}
+              className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted"
+            >
+              <FileDown className="h-4 w-4" /> Export
+            </button>
+            <button
+              onClick={() => {
+                setDraft(emptyDraft());
+                setEditingId(null);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+            >
+              <Plus className="h-4 w-4" /> Add labour entry
+            </button>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <button
+            type="button"
+            onClick={() => setRange("today")}
+            className={`rounded-2xl border bg-card p-5 text-left shadow-sm transition hover:bg-muted/50 ${range === "today" ? "border-primary ring-1 ring-primary" : "border-border"}`}
+          >
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>On site today</span>
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <p className="mt-3 text-2xl font-bold">{Math.round(stats.todayHeads)}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Show today&apos;s entries</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRange("month")}
+            className={`rounded-2xl border bg-card p-5 text-left shadow-sm transition hover:bg-muted/50 ${range === "month" ? "border-primary ring-1 ring-primary" : "border-border"}`}
+          >
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Man-days this month</span>
+              <CalendarDays className="h-4 w-4 text-primary" />
+            </div>
+            <p className="mt-3 text-2xl font-bold">{Math.round(stats.monthManDays)}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Show this month</p>
+          </button>
+          <Link
+            to="/cost-dashboard"
+            className="rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary hover:bg-muted/50"
+          >
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Labour cost this month</span>
+              <IndianRupee className="h-4 w-4 text-primary" />
+            </div>
+            <p className="mt-3 text-2xl font-bold">{inr(stats.monthCost)}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Open cost dashboard</p>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setRange("all")}
+            className={`rounded-2xl border bg-card p-5 text-left shadow-sm transition hover:bg-muted/50 ${range === "all" ? "border-primary ring-1 ring-primary" : "border-border"}`}
+          >
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Contractors engaged</span>
+              <HardHat className="h-4 w-4 text-primary" />
+            </div>
+            <p className="mt-3 text-2xl font-bold">{stats.contractors}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Show all entries</p>
+          </button>
+        </div>
+
+        {draft ? (
+          <section className="rounded-2xl border border-primary/40 bg-card p-5 shadow-sm">
+            <h2 className="text-lg font-bold">{editingId ? "Edit labour entry" : "New labour entry"}</h2>
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <Field label="Date">
+                <input
+                  type="date"
+                  value={draft.work_date}
+                  onChange={(e) => setDraft({ ...draft, work_date: e.target.value })}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </Field>
+              <Field label="Contractor">
+                <input
+                  value={draft.contractor}
+                  onChange={(e) => setDraft({ ...draft, contractor: e.target.value })}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  placeholder="e.g. Ramesh Masonry Works"
+                />
+              </Field>
+              <Field label="Trade">
+                <select
+                  value={draft.trade}
+                  onChange={(e) => setDraft({ ...draft, trade: e.target.value })}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                >
+                  {TRADES.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Headcount">
+                <input
+                  type="number"
+                  value={draft.headcount}
+                  onChange={(e) => setDraft({ ...draft, headcount: num(e.target.value) })}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </Field>
+              <Field label="Hours worked">
+                <input
+                  type="number"
+                  value={draft.hours}
+                  onChange={(e) => setDraft({ ...draft, hours: num(e.target.value) })}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </Field>
+              <Field label="Day rate (₹ per person)">
+                <input
+                  type="number"
+                  value={draft.day_rate}
+                  onChange={(e) => setDraft({ ...draft, day_rate: num(e.target.value) })}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </Field>
+              <Field label="Area / location">
+                <input
+                  value={draft.area}
+                  onChange={(e) => setDraft({ ...draft, area: e.target.value })}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  placeholder="e.g. Block A · 3rd floor"
+                />
+              </Field>
+              <Field label="Supervisor">
+                <input
+                  value={draft.supervisor}
+                  onChange={(e) => setDraft({ ...draft, supervisor: e.target.value })}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </Field>
+              <Field label="Work done">
+                <input
+                  value={draft.work_done}
+                  onChange={(e) => setDraft({ ...draft, work_done: e.target.value })}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </Field>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                disabled={save.isPending}
+                onClick={() => {
+                  if (!draft.contractor.trim()) {
+                    toast.error("Enter the contractor name");
+                    return;
+                  }
+                  save.mutate({ draft, id: editingId });
+                }}
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+              >
+                {save.isPending ? "Saving…" : "Save entry"}
+              </button>
+              <button
+                onClick={() => {
+                  setDraft(null);
+                  setEditingId(null);
+                }}
+                className="rounded-xl border border-border px-4 py-2 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        <div className="flex flex-col gap-3 md:flex-row">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search contractor, trade, area or work done…"
+            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          />
+          <select
+            value={range}
+            onChange={(e) => setRange(e.target.value as typeof range)}
+            className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          >
+            <option value="today">Today</option>
+            <option value="month">This month</option>
+            <option value="all">All entries</option>
+          </select>
+        </div>
+
+        {!project.id ? (
+          <p className="text-sm text-muted-foreground">Add a project first to log labour.</p>
+        ) : null}
+
+        <section className="rounded-2xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border p-4">
+            <h2 className="text-lg font-bold">Daily labour log</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="p-3">Date</th>
+                  <th className="p-3">Contractor</th>
+                  <th className="p-3">Trade</th>
+                  <th className="p-3 text-right">Heads</th>
+                  <th className="p-3 text-right">Man-days</th>
+                  <th className="p-3 text-right">Labour cost</th>
+                  <th className="p-3">Area / work</th>
+                  <th className="p-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {isPending ? (
+                  <tr>
+                    <td className="p-6 text-center text-muted-foreground" colSpan={8}>
+                      Loading labour log…
+                    </td>
+                  </tr>
+                ) : null}
+                {!isPending && filtered.length === 0 ? (
+                  <tr>
+                    <td className="p-6 text-center text-muted-foreground" colSpan={8}>
+                      No labour entries for this period yet. Use “Add labour entry”.
+                    </td>
+                  </tr>
+                ) : null}
+                {filtered.map((e) => (
+                  <tr key={e.id} className="hover:bg-muted/40">
+                    <td className="p-3">{e.work_date}</td>
+                    <td className="p-3 font-semibold">{e.contractor || "—"}</td>
+                    <td className="p-3">{e.trade}</td>
+                    <td className="p-3 text-right">{e.headcount}</td>
+                    <td className="p-3 text-right">{(e.headcount * (e.hours / 8)).toFixed(1)}</td>
+                    <td className="p-3 text-right font-semibold">{inr(e.headcount * e.day_rate)}</td>
+                    <td className="p-3 text-muted-foreground">
+                      {[e.area, e.work_done].filter(Boolean).join(" · ") || "—"}
+                    </td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => {
+                          const { id: _id, ...rest } = e;
+                          setDraft(rest);
+                          setEditingId(e.id);
+                        }}
+                        className="mr-3 font-semibold"
+                      >
+                        Edit
+                      </button>
+                      {canDelete ? (
+                        <button
+                          onClick={() => {
+                            if (confirm("Remove this labour entry?")) remove.mutate(e.id);
+                          }}
+                          className="font-semibold text-destructive"
+                        >
+                          Delete
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h2 className="text-lg font-bold">Contractor-wise summary</h2>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {byContractor.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No entries in the selected period.</p>
+            ) : null}
+            {byContractor.map(([name, v]) => (
+              <div key={name} className="rounded-xl border border-border p-4">
+                <p className="text-sm font-semibold">{name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {[...v.trades].join(", ") || "—"}
+                </p>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{v.manDays.toFixed(1)} man-days</span>
+                  <span className="font-bold">{inr(v.cost)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2 text-sm">
+            <Link to="/field-console" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+              Field console
+            </Link>
+            <Link to="/site-execution" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+              Site execution
+            </Link>
+            <Link to="/cost-dashboard" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+              Cost dashboard
+            </Link>
+          </div>
+        </section>
       </div>
     </Shell>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1 text-sm">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }

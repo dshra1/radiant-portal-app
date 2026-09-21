@@ -1,14 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { Users, AlertTriangle, ClipboardCheck, PackageCheck } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { StatusBadge } from "@/components/saha/ui";
+import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
+import { useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/field-console")({
   head: () => ({
     meta: [
-      { title: "Field Console — Site Quick Actions | Saha OS" },
-      { name: "description", content: "Mobile field console for GRN receipts, digital pour cards, QC sign-offs and AI defect scans." },
-      { property: "og:title", content: "Field Console — Site Quick Actions | Saha OS" },
-      { property: "og:description", content: "Mobile field console for GRN receipts, digital pour cards, QC sign-offs and AI defect scans." },
+      { title: "Field Console | Saha OS" },
+      {
+        name: "description",
+        content:
+          "Today on site: labour deployed, pour cards awaiting approval, open quality issues and material movements for the selected project.",
+      },
+      { property: "og:title", content: "Field Console | Saha OS" },
+      {
+        property: "og:description",
+        content: "One screen for today's site activity — labour, pours, quality issues and materials.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -16,19 +29,302 @@ export const Route = createFileRoute("/field-console")({
   component: Page,
 });
 
+const today = () => new Date().toISOString().slice(0, 10);
+const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+
 function Page() {
   const project = useActiveProject();
+  const user = useSessionUser();
+  const enabled = Boolean(user?.id) && Boolean(project.id);
+
+  const labour = useQuery({
+    queryKey: ["field-console", "labour", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("labour_entries")
+        .select("id,work_date,contractor,trade,headcount,hours,day_rate,area,work_done")
+        .eq("project_id", project.id)
+        .order("work_date", { ascending: false })
+        .limit(60);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const pours = useQuery({
+    queryKey: ["field-console", "pours", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pour_cards")
+        .select("id,pour_ref,element,level,grade,quantity_cum,pour_date,status")
+        .eq("project_id", project.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const qa = useQuery({
+    queryKey: ["field-console", "qa", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("qa_inspections")
+        .select("id,inspected_on,location_tag,category,severity,findings,resolution")
+        .eq("project_id", project.id)
+        .order("inspected_on", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const moves = useQuery({
+    queryKey: ["field-console", "moves", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select("id,movement_date,movement_type,description,quantity,unit,party")
+        .eq("project_id", project.id)
+        .order("movement_date", { ascending: false })
+        .limit(15);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const t = today();
+  const todayLabour = useMemo(
+    () => (labour.data ?? []).filter((l) => l.work_date === t),
+    [labour.data, t],
+  );
+  const openQa = useMemo(
+    () => (qa.data ?? []).filter((r) => r.resolution !== "Closed"),
+    [qa.data],
+  );
+  const pendingPours = useMemo(
+    () => (pours.data ?? []).filter((p) => p.status === "pending"),
+    [pours.data],
+  );
+  const todayMoves = useMemo(
+    () => (moves.data ?? []).filter((m) => m.movement_date === t),
+    [moves.data, t],
+  );
+
   return (
-    <Shell title={"Field Console"}>
-      <div className="m3">
-        <main className="flex flex-col relative w-full px-gutter-normal pt-16 pb-24 bg-surface flex-grow"><div className="flex flex-col w-full gap-space-lg pb-space-3xl">  <div className="flex items-center justify-between pt-space-xs"> <div className="flex flex-col"> <div className="flex items-center gap-space-xs"> <span className="px-space-sm py-space-2xs bg-primary-container text-on-primary-container rounded-full text-label-sm font-label-md">{project.name}</span> <span className="text-on-surface-variant text-body-sm">• Sector 42</span> </div> <h2 className="font-headline-lg text-on-surface mt-space-2xs">Morning, R. Sharma</h2> </div> <div className="relative"> <button className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface hover:bg-surface-container-highest transition-all relative"> <span className="material-symbols-outlined text-[20px]">notifications</span> <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-error rounded-full ring-2 ring-surface" /> </button> </div> </div>  <div className="bg-error-container text-on-error-container rounded-xl p-space-base shadow-sm relative overflow-hidden flex flex-col gap-space-md"> <div className="flex items-start gap-space-sm"> <div className="w-8 h-8 rounded-full bg-error/20 flex items-center justify-center shrink-0 mt-0.5"> <span className="material-symbols-outlined text-error text-[18px]" style={{"fontVariationSettings": "'FILL' 1"}}>warning</span> </div> <div className="flex flex-col min-w-0"> <div className="flex items-center justify-between"> <span className="text-label-md font-label-md text-error uppercase tracking-wider">Critical Stock Warning</span> <span className="text-body-sm opacity-75">10m ago</span> </div> <p className="text-body-md mt-space-2xs font-body-md">Low Stock Alert: OPC 53 Grade Cement below 200 bags. WhatsApp notification dispatched to Storekeeper & Procurement Lead.</p> </div> </div> <div className="flex items-center gap-space-sm pt-space-2xs"> <button className="flex-1 bg-primary text-on-primary rounded-lg py-2 px-space-md text-title-md font-title-md flex items-center justify-center gap-space-xs hover:bg-surface-tint transition-all shadow-sm"> <span className="material-symbols-outlined text-[16px]">receipt_long</span>
-        Acknowledge & Draft PO
-      </button> <button className="bg-surface-container-lowest text-on-surface rounded-lg py-2 px-space-md text-title-md font-title-md flex items-center justify-center gap-space-xs hover:bg-surface-bright transition-all"> <span className="material-symbols-outlined text-[16px] text-[#25D366]" style={{"fontVariationSettings": "'FILL' 1"}}>chat</span>
-        WhatsApp Chat
-      </button> </div> </div>  <div className="flex flex-col gap-space-sm"> <h3 className="font-headline-sm text-on-surface">Quick Actions</h3> <div className="grid grid-cols-2 gap-space-sm"> <a className="bg-surface-container-low p-space-md rounded-xl flex flex-col gap-space-sm hover:bg-surface-container transition-all group shadow-sm" href="#"> <div className="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center group-hover:scale-105 transition-transform"> <span className="material-symbols-outlined text-[20px]">inventory_2</span> </div> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Receive Material</span> <span className="text-body-sm text-on-surface-variant">Gate GRN & Scan</span> </div> </a> <a className="bg-surface-container-low p-space-md rounded-xl flex flex-col gap-space-sm hover:bg-surface-container transition-all group shadow-sm" href="#"> <div className="w-10 h-10 rounded-lg bg-tertiary-container text-on-tertiary-container flex items-center justify-center group-hover:scale-105 transition-transform"> <span className="material-symbols-outlined text-[20px]">foundation</span> </div> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Digital Pour Card</span> <span className="text-body-sm text-on-surface-variant">Sign-offs & QC</span> </div> </a> <a className="bg-surface-container-low p-space-md rounded-xl flex flex-col gap-space-sm hover:bg-surface-container transition-all group shadow-sm" href="#"> <div className="w-10 h-10 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center group-hover:scale-105 transition-transform"> <span className="material-symbols-outlined text-[20px]">camera_alt</span> </div> <div className="flex flex-col"> <span className="font-title-md text-on-surface">AI Defect Scan</span> <span className="text-body-sm text-on-surface-variant">Rebar & Honeycomb</span> </div> </a> <a className="bg-surface-container-low p-space-md rounded-xl flex flex-col gap-space-sm hover:bg-surface-container transition-all group shadow-sm" href="#"> <div className="w-10 h-10 rounded-lg bg-surface-container-highest text-on-surface flex items-center justify-center group-hover:scale-105 transition-transform"> <span className="material-symbols-outlined text-[20px]">badge</span> </div> <div className="flex flex-col"> <span className="font-title-md text-on-surface">Labor & Attendance</span> <span className="text-body-sm text-on-surface-variant">Biometric Sync</span> </div> </a> </div> </div>  <div className="flex flex-col gap-space-sm"> <div className="flex items-center justify-between"> <h3 className="font-headline-sm text-on-surface">Today's Execution Focus</h3> <span className="px-space-sm py-space-2xs bg-primary/10 text-primary rounded-full text-label-sm font-label-md">Priority Active</span> </div> <div className="bg-surface-container-low rounded-xl p-space-base shadow-sm flex flex-col gap-space-md relative overflow-hidden"> <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" /> <div className="flex items-start justify-between"> <div className="flex flex-col"> <span className="text-label-sm text-on-surface-variant uppercase tracking-wider">Milestone 4B</span> <h4 className="font-headline-md text-on-surface mt-space-2xs">3rd Floor Slab Pour</h4> </div> <span className="px-space-sm py-space-2xs bg-primary text-on-primary rounded text-label-sm font-label-md shadow-sm">Ready for Sign-off</span> </div> <div className="grid grid-cols-2 gap-space-sm bg-surface-container-lowest p-space-md rounded-lg"> <div className="flex flex-col"> <span className="text-body-sm text-on-surface-variant">M25 Concrete Target</span> <span className="font-tabular-metric text-on-surface mt-space-2xs">42 <span className="text-body-md font-body-md text-on-surface-variant">CUM</span></span> </div> <div className="flex flex-col"> <span className="text-body-sm text-on-surface-variant">Rebar Clearance</span> <span className="font-tabular-metric text-on-surface mt-space-2xs">4,200 <span className="text-body-md font-body-md text-on-surface-variant">KG</span></span> </div> </div>  <div className="flex flex-col gap-space-xs"> <div className="flex justify-between text-body-sm"> <span className="text-on-surface-variant">Stage: Pre-Pour QC Checklist</span> <span className="font-bold text-primary">85%</span> </div> <div className="flex h-1.5 gap-space-2xs w-full"> <div className="flex-1 bg-primary rounded-l" /> <div className="flex-1 bg-primary" /> <div className="flex-1 bg-primary" /> <div className="flex-1 bg-surface-tint animate-pulse" /> <div className="flex-1 bg-surface-container-highest rounded-r" /> </div> </div> <button className="w-full bg-primary text-on-primary py-2.5 rounded-lg font-title-md flex items-center justify-center gap-space-xs hover:bg-surface-tint transition-all shadow-sm"> <span className="material-symbols-outlined text-[18px]">verified</span>
-        Execute Pre-Pour Digital Sign-off
-      </button> </div> </div>  <div className="flex flex-col gap-space-sm"> <div className="flex items-center justify-between"> <h3 className="font-headline-sm text-on-surface">Gate Deliveries & QC Feed</h3> <span className="text-body-sm text-primary font-title-md">Live Stream</span> </div> <div className="flex flex-col gap-space-sm">  <div className="bg-surface-container-low p-space-md rounded-xl flex items-center justify-between shadow-sm"> <div className="flex items-center gap-space-md"> <div className="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center text-primary shrink-0 shadow-sm"> <span className="material-symbols-outlined text-[20px]">local_shipping</span> </div> <div className="flex flex-col min-w-0"> <div className="flex items-center gap-space-sm"> <span className="font-title-md text-on-surface truncate">ACC Cement (OPC 53)</span> <span className="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-label-md">Verified</span> </div> <span className="text-body-sm text-on-surface-variant">Truck KA-04-F-9921 • 350 Bags</span> </div> </div> <div className="flex flex-col items-end shrink-0"> <span className="font-tabular-metric-sm text-on-surface">11:42 AM</span> <span className="text-body-sm text-on-surface-variant">Gate 2</span> </div> </div>  <div className="bg-surface-container-low p-space-md rounded-xl flex items-center justify-between shadow-sm"> <div className="flex items-center gap-space-md"> <div className="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center text-tertiary shrink-0 shadow-sm"> <span className="material-symbols-outlined text-[20px]">pixel_fold</span> </div> <div className="flex flex-col min-w-0"> <div className="flex items-center gap-space-sm"> <span className="font-title-md text-on-surface truncate">JSW Fe500D Rebar</span> <span className="px-1.5 py-0.5 bg-tertiary/10 text-tertiary rounded text-[10px] font-label-md">Lab Tested</span> </div> <span className="text-body-sm text-on-surface-variant">Trailer TN-22-C-4120 • 12 MT</span> </div> </div> <div className="flex flex-col items-end shrink-0"> <span className="font-tabular-metric-sm text-on-surface">10:15 AM</span> <span className="text-body-sm text-on-surface-variant">Gate 1</span> </div> </div>  <div className="bg-surface-container-low p-space-md rounded-xl flex items-center justify-between shadow-sm"> <div className="flex items-center gap-space-md"> <div className="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center text-secondary shrink-0 shadow-sm"> <span className="material-symbols-outlined text-[20px]">science</span> </div> <div className="flex flex-col min-w-0"> <div className="flex items-center gap-space-sm"> <span className="font-title-md text-on-surface truncate">M30 Cube Test Probe</span> <span className="px-1.5 py-0.5 bg-secondary/10 text-secondary rounded text-[10px] font-label-md">Pending</span> </div> <span className="text-body-sm text-on-surface-variant">Batch #402 • 7-Day Curing</span> </div> </div> <div className="flex flex-col items-end shrink-0"> <span className="font-tabular-metric-sm text-on-surface">09:30 AM</span> <span className="text-body-sm text-on-surface-variant">Lab Room</span> </div> </div> </div> </div>  <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden items-end justify-center transition-opacity" id="whatsappModal"> <div className="bg-surface-container-lowest w-full max-w-lg rounded-t-2xl p-space-base flex flex-col gap-space-md max-h-[707px] shadow-2xl animate-in slide-in-from-bottom"> <div className="flex items-center justify-between border-b border-surface-container pb-space-sm"> <div className="flex items-center gap-space-sm"> <div className="w-9 h-9 rounded-full bg-[#25D366] text-white flex items-center justify-center font-bold"> <span className="material-symbols-outlined text-[20px]" style={{"fontVariationSettings": "'FILL' 1"}}>chat</span> </div> <div> <h4 className="font-headline-sm text-on-surface">WhatsApp Procurement Group</h4> <span className="text-body-sm text-[#25D366] font-semibold">● 3 online (Storekeeper, Lead, Bot)</span> </div> </div> <button className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface"> <span className="material-symbols-outlined text-[18px]">close</span> </button> </div> <div className="flex flex-col gap-space-sm overflow-y-auto max-h-[353px] p-space-sm bg-surface-container-low rounded-xl"> <div className="self-start bg-surface-container-lowest p-space-sm rounded-lg max-w-[85%] shadow-sm"> <p className="text-body-sm text-on-surface">🚨 <b>Saha OS Bot:</b> OPC 53 Grade Cement stock is at 180 bags ({"<"}200 threshold). PO draft auto-generated for 500 bags.</p> <span className="text-[10px] text-on-surface-variant mt-1 block">11:50 AM</span> </div> <div className="self-end bg-[#dcf8c6] text-[#0b1c30] p-space-sm rounded-lg max-w-[85%] shadow-sm"> <p className="text-body-sm"><b>R. Sharma (You):</b> Approved draft PO #PO-8821. Please expedite delivery by tomorrow morning.</p> <span className="text-[10px] text-on-surface-variant mt-1 block">11:52 AM</span> </div> </div> <div className="flex items-center gap-space-sm pt-space-xs"> <input className="flex-1 bg-surface-container-low border-none rounded-lg px-space-md py-2.5 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Type message to procurement..." type="text" /> <button className="bg-[#25D366] text-white px-space-md py-2.5 rounded-lg font-title-md flex items-center justify-center"> <span className="material-symbols-outlined text-[18px]">send</span> </button> </div> </div> </div>  </div></main>
+    <Shell title="Field Console">
+      <div className="flex flex-col gap-6 pb-16">
+        <header className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            {project.name} · {project.location}
+          </p>
+          <h1 className="text-2xl font-bold">Today on site — {t}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Everything the site team needs to act on today. Tap any card to open the full register.
+          </p>
+        </header>
+
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <KpiLink
+            to="/contractors-labour"
+            label="Workers on site"
+            value={String(todayLabour.reduce((s, l) => s + num(l.headcount), 0))}
+            note="Open labour log"
+            icon={<Users className="h-4 w-4 text-primary" />}
+          />
+          <KpiLink
+            to="/pour-cards"
+            label="Pours awaiting approval"
+            value={String(pendingPours.length)}
+            note="Open pour cards"
+            icon={<ClipboardCheck className="h-4 w-4 text-primary" />}
+          />
+          <KpiLink
+            to="/qa-inspection"
+            label="Open quality issues"
+            value={String(openQa.length)}
+            note="Open inspections"
+            icon={<AlertTriangle className="h-4 w-4 text-primary" />}
+          />
+          <KpiLink
+            to="/inventory-control"
+            label="Material moves today"
+            value={String(todayMoves.length)}
+            note="Open stock ledger"
+            icon={<PackageCheck className="h-4 w-4 text-primary" />}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <Panel title="Labour deployed today" to="/contractors-labour" action="Log labour">
+            {todayLabour.length === 0 ? (
+              <Empty text="No labour logged for today yet." />
+            ) : (
+              <ul className="divide-y divide-border">
+                {todayLabour.map((l) => (
+                  <li key={l.id} className="flex items-center justify-between py-3 text-sm">
+                    <div>
+                      <p className="font-semibold">{l.contractor || "Unassigned"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {[l.trade, l.area, l.work_done].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <span className="font-bold">{num(l.headcount)} nos</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+
+          <Panel title="Pour cards" to="/pour-cards" action="New pour card">
+            {(pours.data ?? []).length === 0 ? (
+              <Empty text="No pour cards raised yet." />
+            ) : (
+              <ul className="divide-y divide-border">
+                {(pours.data ?? []).slice(0, 8).map((p) => (
+                  <li key={p.id} className="flex items-center justify-between py-3 text-sm">
+                    <div>
+                      <p className="font-semibold">
+                        {p.pour_ref} · {p.element}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {[p.level, p.grade, `${num(p.quantity_cum)} cum`, p.pour_date ?? ""]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <StatusBadge
+                      tone={
+                        p.status === "approved"
+                          ? "emerald"
+                          : p.status === "pending"
+                            ? "amber"
+                            : p.status === "poured"
+                              ? "sky"
+                              : "slate"
+                      }
+                    >
+                      {p.status}
+                    </StatusBadge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+
+          <Panel title="Open quality issues" to="/qa-inspection" action="Record inspection">
+            {openQa.length === 0 ? (
+              <Empty text="No open quality issues." />
+            ) : (
+              <ul className="divide-y divide-border">
+                {openQa.slice(0, 8).map((r) => (
+                  <li key={r.id} className="flex items-center justify-between py-3 text-sm">
+                    <div>
+                      <p className="font-semibold">{r.location_tag || r.category || "Inspection"}</p>
+                      <p className="text-xs text-muted-foreground">{r.findings || "—"}</p>
+                    </div>
+                    <StatusBadge
+                      tone={
+                        r.severity === "High" ? "red" : r.severity === "Medium" ? "amber" : "slate"
+                      }
+                    >
+                      {r.severity}
+                    </StatusBadge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+
+          <Panel title="Recent material movements" to="/inventory-control" action="Open stock">
+            {(moves.data ?? []).length === 0 ? (
+              <Empty text="No stock movements recorded yet." />
+            ) : (
+              <ul className="divide-y divide-border">
+                {(moves.data ?? []).slice(0, 8).map((m) => (
+                  <li key={m.id} className="flex items-center justify-between py-3 text-sm">
+                    <div>
+                      <p className="font-semibold">{m.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {[m.movement_date, m.movement_type, m.party].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <span className="font-bold">
+                      {num(m.quantity)} {m.unit}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </div>
       </div>
     </Shell>
   );
+}
+
+type AppRoute =
+  | "/contractors-labour"
+  | "/pour-cards"
+  | "/qa-inspection"
+  | "/inventory-control";
+
+function KpiLink({
+  to,
+  label,
+  value,
+  note,
+  icon,
+}: {
+  to: AppRoute;
+  label: string;
+  value: string;
+  note: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <Link
+      to={to}
+      className="rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary hover:bg-muted/50"
+    >
+      <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <span>{label}</span>
+        {icon}
+      </div>
+      <p className="mt-3 text-2xl font-bold">{value}</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">{note}</p>
+    </Link>
+  );
+}
+
+function Panel({
+  title,
+  to,
+  action,
+  children,
+}: {
+  title: string;
+  to: AppRoute;
+  action: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold">{title}</h2>
+        <Link to={to} className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted">
+          {action}
+        </Link>
+      </div>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function Empty({ text }: { text: string }) {
+  return <p className="py-6 text-center text-sm text-muted-foreground">{text}</p>;
 }

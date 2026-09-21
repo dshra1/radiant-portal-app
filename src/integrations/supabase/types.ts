@@ -443,6 +443,68 @@ export type Database = {
           },
         ]
       }
+      labour_entries: {
+        Row: {
+          area: string
+          contractor: string
+          created_at: string
+          created_by: string | null
+          day_rate: number
+          headcount: number
+          hours: number
+          id: string
+          notes: string
+          project_id: string | null
+          supervisor: string
+          trade: string
+          updated_at: string
+          work_date: string
+          work_done: string
+        }
+        Insert: {
+          area?: string
+          contractor?: string
+          created_at?: string
+          created_by?: string | null
+          day_rate?: number
+          headcount?: number
+          hours?: number
+          id?: string
+          notes?: string
+          project_id?: string | null
+          supervisor?: string
+          trade?: string
+          updated_at?: string
+          work_date?: string
+          work_done?: string
+        }
+        Update: {
+          area?: string
+          contractor?: string
+          created_at?: string
+          created_by?: string | null
+          day_rate?: number
+          headcount?: number
+          hours?: number
+          id?: string
+          notes?: string
+          project_id?: string | null
+          supervisor?: string
+          trade?: string
+          updated_at?: string
+          work_date?: string
+          work_done?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labour_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string
@@ -611,6 +673,83 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "owner_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pour_cards: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_name: string
+          checklist: Json
+          created_at: string
+          created_by: string | null
+          cubes_cast: number
+          element: string
+          grade: string
+          id: string
+          level: string
+          pour_date: string | null
+          pour_ref: string
+          project_id: string | null
+          quantity_cum: number
+          remarks: string
+          requested_by_name: string
+          slump: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string
+          checklist?: Json
+          created_at?: string
+          created_by?: string | null
+          cubes_cast?: number
+          element?: string
+          grade?: string
+          id?: string
+          level?: string
+          pour_date?: string | null
+          pour_ref?: string
+          project_id?: string | null
+          quantity_cum?: number
+          remarks?: string
+          requested_by_name?: string
+          slump?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string
+          checklist?: Json
+          created_at?: string
+          created_by?: string | null
+          cubes_cast?: number
+          element?: string
+          grade?: string
+          id?: string
+          level?: string
+          pour_date?: string | null
+          pour_ref?: string
+          project_id?: string | null
+          quantity_cum?: number
+          remarks?: string
+          requested_by_name?: string
+          slump?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pour_cards_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "site_projects"
@@ -834,6 +973,59 @@ export type Database = {
           },
         ]
       }
+      project_media: {
+        Row: {
+          caption: string
+          captured_on: string | null
+          category: string
+          created_at: string
+          id: string
+          path: string
+          project_id: string | null
+          stage: string
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+          uploaded_by_name: string
+        }
+        Insert: {
+          caption?: string
+          captured_on?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          path?: string
+          project_id?: string | null
+          stage?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_name?: string
+        }
+        Update: {
+          caption?: string
+          captured_on?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          path?: string
+          project_id?: string | null
+          stage?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_media_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_order_items: {
         Row: {
           brand: string
@@ -987,6 +1179,71 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "purchase_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_inspections: {
+        Row: {
+          category: string
+          code_ref: string
+          created_at: string
+          created_by: string | null
+          defect_count: number
+          findings: string
+          id: string
+          inspected_on: string
+          inspector_name: string
+          location_tag: string
+          notes: string
+          photos: Json
+          project_id: string | null
+          resolution: string
+          severity: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          code_ref?: string
+          created_at?: string
+          created_by?: string | null
+          defect_count?: number
+          findings?: string
+          id?: string
+          inspected_on?: string
+          inspector_name?: string
+          location_tag?: string
+          notes?: string
+          photos?: Json
+          project_id?: string | null
+          resolution?: string
+          severity?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          code_ref?: string
+          created_at?: string
+          created_by?: string | null
+          defect_count?: number
+          findings?: string
+          id?: string
+          inspected_on?: string
+          inspector_name?: string
+          location_tag?: string
+          notes?: string
+          photos?: Json
+          project_id?: string | null
+          resolution?: string
+          severity?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_inspections_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "site_projects"
@@ -1332,6 +1589,68 @@ export type Database = {
           working_days_per_week?: number
         }
         Relationships: []
+      }
+      site_stages: {
+        Row: {
+          actual_end: string | null
+          actual_pct: number
+          actual_start: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          notes: string
+          planned_end: string | null
+          planned_pct: number
+          planned_start: string | null
+          project_id: string | null
+          sort: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_pct?: number
+          actual_start?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          notes?: string
+          planned_end?: string | null
+          planned_pct?: number
+          planned_start?: string | null
+          project_id?: string | null
+          sort?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actual_end?: string | null
+          actual_pct?: number
+          actual_start?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          notes?: string
+          planned_end?: string | null
+          planned_pct?: number
+          planned_start?: string | null
+          project_id?: string | null
+          sort?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_stages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_items: {
         Row: {
