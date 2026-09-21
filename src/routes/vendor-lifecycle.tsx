@@ -87,7 +87,7 @@ function Page() {
   const vendors = vendorsQ.data ?? [];
   const pos = posQ.data ?? [];
   const bills = billsQ.data ?? [];
-  const committed = pos.filter((p) => p.status === "approved").reduce((s, p) => s + (p.total_value ?? 0), 0);
+  const committed = pos.filter((p) => p.status === "approved").reduce((s, p) => s + (valueByPo.get(p.id) ?? 0), 0);
   const pendingBills = bills.filter((b) => b.status !== "paid");
   const pendingAmount = pendingBills.reduce((s, b) => s + (b.basic_amount + b.gst_amount + b.other_charges - b.retention_amount - b.deductions), 0);
 
@@ -95,7 +95,7 @@ function Page() {
     const m = new Map<string, { pos: number; value: number; billed: number; pending: number }>();
     for (const p of pos) {
       const v = m.get(p.vendor_name) ?? { pos: 0, value: 0, billed: 0, pending: 0 };
-      if (p.status === "approved") { v.pos += 1; v.value += p.total_value ?? 0; }
+      if (p.status === "approved") { v.pos += 1; v.value += valueByPo.get(p.id) ?? 0; }
       m.set(p.vendor_name, v);
     }
     for (const b of bills) {
