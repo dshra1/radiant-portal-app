@@ -1,14 +1,28 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Upload, Images, FileText, HardHat } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
+import { useSessionUser } from "@/lib/access";
+import { MEDIA_CATEGORIES } from "./site-media";
 
 export const Route = createFileRoute("/media-upload-studio")({
   head: () => ({
     meta: [
-      { title: "Site Media Upload Studio | Saha OS" },
-      { name: "description", content: "Upload geo-tagged site photos, videos and drone media into the project media database." },
-      { property: "og:title", content: "Site Media Upload Studio | Saha OS" },
-      { property: "og:description", content: "Upload geo-tagged site photos, videos and drone media into the project media database." },
+      { title: "Media Upload Studio | Saha OS" },
+      {
+        name: "description",
+        content:
+          "Bulk-upload dated site photos and videos with stage, area and caption details straight into the project record.",
+      },
+      { property: "og:title", content: "Media Upload Studio | Saha OS" },
+      {
+        property: "og:description",
+        content: "Bulk upload site photos and videos with stage and caption details.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -18,10 +32,211 @@ export const Route = createFileRoute("/media-upload-studio")({
 
 function Page() {
   const project = useActiveProject();
+  const user = useSessionUser();
+  const queryClient = useQueryClient();
+  const enabled = Boolean(user?.id) && Boolean(project.id);
+
+  const [files, setFiles] = useState<File[]>([]);
+  const [category, setCategory] = useState<string>("progress");
+  const [stage, setStage] = useState("");
+  const [caption, setCaption] = useState("");
+  const [capturedOn, setCapturedOn] = useState(new Date().toISOString().slice(0, 10));
+  const [progress, setProgress] = useState(0);
+
+  const recent = useQuery({
+    queryKey: ["project_media", "recent", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_media")
+        .select("id,title,caption,category,stage,captured_on")
+        .eq("project_id", project.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const upload = useMutation({
+    mutationFn: async () => {
+      if (!project.id) throw new Error("Select a project first");
+      if (files.length === 0) throw new Error("Choose files to upload");
+      let done = 0;
+      for (const file of files) {
+        const safe = file.name.replace(/[^\w.\-]+/g, "_");
+        const path = `${project.id}/${Date.now()}-${safe}`;
+        const { error: upErr } = await supabase.storage.from("site-media").upload(path, file, {
+          upsert: false,
+          contentType: file.type || undefined,
+        });
+        if (upErr) throw upErr;
+        const { error } = await supabase.from("project_media").insert({
+          project_id: project.id,
+          path,
+          title: file.name,
+          caption,
+          stage,
+          category,
+          captured_on: capturedOn || null,
+          uploaded_by: user?.id ?? null,
+          uploaded_by_name: user?.email ?? "",
+        });
+        if (error) throw error;
+        done += 1;
+        setProgress(Math.round((done / files.length) * 100));
+      }
+    },
+    onSuccess: async () => {
+      toast.success(`${files.length} file(s) added to the project record`);
+      setFiles([]);
+      setCaption("");
+      setProgress(0);
+      await queryClient.invalidateQueries({ queryKey: ["project_media"] });
+    },
+    onError: (e: Error) => {
+      setProgress(0);
+      toast.error(e.message);
+    },
+  });
+
+  const inputCls = "rounded-lg border border-border bg-background px-3 py-2 text-sm";
+
   return (
-    <Shell title={"Site Media Upload Studio | Saha OS"}>
-      <div className="m3">
-        <main className="flex flex-col relative w-full px-gutter-normal pt-16 pb-24 bg-surface flex-grow"><div className="flex flex-col w-full min-h-[calc(100vh-4rem)]"><div className="flex flex-col w-full gap-space-md mb-space-2xl"><div className="flex flex-wrap items-center justify-between gap-space-md w-full bg-surface-container-low p-space-base rounded-xl"><div className="flex items-center gap-space-sm"><span className="material-symbols-outlined text-primary text-[24px]">perm_media</span><h2 className="font-headline-lg text-on-surface">Master Site Media Database & Intelligent Archive</h2></div><div className="flex items-center gap-space-sm bg-surface-container p-space-2xs rounded-lg"><button className="px-space-md py-space-sm rounded-lg bg-primary text-on-primary font-title-md text-xs transition-all shadow-sm">Media Database</button><button className="px-space-md py-space-sm rounded-lg text-on-surface-variant font-title-md text-xs hover:text-on-surface transition-all">Upload Studio</button><button className="px-space-md py-space-sm rounded-lg text-on-surface-variant font-title-md text-xs hover:text-on-surface transition-all flex items-center gap-space-2xs"><span className="material-symbols-outlined text-sm">smart_toy</span> AI Analytics</button></div></div></div><div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md flex-grow"><div className="lg:col-span-4 flex flex-col bg-surface-container-low rounded-xl p-space-md gap-space-md"><div className="flex items-center justify-between mb-space-xs"><span className="font-title-md text-on-surface">New Site Upload Studio</span><span className="text-label-sm bg-primary/10 text-primary px-space-sm py-space-2xs rounded-full font-bold">Firebase Storage</span></div><div className="flex flex-col gap-space-sm"><label className="text-label-md text-on-surface-variant">Project Selector</label><select className="bg-surface-container text-on-surface text-body-md rounded-lg p-space-sm border-none focus:ring-1 focus:ring-primary"><option>PRJ-0001 {project.name}</option><option>PRJ-0002 Horizon Towers</option></select></div><div className="flex flex-col gap-space-sm"><label className="text-label-md text-on-surface-variant">Media Type</label><select className="bg-surface-container text-on-surface text-body-md rounded-lg p-space-sm border-none focus:ring-1 focus:ring-primary"><option>Site Photo</option><option>Site Video</option><option>Inspection Report</option><option>Delivery Challan</option><option>Safety Audit</option></select></div><div className="flex flex-col gap-space-sm"><label className="text-label-md text-on-surface-variant">Activity / Work Item</label><select className="bg-surface-container text-on-surface text-body-md rounded-lg p-space-sm border-none focus:ring-1 focus:ring-primary"><option>1st Floor Brickwork</option><option>RCC Column C1 Pour</option><option>Electrical Conduiting</option></select></div><div className="flex flex-col gap-space-sm"><label className="text-label-md text-on-surface-variant">Location / Zone</label><select className="bg-surface-container text-on-surface text-body-md rounded-lg p-space-sm border-none focus:ring-1 focus:ring-primary"><option>Block 5, West Wing, Floor 1</option><option>Block 2, East Wing, Ground</option></select></div><div className="border-2 border-dashed border-outline-variant rounded-xl p-space-xl flex flex-col items-center justify-center text-center bg-surface-container/30 hover:bg-surface-container cursor-pointer transition-all"><span className="material-symbols-outlined text-[36px] text-primary mb-space-sm">cloud_upload</span><span className="font-title-md text-on-surface mb-space-2xs">Drop files here or click to browse</span><span className="text-body-sm text-on-surface-variant mb-space-md">Select MP4/MOV videos, JPG/PNG photos or supporting documents. Metadata stored in Firestore.</span><button className="px-space-lg py-space-sm rounded-lg bg-primary text-on-primary font-title-md text-xs shadow-sm hover:bg-primary/90 transition-all flex items-center gap-1"><span className="material-symbols-outlined text-sm">add</span> Select & Upload</button></div></div><div className="lg:col-span-8 flex flex-col bg-surface-container-low rounded-xl p-space-md gap-space-md"><div className="flex flex-wrap items-center justify-between gap-space-sm pb-space-sm border-b border-surface-container"><div className="flex items-center gap-space-sm"><div className="relative"><span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-sm">search</span><input className="bg-surface-container rounded-lg pl-9 pr-space-base py-space-sm text-body-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Search media archive..." type="text" /></div></div><div className="flex items-center gap-space-sm"><select className="bg-surface-container text-on-surface text-label-md rounded-lg px-space-sm py-2 border-none focus:ring-1 focus:ring-primary"><option>All Stages</option><option>Substructure</option><option>RCC Superstructure</option><option>Finishing & MEP</option></select><div className="flex items-center gap-space-2xs bg-surface-container p-space-2xs rounded-lg"><button className="p-space-xs rounded bg-surface-container-high text-on-surface"><span className="material-symbols-outlined text-sm">grid_view</span></button><button className="p-space-xs rounded text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-sm">view_list</span></button></div></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-space-md overflow-y-auto max-h-[520px] pr-space-2xs"><div className="bg-surface-container rounded-xl p-space-md flex flex-col gap-space-sm shadow-sm"><div className="relative h-36 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden"><span className="material-symbols-outlined text-[48px] text-primary">image</span><span className="absolute top-2 left-2 bg-primary/90 text-on-primary text-[10px] font-bold px-2 py-0.5 rounded">Verified - IS 456</span></div><div className="flex flex-col gap-1"><div className="flex items-center justify-between"><span className="font-title-md text-on-surface truncate">Block 5 West Wing Brickwork</span><span className="text-label-sm text-on-surface-variant">10:42 AM</span></div><span className="text-body-sm text-on-surface-variant truncate">1st Floor • Uploader: Site Engineer</span></div><div className="flex items-center gap-space-xs pt-space-2xs border-t border-surface-container-high"><button className="flex-1 py-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs rounded font-title-md">Fullscreen</button><button className="flex-1 py-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs rounded font-title-md">Chat Origin</button><button className="flex-1 py-1 bg-primary text-on-primary hover:bg-primary/90 text-xs rounded font-title-md">AI Audit</button></div></div><div className="bg-surface-container rounded-xl p-space-md flex flex-col gap-space-sm shadow-sm"><div className="relative h-36 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden"><span className="material-symbols-outlined text-[48px] text-amber-600">videocam</span><span className="absolute top-2 left-2 bg-amber-600 text-on-primary text-[10px] font-bold px-2 py-0.5 rounded">Minor Defect Flagged</span></div><div className="flex flex-col gap-1"><div className="flex items-center justify-between"><span className="font-title-md text-on-surface truncate">RCC Column C1 Pour Video</span><span className="text-label-sm text-on-surface-variant">Yesterday</span></div><span className="text-body-sm text-on-surface-variant truncate">Ground Floor • Uploader: QA Inspector</span></div><div className="flex items-center gap-space-xs pt-space-2xs border-t border-surface-container-high"><button className="flex-1 py-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs rounded font-title-md">Fullscreen</button><button className="flex-1 py-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs rounded font-title-md">Chat Origin</button><button className="flex-1 py-1 bg-primary text-on-primary hover:bg-primary/90 text-xs rounded font-title-md">AI Audit</button></div></div></div><div className="p-space-base bg-surface-container rounded-xl flex items-center justify-between shadow-sm"><div className="flex items-center gap-space-sm"><span className="material-symbols-outlined text-primary text-[24px]">forum</span><div className="flex flex-col"><span className="font-title-md text-on-surface">Worker Flow Banner</span><span className="text-body-sm text-on-surface-variant">Worker flow: open project -{">"} select activity -{">"} Video/Photo -{">"} Upload. No separate file-management steps are required.</span></div></div><span className="text-label-sm bg-primary/10 text-primary px-space-sm py-space-2xs rounded font-bold">Active Workflow</span></div><div className="p-space-base bg-surface-container rounded-xl flex flex-col gap-space-md shadow-sm"><div className="flex items-center justify-between pb-space-xs border-b border-surface-container-high"><div className="flex items-center gap-space-sm"><span className="material-symbols-outlined text-primary text-[24px]">chat</span><span className="font-title-md text-on-surface">Incoming Chat & WhatsApp Media Stream</span></div><span className="text-label-sm bg-primary/10 text-primary px-space-sm py-space-2xs rounded-full font-bold">Live Sync</span></div><div className="grid grid-cols-1 md:grid-cols-2 gap-space-md"><div className="bg-surface rounded-lg p-space-sm flex flex-col gap-space-xs border border-surface-container-high"><div className="flex items-center justify-between"><div className="flex items-center gap-space-2xs"><span className="material-symbols-outlined text-sm text-amber-600">phone_iphone</span><span className="font-title-md text-xs text-on-surface">Rahul Sharma (Site Engineer)</span></div><span className="text-label-sm text-on-surface-variant">2m ago</span></div><div className="relative h-28 rounded bg-surface-container-highest flex items-center justify-center overflow-hidden"><span className="material-symbols-outlined text-[32px] text-primary">image</span><span className="absolute top-1 left-1 bg-primary text-on-primary text-[9px] font-bold px-1.5 py-0.5 rounded">WhatsApp • Brickwork</span></div><div className="flex items-center justify-between text-body-sm text-on-surface-variant"><span>Block 3, Floor 2</span><button className="px-2 py-0.5 bg-primary text-on-primary text-xs rounded font-title-md hover:bg-primary/90">Audit</button></div></div><div className="bg-surface rounded-lg p-space-sm flex flex-col gap-space-xs border border-surface-container-high"><div className="flex items-center justify-between"><div className="flex items-center gap-space-2xs"><span className="material-symbols-outlined text-sm text-tertiary">forum</span><span className="font-title-md text-xs text-on-surface">Anita Roy (QA Supervisor)</span></div><span className="text-label-sm text-on-surface-variant">14m ago</span></div><div className="relative h-28 rounded bg-surface-container-highest flex items-center justify-center overflow-hidden"><span className="material-symbols-outlined text-[32px] text-amber-600">videocam</span><span className="absolute top-1 left-1 bg-amber-600 text-on-primary text-[9px] font-bold px-1.5 py-0.5 rounded">Chat Bot • Pouring</span></div><div className="flex items-center justify-between text-body-sm text-on-surface-variant"><span>Column C4 Pour</span><button className="px-2 py-0.5 bg-primary text-on-primary text-xs rounded font-title-md hover:bg-primary/90">Audit</button></div></div></div></div></div></div></div></main>
+    <Shell title="Media Upload Studio">
+      <div className="flex flex-col gap-6 pb-16">
+        <header className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            {project.name} · {project.location}
+          </p>
+          <h1 className="text-2xl font-bold">Upload studio</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add a batch of photos or videos in one go, tagged with stage, area and date.
+          </p>
+        </header>
+
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-xs font-semibold uppercase text-muted-foreground">Category</span>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
+                {MEDIA_CATEGORIES.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-xs font-semibold uppercase text-muted-foreground">Stage / area</span>
+              <input value={stage} onChange={(e) => setStage(e.target.value)} className={inputCls} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-xs font-semibold uppercase text-muted-foreground">Captured on</span>
+              <input
+                type="date"
+                value={capturedOn}
+                onChange={(e) => setCapturedOn(e.target.value)}
+                className={inputCls}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-xs font-semibold uppercase text-muted-foreground">Caption</span>
+              <input value={caption} onChange={(e) => setCaption(e.target.value)} className={inputCls} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm md:col-span-3">
+              <span className="text-xs font-semibold uppercase text-muted-foreground">Choose files</span>
+              <input
+                type="file"
+                multiple
+                accept="image/*,video/*,application/pdf"
+                onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+                className={inputCls}
+              />
+            </label>
+            <div className="flex items-end">
+              <button
+                onClick={() => upload.mutate()}
+                disabled={upload.isPending}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                <Upload className="h-4 w-4" />
+                {upload.isPending ? `Uploading ${progress}%` : `Upload ${files.length || ""}`}
+              </button>
+            </div>
+          </div>
+          {files.length > 0 ? (
+            <ul className="mt-4 grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
+              {files.map((f) => (
+                <li key={f.name} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <span className="truncate">{f.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {(f.size / (1024 * 1024)).toFixed(1)} MB
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {upload.isPending ? (
+            <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
+            </div>
+          ) : null}
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">Just uploaded</h2>
+            <Link
+              to="/site-media"
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted"
+            >
+              Open media library
+            </Link>
+          </div>
+          <ul className="mt-3 divide-y divide-border">
+            {(recent.data ?? []).length === 0 ? (
+              <li className="py-6 text-center text-sm text-muted-foreground">
+                Nothing uploaded for this project yet.
+              </li>
+            ) : null}
+            {(recent.data ?? []).map((m) => (
+              <li key={m.id} className="flex items-center justify-between py-3 text-sm">
+                <div>
+                  <p className="font-semibold">{m.caption || m.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {[m.category, m.stage, m.captured_on].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Link
+            to="/site-media"
+            className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:border-primary"
+          >
+            <Images className="h-5 w-5 text-primary" />
+            <p className="mt-2 font-semibold">Media library</p>
+            <p className="text-xs text-muted-foreground">Browse, download or remove project media.</p>
+          </Link>
+          <Link
+            to="/drawing-decipher"
+            className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:border-primary"
+          >
+            <FileText className="h-5 w-5 text-primary" />
+            <p className="mt-2 font-semibold">Drawings</p>
+            <p className="text-xs text-muted-foreground">Upload and read the drawing register.</p>
+          </Link>
+          <Link
+            to="/qa-inspection"
+            className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:border-primary"
+          >
+            <HardHat className="h-5 w-5 text-primary" />
+            <p className="mt-2 font-semibold">QA inspections</p>
+            <p className="text-xs text-muted-foreground">Log what the photos show.</p>
+          </Link>
+        </div>
       </div>
     </Shell>
   );
