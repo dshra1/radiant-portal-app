@@ -53,7 +53,7 @@ type RfqBid = {
   created_at: string;
 };
 
-const STATUS_TONE: Record<string, "good" | "warn" | "neutral"> = { open: "warn", evaluating: "warn", awarded: "good" };
+const STATUS_TONE: Record<string, "emerald" | "amber" | "sky"> = { open: "amber", evaluating: "sky", awarded: "emerald" };
 
 function bidLineTotal(bid: RfqBid, item: RfqItem) {
   const rate = Number(bid.rates?.[item.id] ?? 0);
@@ -247,7 +247,7 @@ function Page() {
                           <div className="flex items-center gap-2">
                             {i === 0 && <Trophy className="h-4 w-4 text-primary" />}
                             <span className="font-semibold text-foreground">{r.bid.vendor_name}</span>
-                            <StatusBadge tone={i === 0 ? "good" : i === ranked.length - 1 && ranked.length > 1 ? "warn" : "neutral"}>L{i + 1}</StatusBadge>
+                            <StatusBadge tone={i === 0 ? "emerald" : i === ranked.length - 1 && ranked.length > 1 ? "red" : "slate"}>L{i + 1}</StatusBadge>
                           </div>
                           <div className="mt-1 text-xs font-normal text-muted-foreground">{r.bid.payment_terms || "Terms n/a"} • {r.bid.lead_time || "Lead n/a"}</div>
                           {canManage && rfq.status !== "awarded" && (
@@ -293,7 +293,7 @@ function Page() {
                       {ranked.map((r, i) => (
                         <td key={r.bid.id} className={`p-3 font-bold ${i === 0 ? "text-primary" : "text-foreground"}`}>
                           {inr(r.total)}
-                          <div className="text-xs font-semibold">{i === 0 ? "L1 — recommended" : `+${inrCompact(r.total - l1.total)} vs L1`}</div>
+                          <div className="text-xs font-semibold">{i === 0 ? "L1 — recommended" : `+${inrCompact(r.total - (l1?.total ?? 0))} vs L1`}</div>
                         </td>
                       ))}
                     </tr>
@@ -330,10 +330,10 @@ function NewRfqForm({ projectId, userId, onDone }: { projectId: string | null; u
   const [saving, setSaving] = useState(false);
 
   async function save() {
-    if (!projectId) return toast.error("Select a project first");
-    if (!title.trim()) return toast.error("Tender title is required");
+    if (!projectId) { toast.error("Select a project first"); return; }
+    if (!title.trim()) { toast.error("Tender title is required"); return; }
     const rows = items.filter((i) => i.description.trim() && Number(i.qty) > 0);
-    if (!rows.length) return toast.error("Add at least one line item with quantity");
+    if (!rows.length) { toast.error("Add at least one line item with quantity"); return; }
     setSaving(true);
     const rfqNumber = `RFQ-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
     const { data, error } = await db
@@ -341,10 +341,10 @@ function NewRfqForm({ projectId, userId, onDone }: { projectId: string | null; u
       .insert({ project_id: projectId, rfq_number: rfqNumber, title: title.trim(), spec: spec.trim(), deadline: deadline || null, budget_estimate: Number(budget) || 0, created_by: userId ?? null, created_by_name: "" })
       .select("id")
       .single();
-    if (error) { setSaving(false); return toast.error(error.message); }
+    if (error) { setSaving(false); toast.error(error.message); return; }
     const { error: ie } = await db.from("rfq_items").insert(rows.map((i, idx) => ({ rfq_id: data.id, description: i.description.trim(), qty: Number(i.qty), unit: i.unit || "MT", benchmark_rate: Number(i.benchmark_rate) || 0, sort: idx })));
     setSaving(false);
-    if (ie) return toast.error(ie.message);
+    if (ie) { toast.error(ie.message); return; }
     toast.success(`Tender ${rfqNumber} created`);
     onDone(data.id as string);
   }
@@ -387,17 +387,17 @@ function AddBidForm({ rfq, items, vendors, userId, onDone }: { rfq: Rfq; items: 
   const [saving, setSaving] = useState(false);
 
   async function save() {
-    if (!vendor.trim()) return toast.error("Vendor name is required");
+    if (!vendor.trim()) { toast.error("Vendor name is required"); return; }
     const rateMap: Record<string, number> = {};
     for (const it of items) {
       const v = Number(rates[it.id]);
       if (v > 0) rateMap[it.id] = v;
     }
-    if (!Object.keys(rateMap).length) return toast.error("Enter at least one line rate");
+    if (!Object.keys(rateMap).length) { toast.error("Enter at least one line rate"); return; }
     setSaving(true);
     const { error } = await db.from("rfq_bids").insert({ rfq_id: rfq.id, vendor_name: vendor.trim(), rates: rateMap, freight_total: Number(freight) || 0, payment_terms: terms.trim(), lead_time: lead.trim(), notes: notes.trim(), created_by: userId ?? null, created_by_name: "" });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     if (rfq.status === "open") await db.from("rfqs").update({ status: "evaluating" }).eq("id", rfq.id);
     toast.success("Vendor quote recorded");
     onDone();
