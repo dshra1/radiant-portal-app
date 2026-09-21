@@ -117,3 +117,5 @@
 ## Sep 21
 - [x] Accounts & Audit: Billing & Expenditure now shows entered statutory/permission charges + vendor bills live
 - [x] Financial Ingestion: real cash ledger (owner funding, vendor payments, statutory charges) + working document uploads to private storage, CSV export
+
+- [x] Procurement: live PO register (project-scoped values, status filters, vendor commitments, CSV)
