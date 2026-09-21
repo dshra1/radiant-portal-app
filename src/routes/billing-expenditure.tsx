@@ -150,7 +150,10 @@ function Page() {
   }, [bills, charges, payments]);
 
   const filtered = rows.filter((r) => {
-    if (kind !== "all" && r.kind !== kind) return false;
+    if (kind === "paid") {
+      if (r.paid <= 0) return false;
+    } else if (kind !== "all" && r.kind !== kind) return false;
+
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return [r.reference, r.payee, r.category, r.detail, r.status].some((v) =>
