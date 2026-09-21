@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { inrCompact, num } from "@/data/saha";
@@ -7,31 +7,19 @@ import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Calculator,
-  ShoppingCart,
-  ClipboardCheck,
-  ScanEye,
   Building2,
-  FileText,
-  Users,
-  TrendingUp,
   Bell,
   MessagesSquare,
   ChevronDown,
   ChevronRight,
   Plus,
   CloudCog,
-  Sun,
-  Wind,
-  Droplets,
-  CloudRain,
   AlertTriangle,
   CheckCircle2,
   Info,
-  MoreHorizontal,
   ArrowRight,
 } from "lucide-react";
+
 import { NotificationBell } from "@/components/saha/NotificationBell";
 
 export const Route = createFileRoute("/")({
@@ -69,32 +57,6 @@ type Notification = {
   recipient_id: string | null;
 };
 
-type Shortcut = {
-  id: string;
-  label: string;
-  to: string;
-  icon: React.ElementType;
-  tone: "primary" | "secondary" | "warning" | "info" | "success";
-};
-
-const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { id: "dashboard", label: "Command", to: "/dashboard", icon: LayoutDashboard, tone: "primary" },
-  { id: "projects", label: "Projects", to: "/projects", icon: Building2, tone: "secondary" },
-  { id: "boq", label: "BOQ Engine", to: "/boq-engine", icon: Calculator, tone: "success" },
-  { id: "po", label: "Raise PO", to: "/po-create", icon: ShoppingCart, tone: "warning" },
-  { id: "qa", label: "QA Audit", to: "/qa-inspection", icon: ScanEye, tone: "info" },
-  { id: "pours", label: "Pour Cards", to: "/pour-cards", icon: ClipboardCheck, tone: "secondary" },
-];
-
-const ALL_SHORTCUTS: Shortcut[] = [
-  ...DEFAULT_SHORTCUTS,
-  { id: "billing", label: "Billing", to: "/billing-expenditure", icon: FileText, tone: "secondary" },
-  { id: "team", label: "Team Chat", to: "/messages", icon: Users, tone: "info" },
-  { id: "forecast", label: "Forecast", to: "/financial-forecast", icon: TrendingUp, tone: "success" },
-];
-
-const SHORTCUT_STORAGE_KEY = "saha-home-shortcuts";
-
 function greetingForHour() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -113,11 +75,6 @@ function timeAgo(iso: string) {
   return `${days}d ago`;
 }
 
-function weatherFromLocation(_location: string) {
-  // Placeholder: in production this can call a weather API. Returns sensible defaults for Hyderabad.
-  return { temp: 31, condition: "Clear", humidity: "High", advice: "Field work recommended before 11:00 AM." };
-}
-
 function priorityTone(priority: string) {
   const p = priority.toLowerCase();
   if (p === "high" || p === "urgent") return "warning";
@@ -126,6 +83,7 @@ function priorityTone(priority: string) {
   return "info";
 }
 
+
 function Index() {
   const { access } = useAccess();
   const user = useSessionUser();
@@ -133,40 +91,6 @@ function Index() {
   const activeProject = useActiveProject();
   const setActiveProject = useActiveProjectSetter();
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
-  const [editShortcuts, setEditShortcuts] = useState(false);
-  const [shortcuts, setShortcuts] = useState<Shortcut[]>(DEFAULT_SHORTCUTS);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const saved = window.localStorage.getItem(SHORTCUT_STORAGE_KEY);
-      if (saved) {
-        const ids: string[] = JSON.parse(saved);
-        const ordered = ids
-          .map((id) => ALL_SHORTCUTS.find((s) => s.id === id))
-          .filter(Boolean) as Shortcut[];
-        if (ordered.length) setShortcuts(ordered);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const saveShortcuts = (next: Shortcut[]) => {
-    setShortcuts(next);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(SHORTCUT_STORAGE_KEY, JSON.stringify(next.map((s) => s.id)));
-    }
-  };
-
-  const toggleShortcut = (s: Shortcut) => {
-    const exists = shortcuts.find((x) => x.id === s.id);
-    if (exists) {
-      saveShortcuts(shortcuts.filter((x) => x.id !== s.id));
-    } else if (shortcuts.length < 8) {
-      saveShortcuts([...shortcuts, s]);
-    }
-  };
 
   const firstName = access?.profile?.full_name?.split(" ")[0] ?? access?.email?.split("@")[0] ?? "Saha";
   const greeting = greetingForHour();
@@ -252,37 +176,8 @@ function Index() {
     enabled: !!activeProject.id,
   });
 
-  const activeRow = useMemo(
-    () => projects.find((p) => p.id === activeProject.id) ?? projects[0],
-    [projects, activeProject.id],
-  );
-
-  const stats = useMemo(() => {
-    const totalBudget = projects.reduce((s, p) => s + Number(p.target_budget ?? 0), 0);
-    const totalSpend = projects.reduce((s, p) => s + Number(p.spend ?? 0), 0);
-    const totalStaff = projects.reduce((s, p) => s + Number(p.total_staff ?? 0), 0);
-    const atRisk = projects.filter((p) => p.health && p.health !== "On Track").length;
-    const active = activeRow;
-    return {
-      totalProjects: projects.length,
-      totalBudget,
-      totalSpend,
-      totalStaff,
-      atRisk,
-      activeBudget: Number(active?.target_budget ?? 0),
-      activeSpend: Number(active?.spend ?? 0),
-      activeStaff: Number(active?.total_staff ?? 0),
-      activeBuiltUp: Number(active?.total_built_up_sft ?? 0),
-      activeHealth: active?.health ?? "—",
-    };
-  }, [projects, activeRow]);
-
   const unreadCount = notifications.filter((n) => !n.is_read).length;
-  const pendingCount = notifications.filter(
-    (n) => !n.is_read && (n.priority.toLowerCase() === "high" || n.priority.toLowerCase() === "urgent"),
-  ).length;
 
-  const weather = weatherFromLocation(activeProject.location);
 
   const markRead = async (id: string) => {
     await supabase.from("notifications").update({ is_read: true }).eq("id", id);
@@ -593,41 +488,6 @@ function Index() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  hint,
-  tone,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  hint?: string | undefined;
-  tone: "primary" | "success" | "info" | "warning" | "secondary";
-  icon: React.ElementType;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-primary/20">
-      <div className="flex items-start justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-        <div
-          className={cn(
-            "grid size-8 place-items-center rounded-lg",
-            tone === "primary" && "bg-primary-soft text-primary",
-            tone === "success" && "bg-primary-soft text-primary",
-            tone === "secondary" && "bg-secondary text-secondary-foreground",
-            tone === "info" && "bg-info-soft text-info",
-            tone === "warning" && "bg-warning-soft text-warning",
-          )}
-        >
-          <Icon className="size-4" />
-        </div>
-      </div>
-      <p className="mt-2 display-title text-2xl">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
-}
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
