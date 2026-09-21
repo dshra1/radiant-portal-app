@@ -555,6 +555,17 @@ function Page() {
                       <span className="rounded-full border border-border px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                         {r.status}
                       </span>
+                      {r.audience === "owner" ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-sky-700">
+                          <Lock className="h-3 w-3" />
+                          Private · {r.target_owner_name}
+                        </span>
+                      ) : null}
+                      {r.unit_label ? (
+                        <span className="rounded-full bg-muted px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          {r.unit_label}
+                        </span>
+                      ) : null}
                     </div>
                     <h2 className="text-lg font-bold text-foreground">{r.title}</h2>
                     {r.body ? <p className="text-sm text-muted-foreground">{r.body}</p> : null}
