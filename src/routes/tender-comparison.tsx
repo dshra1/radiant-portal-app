@@ -1,13 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Shell } from "@/components/saha/Shell";
+import { MetricTile, Section, StatusBadge } from "@/components/saha/ui";
+import { supabase } from "@/integrations/supabase/client";
+import { useSessionUser, useAccess } from "@/lib/access";
+import { useActiveProject } from "@/hooks/useActiveProject";
+import { inr, inrCompact } from "@/data/saha";
+import { Download, Plus, Trophy, Trash2, FilePlus2, Gavel } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/tender-comparison")({
   head: () => ({
     meta: [
-      { title: "Multi-Vendor Tender Quotation Comparison | Saha OS" },
-      { name: "description", content: "L-1/L-2/L-3 unit rate intelligence, logistics parity and compliance matrix." },
-      { property: "og:title", content: "Multi-Vendor Tender Quotation Comparison | Saha OS" },
-      { property: "og:description", content: "L-1/L-2/L-3 unit rate intelligence, logistics parity and compliance matrix." },
+      { title: "Tender Comparison — L1/L2/L3 Vendor Quotes | Saha OS" },
+      { name: "description", content: "Compare vendor quotations line by line, rank L1/L2/L3 and award the tender." },
+      { property: "og:title", content: "Tender Comparison — L1/L2/L3 Vendor Quotes | Saha OS" },
+      { property: "og:description", content: "Compare vendor quotations line by line, rank L1/L2/L3 and award the tender." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -15,654 +24,408 @@ export const Route = createFileRoute("/tender-comparison")({
   component: Page,
 });
 
+// The rfq tables were added after the generated types; query through an untyped handle.
+const db = supabase as any;
+
+type Rfq = {
+  id: string;
+  project_id: string;
+  rfq_number: string;
+  title: string;
+  spec: string;
+  status: "open" | "evaluating" | "awarded";
+  deadline: string | null;
+  budget_estimate: number;
+  awarded_bid_id: string | null;
+  awarded_vendor_name: string;
+  created_at: string;
+};
+type RfqItem = { id: string; rfq_id: string; description: string; qty: number; unit: string; benchmark_rate: number; sort: number };
+type RfqBid = {
+  id: string;
+  rfq_id: string;
+  vendor_name: string;
+  rates: Record<string, number>;
+  freight_total: number;
+  payment_terms: string;
+  lead_time: string;
+  notes: string;
+  created_at: string;
+};
+
+const STATUS_TONE: Record<string, "emerald" | "amber" | "sky"> = { open: "amber", evaluating: "sky", awarded: "emerald" };
+
+function bidLineTotal(bid: RfqBid, item: RfqItem) {
+  const rate = Number(bid.rates?.[item.id] ?? 0);
+  return rate * Number(item.qty || 0);
+}
+function bidGrandTotal(bid: RfqBid, items: RfqItem[]) {
+  return items.reduce((s, it) => s + bidLineTotal(bid, it), 0) + Number(bid.freight_total || 0);
+}
+
+type NewItem = { description: string; qty: string; unit: string; benchmark_rate: string };
+
 function Page() {
+  const project = useActiveProject();
+  const user = useSessionUser();
+  const access = useAccess();
+  const qc = useQueryClient();
+  const canManage = Boolean(access.access?.isAdmin || access.access?.roles?.some((r: string) => ["admin", "pm", "purchase"].includes(r)));
+
+  const [selectedRfq, setSelectedRfq] = useState<string>("");
+  const [showNew, setShowNew] = useState(false);
+  const [showBid, setShowBid] = useState(false);
+  const enabled = Boolean(user?.id) && Boolean(project.id);
+
+  const rfqsQ = useQuery({
+    queryKey: ["rfqs", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await db.from("rfqs").select("*").eq("project_id", project.id).order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Rfq[];
+    },
+  });
+  const rfqs = rfqsQ.data ?? [];
+  const rfq = rfqs.find((r) => r.id === selectedRfq) ?? rfqs[0];
+
+  useEffect(() => {
+    if (rfq && rfq.id !== selectedRfq) setSelectedRfq(rfq.id);
+  }, [rfq?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const itemsQ = useQuery({
+    queryKey: ["rfq-items", rfq?.id],
+    enabled: Boolean(rfq?.id),
+    queryFn: async () => {
+      const { data, error } = await db.from("rfq_items").select("*").eq("rfq_id", rfq!.id).order("sort");
+      if (error) throw error;
+      return (data ?? []) as RfqItem[];
+    },
+  });
+  const bidsQ = useQuery({
+    queryKey: ["rfq-bids", rfq?.id],
+    enabled: Boolean(rfq?.id),
+    queryFn: async () => {
+      const { data, error } = await db.from("rfq_bids").select("*").eq("rfq_id", rfq!.id).order("created_at");
+      if (error) throw error;
+      return (data ?? []) as RfqBid[];
+    },
+  });
+  const vendorsQ = useQuery({
+    queryKey: ["vendors-list"],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("vendors").select("vendor_name").order("vendor_name").limit(200);
+      if (error) throw error;
+      return (data ?? []).map((v) => ({ name: v.vendor_name }));
+    },
+  });
+
+  const items = itemsQ.data ?? [];
+  const bids = bidsQ.data ?? [];
+
+  const ranked = useMemo(
+    () => [...bids].map((b) => ({ bid: b, total: bidGrandTotal(b, items) })).sort((a, b) => a.total - b.total),
+    [bids, items],
+  );
+  const l1 = ranked[0];
+  const l3 = ranked[ranked.length - 1];
+  const spread = l1 && l3 && ranked.length > 1 ? l3.total - l1.total : 0;
+  const savingsVsBudget = rfq && l1 ? Number(rfq.budget_estimate || 0) - l1.total : 0;
+  const lowestRatePerItem = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const it of items) {
+      const rs = bids.map((b) => Number(b.rates?.[it.id] ?? 0)).filter((r) => r > 0);
+      m[it.id] = rs.length ? Math.min(...rs) : 0;
+    }
+    return m;
+  }, [items, bids]);
+
+  async function award(bidId: string, vendor: string) {
+    if (!rfq) return;
+    const { error } = await db.from("rfqs").update({ status: "awarded", awarded_bid_id: bidId, awarded_vendor_name: vendor }).eq("id", rfq.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Tender awarded to ${vendor}`);
+    qc.invalidateQueries({ queryKey: ["rfqs", project.id] });
+  }
+  async function removeBid(id: string) {
+    const { error } = await db.from("rfq_bids").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Bid removed");
+    qc.invalidateQueries({ queryKey: ["rfq-bids", rfq?.id] });
+  }
+
+  function exportCsv() {
+    if (!rfq) return;
+    const head = ["Line item", "Qty", "Unit", "Benchmark", ...ranked.map((r, i) => `L${i + 1} ${r.bid.vendor_name} rate`), ...ranked.map((r, i) => `L${i + 1} ${r.bid.vendor_name} total`)];
+    const rows = items.map((it) => [
+      it.description, String(it.qty), it.unit, String(it.benchmark_rate),
+      ...ranked.map((r) => String(r.bid.rates?.[it.id] ?? "")),
+      ...ranked.map((r) => String(bidLineTotal(r.bid, it))),
+    ]);
+    rows.push(["Freight / logistics", "", "", "", ...ranked.map(() => ""), ...ranked.map((r) => String(r.bid.freight_total))]);
+    rows.push(["GRAND TOTAL", "", "", "", ...ranked.map(() => ""), ...ranked.map((r) => String(r.total))]);
+    const csv = [head, ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `${rfq.rfq_number || "rfq"}-comparison.csv`;
+    a.click();
+  }
+
   return (
-    <Shell title={"Multi-Vendor Tender Quotation Comparison | Saha OS"}>
-      <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full">
-
-<div className="flex flex-col gap-space-sm mb-space-base">
-
-<div className="flex items-center justify-between">
-<div className="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md">
-<span>Civil Platform</span>
-<span className="material-symbols-outlined text-space-base">chevron_right</span>
-<span>Procurement &amp; Tenders</span>
-<span className="material-symbols-outlined text-space-base">chevron_right</span>
-<span className="text-on-surface font-title-md">Multi-Vendor Comparison</span>
-</div>
-<div className="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
-<span className="inline-block w-2 h-2 rounded-full bg-primary animate-ping"></span>
-<span>Mandi Rates Live Sync: <strong>Today, 11:30 AM IST</strong></span>
-</div>
-</div>
-
-<div className="flex flex-wrap items-center justify-between gap-space-md">
-<div className="flex flex-col">
-<div className="flex items-center gap-space-sm flex-wrap">
-<h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Multi-Vendor Tender Quotation Comparison Studio</h1>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm">RFQ #RFQ-2026-STEEL-09</span>
-<span className="px-space-xs py-space-2xs rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">Hyderabad Region Benchmarked</span>
-<span className="px-space-xs py-space-2xs rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-semibold">3 Quotations Received</span>
-</div>
-<p className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs">High-density L-1 / L-2 / L-3 unit-rate intelligence, logistics parity analysis, and commercial compliance matrix.</p>
-</div>
-
-<div className="flex items-center gap-space-xs">
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container-lowest shadow-sm hover:bg-surface-container transition-colors text-on-surface font-title-md text-title-md">
-<span className="material-symbols-outlined text-space-base text-primary">download</span>
-<span>Export Comparative (.xlsx)</span>
-</button>
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container-lowest shadow-sm hover:bg-surface-container transition-colors text-on-surface font-title-md text-title-md">
-<span className="material-symbols-outlined text-space-base text-secondary">mail</span>
-<span>Auto-Negotiation Letter</span>
-</button>
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-primary text-on-primary hover:bg-primary-container font-title-md text-title-md shadow-sm transition-colors">
-<span className="material-symbols-outlined text-space-base">person_add</span>
-<span>Invite Vendor (+)</span>
-</button>
-</div>
-</div>
-
-<div className="flex flex-wrap items-center justify-between gap-space-md bg-surface-container-lowest p-space-sm rounded-lg shadow-sm mt-space-xs">
-<div className="flex items-center gap-space-md flex-1 min-w-[280px]">
-<div className="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm shrink-0">
-<span className="material-symbols-outlined text-space-base">filter_alt</span>
-<span>ACTIVE RFQ:</span>
-</div>
-<div className="relative flex-1 max-w-md">
-<select className="w-full bg-surface-container-low text-on-surface font-title-md text-title-md py-space-xs pl-space-sm pr-space-xl rounded appearance-none focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer">
-<option>Steel Rebar 12mm-25mm Fe 500D — 120 MT Total (Madhapur Plot 44/A)</option>
-<option>Ready-Mix Concrete M30/M40 — 850 Cum (Tower B Raft)</option>
-<option>Structural Steel Sections ISMB 200 — 45 MT</option>
-</select>
-<span className="material-symbols-outlined absolute right-space-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-space-base">expand_more</span>
-</div>
-<div className="flex items-center gap-space-xs px-space-sm py-space-2xs rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
-<span className="w-1.5 h-1.5 rounded-full bg-tertiary-container"></span>
-<span>Status: <strong>Evaluation Phase (Active)</strong></span>
-</div>
-</div>
-<div className="flex items-center gap-space-md text-body-sm text-on-surface-variant">
-<span>Tender Ceiling: <strong className="text-on-surface font-tabular-metric-sm text-tabular-metric-sm">₹70,26,000</strong></span>
-<span className="h-4 w-px bg-surface-container"></span>
-<span>Submission Deadline: <strong className="text-on-surface">Yesterday, 17:00 IST</strong></span>
-<span className="h-4 w-px bg-surface-container"></span>
-<div className="flex items-center gap-space-2xs text-primary font-label-sm text-label-sm">
-<span className="material-symbols-outlined text-space-base">verified</span>
-<span>NABL Standard Validated</span>
-</div>
-</div>
-</div>
-</div>
-
-<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-normal mb-space-base">
-
-<div className="flex flex-col justify-between bg-surface-container-lowest p-space-base rounded-xl shadow-sm relative overflow-hidden">
-<div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full pointer-events-none"></div>
-<div className="flex items-start justify-between">
-<div className="flex flex-col">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Lowest Bid (L-1 Standard)</span>
-<span className="font-display-lg text-display-lg font-bold text-on-surface mt-space-2xs">₹67,84,000</span>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm font-semibold tracking-wide uppercase">L-1 Active</span>
-</div>
-<div className="flex items-center gap-space-xs mt-space-md text-primary font-body-sm text-body-sm">
-<span className="material-symbols-outlined text-space-base">trending_down</span>
-<span><strong>₹2,42,000 below</strong> budgeted estimate</span>
-</div>
-<div className="font-label-sm text-label-sm text-on-surface-variant mt-space-2xs truncate">
-        Vendor: <strong>Tirumala Steel &amp; Infra Traders</strong>
-</div>
-</div>
-
-<div className="flex flex-col justify-between bg-surface-container-lowest p-space-base rounded-xl shadow-sm relative overflow-hidden">
-<div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary-fixed/30 rounded-full pointer-events-none"></div>
-<div className="flex items-start justify-between">
-<div className="flex flex-col">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Project Savings vs Mandi</span>
-<span className="font-display-lg text-display-lg font-bold text-primary mt-space-2xs">₹3,16,000</span>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-semibold">-4.45% Spread</span>
-</div>
-<div className="flex items-center gap-space-xs mt-space-md text-on-surface-variant font-body-sm text-body-sm">
-<span className="material-symbols-outlined text-space-base text-primary">analytics</span>
-<span>Mandi Spot avg: <strong>₹59,166/MT</strong></span>
-</div>
-<div className="font-label-sm text-label-sm text-on-surface-variant mt-space-2xs">
-        Effective weighted savings: <strong>₹2,633/MT</strong>
-</div>
-</div>
-
-<div className="flex flex-col justify-between bg-surface-container-lowest p-space-base rounded-xl shadow-sm relative overflow-hidden">
-<div className="flex items-start justify-between">
-<div className="flex flex-col">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Spread (L-1 vs L-3)</span>
-<span className="font-display-lg text-display-lg font-bold text-secondary mt-space-2xs">₹4,12,000</span>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-secondary-container font-label-sm text-label-sm">6.07% Divergence</span>
-</div>
-<div className="flex items-center gap-space-xs mt-space-md text-on-surface-variant font-body-sm text-body-sm">
-<span className="material-symbols-outlined text-space-base text-error">swap_vert</span>
-<span>Delta between lowest and highest quote</span>
-</div>
-<div className="font-label-sm text-label-sm text-on-surface-variant mt-space-2xs">
-        Max risk exposure mitigated via L-1 auto-lock
+    <Shell title="Tender Comparison">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Multi-Vendor Tender Comparison</h1>
+          <p className="text-sm text-muted-foreground">Live L1/L2/L3 ranking of vendor quotations for {project.name}.</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={exportCsv} disabled={!rfq || !bids.length} className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground disabled:opacity-50">
+            <Download className="h-4 w-4" /> Export comparative
+          </button>
+          <button onClick={() => setShowNew((v) => !v)} className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground">
+            <FilePlus2 className="h-4 w-4" /> New tender (RFQ)
+          </button>
+        </div>
       </div>
-</div>
 
-<div className="flex flex-col justify-between bg-surface-container-lowest p-space-base rounded-xl shadow-sm relative overflow-hidden">
-<div className="flex items-start justify-between">
-<div className="flex flex-col">
-<span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Compliance &amp; Delivery</span>
-<span className="font-display-lg text-display-lg font-bold text-on-surface mt-space-2xs">98.2%</span>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm">BIS / NABL Pass</span>
-</div>
-<div className="flex items-center gap-space-xs mt-space-md text-on-surface-variant font-body-sm text-body-sm">
-<span className="material-symbols-outlined text-space-base text-primary">fact_check</span>
-<span>3 of 3 Vendors Certified IS 1786:2008</span>
-</div>
-<div className="font-label-sm text-label-sm text-on-surface-variant mt-space-2xs">
-        Audit trail logged to Hyderabad QA registry
-      </div>
-</div>
-</div>
+      {showNew && <NewRfqForm projectId={project.id} userId={user?.id} onDone={(id) => { setShowNew(false); setSelectedRfq(id); qc.invalidateQueries({ queryKey: ["rfqs", project.id] }); }} />}
 
-<div className="bg-surface-container-low rounded-xl p-space-base mb-space-base shadow-sm">
-<div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-base">
-<div className="flex items-start gap-space-base">
-<div className="w-10 h-10 rounded bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-sm">
-<span className="material-symbols-outlined text-space-lg">psychology</span>
-</div>
-<div className="flex flex-col">
-<div className="flex items-center gap-space-xs">
-<span className="font-title-md text-title-md text-on-surface font-bold">AI Rate Intelligence &amp; Split Procurement Recommendation</span>
-<span className="px-space-xs py-space-2xs rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm uppercase font-semibold">High Value Insight</span>
-</div>
-<p className="font-body-md text-body-md text-on-surface mt-space-2xs max-w-4xl">
-<strong>Sagar Infra Steels (L-2)</strong> submitted a lower unit rate on <strong>12mm Rebar (₹56,600 vs ₹56,800/MT)</strong>. A split allocation saves ₹5,000 on steel, but consolidating 100% of order with <strong>Tirumala Steel (L-1)</strong> secures <span className="text-primary font-semibold">₹54,000 savings in unified logistics</span> (free direct trailers) plus <strong>30-day PDC terms</strong> vs 15-day LC. Single award recommended.
-          </p>
-</div>
-</div>
-<div className="flex items-center gap-space-xs shrink-0 w-full lg:w-auto justify-end">
-<button className="px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container text-body-md font-title-md shadow-sm transition-colors">
-          Award Split Tender
-        </button>
-<button className="px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container text-body-md font-title-md shadow-sm transition-colors">
-          BAFO Request (L-2)
-        </button>
-<button className="px-space-md py-space-xs rounded bg-primary text-on-primary hover:bg-primary-container text-body-md font-title-md shadow-sm flex items-center gap-space-2xs transition-colors">
-<span className="material-symbols-outlined text-space-base">task_alt</span>
-<span>Award Complete to L-1</span>
-</button>
-</div>
-</div>
-</div>
+      <Section title="Active tender">
+        {rfqs.length === 0 ? (
+          <p className="p-4 text-sm text-muted-foreground">No tenders yet for this project. Create one with “New tender (RFQ)”, add its line items, then record each vendor's quote.</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 p-4">
+            <select value={rfq?.id ?? ""} onChange={(e) => setSelectedRfq(e.target.value)} className="min-w-[280px] rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground">
+              {rfqs.map((r) => (
+                <option key={r.id} value={r.id}>{r.rfq_number} — {r.title}</option>
+              ))}
+            </select>
+            {rfq && (
+              <>
+                <StatusBadge tone={STATUS_TONE[rfq.status] ?? "slate"}>{rfq.status.toUpperCase()}</StatusBadge>
+                <span className="text-sm text-muted-foreground">Budget estimate: <strong className="text-foreground">{inr(Number(rfq.budget_estimate || 0))}</strong></span>
+                {rfq.deadline && <span className="text-sm text-muted-foreground">Deadline: <strong className="text-foreground">{rfq.deadline}</strong></span>}
+                {rfq.status === "awarded" && <span className="text-sm text-primary font-semibold">Awarded to {rfq.awarded_vendor_name}</span>}
+              </>
+            )}
+          </div>
+        )}
+      </Section>
 
-<div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden mb-space-base">
+      {rfq && (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetricTile label="Lowest bid (L1)" value={l1 ? inrCompact(l1.total) : "—"} delta={l1 ? `Vendor: ${l1.bid.vendor_name}` : "No bids yet"} tone={l1 ? "good" : "neutral"} />
+            <MetricTile label="Savings vs budget" value={l1 ? inrCompact(savingsVsBudget) : "—"} tone={savingsVsBudget >= 0 ? "good" : "bad"} delta={rfq ? `Budget ${inrCompact(Number(rfq.budget_estimate || 0))}` : ""} />
+            <MetricTile label="Spread (L1 vs highest)" value={ranked.length > 1 ? inrCompact(spread) : "—"} delta={ranked.length > 1 ? `${((spread / ((l1?.total ?? 0) || 1)) * 100).toFixed(2)}% divergence` : "Need 2+ bids"} tone="warn" />
+            <MetricTile label="Quotations received" value={String(bids.length)} delta={`${items.length} line items`} />
+          </div>
 
-<div className="px-space-base py-space-sm bg-surface-container-low flex flex-wrap items-center justify-between gap-space-base">
-<div className="flex items-center gap-space-base">
-<span className="font-title-md text-title-md text-on-surface uppercase tracking-wider">Line Item Parity Matrix</span>
-<span className="text-on-surface-variant font-body-sm text-body-sm">All base rates in INR (₹) per Metric Tonne excl. GST</span>
-</div>
-<div className="flex items-center gap-space-md">
-<div className="flex items-center gap-space-2xs font-label-sm text-label-sm text-on-surface-variant">
-<span className="w-3 h-3 rounded-full bg-primary inline-block"></span>
-<span>L-1 Lowest Line Rate</span>
-</div>
-<div className="flex items-center gap-space-2xs font-label-sm text-label-sm text-on-surface-variant">
-<span className="w-3 h-3 rounded-full bg-secondary inline-block"></span>
-<span>L-2 Competitive</span>
-</div>
-<div className="flex items-center gap-space-2xs font-label-sm text-label-sm text-on-surface-variant">
-<span className="w-3 h-3 rounded-full bg-error inline-block"></span>
-<span>L-3 Over Benchmark</span>
-</div>
-</div>
-</div>
+          <Section
+            title="Line item parity matrix"
+            action={
+              <button onClick={() => setShowBid((v) => !v)} disabled={!items.length} className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+                <Plus className="h-4 w-4" /> Add vendor quote
+              </button>
+            }
+          >
+            {showBid && <AddBidForm rfq={rfq} items={items} vendors={vendorsQ.data ?? []} userId={user?.id} onDone={() => { setShowBid(false); qc.invalidateQueries({ queryKey: ["rfq-bids", rfq.id] }); }} />}
 
-<div className="overflow-x-auto w-full">
-<table className="w-full text-left table-fixed min-w-[1100px]">
-<colgroup>
-<col className="w-[28%]" />
-<col className="w-[24%] bg-primary/5" />
-<col className="w-[24%]" />
-<col className="w-[24%]" />
-</colgroup>
-<thead>
-<tr className="bg-surface-container-low text-on-surface font-title-md text-title-md">
-
-<th className="p-space-base align-top">
-<div className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Tender Specification &amp; Quantities</div>
-<div className="font-headline-sm text-headline-sm text-on-surface mt-space-2xs">Steel Rebar BOQ Scope</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Estimated Budget: ₹70,26,000</div>
-</th>
-
-<th className="p-space-base align-top bg-primary text-on-primary relative">
-<div className="flex items-center justify-between">
-<span className="px-space-xs py-space-2xs rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-bold uppercase tracking-wider">Recommended L-1</span>
-<span className="material-symbols-outlined text-primary-fixed text-space-lg">stars</span>
-</div>
-<div className="font-headline-sm text-headline-sm font-bold text-on-primary mt-space-xs">Tirumala Steel &amp; Infra</div>
-<div className="text-on-primary/80 font-body-sm text-body-sm mt-space-2xs">Nacharam Yard, Hyd • GSTIN: 36AAACT9821R1Z8</div>
-<div className="mt-space-xs flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm bg-primary-container px-space-xs py-space-2xs rounded">Score: 9.4 / 10</span>
-<span className="font-label-sm text-label-sm bg-primary-container px-space-xs py-space-2xs rounded">BIS Certified</span>
-</div>
-</th>
-
-<th className="p-space-base align-top bg-surface-container-lowest text-on-surface">
-<div className="flex items-center justify-between">
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm uppercase font-semibold">L-2 Bidder</span>
-<span className="text-on-surface-variant font-label-sm text-label-sm">+2.18% Delta</span>
-</div>
-<div className="font-headline-sm text-headline-sm text-on-surface mt-space-xs">Sagar Infra Steels Ltd</div>
-<div className="text-on-surface-variant font-body-sm text-body-sm mt-space-2xs">Balanagar Hub, Hyd • GSTIN: 36AABCS4412K1ZK</div>
-<div className="mt-space-xs flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm bg-surface-container px-space-xs py-space-2xs rounded">Score: 8.8 / 10</span>
-<span className="font-label-sm text-label-sm bg-surface-container px-space-xs py-space-2xs rounded">TATA Tiscon Auth</span>
-</div>
-</th>
-
-<th className="p-space-base align-top bg-surface-container-lowest text-on-surface">
-<div className="flex items-center justify-between">
-<span className="px-space-xs py-space-2xs rounded bg-error-container text-on-error-container font-label-sm text-label-sm uppercase font-semibold">L-3 Bidder - High</span>
-<span className="text-error font-label-sm text-label-sm font-semibold">+6.07% Delta</span>
-</div>
-<div className="font-headline-sm text-headline-sm text-on-surface mt-space-xs">Deccan Iron &amp; Metal Corp</div>
-<div className="text-on-surface-variant font-body-sm text-body-sm mt-space-2xs">Kukatpally Depot, Hyd • GSTIN: 36AACCD9182L1ZX</div>
-<div className="mt-space-xs flex items-center gap-space-xs">
-<span className="font-label-sm text-label-sm bg-surface-container px-space-xs py-space-2xs rounded">Score: 7.6 / 10</span>
-<span className="font-label-sm text-label-sm bg-surface-container px-space-xs py-space-2xs rounded">Secondary Rolling</span>
-</div>
-</th>
-</tr>
-</thead>
-<tbody className="divide-none text-body-md text-on-surface">
-
-<tr className="hover:bg-surface-container/30 transition-colors">
-<td className="p-space-base">
-<div className="font-title-md text-title-md text-on-surface">Fe 500D TMT Rebar 16mm</div>
-<div className="text-body-sm text-on-surface-variant">Tender Est Qty: <strong>50 MT</strong> • Benchmark: ₹58,000/MT</div>
-<div className="text-label-sm text-label-sm text-outline mt-space-2xs">Primary reinforcement for Columns &amp; Raft beams</div>
-</td>
-
-<td className="p-space-base bg-primary/5">
-<div className="flex items-baseline justify-between">
-<span className="font-tabular-metric text-tabular-metric text-primary">₹56,200</span>
-<span className="px-space-xs py-space-2xs rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-semibold">L-1 (-₹1,800)</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Line Total: <strong>₹28,10,000</strong></div>
-<div className="text-label-sm text-label-sm text-primary">Jindal Panther Primary Grade</div>
-</td>
-
-<td className="p-space-base">
-<div className="flex items-baseline justify-between">
-<span className="font-tabular-metric text-tabular-metric text-on-surface">₹57,100</span>
-<span className="text-on-surface-variant font-label-sm text-label-sm">+₹900/MT</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Line Total: <strong>₹28,55,000</strong></div>
-<div className="text-label-sm text-label-sm text-on-surface-variant">Tata Tiscon 500D</div>
-</td>
-
-<td className="p-space-base">
-<div className="flex items-baseline justify-between">
-<span className="font-tabular-metric text-tabular-metric text-error">₹59,400</span>
-<span className="px-space-xs py-space-2xs rounded bg-error-container text-on-error-container font-label-sm text-label-sm">+₹1,400 Over Est</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Line Total: <strong>₹29,70,000</strong></div>
-<div className="text-label-sm text-label-sm text-on-surface-variant">SAIL Commercial Batch</div>
-</td>
-</tr>
-
-<tr className="bg-surface-container-low/40 hover:bg-surface-container/40 transition-colors">
-<td className="p-space-base">
-<div className="font-title-md text-title-md text-on-surface">Fe 500D TMT Rebar 20mm</div>
-<div className="text-body-sm text-on-surface-variant">Tender Est Qty: <strong>45 MT</strong> • Benchmark: ₹58,500/MT</div>
-<div className="text-label-sm text-label-sm text-outline mt-space-2xs">Core structural shear walls &amp; footing dowels</div>
-</td>
-
-<td className="p-space-base bg-primary/5">
-<div className="flex items-baseline justify-between">
-<span className="font-tabular-metric text-tabular-metric text-primary">₹56,500</span>
-<span className="px-space-xs py-space-2xs rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-semibold">L-1 (-₹2,000)</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Line Total: <strong>₹25,42,500</strong></div>
-<div className="text-label-sm text-label-sm text-primary">Pre-tested rolling certificate attached</div>
-</td>
-
-<td className="p-space-base">
-<div className="flex items-baseline justify-between">
-<span className="font-tabular-metric text-tabular-metric text-on-surface">₹57,400</span>
-<span className="text-on-surface-variant font-label-sm text-label-sm">+₹900/MT</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Line Total: <strong>₹25,83,000</strong></div>
-<div className="text-label-sm text-label-sm text-on-surface-variant">Ex-stock available</div>
-</td>
-
-<td className="p-space-base">
-<div className="flex items-baseline justify-between">
-<span className="font-tabular-metric text-tabular-metric text-error">₹59,800</span>
-<span className="px-space-xs py-space-2xs rounded bg-error-container text-on-error-container font-label-sm text-label-sm">+₹1,300 Over Est</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Line Total: <strong>₹26,91,000</strong></div>
-<div className="text-label-sm text-label-sm text-on-surface-variant">Vizag Steel Primary</div>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container/30 transition-colors">
-<td className="p-space-base">
-<div className="font-title-md text-title-md text-on-surface">Fe 500D TMT Rebar 12mm</div>
-<div className="text-body-sm text-on-surface-variant">Tender Est Qty: <strong>25 MT</strong> • Benchmark: ₹58,900/MT</div>
-<div className="text-label-sm text-label-sm text-outline mt-space-2xs">Floor slab distribution &amp; staircase reinforcement</div>
-</td>
-
-<td className="p-space-base bg-primary/5">
-<div className="flex items-baseline justify-between">
-<span className="font-tabular-metric text-tabular-metric text-on-surface">₹56,800</span>
-<span className="text-on-surface-variant font-label-sm text-label-sm font-semibold">+₹200 diff vs Sagar</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Line Total: <strong>₹14,20,000</strong></div>
-<div className="text-label-sm text-label-sm text-primary">Tied to bundle packing</div>
-</td>
-
-<td className="p-space-base bg-surface-container/20">
-<div className="flex items-baseline justify-between">
-<span className="font-tabular-metric text-tabular-metric text-primary">₹56,600</span>
-<span className="px-space-xs py-space-2xs rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-bold">Line L-1</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Line Total: <strong>₹14,15,000</strong></div>
-<div className="text-label-sm text-label-sm text-primary">Special bulk promotional batch</div>
-</td>
-
-<td className="p-space-base">
-<div className="flex items-baseline justify-between">
-<span className="font-tabular-metric text-tabular-metric text-on-surface">₹58,900</span>
-<span className="text-on-surface-variant font-label-sm text-label-sm">At Benchmark</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Line Total: <strong>₹14,72,500</strong></div>
-<div className="text-label-sm text-label-sm text-on-surface-variant">Standard bundled</div>
-</td>
-</tr>
-
-<tr className="bg-surface-container-low/40 hover:bg-surface-container/40 transition-colors">
-<td className="p-space-base">
-<div className="font-title-md text-title-md text-on-surface">Freight, Transit Insurance &amp; Unloading</div>
-<div className="text-body-sm text-on-surface-variant">Madhapur Site (Plot 44/A) • Total 120 MT</div>
-<div className="text-label-sm text-label-sm text-outline mt-space-2xs">Hydraulic crane crane offloading mandatory</div>
-</td>
-
-<td className="p-space-base bg-primary/5">
-<div className="flex items-center gap-space-xs">
-<span className="px-space-xs py-space-2xs rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-bold">Free / Included</span>
-<span className="text-primary font-body-sm text-body-sm">₹0 Additional</span>
-</div>
-<div className="text-label-sm text-label-sm text-on-surface-variant mt-space-2xs">Saves ₹54,000 in site unloading handling</div>
-</td>
-
-<td className="p-space-base">
-<div className="font-tabular-metric text-tabular-metric text-error">+₹450 / MT</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Additional: <strong>₹54,000</strong> on consignment</div>
-<div className="text-label-sm text-label-sm text-on-surface-variant">Site crane extra on client scope</div>
-</td>
-
-<td className="p-space-base">
-<div className="flex items-center gap-space-xs">
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm font-medium">Included</span>
-<span className="text-on-surface-variant font-body-sm text-body-sm">₹0 Additional</span>
-</div>
-<div className="text-label-sm text-label-sm text-on-surface-variant mt-space-2xs">Unloading within 4 hours free</div>
-</td>
-</tr>
-
-<tr className="hover:bg-surface-container/30 transition-colors">
-<td className="p-space-base">
-<div className="font-title-md text-title-md text-on-surface">Payment Terms &amp; Credit Window</div>
-<div className="text-body-sm text-on-surface-variant">Financial Risk Assessment &amp; Working Capital</div>
-<div className="text-label-sm text-label-sm text-outline mt-space-2xs">Client Treasury Preference: Min 30 Days Credit</div>
-</td>
-
-<td className="p-space-base bg-primary/5">
-<div className="flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-primary text-space-base">verified</span>
-<span className="font-title-md text-title-md text-primary">30 Days PDC</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Post-dated cheque post physical test slip</div>
-<div className="text-label-sm text-label-sm text-primary font-semibold">Zero Treasury Strain</div>
-</td>
-
-<td className="p-space-base">
-<div className="font-title-md text-title-md text-on-surface">15 Days Bank LC</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Requires bank limits lien (~0.75% fee)</div>
-<div className="text-label-sm text-label-sm text-on-surface-variant">Moderate working capital tie-up</div>
-</td>
-
-<td className="p-space-base">
-<div className="font-title-md text-title-md text-error">100% Against Proforma</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Immediate fund transfer prior to dispatch</div>
-<div className="text-label-sm text-label-sm text-error font-semibold">High working capital friction</div>
-</td>
-</tr>
-
-<tr className="bg-surface-container-low/40 hover:bg-surface-container/40 transition-colors">
-<td className="p-space-base">
-<div className="font-title-md text-title-md text-on-surface">Lead Time to Site Delivery</div>
-<div className="text-body-sm text-on-surface-variant">Crucial for Foundation Pour Schedule (24-Apr)</div>
-<div className="text-label-sm text-label-sm text-outline mt-space-2xs">Stockyard proximity &amp; fleet readiness</div>
-</td>
-
-<td className="p-space-base bg-primary/5">
-<div className="flex items-center gap-space-xs">
-<span className="material-symbols-outlined text-primary text-space-base">bolt</span>
-<span className="font-tabular-metric-sm text-tabular-metric-sm text-primary">24 Hours Guaranteed</span>
-</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Direct dispatch from Nacharam yard (14km)</div>
-<div className="text-label-sm text-label-sm text-primary">Zero schedule slip risk</div>
-</td>
-
-<td className="p-space-base">
-<div className="font-tabular-metric-sm text-tabular-metric-sm text-on-surface">48 Hours</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Balanagar central hub (26km)</div>
-<div className="text-label-sm text-label-sm text-on-surface-variant">Acceptable buffer</div>
-</td>
-
-<td className="p-space-base">
-<div className="font-tabular-metric-sm text-tabular-metric-sm text-error">3 to 4 Days</div>
-<div className="text-body-sm text-on-surface-variant mt-space-2xs">Transit from secondary rolling mill outside city</div>
-<div className="text-label-sm text-label-sm text-error">Pours at risk if delayed</div>
-</td>
-</tr>
-</tbody>
-
-<tfoot>
-
-<tr className="bg-surface-container">
-<td className="p-space-base font-title-md text-title-md text-on-surface">
-<span>Total Material &amp; Freight Base Cost</span>
-<div className="text-body-sm text-on-surface-variant font-normal">Excluding applicable Goods &amp; Service Tax</div>
-</td>
-<td className="p-space-base bg-primary/10">
-<div className="font-display-lg text-display-lg text-primary font-bold">₹67.84 L</div>
-<div className="text-label-sm text-label-sm text-primary font-semibold">L-1 (₹67,84,000)</div>
-</td>
-<td className="p-space-base">
-<div className="font-display-lg text-display-lg text-on-surface font-bold">₹69.32 L</div>
-<div className="text-label-sm text-label-sm text-on-surface-variant">Base + Logistics (₹69,32,000)</div>
-</td>
-<td className="p-space-base">
-<div className="font-display-lg text-display-lg text-on-surface font-bold">₹71.96 L</div>
-<div className="text-label-sm text-label-sm text-error font-semibold">L-3 (₹71,96,000)</div>
-</td>
-</tr>
-
-<tr className="bg-surface-container-low/80 text-on-surface-variant">
-<td className="p-space-base font-body-md text-body-md">
-<span>Applicable GST @ 18% (Input Tax Credit Eligible)</span>
-</td>
-<td className="p-space-base bg-primary/5 font-tabular-metric-sm text-tabular-metric-sm text-on-surface">₹12,21,120</td>
-<td className="p-space-base font-tabular-metric-sm text-tabular-metric-sm text-on-surface">₹12,47,760</td>
-<td className="p-space-base font-tabular-metric-sm text-tabular-metric-sm text-on-surface">₹12,95,280</td>
-</tr>
-
-<tr className="bg-surface-container-high text-on-surface">
-<td className="p-space-base">
-<div className="font-headline-sm text-headline-sm font-bold">Gross Landed Cost (Project Total)</div>
-<div className="text-body-sm text-on-surface-variant">Final contractual commitment value</div>
-</td>
-<td className="p-space-base bg-primary text-on-primary">
-<div className="font-display-lg text-display-lg font-bold">₹80.05 L</div>
-<div className="font-label-sm text-label-sm text-primary-fixed">₹80,05,120 All-Inclusive</div>
-</td>
-<td className="p-space-base">
-<div className="font-display-lg text-display-lg font-bold">₹81.80 L</div>
-<div className="text-label-sm text-label-sm text-on-surface-variant">₹81,79,760 (+₹1.74 L)</div>
-</td>
-<td className="p-space-base">
-<div className="font-display-lg text-display-lg font-bold text-error">₹84.91 L</div>
-<div className="text-label-sm text-label-sm text-error">₹84,91,280 (+₹4.86 L)</div>
-</td>
-</tr>
-
-<tr className="bg-surface-container-lowest">
-<td className="p-space-base align-middle">
-<div className="font-title-md text-title-md text-on-surface">Vendor Final Composite Rating</div>
-<div className="text-body-sm text-on-surface-variant">Score based on price (60%), terms (20%), QA (20%)</div>
-</td>
-<td className="p-space-base bg-primary/5 align-middle">
-<div className="flex items-center justify-between">
-<span className="font-headline-sm text-headline-sm font-bold text-primary">9.4 / 10</span>
-<span className="px-space-xs py-space-2xs rounded bg-primary text-on-primary font-label-sm text-label-sm font-bold">RECOMMENDED</span>
-</div>
-<div className="w-full bg-surface-container rounded-full h-1.5 mt-space-xs overflow-hidden">
-<div className="bg-primary h-1.5 rounded-full" style={{ width: "94%" }}></div>
-</div>
-</td>
-<td className="p-space-base align-middle">
-<div className="flex items-center justify-between">
-<span className="font-headline-sm text-headline-sm font-bold text-on-surface">8.8 / 10</span>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">BACKUP</span>
-</div>
-<div className="w-full bg-surface-container rounded-full h-1.5 mt-space-xs overflow-hidden">
-<div className="bg-secondary h-1.5 rounded-full" style={{ width: "88%" }}></div>
-</div>
-</td>
-<td className="p-space-base align-middle">
-<div className="flex items-center justify-between">
-<span className="font-headline-sm text-headline-sm font-bold text-on-surface-variant">7.6 / 10</span>
-<span className="px-space-xs py-space-2xs rounded bg-error-container text-on-error-container font-label-sm text-label-sm">DISQUALIFIED</span>
-</div>
-<div className="w-full bg-surface-container rounded-full h-1.5 mt-space-xs overflow-hidden">
-<div className="bg-outline h-1.5 rounded-full" style={{ width: "76%" }}></div>
-</div>
-</td>
-</tr>
-</tfoot>
-</table>
-</div>
-</div>
-
-<div className="grid grid-cols-1 lg:grid-cols-3 gap-space-normal">
-
-<div className="bg-surface-container-lowest p-space-base rounded-xl shadow-sm flex flex-col justify-between">
-<div className="flex items-center justify-between mb-space-sm">
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">Price Deviation Spectrum</span>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Variance vs Tender Benchmark (₹70.26 L)</span>
-</div>
-<span className="material-symbols-outlined text-primary text-space-lg">insights</span>
-</div>
-
-<div className="py-space-md">
-<svg className="w-full h-24" fill="none" viewBox="0 0 380 90" xmlns="http://www.w3.org/2000/svg">
-
-<line stroke="#dce9ff" strokeLinecap="round" strokeWidth="4" x1="20" x2="360" y1="45" y2="45"></line>
-<line stroke="#6d7a72" strokeDasharray="3 3" strokeWidth="2" x1="200" x2="200" y1="20" y2="70"></line>
-<text fill="#6d7a72" fontFamily="Inter" fontSize={10} fontWeight="500" textAnchor="middle" x="200" y="85">Benchmark ₹70.26L</text>
-
-<circle cx="85" cy="45" fill="#006948" r="10"></circle>
-<circle cx="85" cy="45" r="16" stroke="#006948" strokeOpacity="0.2" strokeWidth="4"></circle>
-<text fill="#006948" fontFamily="Inter" fontSize={11} fontWeight="700" textAnchor="middle" x="85" y="25">Tirumala (-₹2.42L)</text>
-
-<circle cx="160" cy="45" fill="#565e74" r="8"></circle>
-<text fill="#565e74" fontFamily="Inter" fontSize={10} fontWeight="600" textAnchor="middle" x="160" y="25">Sagar (-₹0.94L)</text>
-
-<circle cx="280" cy="45" fill="#ba1a1a" r="8"></circle>
-<text fill="#ba1a1a" fontFamily="Inter" fontSize={10} fontWeight="600" textAnchor="middle" x="280" y="25">Deccan (+₹1.70L)</text>
-</svg>
-</div>
-<div className="bg-surface-container-low p-space-sm rounded-lg flex items-center justify-between text-body-sm">
-<span className="text-on-surface-variant">Recommended Negotiated Target:</span>
-<strong className="text-primary font-tabular-metric-sm text-tabular-metric-sm">₹67,00,000 (-1.2% further)</strong>
-</div>
-</div>
-
-<div className="bg-surface-container-lowest p-space-base rounded-xl shadow-sm flex flex-col justify-between">
-<div className="flex items-center justify-between mb-space-sm">
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">L-1 Logistics Dispatch Radius</span>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Tirumala Yard to Site (Madhapur)</span>
-</div>
-<span className="px-space-xs py-space-2xs rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-semibold">14.2 km Transit</span>
-</div>
-
-<div className="bg-surface-container-low p-space-sm rounded-lg flex flex-col gap-space-xs">
-<div className="flex justify-between text-body-sm">
-<span className="text-on-surface-variant">Yard Location:</span>
-<span className="font-title-md text-title-md text-on-surface">Nacharam Industrial Phase 1</span>
-</div>
-<div className="flex justify-between text-body-sm">
-<span className="text-on-surface-variant">Fleet Readiness:</span>
-<span className="text-primary font-semibold">4 Dedicated Multi-Axle Trailers</span>
-</div>
-<div className="flex justify-between text-body-sm">
-<span className="text-on-surface-variant">Batch Testing:</span>
-<span className="text-on-surface font-semibold">NABL Accredited Lab on-site</span>
-</div>
-<div className="flex justify-between text-body-sm">
-<span className="text-on-surface-variant">Weighbridge Cert:</span>
-<span className="text-on-surface font-semibold">Electronic Direct Sync to Saha OS</span>
-</div>
-</div>
-<div className="flex items-center gap-space-xs mt-space-sm text-label-sm text-label-sm text-on-surface-variant">
-<span className="material-symbols-outlined text-primary text-space-base">local_shipping</span>
-<span>Green Corridor transit approved via Nehru Outer Ring Road (ORR)</span>
-</div>
-</div>
-
-<div className="bg-surface-container-lowest p-space-base rounded-xl shadow-sm flex flex-col justify-between">
-<div className="flex items-center justify-between mb-space-sm">
-<div className="flex flex-col">
-<span className="font-title-md text-title-md text-on-surface">Contract Award Authorization</span>
-<span className="font-body-sm text-body-sm text-on-surface-variant">Sign-off as Site Chief / Procurement Lead</span>
-</div>
-<span className="material-symbols-outlined text-space-lg text-primary">gavel</span>
-</div>
-<div className="space-y-space-xs my-space-xs">
-<label className="flex items-start gap-space-xs cursor-pointer">
-<input defaultChecked={true} className="mt-1 rounded text-primary focus:ring-primary accent-primary" type="checkbox" />
-<span className="font-body-sm text-body-sm text-on-surface">Lock rates against price escalation clause for 60 calendar days</span>
-</label>
-<label className="flex items-start gap-space-xs cursor-pointer">
-<input defaultChecked={true} className="mt-1 rounded text-primary focus:ring-primary accent-primary" type="checkbox" />
-<span className="font-body-sm text-body-sm text-on-surface">Require mill test certificate before trailer uncoupling</span>
-</label>
-<label className="flex items-start gap-space-xs cursor-pointer">
-<input className="mt-1 rounded text-primary focus:ring-primary accent-primary" type="checkbox" />
-<span className="font-body-sm text-body-sm text-on-surface">Issue digital Letter of Intent (LOI) with OTP dual sign-off</span>
-</label>
-</div>
-<div className="pt-space-xs">
-<button className="w-full py-space-sm px-space-base bg-primary text-on-primary font-title-md text-title-md rounded hover:bg-primary-container shadow-sm flex items-center justify-center gap-space-xs transition-colors">
-<span className="material-symbols-outlined text-space-base">done_all</span>
-<span>Execute Purchase Order (₹80,05,120)</span>
-</button>
-</div>
-</div>
-</div>
-</div></main>
-      </div>
+            {items.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">This tender has no line items yet.</p>
+            ) : ranked.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">No vendor quotes recorded yet — add the first quote above.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40 text-left">
+                      <th className="p-3 font-semibold text-foreground">Tender specification</th>
+                      {ranked.map((r, i) => (
+                        <th key={r.bid.id} className="p-3">
+                          <div className="flex items-center gap-2">
+                            {i === 0 && <Trophy className="h-4 w-4 text-primary" />}
+                            <span className="font-semibold text-foreground">{r.bid.vendor_name}</span>
+                            <StatusBadge tone={i === 0 ? "emerald" : i === ranked.length - 1 && ranked.length > 1 ? "red" : "slate"}>L{i + 1}</StatusBadge>
+                          </div>
+                          <div className="mt-1 text-xs font-normal text-muted-foreground">{r.bid.payment_terms || "Terms n/a"} • {r.bid.lead_time || "Lead n/a"}</div>
+                          {canManage && rfq.status !== "awarded" && (
+                            <div className="mt-2 flex gap-2">
+                              <button onClick={() => award(r.bid.id, r.bid.vendor_name)} className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"><Gavel className="h-3 w-3" /> Award</button>
+                              <button onClick={() => removeBid(r.bid.id)} className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-xs text-muted-foreground"><Trash2 className="h-3 w-3" /> Remove</button>
+                            </div>
+                          )}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((it) => (
+                      <tr key={it.id} className="border-b border-border/60">
+                        <td className="p-3">
+                          <div className="font-medium text-foreground">{it.description}</div>
+                          <div className="text-xs text-muted-foreground">Qty {it.qty} {it.unit} • Benchmark {inr(Number(it.benchmark_rate || 0))}</div>
+                        </td>
+                        {ranked.map((r) => {
+                          const rate = Number(r.bid.rates?.[it.id] ?? 0);
+                          const isLow = rate > 0 && rate === lowestRatePerItem[it.id] && ranked.length > 1;
+                          return (
+                            <td key={r.bid.id} className={`p-3 ${isLow ? "bg-primary/5" : ""}`}>
+                              <div className="font-semibold text-foreground">{rate ? inr(rate) : "—"}</div>
+                              <div className="text-xs text-muted-foreground">Line total {rate ? inr(bidLineTotal(r.bid, it)) : "—"}</div>
+                              {isLow && <div className="text-xs font-semibold text-primary">Lowest line rate</div>}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                    <tr className="border-b border-border/60 bg-muted/30">
+                      <td className="p-3 font-medium text-foreground">Freight, insurance &amp; unloading</td>
+                      {ranked.map((r) => (
+                        <td key={r.bid.id} className="p-3 text-foreground">{inr(Number(r.bid.freight_total || 0))}</td>
+                      ))}
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-muted/50">
+                      <td className="p-3 font-bold text-foreground">Grand total (material + freight)</td>
+                      {ranked.map((r, i) => (
+                        <td key={r.bid.id} className={`p-3 font-bold ${i === 0 ? "text-primary" : "text-foreground"}`}>
+                          {inr(r.total)}
+                          <div className="text-xs font-semibold">{i === 0 ? "L1 — recommended" : `+${inrCompact(r.total - (l1?.total ?? 0))} vs L1`}</div>
+                        </td>
+                      ))}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+            {rfq.status === "awarded" && (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border p-4">
+                <p className="text-sm text-foreground">Awarded to <strong>{rfq.awarded_vendor_name}</strong>. Raise the purchase order from the winning quote.</p>
+                <Link to="/po-create" className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground">Create PO for {rfq.awarded_vendor_name}</Link>
+              </div>
+            )}
+            {ranked.length > 1 && rfq.status !== "awarded" && l1 && (
+              <div className="border-t border-border p-4 text-sm text-muted-foreground">
+                Recommendation: award to <strong className="text-foreground">{l1.bid.vendor_name}</strong> (L1) at <strong className="text-foreground">{inr(l1.total)}</strong>
+                {savingsVsBudget >= 0 ? ` — ${inrCompact(savingsVsBudget)} under the budget estimate.` : ` — ${inrCompact(-savingsVsBudget)} over budget; negotiate before award.`}
+                {l1.bid.notes ? ` Note: ${l1.bid.notes}` : ""}
+              </div>
+            )}
+          </Section>
+        </>
+      )}
     </Shell>
+  );
+}
+
+function NewRfqForm({ projectId, userId, onDone }: { projectId: string | null; userId: string | undefined; onDone: (id: string) => void }) {
+  const [title, setTitle] = useState("");
+  const [spec, setSpec] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [budget, setBudget] = useState("");
+  const [items, setItems] = useState<NewItem[]>([{ description: "", qty: "", unit: "MT", benchmark_rate: "" }]);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!projectId) { toast.error("Select a project first"); return; }
+    if (!title.trim()) { toast.error("Tender title is required"); return; }
+    const rows = items.filter((i) => i.description.trim() && Number(i.qty) > 0);
+    if (!rows.length) { toast.error("Add at least one line item with quantity"); return; }
+    setSaving(true);
+    const rfqNumber = `RFQ-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    const { data, error } = await db
+      .from("rfqs")
+      .insert({ project_id: projectId, rfq_number: rfqNumber, title: title.trim(), spec: spec.trim(), deadline: deadline || null, budget_estimate: Number(budget) || 0, created_by: userId ?? null, created_by_name: "" })
+      .select("id")
+      .single();
+    if (error) { setSaving(false); toast.error(error.message); return; }
+    const { error: ie } = await db.from("rfq_items").insert(rows.map((i, idx) => ({ rfq_id: data.id, description: i.description.trim(), qty: Number(i.qty), unit: i.unit || "MT", benchmark_rate: Number(i.benchmark_rate) || 0, sort: idx })));
+    setSaving(false);
+    if (ie) { toast.error(ie.message); return; }
+    toast.success(`Tender ${rfqNumber} created`);
+    onDone(data.id as string);
+  }
+
+  return (
+    <Section title="New tender (RFQ)">
+      <div className="grid gap-3 p-4 md:grid-cols-2">
+        <label className="text-sm text-foreground">Title<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Steel Rebar Fe500D — 120 MT" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" /></label>
+        <label className="text-sm text-foreground">Specification<input value={spec} onChange={(e) => setSpec(e.target.value)} placeholder="Sizes, grade, delivery location" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" /></label>
+        <label className="text-sm text-foreground">Submission deadline<input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" /></label>
+        <label className="text-sm text-foreground">Budget estimate (₹)<input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" /></label>
+      </div>
+      <div className="px-4 pb-2 text-sm font-semibold text-foreground">Line items</div>
+      <div className="flex flex-col gap-2 px-4 pb-4">
+        {items.map((it, idx) => (
+          <div key={idx} className="grid gap-2 md:grid-cols-[1fr_110px_90px_150px_40px]">
+            <input value={it.description} onChange={(e) => setItems((p) => p.map((x, i) => (i === idx ? { ...x, description: e.target.value } : x)))} placeholder="Fe 500D TMT Rebar 16mm" className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
+            <input type="number" value={it.qty} onChange={(e) => setItems((p) => p.map((x, i) => (i === idx ? { ...x, qty: e.target.value } : x)))} placeholder="Qty" className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
+            <input value={it.unit} onChange={(e) => setItems((p) => p.map((x, i) => (i === idx ? { ...x, unit: e.target.value } : x)))} placeholder="Unit" className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
+            <input type="number" value={it.benchmark_rate} onChange={(e) => setItems((p) => p.map((x, i) => (i === idx ? { ...x, benchmark_rate: e.target.value } : x)))} placeholder="Benchmark rate" className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
+            <button onClick={() => setItems((p) => p.filter((_, i) => i !== idx))} className="text-muted-foreground"><Trash2 className="h-4 w-4" /></button>
+          </div>
+        ))}
+        <div className="flex gap-2 pt-1">
+          <button onClick={() => setItems((p) => [...p, { description: "", qty: "", unit: "MT", benchmark_rate: "" }])} className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-sm text-foreground"><Plus className="h-4 w-4" /> Add line</button>
+          <button onClick={save} disabled={saving} className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : "Create tender"}</button>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function AddBidForm({ rfq, items, vendors, userId, onDone }: { rfq: Rfq; items: RfqItem[]; vendors: { name: string }[]; userId: string | undefined; onDone: () => void }) {
+  const [vendor, setVendor] = useState("");
+  const [rates, setRates] = useState<Record<string, string>>({});
+  const [freight, setFreight] = useState("");
+  const [terms, setTerms] = useState("");
+  const [lead, setLead] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!vendor.trim()) { toast.error("Vendor name is required"); return; }
+    const rateMap: Record<string, number> = {};
+    for (const it of items) {
+      const v = Number(rates[it.id]);
+      if (v > 0) rateMap[it.id] = v;
+    }
+    if (!Object.keys(rateMap).length) { toast.error("Enter at least one line rate"); return; }
+    setSaving(true);
+    const { error } = await db.from("rfq_bids").insert({ rfq_id: rfq.id, vendor_name: vendor.trim(), rates: rateMap, freight_total: Number(freight) || 0, payment_terms: terms.trim(), lead_time: lead.trim(), notes: notes.trim(), created_by: userId ?? null, created_by_name: "" });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    if (rfq.status === "open") await db.from("rfqs").update({ status: "evaluating" }).eq("id", rfq.id);
+    toast.success("Vendor quote recorded");
+    onDone();
+  }
+
+  return (
+    <div className="border-b border-border p-4">
+      <div className="grid gap-3 md:grid-cols-3">
+        <label className="text-sm text-foreground">Vendor
+          <input list="rfq-vendors" value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Vendor name" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" />
+          <datalist id="rfq-vendors">{vendors.map((v) => <option key={v.name} value={v.name} />)}</datalist>
+        </label>
+        <label className="text-sm text-foreground">Payment terms<input value={terms} onChange={(e) => setTerms(e.target.value)} placeholder="30 days PDC" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" /></label>
+        <label className="text-sm text-foreground">Lead time<input value={lead} onChange={(e) => setLead(e.target.value)} placeholder="48 hours" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" /></label>
+      </div>
+      <div className="mt-3 grid gap-2">
+        {items.map((it) => (
+          <div key={it.id} className="grid items-center gap-2 md:grid-cols-[1fr_160px]">
+            <span className="text-sm text-foreground">{it.description} <span className="text-xs text-muted-foreground">({it.qty} {it.unit})</span></span>
+            <input type="number" value={rates[it.id] ?? ""} onChange={(e) => setRates((p) => ({ ...p, [it.id]: e.target.value }))} placeholder={`Rate per ${it.unit}`} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <label className="text-sm text-foreground">Freight total (₹)<input type="number" value={freight} onChange={(e) => setFreight(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" /></label>
+        <label className="text-sm text-foreground md:col-span-2">Notes<input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Brand offered, certificates, conditions" className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" /></label>
+      </div>
+      <button onClick={save} disabled={saving} className="mt-3 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : "Save quote"}</button>
+    </div>
   );
 }

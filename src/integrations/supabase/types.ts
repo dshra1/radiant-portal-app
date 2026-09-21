@@ -994,6 +994,159 @@ export type Database = {
           },
         ]
       }
+      rfq_bids: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_by_name: string
+          freight_total: number
+          id: string
+          lead_time: string
+          notes: string
+          payment_terms: string
+          rates: Json
+          rfq_id: string
+          updated_at: string
+          vendor_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          freight_total?: number
+          id?: string
+          lead_time?: string
+          notes?: string
+          payment_terms?: string
+          rates?: Json
+          rfq_id: string
+          updated_at?: string
+          vendor_name?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          freight_total?: number
+          id?: string
+          lead_time?: string
+          notes?: string
+          payment_terms?: string
+          rates?: Json
+          rfq_id?: string
+          updated_at?: string
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_bids_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfqs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfq_items: {
+        Row: {
+          benchmark_rate: number
+          created_at: string
+          description: string
+          id: string
+          qty: number
+          rfq_id: string
+          sort: number
+          unit: string
+        }
+        Insert: {
+          benchmark_rate?: number
+          created_at?: string
+          description?: string
+          id?: string
+          qty?: number
+          rfq_id: string
+          sort?: number
+          unit?: string
+        }
+        Update: {
+          benchmark_rate?: number
+          created_at?: string
+          description?: string
+          id?: string
+          qty?: number
+          rfq_id?: string
+          sort?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_items_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfqs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfqs: {
+        Row: {
+          awarded_bid_id: string | null
+          awarded_vendor_name: string
+          budget_estimate: number
+          created_at: string
+          created_by: string | null
+          created_by_name: string
+          deadline: string | null
+          id: string
+          project_id: string | null
+          rfq_number: string
+          spec: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          awarded_bid_id?: string | null
+          awarded_vendor_name?: string
+          budget_estimate?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          deadline?: string | null
+          id?: string
+          project_id?: string | null
+          rfq_number?: string
+          spec?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          awarded_bid_id?: string | null
+          awarded_vendor_name?: string
+          budget_estimate?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          deadline?: string | null
+          id?: string
+          project_id?: string | null
+          rfq_number?: string
+          spec?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfqs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_projects: {
         Row: {
           bank_account_last4: string

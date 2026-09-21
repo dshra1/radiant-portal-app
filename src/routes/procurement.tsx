@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shell } from "@/components/saha/Shell";
 import { MetricTile, Section, StatusBadge } from "@/components/saha/ui";
@@ -11,6 +11,11 @@ import { STATUS_LABEL, lineTotals, type PoItem, type PoRecord, type PoStatus } f
 import { Download, Plus, Users } from "lucide-react";
 
 export const Route = createFileRoute("/procurement")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    status: (["draft", "pending", "approved", "rejected"].includes(String(search["status"]))
+      ? String(search["status"])
+      : undefined) as PoStatus | undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Procurement & Vendor Commitments | Saha OS" },
@@ -43,8 +48,13 @@ type Filter = "all" | PoStatus;
 function Procurement() {
   const user = useSessionUser();
   const project = useActiveProject();
-  const [filter, setFilter] = useState<Filter>("all");
+  const { status } = Route.useSearch();
+  const [filter, setFilter] = useState<Filter>(status ?? "all");
   const [q, setQ] = useState("");
+
+  useEffect(() => {
+    setFilter(status ?? "all");
+  }, [status]);
 
   const { data: orders, isPending } = useQuery({
     queryKey: ["purchase_orders", "procurement", project.id],
@@ -167,15 +177,23 @@ function Procurement() {
       }
     >
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricTile label="Total PO value raised" value={inrCompact(total)} delta={`${(orders ?? []).length} orders`} />
-        <MetricTile label="Approved / committed" value={inrCompact(committed)} tone="good" delta="Payable on delivery" />
-        <MetricTile
-          label="Awaiting PM approval"
-          value={String(pendingCount)}
-          tone={pendingCount ? "warn" : "neutral"}
-          delta={inrCompact(pendingValue)}
-        />
-        <MetricTile label="Drafts to complete" value={String(draftCount)} delta="Not yet submitted" />
+        <button type="button" onClick={() => setFilter("all")} className="text-left transition-transform hover:-translate-y-0.5">
+          <MetricTile label="Total PO value raised" value={inrCompact(total)} delta={`${(orders ?? []).length} orders — tap to view`} />
+        </button>
+        <button type="button" onClick={() => setFilter("approved")} className="text-left transition-transform hover:-translate-y-0.5">
+          <MetricTile label="Approved / committed" value={inrCompact(committed)} tone="good" delta="Tap to view approved POs" />
+        </button>
+        <button type="button" onClick={() => setFilter("pending")} className="text-left transition-transform hover:-translate-y-0.5">
+          <MetricTile
+            label="Awaiting PM approval"
+            value={String(pendingCount)}
+            tone={pendingCount ? "warn" : "neutral"}
+            delta={`${inrCompact(pendingValue)} — tap to view`}
+          />
+        </button>
+        <button type="button" onClick={() => setFilter("draft")} className="text-left transition-transform hover:-translate-y-0.5">
+          <MetricTile label="Drafts to complete" value={String(draftCount)} delta="Tap to complete drafts" />
+        </button>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">

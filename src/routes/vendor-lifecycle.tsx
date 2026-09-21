@@ -1,14 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Shell } from "@/components/saha/Shell";
+import { MetricTile, Section, StatusBadge } from "@/components/saha/ui";
+import { supabase } from "@/integrations/supabase/client";
+import { useSessionUser } from "@/lib/access";
 import { useActiveProject } from "@/hooks/useActiveProject";
+import { inrCompact } from "@/data/saha";
+import { lineTotals, type PoItem, type PoRecord } from "@/lib/po";
+import { Building2, ScanLine, Scale, Receipt, ShoppingCart, Plus, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/vendor-lifecycle")({
   head: () => ({
     meta: [
-      { title: "Purchase & Vendor Lifecycle Hub | Saha OS" },
-      { name: "description", content: "Vendor onboarding, bulk uploader, compliance vetting and purchase lifecycle governance." },
-      { property: "og:title", content: "Purchase & Vendor Lifecycle Hub | Saha OS" },
-      { property: "og:description", content: "Vendor onboarding, bulk uploader, compliance vetting and purchase lifecycle governance." },
+      { title: "Vendor Lifecycle — Vendors, Orders, Stock & Payments | Saha OS" },
+      { name: "description", content: "One live hub tracking every vendor from registration to purchase orders, deliveries and payments." },
+      { property: "og:title", content: "Vendor Lifecycle — Vendors, Orders, Stock & Payments | Saha OS" },
+      { property: "og:description", content: "One live hub tracking every vendor from registration to purchase orders, deliveries and payments." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -18,29 +26,177 @@ export const Route = createFileRoute("/vendor-lifecycle")({
 
 function Page() {
   const project = useActiveProject();
+  const user = useSessionUser();
+  const enabled = Boolean(user?.id) && Boolean(project.id);
+
+  const vendorsQ = useQuery({
+    queryKey: ["vl-vendors", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("vendors").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const posQ = useQuery({
+    queryKey: ["vl-pos", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("purchase_orders").select("*").eq("project_id", project.id!);
+      if (error) throw error;
+      return (data ?? []) as PoRecord[];
+    },
+  });
+  const poItemsQ = useQuery({
+    queryKey: ["vl-po-items", project.id, (posQ.data ?? []).length],
+    enabled: Boolean(posQ.data?.length),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("purchase_order_items").select("*").in("po_id", (posQ.data ?? []).map((o) => o.id));
+      if (error) throw error;
+      return (data ?? []) as (PoItem & { po_id: string })[];
+    },
+  });
+  const valueByPo = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const it of poItemsQ.data ?? []) map.set(it.po_id, (map.get(it.po_id) ?? 0) + lineTotals(it).total);
+    for (const o of posQ.data ?? []) {
+      const base = map.get(o.id) ?? 0;
+      map.set(o.id, base + Number(o.freight_charges ?? 0) + Number(o.other_charges ?? 0));
+    }
+    return map;
+  }, [poItemsQ.data, posQ.data]);
+  const stockQ = useQuery({
+    queryKey: ["vl-stock", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("stock_items").select("id").eq("project_id", project.id!);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const billsQ = useQuery({
+    queryKey: ["vl-bills", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("bills").select("id,vendor_name,status,basic_amount,gst_amount,other_charges,retention_amount,deductions,bill_date").eq("project_id", project.id!);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const vendors = vendorsQ.data ?? [];
+  const pos = posQ.data ?? [];
+  const bills = billsQ.data ?? [];
+  const committed = pos.filter((p) => p.status === "approved").reduce((s, p) => s + (valueByPo.get(p.id) ?? 0), 0);
+  const pendingBills = bills.filter((b) => b.status !== "paid");
+  const pendingAmount = pendingBills.reduce((s, b) => s + (b.basic_amount + b.gst_amount + b.other_charges - b.retention_amount - b.deductions), 0);
+
+  const spendByVendor = useMemo(() => {
+    const m = new Map<string, { pos: number; value: number; billed: number; pending: number }>();
+    for (const p of pos) {
+      const v = m.get(p.vendor_name) ?? { pos: 0, value: 0, billed: 0, pending: 0 };
+      if (p.status === "approved") { v.pos += 1; v.value += valueByPo.get(p.id) ?? 0; }
+      m.set(p.vendor_name, v);
+    }
+    for (const b of bills) {
+      const v = m.get(b.vendor_name) ?? { pos: 0, value: 0, billed: 0, pending: 0 };
+      const gross = b.basic_amount + b.gst_amount + b.other_charges - b.retention_amount - b.deductions;
+      v.billed += gross;
+      if (b.status !== "paid") v.pending += gross;
+      m.set(b.vendor_name, v);
+    }
+    return [...m.entries()].sort((a, b) => b[1].value - a[1].value).slice(0, 20);
+  }, [pos, bills]);
+
+  const loading = vendorsQ.isLoading || posQ.isLoading || billsQ.isLoading;
+
   return (
-    <Shell title={"Purchase & Vendor Lifecycle Hub | Saha OS"}>
-      <div className="m3">
-        <main className="w-full  px-gutter-normal pb-gutter-expanded bg-surface"><div className="flex flex-col w-full">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-2xl"> <div> <div className="flex items-center gap-space-xs mb-space-2xs"> <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Procurement & Supply Chain</span> <span className="text-outline">/</span> <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Lifecycle Hub</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Purchase & Vendor Lifecycle Hub</h1> <p className="font-body-md text-body-md text-on-surface-variant mt-space-2xs">End-to-end vendor onboarding, market price intelligence, multi-stage material tracking, and milestone payment reconciliation for {project.name}.</p> </div> <div className="flex items-center gap-space-sm"> <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-title-md rounded-lg transition-colors shadow-sm" type="button"> <span className="material-symbols-outlined text-[18px]">download</span>
-        Export Full Audit
-      </button> <button className="flex items-center gap-space-xs px-space-md py-space-sm bg-primary text-on-primary hover:bg-primary-container font-title-md text-title-md rounded-lg transition-colors shadow-sm" type="button"> <span className="material-symbols-outlined text-[18px]">add_circle</span>
-        New Purchase Order
-      </button> </div> </div>  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-2xl">  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between mb-space-md"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Active Vendors & MSME</span> <span className="p-space-xs bg-surface-container rounded-lg text-primary"><span className="material-symbols-outlined text-[20px]">badge</span></span> </div> <div> <div className="font-tabular-metric text-tabular-metric text-on-surface">142 Registered</div> <div className="flex items-center gap-space-xs mt-space-xs"> <span className="px-space-xs py-0.5 bg-primary/10 text-primary rounded font-label-sm text-label-sm">68 MSME Verified</span> <span className="font-body-sm text-body-sm text-on-surface-variant">48% ratio</span> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between mb-space-md"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Market Price Variance</span> <span className="p-space-xs bg-surface-container rounded-lg text-tertiary"><span className="material-symbols-outlined text-[20px]">trending_down</span></span> </div> <div> <div className="font-tabular-metric text-tabular-metric text-on-surface">-3.4% Avg</div> <div className="flex items-center gap-space-xs mt-space-xs"> <span className="px-space-xs py-0.5 bg-emerald-50 text-emerald-700 rounded font-label-sm text-label-sm">₹12.4L Saved</span> <span className="font-body-sm text-body-sm text-on-surface-variant">vs Hyderabad Avg</span> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between mb-space-md"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Material Ledger (PO to Site)</span> <span className="p-space-xs bg-surface-container rounded-lg text-on-surface"><span className="material-symbols-outlined text-[20px]">inventory_2</span></span> </div> <div> <div className="font-tabular-metric text-tabular-metric text-on-surface">94.8% Flow</div> <div className="flex items-center gap-space-xs mt-space-xs"> <span className="px-space-xs py-0.5 bg-amber-50 text-amber-700 rounded font-label-sm text-label-sm">1.2% Damaged/Return</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Inspected</span> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div className="flex items-center justify-between mb-space-md"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Pending Reconciliations</span> <span className="p-space-xs bg-error-container text-error rounded-lg"><span className="material-symbols-outlined text-[20px]">payments</span></span> </div> <div> <div className="font-tabular-metric text-tabular-metric text-on-surface">₹1.84 Cr</div> <div className="flex items-center gap-space-xs mt-space-xs"> <span className="px-space-xs py-0.5 bg-rose-50 text-error rounded font-label-sm text-label-sm">14 Milestone Bills</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Due this week</span> </div> </div> </div> </div>  <div className="flex items-center gap-space-xs mb-space-lg bg-surface-container-low p-space-2xs rounded-xl w-fit"> <button className="px-space-md py-space-sm rounded-lg font-title-md text-title-md transition-all bg-surface-container-lowest text-on-surface shadow-sm" id="tab-btn-vendors">
-      1. Vendor Database & Uploader
-    </button> <button className="px-space-md py-space-sm rounded-lg font-title-md text-title-md transition-all text-on-surface-variant hover:text-on-surface" id="tab-btn-prices">
-      2. Price Database & Market Intelligence
-    </button> <button className="px-space-md py-space-sm rounded-lg font-title-md text-title-md transition-all text-on-surface-variant hover:text-on-surface" id="tab-btn-ledger">
-      3. Material Ledger & Tracking Flow
-    </button> <button className="px-space-md py-space-sm rounded-lg font-title-md text-title-md transition-all text-on-surface-variant hover:text-on-surface" id="tab-btn-payments">
-      4. Payments & Pendings Hub
-    </button> </div>  <div className="space-y-space-xl" id="tab-vendors"> <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg">  <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div> <div className="flex items-center gap-space-sm mb-space-md"> <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary"> <span className="material-symbols-outlined">cloud_upload</span> </div> <div> <h3 className="font-headline-sm text-headline-sm text-on-surface">Bulk Vendor Uploader</h3> <p className="font-body-sm text-body-sm text-on-surface-variant">Upload CSV/Excel with GSTIN & Bank details</p> </div> </div> <div className="border-2 border-dashed border-outline-variant/60 rounded-xl p-space-xl text-center hover:bg-surface-container-low transition-colors cursor-pointer mb-space-md"> <span className="material-symbols-outlined text-[36px] text-primary mb-space-xs">upload_file</span> <p className="font-title-md text-title-md text-on-surface">Drag & drop spreadsheet here</p> <p className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs">Supports .xlsx, .csv up to 25MB</p> </div> </div> <div className="flex flex-col gap-space-xs"> <button className="w-full py-space-sm bg-primary text-on-primary font-title-md text-title-md rounded-lg hover:bg-primary-container transition-colors shadow-sm" type="button">
-            Process & Validate GSTIN
-          </button> <a className="text-center font-label-md text-label-md text-primary hover:underline" href="#">Download Master Template .CSV</a> </div> </div>  <div className="lg:col-span-2 bg-surface-container-lowest p-space-xl rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-lg"> <h3 className="font-headline-sm text-headline-sm text-on-surface">Vendor Onboarding Parameters</h3> <span className="px-space-sm py-space-2xs bg-emerald-50 text-emerald-700 font-label-sm text-label-sm rounded">GSTIN API Auto-Synced</span> </div> <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-md mb-space-lg"> <div className="bg-surface-container-low p-space-md rounded-lg"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Active Suppliers</span> <div className="font-tabular-metric text-tabular-metric text-on-surface mt-space-2xs">142</div> <span className="font-body-sm text-body-sm text-on-surface-variant">Across 12 Categories</span> </div> <div className="bg-surface-container-low p-space-md rounded-lg"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">MSME Registered</span> <div className="font-tabular-metric text-tabular-metric text-on-surface mt-space-2xs">68</div> <span className="font-body-sm text-body-sm text-emerald-700 font-semibold">45-day credit eligible</span> </div> <div className="bg-surface-container-low p-space-md rounded-lg"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Avg Vendor Rating</span> <div className="font-tabular-metric text-tabular-metric text-on-surface mt-space-2xs">4.6 / 5.0</div> <span className="font-body-sm text-body-sm text-on-surface-variant">Based on 310 Deliveries</span> </div> </div> </div> <div className="flex items-center justify-between pt-space-md border-t border-surface-container"> <div className="flex items-center gap-space-xs text-on-surface-variant"> <span className="material-symbols-outlined text-[18px]">security</span> <span className="font-body-sm text-body-sm">Bank accounts verified via Penny Drop API</span> </div> <span className="font-label-sm text-label-sm text-primary font-semibold">Last Sync: 10 mins ago</span> </div> </div> </div>  <div className="bg-surface-container-lowest rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] overflow-hidden"> <div className="p-space-lg flex items-center justify-between border-b border-surface-container"> <div className="flex items-center gap-space-md"> <h3 className="font-headline-sm text-headline-sm text-on-surface">Verified Vendor Master List</h3> <div className="relative"> <span className="material-symbols-outlined absolute left-space-xs top-1/2 -translate-y-1/2 text-outline text-[16px]">search</span> <input className="pl-8 pr-space-md py-1 bg-surface-container-low text-on-surface font-body-sm text-body-sm rounded-lg focus:outline-none w-72" placeholder="Filter by vendor name, GSTIN, or city..." type="text" /> </div> </div> <div className="flex items-center gap-space-xs"> <button className="px-space-sm py-1 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md rounded-lg transition-colors" type="button">All Categories</button> <button className="px-space-sm py-1 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md rounded-lg transition-colors" type="button">MSME Only</button> </div> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="bg-surface-container-low text-secondary font-label-sm text-label-sm uppercase tracking-wider"><th className="p-space-md">Vendor Name & Code</th><th className="p-space-md">GSTIN / State</th><th className="p-space-md">Registered Address</th><th className="p-space-md">Bank Account & IFSC</th><th className="p-space-md">MSME Status</th><th className="p-space-md">Rating</th><th className="p-space-md text-right">Actions</th></tr></thead><tbody className="divide-y divide-surface-container font-body-sm text-body-sm text-on-surface"><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">Apex Steels & TMT Ltd</div> <div className="text-on-surface-variant">VND-HYD-0921</div> </td><td className="p-space-md"> <span className="font-mono text-xs font-semibold">36AABCA1234Z1ZO</span> <div className="text-on-surface-variant">Telangana (36)</div> </td><td className="p-space-md max-w-xs truncate text-on-surface-variant">Plot 42, IDA Jeedimetla, Hyderabad, TS 500055</td><td className="p-space-md"> <div className="font-mono text-xs">HDFC0001824</div> <div className="text-on-surface-variant">A/C ending 4892</div> </td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-emerald-50 text-emerald-700 rounded font-label-sm text-label-sm">UDYAM-TS-02-0049</span> </td><td className="p-space-md"> <div className="flex items-center gap-space-2xs text-amber-500"> <span className="material-symbols-outlined text-[16px]" style={{"fontVariationSettings": "'FILL' 1"}}>star</span> <span className="font-semibold text-on-surface">4.8</span> </div> </td><td className="p-space-md text-right"> <button className="p-1 hover:bg-surface-container rounded text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">visibility</span></button> <button className="p-1 hover:bg-surface-container rounded text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">edit</span></button> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">Deccan RMC & Concrete</div> <div className="text-on-surface-variant">VND-HYD-0844</div> </td><td className="p-space-md"> <span className="font-mono text-xs font-semibold">36AACCD9872K1ZT</span> <div className="text-on-surface-variant">Telangana (36)</div> </td><td className="p-space-md max-w-xs truncate text-on-surface-variant">Survey No 14, Kondapur Main Road, Hyderabad, TS 500084</td><td className="p-space-md"> <div className="font-mono text-xs">ICIC0000341</div> <div className="text-on-surface-variant">A/C ending 9012</div> </td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-emerald-50 text-emerald-700 rounded font-label-sm text-label-sm">UDYAM-TS-05-0192</span> </td><td className="p-space-md"> <div className="flex items-center gap-space-2xs text-amber-500"> <span className="material-symbols-outlined text-[16px]" style={{"fontVariationSettings": "'FILL' 1"}}>star</span> <span className="font-semibold text-on-surface">4.6</span> </div> </td><td className="p-space-md text-right"> <button className="p-1 hover:bg-surface-container rounded text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">visibility</span></button> <button className="p-1 hover:bg-surface-container rounded text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">edit</span></button> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">Sri Balaji Aggregate Quarry</div> <div className="text-on-surface-variant">VND-HYD-1102</div> </td><td className="p-space-md"> <span className="font-mono text-xs font-semibold">36BBWPS5411L1ZF</span> <div className="text-on-surface-variant">Telangana (36)</div> </td><td className="p-space-md max-w-xs truncate text-on-surface-variant">Shamirpet Mandal, Medchal District, Hyderabad, TS 500078</td><td className="p-space-md"> <div className="font-mono text-xs">SBIN0002194</div> <div className="text-on-surface-variant">A/C ending 3341</div> </td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-surface-container text-secondary rounded font-label-sm text-label-sm">Non-MSME</span> </td><td className="p-space-md"> <div className="flex items-center gap-space-2xs text-amber-500"> <span className="material-symbols-outlined text-[16px]" style={{"fontVariationSettings": "'FILL' 1"}}>star</span> <span className="font-semibold text-on-surface">4.2</span> </div> </td><td className="p-space-md text-right"> <button className="p-1 hover:bg-surface-container rounded text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">visibility</span></button> <button className="p-1 hover:bg-surface-container rounded text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">edit</span></button> </td></tr></tbody></table> </div> </div> </div>  <div className="space-y-space-xl hidden" id="tab-prices"> <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg"> <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div> <div className="flex items-center gap-space-sm mb-space-md"> <div className="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary"> <span className="material-symbols-outlined">analytics</span> </div> <div> <h3 className="font-headline-sm text-headline-sm text-on-surface">Hyderabad Market Index</h3> <p className="font-body-sm text-body-sm text-on-surface-variant">Live benchmarked vs uploaded contract rates</p> </div> </div> <p className="font-body-md text-body-md text-on-surface-variant mb-space-lg">
-            Market intelligence monitors daily commodity indices across Madhapur, Gachibowli, and Bowenpally hubs to flag price deviations before PO issuance.
-          </p> </div> <div className="bg-surface-container-low p-space-md rounded-lg flex items-center justify-between"> <div> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Overall Price Index</span> <div className="font-tabular-metric text-tabular-metric text-on-surface">Stable (Q3 2024)</div> </div> <span className="px-space-sm py-1 bg-emerald-50 text-emerald-700 font-label-md text-label-md rounded-full">-1.2% MoM</span> </div> </div> <div className="lg:col-span-2 bg-surface-container-lowest p-space-xl rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex items-center justify-between mb-space-lg"> <h3 className="font-headline-sm text-headline-sm text-on-surface">Uploaded Rate vs Market Benchmark</h3> <span className="font-label-sm text-label-sm text-on-surface-variant">Currency: INR (₹) per Unit</span> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="bg-surface-container-low text-secondary font-label-sm text-label-sm uppercase tracking-wider"><th className="p-space-md">Material & Specification</th><th className="p-space-md">Unit</th><th className="p-space-md">Our Contract Price</th><th className="p-space-md">Hyd Market Avg</th><th className="p-space-md">Variance</th><th className="p-space-md">Intelligence Suggestion</th></tr></thead><tbody className="divide-y divide-surface-container font-body-sm text-body-sm text-on-surface"><tr className="hover:bg-surface-container-low/50"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">TMT Fe 500D Rebar (Primary)</div> <div className="text-on-surface-variant">Apex Steels & TMT Ltd</div> </td><td className="p-space-md">MT</td><td className="p-space-md font-tabular-metric-sm text-on-surface">₹54,200</td><td className="p-space-md font-tabular-metric-sm text-on-surface-variant">₹55,800</td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-emerald-50 text-emerald-700 rounded font-semibold text-xs">-2.8% (Better)</span> </td><td className="p-space-md text-on-surface-variant">Locked contract rate valid till Oct 31.</td></tr><tr className="hover:bg-surface-container-low/50"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">Ready Mix Concrete (M35 Grade)</div> <div className="text-on-surface-variant">Deccan RMC & Concrete</div> </td><td className="p-space-md">CuM</td><td className="p-space-md font-tabular-metric-sm text-on-surface">₹4,450</td><td className="p-space-md font-tabular-metric-sm text-on-surface-variant">₹4,380</td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-rose-50 text-error rounded font-semibold text-xs">+1.6% (Higher)</span> </td><td className="p-space-md text-error font-medium">Negotiate bulk discount with alternate vendor.</td></tr><tr className="hover:bg-surface-container-low/50"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">Coarse Aggregate (20mm Crushed)</div> <div className="text-on-surface-variant">Sri Balaji Quarry</div> </td><td className="p-space-md">CuM</td><td className="p-space-md font-tabular-metric-sm text-on-surface">₹1,120</td><td className="p-space-md font-tabular-metric-sm text-on-surface-variant">₹1,150</td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-emerald-50 text-emerald-700 rounded font-semibold text-xs">-2.6% (Better)</span> </td><td className="p-space-md text-on-surface-variant">Optimal pricing aligned with quarry location.</td></tr></tbody></table> </div> </div> </div> </div>  <div className="space-y-space-xl hidden" id="tab-ledger">  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex items-center justify-between mb-space-md"> <h3 className="font-headline-sm text-headline-sm text-on-surface">Material Lifecycle Pipeline (PO → GRN → Damaged → Returned → Consumed)</h3> <span className="font-label-sm text-label-sm text-primary font-semibold">Real-time Site Sync</span> </div> <div className="grid grid-cols-1 sm:grid-cols-5 gap-space-md text-center"> <div className="bg-surface-container-low p-space-md rounded-lg"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">1. Ordered (POs)</span> <div className="font-tabular-metric text-tabular-metric text-on-surface mt-space-2xs">₹8.42 Cr</div> <span className="font-body-sm text-body-sm text-on-surface-variant">48 Active POs</span> </div> <div className="bg-surface-container-low p-space-md rounded-lg"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">2. Received (GRNs)</span> <div className="font-tabular-metric text-tabular-metric text-on-surface mt-space-2xs">₹6.95 Cr</div> <span className="font-body-sm text-body-sm text-emerald-700 font-semibold">Verified at Gate 2</span> </div> <div className="bg-surface-container-low p-space-md rounded-lg"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">3. Damaged</span> <div className="font-tabular-metric text-tabular-metric text-error mt-space-2xs">₹1.4 Lakhs</div> <span className="font-body-sm text-body-sm text-on-surface-variant">Transit breakage</span> </div> <div className="bg-surface-container-low p-space-md rounded-lg"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">4. Returned</span> <div className="font-tabular-metric text-tabular-metric text-on-surface mt-space-2xs">₹98,000</div> <span className="font-body-sm text-body-sm text-on-surface-variant">Debit note issued</span> </div> <div className="bg-surface-container-low p-space-md rounded-lg"> <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">5. Consumed</span> <div className="font-tabular-metric text-tabular-metric text-on-surface mt-space-2xs">₹5.84 Cr</div> <span className="font-body-sm text-body-sm text-primary font-semibold">Deployed on Floor 12</span> </div> </div> </div>  <div className="bg-surface-container-lowest rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] overflow-hidden"> <div className="p-space-lg flex items-center justify-between border-b border-surface-container"> <h3 className="font-headline-sm text-headline-sm text-on-surface">Complete Material Movement Ledger</h3> <div className="flex items-center gap-space-xs"> <button className="px-space-sm py-1 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md rounded-lg">All Stages</button> <button className="px-space-sm py-1 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md rounded-lg">Discrepancies</button> </div> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="bg-surface-container-low text-secondary font-label-sm text-label-sm uppercase tracking-wider"><th className="p-space-md">PO Reference & Vendor</th><th className="p-space-md">Material Description</th><th className="p-space-md">Ordered Qty</th><th className="p-space-md">Received (GRN)</th><th className="p-space-md">Damaged / Return</th><th className="p-space-md">Consumed on Site</th><th className="p-space-md">Stage Status</th></tr></thead><tbody className="divide-y divide-surface-container font-body-sm text-body-sm text-on-surface"><tr className="hover:bg-surface-container-low/50"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">PO-2024-884</div> <div className="text-on-surface-variant">Apex Steels & TMT Ltd</div> </td><td className="p-space-md">TMT Fe 500D (16mm)</td><td className="p-space-md">120 MT</td><td className="p-space-md text-emerald-700 font-semibold">120 MT</td><td className="p-space-md text-on-surface-variant">0 MT</td><td className="p-space-md">115 MT</td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-emerald-50 text-emerald-700 rounded font-label-sm text-label-sm">Fully Consumed</span> </td></tr><tr className="hover:bg-surface-container-low/50"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">PO-2024-892</div> <div className="text-on-surface-variant">Deccan RMC & Concrete</div> </td><td className="p-space-md">RMC M35 Grade</td><td className="p-space-md">450 CuM</td><td className="p-space-md text-emerald-700 font-semibold">450 CuM</td><td className="p-space-md text-error font-semibold">4.5 CuM (Spillage)</td><td className="p-space-md">445 CuM</td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-amber-50 text-amber-700 rounded font-label-sm text-label-sm">Debit Note Issued</span> </td></tr><tr className="hover:bg-surface-container-low/50"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">PO-2024-910</div> <div className="text-on-surface-variant">Sri Balaji Aggregate Quarry</div> </td><td className="p-space-md">20mm Aggregates</td><td className="p-space-md">800 CuM</td><td className="p-space-md text-emerald-700 font-semibold">780 CuM</td><td className="p-space-md text-on-surface-variant">0 CuM</td><td className="p-space-md">620 CuM</td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-primary/10 text-primary rounded font-label-sm text-label-sm">In Stock / Staged</span> </td></tr></tbody></table> </div> </div> </div>  <div className="space-y-space-xl hidden" id="tab-payments"> <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg"> <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div> <div className="flex items-center gap-space-sm mb-space-md"> <div className="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center text-error"> <span className="material-symbols-outlined">account_balance_wallet</span> </div> <div> <h3 className="font-headline-sm text-headline-sm text-on-surface">Retention & Milestone Hub</h3> <p className="font-body-sm text-body-sm text-on-surface-variant">Automated 3-way bill matching (PO, GRN, Invoice)</p> </div> </div> <div className="space-y-space-md my-space-lg"> <div className="flex items-center justify-between p-space-sm bg-surface-container-low rounded-lg"> <span className="font-body-sm text-body-sm text-on-surface-variant">Total Retention Held (5%)</span> <span className="font-tabular-metric-sm text-on-surface">₹42.8 Lakhs</span> </div> <div className="flex items-center justify-between p-space-sm bg-surface-container-low rounded-lg"> <span className="font-body-sm text-body-sm text-on-surface-variant">Pending Bills Approval</span> <span className="font-tabular-metric-sm text-error">₹1.84 Cr</span> </div> </div> </div> <button className="w-full py-space-sm bg-primary text-on-primary font-title-md text-title-md rounded-lg hover:bg-primary-container transition-colors shadow-sm" type="button">
-          Run Batch Disbursement
-        </button> </div> <div className="lg:col-span-2 bg-surface-container-lowest p-space-xl rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex items-center justify-between mb-space-lg"> <h3 className="font-headline-sm text-headline-sm text-on-surface">Milestone Bills & Reconciliation Queue</h3> <span className="px-space-sm py-1 bg-surface-container text-on-surface font-label-md text-label-md rounded-lg">14 Pending Approval</span> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="bg-surface-container-low text-secondary font-label-sm text-label-sm uppercase tracking-wider"><th className="p-space-md">Vendor & Bill No</th><th className="p-space-md">Milestone Stage</th><th className="p-space-md">Bill Amount</th><th className="p-space-md">3-Way Match</th><th className="p-space-md">Due Date</th><th className="p-space-md text-right">Action</th></tr></thead><tbody className="divide-y divide-surface-container font-body-sm text-body-sm text-on-surface"><tr className="hover:bg-surface-container-low/50"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">Apex Steels & TMT</div> <div className="text-on-surface-variant">INV/2024/991</div> </td><td className="p-space-md">Slab 12 Reinforcement Complete</td><td className="p-space-md font-tabular-metric-sm text-on-surface">₹64,50,000</td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-emerald-50 text-emerald-700 rounded font-label-sm text-label-sm">Matched (100%)</span> </td><td className="p-space-md text-on-surface-variant">Oct 28, 2024</td><td className="p-space-md text-right"> <button className="px-space-sm py-1 bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md rounded shadow-sm">Approve & Pay</button> </td></tr><tr className="hover:bg-surface-container-low/50"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">Deccan RMC & Concrete</div> <div className="text-on-surface-variant">INV/2024/1042</div> </td><td className="p-space-md">Basement Casting Milestone 3</td><td className="p-space-md font-tabular-metric-sm text-on-surface">₹48,20,000</td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-amber-50 text-amber-700 rounded font-label-sm text-label-sm">Pending GRN QA</span> </td><td className="p-space-md text-on-surface-variant">Oct 30, 2024</td><td className="p-space-md text-right"> <button className="px-space-sm py-1 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md rounded">Review Match</button> </td></tr><tr className="hover:bg-surface-container-low/50"><td className="p-space-md"> <div className="font-title-md text-title-md text-on-surface">Sri Balaji Aggregate Quarry</div> <div className="text-on-surface-variant">INV/2024/1108</div> </td><td className="p-space-md">Monthly Supply Running Bill</td><td className="p-space-md font-tabular-metric-sm text-on-surface">₹24,10,000</td><td className="p-space-md"> <span className="px-space-xs py-0.5 bg-emerald-50 text-emerald-700 rounded font-label-sm text-label-sm">Matched (100%)</span> </td><td className="p-space-md text-on-surface-variant">Nov 02, 2024</td><td className="p-space-md text-right"> <button className="px-space-sm py-1 bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md rounded shadow-sm">Approve & Pay</button> </td></tr></tbody></table> </div> </div> </div> </div>   </div></main>
+    <Shell title="Vendor Lifecycle">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Vendor Lifecycle</h1>
+          <p className="text-sm text-muted-foreground">Every vendor for {project.name}: from registration and quotes to purchase orders, deliveries and payments. All figures are live.</p>
+        </div>
+        <div className="flex gap-2">
+          <Link to="/vendor-directory" className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground"><Plus className="h-4 w-4" /> Add vendor</Link>
+          <Link to="/po-create" className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"><ShoppingCart className="h-4 w-4" /> Raise PO</Link>
+        </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Link to="/vendor-directory" className="transition-transform hover:-translate-y-0.5">
+          <MetricTile label="Registered vendors" value={String(vendors.length)} delta="Tap to manage & upload" />
+        </Link>
+        <Link to="/procurement" search={{ status: "approved" }} className="transition-transform hover:-translate-y-0.5">
+          <MetricTile label="Committed PO value" value={inrCompact(committed)} delta={`${pos.filter((p) => p.status === "approved").length} approved POs`} />
+        </Link>
+        <Link to="/inventory-control" className="transition-transform hover:-translate-y-0.5">
+          <MetricTile label="Stock items tracked" value={String(stockQ.data?.length ?? 0)} delta="Tap for material ledger" />
+        </Link>
+        <Link to="/bills-payments" className="transition-transform hover:-translate-y-0.5">
+          <MetricTile label="Pending payments" value={inrCompact(pendingAmount)} tone={pendingBills.length ? "warn" : "good"} delta={`${pendingBills.length} unpaid bills`} />
+        </Link>
+      </div>
+
+      <Section title="Vendor-wise spend (live)">
+        {loading ? (
+          <p className="p-4 text-sm text-muted-foreground">Loading vendor spend…</p>
+        ) : spendByVendor.length === 0 ? (
+          <div className="p-4 text-sm text-muted-foreground">
+            No vendors or orders yet for this project. <Link to="/vendor-directory" className="font-semibold text-primary">Add vendors</Link>, then raise POs and bills — their full lifecycle shows up here.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 text-left">
+                  <th className="p-3 font-semibold text-foreground">Vendor</th>
+                  <th className="p-3 font-semibold text-foreground">Approved POs</th>
+                  <th className="p-3 font-semibold text-foreground">PO value</th>
+                  <th className="p-3 font-semibold text-foreground">Billed</th>
+                  <th className="p-3 font-semibold text-foreground">Pending</th>
+                  <th className="p-3 font-semibold text-foreground"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {spendByVendor.map(([name, v]) => (
+                  <tr key={name} className="border-b border-border/60">
+                    <td className="p-3 font-medium text-foreground">{name}</td>
+                    <td className="p-3 text-foreground">{v.pos}</td>
+                    <td className="p-3 text-foreground">{inrCompact(v.value)}</td>
+                    <td className="p-3 text-foreground">{inrCompact(v.billed)}</td>
+                    <td className="p-3">{v.pending > 0 ? <StatusBadge tone="amber">{inrCompact(v.pending)}</StatusBadge> : <StatusBadge tone="emerald">Clear</StatusBadge>}</td>
+                    <td className="p-3 text-right">
+                      <Link to="/procurement" search={{ status: undefined }} className="text-xs font-medium text-primary">POs <ArrowRight className="inline h-3 w-3" /></Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
+
+      <Section title="Vendor tools">
+        <div className="grid grid-cols-2 gap-3 p-4 lg:grid-cols-3">
+          {[
+            { to: "/vendor-directory", icon: Building2, label: "Vendor directory", desc: "Register, edit, bulk-upload vendors" },
+            { to: "/price-ocr", icon: ScanLine, label: "Scan a price quote", desc: "Upload proforma — AI extracts rates" },
+            { to: "/price-intelligence", icon: Scale, label: "Price intelligence", desc: "Quoted rates vs BOQ, live" },
+            { to: "/tender-comparison", icon: Scale, label: "Tender comparison", desc: "RFQs, L1/L2/L3 ranking, award" },
+            { to: "/procurement", icon: ShoppingCart, label: "Purchase orders", desc: "PO register with approvals" },
+            { to: "/bills-payments", icon: Receipt, label: "Bills & payments", desc: "Verify, approve and pay vendor bills" },
+          ].map((t) => (
+            <Link key={t.to} to={t.to} search={{}} className="flex items-start gap-3 rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-sm">
+              <t.icon className="mt-0.5 h-5 w-5 text-primary" />
+              <div>
+                <div className="text-sm font-semibold text-foreground">{t.label}</div>
+                <div className="text-xs text-muted-foreground">{t.desc}</div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </Section>
     </Shell>
   );
 }

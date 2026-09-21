@@ -119,3 +119,14 @@
 - [x] Financial Ingestion: real cash ledger (owner funding, vendor payments, statutory charges) + working document uploads to private storage, CSV export
 
 - [x] Procurement: live PO register (project-scoped values, status filters, vendor commitments, CSV)
+- [x] Purchasing Center rebuilt live: KPI cards link to filtered /procurement lists, vendor directory, tools; /procurement accepts ?status= filter
+- [x] /procurement KPI tiles clickable — each filters the PO list below
+- [x] Tender Comparison rebuilt live: rfqs/rfq_items/rfq_bids tables, create RFQ with line items, record vendor quotes, auto L1/L2/L3 ranking, award (Admin/PM/Purchase), CSV export, PO link after award
+- [ ] Security linter: 5 pre-existing SECURITY DEFINER functions executable by authenticated (role helpers) — review/restrict later
+- [ ] Price Intelligence: audit page, remove static buttons, wire to real data/actions
+- [ ] Vendor Lifecycle: currently static demo — rebuild live (vendors, PO flow, payments) per user question
+
+- 2026-09-21: Rebuilt /price-intelligence live (price_quotes+price_quote_items vs boq_items auto-match, KPI tiles link to /price-ocr /vendor-directory /budget-fit, CSV export, quote register, no dead buttons).
+- 2026-09-21: Rebuilt /vendor-lifecycle live (vendors, approved PO value, stock items, pending bills; vendor-wise spend table; tool cards all link to live pages).
+- 2026-09-21: Rebuild /brand-benchmark live (user asked what it is + make it working like other pages).
+- 2026-09-21: DONE — /brand-benchmark live (brand_preferences vs boq_items vs price_quote_items; verdict badges, saving tile, CSV, links to brand-preferences/price-ocr/budget-fit). /vendor-lifecycle + /price-intelligence live; build OK, all pages 200.
