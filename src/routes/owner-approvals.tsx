@@ -53,7 +53,11 @@ type Request = {
   status: string;
   raised_by_name: string;
   created_at: string;
+  audience: string;
+  target_owner_name: string;
+  unit_label: string;
 };
+
 
 type Decision = {
   id: string;
