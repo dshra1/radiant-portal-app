@@ -72,6 +72,7 @@ function Page() {
 
   const { data: projects } = useQuery({
     queryKey: ["site_projects", "po-create"],
+    enabled: Boolean(access?.userId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")

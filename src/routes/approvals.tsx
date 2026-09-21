@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X, ShieldCheck, History, IndianRupee } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { useSessionUser } from "@/lib/access";
 import { supabase } from "@/integrations/supabase/client";
 import {
   approveChangeRequest,
@@ -61,6 +62,7 @@ function Page() {
 
   const projectsQuery = useQuery({
     queryKey: ["site_projects", "approvals"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")

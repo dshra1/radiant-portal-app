@@ -6,6 +6,7 @@ import { Shell } from "@/components/saha/Shell";
 import { ActionButton, PhaseBar, StatusBadge } from "@/components/saha/ui";
 import { inrCompact, num } from "@/data/saha";
 import { supabase } from "@/integrations/supabase/client";
+import { useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/projects")({
   head: () => ({
@@ -179,6 +180,7 @@ function Projects() {
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["site_projects", "full"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")

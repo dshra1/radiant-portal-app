@@ -6,6 +6,7 @@ import { CalendarClock, Sparkles, Download, Gauge } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { generateProgramme, type ProgrammeTask } from "@/lib/programme.functions";
+import { useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/ai-programme")({
   head: () => ({
@@ -86,6 +87,7 @@ function Page() {
 
   const projectsQuery = useQuery({
     queryKey: ["site_projects", "ai-programme"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
