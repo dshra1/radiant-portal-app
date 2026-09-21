@@ -98,3 +98,9 @@
 - [x] /scope-brief live (package selection, drawing list, CSV export, printable PDF brief)
 - [x] /drawing-decipher → live Drawings & Documents register (upload, open, delete, export)
 - [x] Re-checked /execution-manual buttons (print, pocket card, push to field, stage tabs) — working
+
+## Sep 21
+- [x] Fix Bills & Payments permission check (Approve/Pay buttons for Admin/PM)
+- [x] Guard project queries with sign-in state (home, projects, approvals, PO create, AI programme, brand preferences, budget fit, BOQ engine, project setup)
+- [x] Fix AI SDK version mismatch typecheck errors
+- [ ] Suggest per-user monthly pricing in INR for the SaaS offering

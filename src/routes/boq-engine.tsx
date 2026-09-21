@@ -10,6 +10,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { useSessionUser } from "@/lib/access";
 import {
   BOQ_TRADES,
   BOQ_SECTIONS,
@@ -274,6 +275,7 @@ function download(name: string, content: string, mime = "text/csv;charset=utf-8"
 }
 
 function Page() {
+  const user = useSessionUser();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [projectId, setProjectId] = useState<string>("");
@@ -375,6 +377,7 @@ function Page() {
 
   const projectsQuery = useQuery({
     queryKey: ["site_projects", "boq-engine"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")

@@ -6,6 +6,7 @@ import { Shell } from "@/components/saha/Shell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { inrCompact } from "@/data/saha";
+import { useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/projects-setup")({
   head: () => ({
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/projects-setup")({
 });
 
 function Page() {
+  const user = useSessionUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeProjectId, setActiveProjectId] = useState("");
@@ -30,6 +32,7 @@ function Page() {
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["site_projects", "full"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")

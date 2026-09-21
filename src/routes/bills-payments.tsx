@@ -94,7 +94,7 @@ function Page() {
   const project = useActiveProject();
   const user = useSessionUser();
   const access = useAccess();
-  const canApprove = access.data?.isAdmin || access.data?.roles.includes("pm");
+  const canApprove = access.access?.isAdmin || access.access?.roles.includes("pm");
   const queryClient = useQueryClient();
 
   const [draft, setDraft] = useState<BillDraft | null>(null);

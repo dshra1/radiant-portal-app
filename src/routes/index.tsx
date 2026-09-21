@@ -172,6 +172,7 @@ function Index() {
 
   const { data: projects = [] } = useQuery({
     queryKey: ["site_projects", "hub-summary"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
@@ -201,7 +202,7 @@ function Index() {
       if (!activeProject.id) return rows;
       return rows.filter((n) => !n.project_id || n.project_id === activeProject.id);
     },
-    enabled: true,
+    enabled: Boolean(user?.id),
   });
 
   const { data: unreadChats = 0 } = useQuery({

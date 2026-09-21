@@ -7,6 +7,7 @@ import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { suggestBudgetFit, type BudgetSwap } from "@/lib/budget.functions";
 import { raiseChangeRequest, useApprovalGate } from "@/lib/approvals";
+import { useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/budget-fit")({
   head: () => ({
@@ -41,6 +42,7 @@ function crore(v: number) {
 }
 
 function Page() {
+  const user = useSessionUser();
   const qc = useQueryClient();
   const runSuggest = useServerFn(suggestBudgetFit);
   const [projectId, setProjectId] = useState("");
@@ -50,6 +52,7 @@ function Page() {
 
   const projectsQuery = useQuery({
     queryKey: ["site_projects", "budget-fit"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")

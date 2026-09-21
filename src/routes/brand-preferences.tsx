@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
+import { useSessionUser } from "@/lib/access";
 import { Shell } from "@/components/saha/Shell";
 import { Plus, Trash2, Save, Calculator, Tags, Download, Upload, Sparkles } from "lucide-react";
 
@@ -339,6 +340,7 @@ function normalise(raw: unknown): BrandPref[] {
 }
 
 function Page() {
+  const user = useSessionUser();
   const qc = useQueryClient();
   const [projectId, setProjectId] = useState("");
   const [rows, setRows] = useState<BrandPref[]>([]);
@@ -348,6 +350,7 @@ function Page() {
 
   const projectsQuery = useQuery({
     queryKey: ["site_projects", "brand-preferences"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
