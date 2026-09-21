@@ -222,11 +222,17 @@ function Page() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return bills.filter((b) => {
-      if (status !== "all" && b.status !== status) return false;
+      const paid = paidByBill.get(b.id) ?? 0;
+      if (status === "outstanding") {
+        if (billPayable(b) - paid <= 0) return false;
+      } else if (status === "retention") {
+        if (b.retention_amount <= 0) return false;
+      } else if (status !== "all" && b.status !== status) return false;
       if (!q) return true;
       return [b.bill_number, b.vendor_name, b.category, b.description].join(" ").toLowerCase().includes(q);
     });
-  }, [bills, search, status]);
+  }, [bills, search, status, paidByBill]);
+
 
   const totals = useMemo(() => {
     const payable = bills.reduce((s, b) => s + billPayable(b), 0);
