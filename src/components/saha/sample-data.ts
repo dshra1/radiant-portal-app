@@ -21,7 +21,6 @@ export const SAMPLE_DATA_ROUTES: Record<string, string> = {
   "/financial-ingestion": "ingested invoice and ledger samples",
   "/billing-expenditure": "billing and expenditure figures",
   "/bills-payments": "bill and payment records",
-  "/landowners-investment": "investor payout schedules",
   "/vendor-lifecycle": "vendor scores and lifecycle stages",
   "/media-upload-studio": "uploaded media samples",
   "/site-media": "site media samples",
