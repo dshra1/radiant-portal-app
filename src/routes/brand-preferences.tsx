@@ -340,6 +340,7 @@ function normalise(raw: unknown): BrandPref[] {
 }
 
 function Page() {
+  const user = useSessionUser();
   const qc = useQueryClient();
   const [projectId, setProjectId] = useState("");
   const [rows, setRows] = useState<BrandPref[]>([]);

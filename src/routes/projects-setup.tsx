@@ -23,6 +23,7 @@ export const Route = createFileRoute("/projects-setup")({
 });
 
 function Page() {
+  const user = useSessionUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeProjectId, setActiveProjectId] = useState("");

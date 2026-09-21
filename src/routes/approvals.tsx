@@ -53,6 +53,7 @@ function Values({ values }: { values: Record<string, unknown> }) {
 }
 
 function Page() {
+  const user = useSessionUser();
   const qc = useQueryClient();
   const { canDecide, decider } = useApprovalGate();
   const [projectId, setProjectId] = useState("");

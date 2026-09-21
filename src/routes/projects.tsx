@@ -134,6 +134,7 @@ const emptyForm = {
 const QUALITY = ["Standard", "Premium", "Luxury"];
 
 function Projects() {
+  const user = useSessionUser();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

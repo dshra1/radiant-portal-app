@@ -61,6 +61,7 @@ const inputClass =
   "rounded-xl border border-sky-500/40 bg-sky-500/5 px-3 py-2 text-sm text-foreground outline-none focus:border-sky-500";
 
 function Page() {
+  const user = useSessionUser();
   const [projectId, setProjectId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [targetDate, setTargetDate] = useState("");

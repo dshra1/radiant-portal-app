@@ -275,6 +275,7 @@ function download(name: string, content: string, mime = "text/csv;charset=utf-8"
 }
 
 function Page() {
+  const user = useSessionUser();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [projectId, setProjectId] = useState<string>("");

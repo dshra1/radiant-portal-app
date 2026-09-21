@@ -42,6 +42,7 @@ function crore(v: number) {
 }
 
 function Page() {
+  const user = useSessionUser();
   const qc = useQueryClient();
   const runSuggest = useServerFn(suggestBudgetFit);
   const [projectId, setProjectId] = useState("");
