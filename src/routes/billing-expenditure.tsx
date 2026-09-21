@@ -266,6 +266,8 @@ function Page() {
               <option value="all">All entries</option>
               <option value="Vendor bill">Vendor bills only</option>
               <option value="Statutory charge">Statutory charges only</option>
+              <option value="paid">Paid entries only</option>
+
             </select>
           </div>
           <div className="overflow-x-auto">
