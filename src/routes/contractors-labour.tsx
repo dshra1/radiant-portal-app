@@ -316,14 +316,14 @@ function Page() {
                   type="date"
                   value={draft.work_date}
                   onChange={(e) => setDraft({ ...draft, work_date: e.target.value })}
-                  className="input"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Contractor">
                 <input
                   value={draft.contractor}
                   onChange={(e) => setDraft({ ...draft, contractor: e.target.value })}
-                  className="input"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                   placeholder="e.g. Ramesh Masonry Works"
                 />
               </Field>
@@ -331,7 +331,7 @@ function Page() {
                 <select
                   value={draft.trade}
                   onChange={(e) => setDraft({ ...draft, trade: e.target.value })}
-                  className="input"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 >
                   {TRADES.map((t) => (
                     <option key={t}>{t}</option>
@@ -343,7 +343,7 @@ function Page() {
                   type="number"
                   value={draft.headcount}
                   onChange={(e) => setDraft({ ...draft, headcount: num(e.target.value) })}
-                  className="input"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Hours worked">
@@ -351,7 +351,7 @@ function Page() {
                   type="number"
                   value={draft.hours}
                   onChange={(e) => setDraft({ ...draft, hours: num(e.target.value) })}
-                  className="input"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Day rate (₹ per person)">
@@ -359,14 +359,14 @@ function Page() {
                   type="number"
                   value={draft.day_rate}
                   onChange={(e) => setDraft({ ...draft, day_rate: num(e.target.value) })}
-                  className="input"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Area / location">
                 <input
                   value={draft.area}
                   onChange={(e) => setDraft({ ...draft, area: e.target.value })}
-                  className="input"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                   placeholder="e.g. Block A · 3rd floor"
                 />
               </Field>
@@ -374,14 +374,14 @@ function Page() {
                 <input
                   value={draft.supervisor}
                   onChange={(e) => setDraft({ ...draft, supervisor: e.target.value })}
-                  className="input"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
               <Field label="Work done">
                 <input
                   value={draft.work_done}
                   onChange={(e) => setDraft({ ...draft, work_done: e.target.value })}
-                  className="input"
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </Field>
             </div>
