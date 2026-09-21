@@ -436,7 +436,15 @@ function Index() {
 
           {/* Active project summary */}
           {activeRow && (
-            <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-card p-5">
+            <button
+              type="button"
+              onClick={() => {
+                if (activeRow?.id && activeRow.id !== activeProject.id) setActiveProject(activeRow.id);
+                void navigate({ to: "/dashboard" });
+              }}
+              title={`Open ${activeProject.name} dashboard`}
+              className="group block w-full cursor-pointer rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-card p-5 text-left transition-all hover:border-primary/40 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
