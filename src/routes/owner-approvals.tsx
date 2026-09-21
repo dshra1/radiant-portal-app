@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   FileText,
+  Lock,
   MessageSquare,
   Paperclip,
   Plus,
