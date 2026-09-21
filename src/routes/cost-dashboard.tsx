@@ -218,7 +218,15 @@ function Page() {
       icon: IndianRupee,
       tone: "border-primary/40 bg-primary/5",
     },
+    {
+      label: "Owner funds received",
+      value: crore(ownerFunds),
+      sub: openCalls > 0 ? `Open capital calls ${crore(openCalls)}` : "No open capital calls",
+      icon: Wallet,
+      tone: "border-emerald-600/40 bg-emerald-600/5",
+    },
   ];
+
 
   return (
     <Shell title="Cost Dashboard">
