@@ -496,6 +496,119 @@ export type Database = {
           },
         ]
       }
+      owner_decisions: {
+        Row: {
+          comment: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision: string
+          id: string
+          owner_name: string
+          owner_role: string
+          project_id: string | null
+          request_id: string
+          updated_at: string
+        }
+        Insert: {
+          comment?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string
+          id?: string
+          owner_name?: string
+          owner_role?: string
+          project_id?: string | null
+          request_id: string
+          updated_at?: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string
+          id?: string
+          owner_name?: string
+          owner_role?: string
+          project_id?: string | null
+          request_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_decisions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_decisions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "owner_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_requests: {
+        Row: {
+          attachments: Json
+          body: string
+          category: string
+          created_at: string
+          due_date: string | null
+          id: string
+          priority: string
+          project_id: string | null
+          raised_by: string | null
+          raised_by_name: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json
+          body?: string
+          category?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          priority?: string
+          project_id?: string | null
+          raised_by?: string | null
+          raised_by_name?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json
+          body?: string
+          category?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          priority?: string
+          project_id?: string | null
+          raised_by?: string | null
+          raised_by_name?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_quote_items: {
         Row: {
           brand: string

@@ -121,7 +121,9 @@ export const navGroups: NavGroup[] = [
       { to: "/common-expenses", label: "Common & Statutory Expenses", icon: Landmark },
       { to: "/pmc-scope", label: "PMC Commercials", icon: BadgeIndianRupee },
       { to: "/cost-dashboard", label: "Cost Dashboard", icon: BadgeIndianRupee },
+      { to: "/owner-approvals", label: "Owner Approvals & Suggestions", icon: ShieldCheck },
       { to: "/approvals", label: "Change Approvals", icon: ShieldCheck },
+
     ],
   },
   {
