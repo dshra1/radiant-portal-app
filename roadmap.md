@@ -116,4 +116,4 @@
 
 ## Sep 21
 - [x] Accounts & Audit: Billing & Expenditure now shows entered statutory/permission charges + vendor bills live
-- [ ] Financial Ingestion: make buttons working with real project data (no dummy values)
+- [x] Financial Ingestion: real cash ledger (owner funding, vendor payments, statutory charges) + working document uploads to private storage, CSV export
