@@ -133,7 +133,7 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("owner_requests")
-        .select("id,project_id,title,body,category,priority,attachments,due_date,status,raised_by_name,created_at")
+        .select("id,project_id,title,body,category,priority,attachments,due_date,status,raised_by_name,created_at,audience,target_owner_name,unit_label")
         .eq("project_id", activeId)
         .order("created_at", { ascending: false });
       if (error) throw error;
