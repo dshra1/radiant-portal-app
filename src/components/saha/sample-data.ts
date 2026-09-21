@@ -13,5 +13,4 @@ export const SAMPLE_DATA_ROUTES: Record<string, string> = {
   "/media-upload-studio": "uploaded media samples",
   "/site-media": "site media samples",
   "/system-directory": "directory records",
-  "/roles-access": "sample role assignments",
 };
