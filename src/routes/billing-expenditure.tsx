@@ -282,7 +282,9 @@ function Page() {
                   <th className="py-3 px-4 text-right">Amount</th>
                   <th className="py-3 px-4 text-right">Paid</th>
                   <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Open</th>
                 </tr>
+
               </thead>
               <tbody className="divide-y text-sm">
                 {filtered.map((r) => (
@@ -306,7 +308,16 @@ function Page() {
                     <td className="py-3 px-4 text-right font-semibold">{inr(r.amount)}</td>
                     <td className="py-3 px-4 text-right">{inr(r.paid)}</td>
                     <td className="py-3 px-4 capitalize">{r.status}</td>
+                    <td className="py-3 px-4 text-right">
+                      <Link
+                        to={r.kind === "Vendor bill" ? "/bills-payments" : "/common-expenses"}
+                        className="text-primary text-xs font-semibold hover:underline"
+                      >
+                        {r.kind === "Vendor bill" ? "View bill" : "View charge"}
+                      </Link>
+                    </td>
                   </tr>
+
                 ))}
                 {!loading && filtered.length === 0 ? (
                   <tr>
