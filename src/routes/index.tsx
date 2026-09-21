@@ -8,7 +8,7 @@ import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProje
 import { cn } from "@/lib/utils";
 import {
   Bell,
-  Bell,
+
   MessagesSquare,
   ChevronDown,
   ChevronRight,
