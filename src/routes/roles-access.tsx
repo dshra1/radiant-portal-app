@@ -1,13 +1,25 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ShieldCheck, Users, UserCheck, UserPlus, MessagesSquare, ClipboardList } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { supabase } from "@/integrations/supabase/client";
+import { useAccess, useSessionUser, roleSlugToLabel, type RoleSlug } from "@/lib/access";
 
 export const Route = createFileRoute("/roles-access")({
   head: () => ({
     meta: [
       { title: "Roles & Access Activity | Saha OS" },
-      { name: "description", content: "Role-based access for admins, project managers, site engineers and landowner viewers with activity trail." },
+      {
+        name: "description",
+        content:
+          "Who has access to this project workspace, the permissions assigned to each member and where to approve or change them.",
+      },
       { property: "og:title", content: "Roles & Access Activity | Saha OS" },
-      { property: "og:description", content: "Role-based access for admins, project managers, site engineers and landowner viewers with activity trail." },
+      {
+        property: "og:description",
+        content: "Members, assigned permissions and pending access requests for the project workspace.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -15,18 +27,225 @@ export const Route = createFileRoute("/roles-access")({
   component: Page,
 });
 
+type Member = {
+  id: string;
+  email: string;
+  full_name: string;
+  status: string;
+  created_at: string;
+  roles: RoleSlug[];
+};
+
 function Page() {
+  const user = useSessionUser();
+  const { access } = useAccess();
+  const isAdmin = Boolean(access?.isAdmin);
+
+  const { data: members = [], isPending } = useQuery({
+    queryKey: ["roles-access", "members"],
+    enabled: Boolean(user?.id),
+    queryFn: async (): Promise<Member[]> => {
+      const [{ data: profiles, error: pErr }, { data: roleRows, error: rErr }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id,email,full_name,status,created_at")
+          .order("created_at", { ascending: false }),
+        supabase.from("user_roles").select("user_id,role"),
+      ]);
+      if (pErr) throw pErr;
+      if (rErr) throw rErr;
+      const byUser = new Map<string, RoleSlug[]>();
+      for (const r of roleRows ?? []) {
+        const list = byUser.get(r.user_id) ?? [];
+        list.push(r.role as RoleSlug);
+        byUser.set(r.user_id, list);
+      }
+      return (profiles ?? []).map((p) => ({
+        id: p.id,
+        email: p.email ?? "",
+        full_name: p.full_name ?? "",
+        status: p.status ?? "pending",
+        created_at: p.created_at ?? "",
+        roles: byUser.get(p.id) ?? [],
+      }));
+    },
+  });
+
+  const stats = useMemo(() => {
+    const approved = members.filter((m) => m.status === "approved");
+    return {
+      total: members.length,
+      approved: approved.length,
+      pending: members.filter((m) => m.status !== "approved").length,
+      unassigned: approved.filter((m) => m.roles.length === 0).length,
+    };
+  }, [members]);
+
+  const byRole = useMemo(() => {
+    const map = new Map<RoleSlug, Member[]>();
+    for (const m of members) {
+      for (const r of m.roles) {
+        map.set(r, [...(map.get(r) ?? []), m]);
+      }
+    }
+    return map;
+  }, [members]);
+
   return (
-    <Shell title={"Roles & Access Activity | Saha OS"}>
-      <div className="m3">
-        <main className="flex flex-col relative w-full px-gutter-normal pt-16 pb-24 bg-surface flex-grow"><div className="flex flex-col w-full min-h-[calc(100vh-4rem)]"> <div className="flex flex-col md:flex-row w-full gap-space-md mb-space-2xl"> <div className="flex flex-wrap items-center justify-between gap-space-md w-full bg-surface-container-low p-space-base rounded-xl"> <div className="flex items-center gap-space-sm"> <span className="material-symbols-outlined text-primary text-[24px]">forum</span> <h2 className="font-headline-lg text-on-surface">Communication & Formal Instructions</h2> </div> <div className="flex items-center gap-space-sm bg-surface-container p-space-2xs rounded-lg"> <button className="px-space-md py-space-sm rounded-lg bg-primary text-on-primary font-title-md text-xs transition-all shadow-sm">People & Groups</button> <button className="px-space-md py-space-sm rounded-lg text-on-surface-variant font-title-md text-xs hover:text-on-surface transition-all">Team Chat & Instructions</button> <button className="px-space-md py-space-sm rounded-lg text-on-surface-variant font-title-md text-xs hover:text-on-surface transition-all flex items-center gap-space-2xs"> <span className="material-symbols-outlined text-sm">smart_toy</span> SAHA AI Intelligence
-        </button> </div> </div> </div> <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md flex-grow"> <div className="lg:col-span-3 flex flex-col bg-surface-container-low rounded-xl p-space-md gap-space-sm"><div className="flex items-center justify-between mb-space-xs"><span className="font-title-md text-on-surface">Threads & Contacts</span><div className="flex items-center gap-space-xs"><button className="text-label-sm bg-primary text-on-primary px-space-sm py-space-2xs rounded-full font-bold flex items-center gap-1 hover:bg-primary/90 transition-all"><span className="material-symbols-outlined text-xs">add</span> New Group</button><span className="text-label-sm bg-primary/10 text-primary px-space-sm py-space-2xs rounded-full font-bold">6 Active</span></div></div> <div className="relative w-full mb-space-sm"> <span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-sm">search</span> <input className="w-full bg-surface-container rounded-lg pl-9 pr-space-base py-space-sm text-body-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Search conversations..." type="text" /> </div> <div className="flex flex-col gap-space-xs overflow-y-auto max-h-[600px]"> <div className="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container/30 hover:bg-surface-container cursor-pointer transition-all"><div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-title-md text-xs"><span className="material-symbols-outlined text-sm">group</span></div><div className="flex flex-col flex-grow min-w-0"><div className="flex justify-between items-center"><span className="font-title-md text-on-surface truncate">Level 1 Masonry & QA</span><span className="text-label-sm text-on-surface-variant">11:15 AM</span></div><span className="text-body-sm text-on-surface-variant truncate">4 members • Masonry crew active</span></div><span className="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center text-[10px] font-bold">3</span></div><div className="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container-highest cursor-pointer transition-all shadow-sm"> <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary font-title-md text-xs">SA</div> <div className="flex flex-col flex-grow min-w-0"> <div className="flex justify-between items-center"><span className="font-title-md text-on-surface truncate">SAHA Admin</span><span className="text-label-sm text-on-surface-variant">10:42 AM</span></div> <span className="text-body-sm text-on-surface-variant truncate">Brickwork check in 1st floor required...</span> </div> <span className="w-5 h-5 rounded-full bg-error text-on-error flex items-center justify-center text-[10px] font-bold">2</span> </div> <div className="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container/30 hover:bg-surface-container cursor-pointer transition-all"> <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-on-secondary font-title-md text-xs">PM</div> <div className="flex flex-col flex-grow min-w-0"> <div className="flex justify-between items-center"><span className="font-title-md text-on-surface truncate">Project Manager</span><span className="text-label-sm text-on-surface-variant">Yesterday</span></div> <span className="text-body-sm text-on-surface-variant truncate">BOQ revision approved for Block B</span> </div> </div> <div className="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container/30 hover:bg-surface-container cursor-pointer transition-all"> <div className="w-10 h-10 rounded-full bg-tertiary-container flex items-center justify-center text-on-tertiary-container font-title-md text-xs">SE</div> <div className="flex flex-col flex-grow min-w-0"> <div className="flex justify-between items-center"><span className="font-title-md text-on-surface truncate">Site Engineer</span><span className="text-label-sm text-on-surface-variant">Oct 24</span></div> <span className="text-body-sm text-on-surface-variant truncate">Stock check completed for cement bags</span> </div> <span className="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center text-[10px] font-bold">1</span> </div> <div className="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container/30 hover:bg-surface-container cursor-pointer transition-all"> <div className="w-10 h-10 rounded-full bg-surface-dim flex items-center justify-center text-on-surface font-title-md text-xs">AC</div> <div className="flex flex-col flex-grow min-w-0"> <div className="flex justify-between items-center"><span className="font-title-md text-on-surface truncate">Accounts</span><span className="text-label-sm text-on-surface-variant">Oct 22</span></div> <span className="text-body-sm text-on-surface-variant truncate">Invoice #492 verified against delivery</span> </div> </div> <div className="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container/30 hover:bg-surface-container cursor-pointer transition-all"> <div className="w-10 h-10 rounded-full bg-outline-variant flex items-center justify-center text-on-surface font-title-md text-xs">LV</div> <div className="flex flex-col flex-grow min-w-0"> <div className="flex justify-between items-center"><span className="font-title-md text-on-surface truncate">Landowner Viewer</span><span className="text-label-sm text-on-surface-variant">Oct 19</span></div> <span className="text-body-sm text-on-surface-variant truncate">Requested drone footage update</span> </div> </div> <div className="flex items-center gap-space-sm p-space-sm rounded-xl bg-primary/5 hover:bg-primary/10 cursor-pointer transition-all border border-primary/20"> <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary font-title-md text-xs"><span className="material-symbols-outlined text-sm">smart_toy</span></div> <div className="flex flex-col flex-grow min-w-0"> <div className="flex justify-between items-center"><span className="font-title-md text-primary truncate">SAHA AI Assistant</span><span className="text-label-sm text-primary font-bold">Live</span></div> <span className="text-body-sm text-on-surface-variant truncate">Ready to analyze risks & BOQ</span> </div> </div> </div></div> <div className="lg:col-span-6 flex flex-col bg-surface-container-low rounded-xl p-space-md justify-between min-h-[650px]"> <div className="flex flex-col gap-space-base"> <div className="flex items-center justify-between pb-space-sm border-b border-surface-container"> <div className="flex items-center gap-space-sm"> <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-on-primary font-title-md text-xs">SA</div> <div> <h3 className="font-headline-sm text-on-surface">SAHA Admin</h3> <p className="text-body-sm text-on-surface-variant">Online • Project Command Center</p> </div> </div> <div className="flex items-center gap-space-sm"> <button className="px-space-sm py-space-2xs rounded-md bg-surface-container hover:bg-surface-container-high text-on-surface text-label-sm font-bold flex items-center gap-1 transition-all"><span className="material-symbols-outlined text-xs">group</span> 4 Members (+ Add)</button><span className="px-space-sm py-space-2xs rounded-md bg-primary/10 text-primary text-label-sm font-bold">Formal Instruction Hub</span> <button className="p-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high transition-all text-on-surface"><span className="material-symbols-outlined text-sm">more_vert</span></button> </div> </div> <div className="flex flex-col gap-space-md overflow-y-auto max-h-[440px] pr-space-2xs"> <div className="flex flex-col gap-space-2xs self-start max-w-[85%]"> <div className="flex items-center gap-space-xs text-label-sm text-on-surface-variant"><span>SAHA Admin</span><span>•</span><span>10:30 AM</span></div> <div className="p-space-base rounded-xl bg-surface-container text-on-surface text-body-md shadow-sm">
-              Good morning team. We need an immediate status check on the first floor brickwork alignment with CAD Drawing #DWG-882. Are cement stock levels sufficient to finish the west wing today?
-            </div> </div> <div className="flex flex-col gap-space-2xs self-end max-w-[85%]"> <div className="flex items-center gap-space-xs text-label-sm text-on-surface-variant self-end"><span>10:35 AM</span><span>•</span><span>You</span></div> <div className="p-space-base rounded-xl bg-primary text-on-primary text-body-md shadow-sm flex flex-col gap-space-sm"> <p>Morning. Checked with Site Engineer. Cement inventory stands at 420 bags (Grade 53), which covers the west wing comfortably. Masonry crew is active on grid line B-4.</p> <div className="flex items-center gap-space-xs bg-black/10 p-space-xs rounded-lg text-xs font-title-md"> <span className="material-symbols-outlined text-sm">description</span> FORMAL INSTRUCTION #FI-2023-094 LINKED
-              </div> </div> </div> <div className="flex flex-col gap-space-2xs self-start max-w-[85%]"> <div className="flex items-center gap-space-xs text-label-sm text-on-surface-variant"><span>SAHA Admin</span><span>•</span><span>10:40 AM</span></div> <div className="p-space-base rounded-xl bg-surface-container text-on-surface text-body-md shadow-sm">
-              Excellent. Please log this as a verified milestone in the BOQ tracker. SAHA AI flagged a minor variance in mortar mix ratios yesterday—ensure compliance on site.
-            </div> </div> </div> </div> <div className="flex flex-col gap-space-sm pt-space-md bg-surface-container-low"> <div className="flex flex-wrap items-center justify-between gap-space-sm bg-surface-container p-space-sm rounded-xl"><div className="flex items-center gap-space-sm"> <label className="relative inline-flex items-center cursor-pointer"> <input checked={true} className="sr-only peer" type="checkbox" /> <div className="w-9 h-5 bg-surface-dim peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary" /> </label> <span className="text-title-md text-on-surface flex items-center gap-space-2xs"> <span className="material-symbols-outlined text-sm text-primary">gavel</span> Formal Instruction Mode
-            </span> </div> <div className="flex items-center gap-space-xs"> <select className="bg-surface-container-high text-on-surface text-label-md rounded-lg px-space-sm py-1 border-none focus:ring-1 focus:ring-primary"><option>BOQ Item: 4.2 Brickwork & Masonry</option><option>BOQ Item: 3.1 Foundation Piling</option><option>BOQ Item: 5.0 Electrical Wiring</option></select> </div></div> <div className="flex items-center gap-space-sm"> <button className="p-space-sm rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-all"><span className="material-symbols-outlined text-base">attach_file</span></button> <button className="p-space-sm rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant transition-all"><span className="material-symbols-outlined text-base">image</span></button> <input className="flex-grow bg-surface-container rounded-xl px-space-base py-space-sm text-body-md text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Type formal message or instruction..." type="text" /> <button className="px-space-xl py-space-sm rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-title-md flex items-center gap-space-2xs shadow-sm transition-all"> <span>Send</span> <span className="material-symbols-outlined text-base">send</span> </button> </div> </div> </div> <div className="lg:col-span-3 flex flex-col bg-surface-container-low rounded-xl p-space-md gap-space-md"><div className="flex items-center justify-between"><span className="font-title-md text-on-surface">Threads & Contacts</span><div className="flex items-center gap-space-xs"><button className="text-label-sm bg-primary text-on-primary px-space-sm py-space-2xs rounded-full font-bold flex items-center gap-1 hover:bg-primary/90 transition-all"><span className="material-symbols-outlined text-xs">add</span> New Group</button><span className="text-label-sm bg-primary/10 text-primary px-space-sm py-space-2xs rounded-full font-bold">6 Active</span></div></div> <div className="flex flex-col gap-space-md overflow-y-auto max-h-[600px]"> <div className="p-space-base bg-surface-container rounded-xl flex flex-col gap-space-sm shadow-sm border border-primary/20"> <div className="flex items-center justify-between"> <span className="text-title-md text-on-surface flex items-center gap-space-xs"><span className="material-symbols-outlined text-sm text-primary">psychology</span> AI Task Breakdown & Work Order Intelligence</span> <span className="text-label-sm text-primary bg-primary/10 px-space-2xs py-0.5 rounded font-bold">Live Active</span> </div> <div className="text-body-sm text-on-surface-variant flex flex-col gap-space-xs"> <p className="font-bold text-on-surface">Task: 1st Floor Brickwork Alignment (#DWG-882)</p> <div className="flex flex-col gap-1 bg-surface-container-high p-space-xs rounded-lg mt-1"> <div className="flex items-center justify-between text-xs"> <span className="flex items-center gap-1 font-title-md text-on-surface"><span className="material-symbols-outlined text-xs text-primary">verified</span> 1. Stage Validation</span> <span className="text-primary font-bold">Approved (Milestone 3)</span> </div> <div className="flex items-center justify-between text-xs"> <span className="flex items-center gap-1 font-title-md text-on-surface"><span className="material-symbols-outlined text-xs text-primary">inventory_2</span> 2. Stock Check</span> <span className="text-primary font-bold">420 Bags Available</span> </div> <div className="flex items-center justify-between text-xs"> <span className="flex items-center gap-1 font-title-md text-on-surface"><span className="material-symbols-outlined text-xs text-primary">group</span> 3. Labor Allocation</span> <span className="text-on-surface-variant">6 Masons, 8 Helpers</span> </div> <div className="flex items-center justify-between text-xs"> <span className="flex items-center gap-1 font-title-md text-on-surface"><span className="material-symbols-outlined text-xs text-primary">assignment_turned_in</span> 4. QA/QC Mandate</span> <span className="text-amber-600 font-bold">Mortar Ratio Check</span> </div> </div> </div> <div className="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full w-[85%]" /> </div> <button className="w-full py-1.5 bg-primary text-on-primary hover:bg-primary/90 text-label-md rounded-lg transition-all font-title-md">Dispatch Work Order</button> </div> <div className="p-space-base bg-surface-container rounded-xl flex flex-col gap-space-sm shadow-sm"> <div className="flex items-center justify-between"> <span className="text-title-md text-on-surface flex items-center gap-space-xs"><span className="material-symbols-outlined text-sm text-amber-600">warning</span> BOQ Material Risk</span> <span className="text-label-sm text-amber-700 bg-amber-500/10 px-space-2xs py-0.5 rounded font-bold">Check Req</span> </div> <p className="text-body-sm text-on-surface-variant">First floor reinforcement steel shows 4.5% variance against initial architectural estimates.</p> <div className="flex gap-space-xs"> <button className="flex-1 py-1.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-label-md rounded-lg transition-all font-title-md">Review Delta</button> <button className="flex-1 py-1.5 bg-primary text-on-primary hover:bg-primary/90 text-label-md rounded-lg transition-all font-title-md">Draft PO</button> </div> </div> <div className="p-space-base bg-surface-container rounded-xl flex flex-col gap-space-sm shadow-sm"> <div className="flex items-center justify-between"> <span className="text-title-md text-on-surface flex items-center gap-space-xs"><span className="material-symbols-outlined text-sm text-primary">verified_user</span> Schedule Verification</span> <span className="text-label-sm text-primary bg-primary/10 px-space-2xs py-0.5 rounded font-bold">On Track</span> </div> <p className="text-body-sm text-on-surface-variant">Current brickwork instructions align with Milestone 3 completion targets set for Nov 15.</p> </div> <div className="p-space-base bg-surface-container rounded-xl flex flex-col gap-space-sm shadow-sm"> <div className="flex items-center justify-between"> <span className="text-title-md text-on-surface flex items-center gap-space-xs"><span className="material-symbols-outlined text-sm text-primary">bolt</span> Instant Query Audit</span> </div> <p className="text-body-sm text-on-surface-variant">Ask SAHA AI to instantly cross-reference any on-site message with project blueprints or budget constraints.</p> <div className="relative w-full"> <input className="w-full bg-surface-container-high rounded-lg px-space-sm py-1.5 text-body-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary pr-8" placeholder="Ask AI about specs..." type="text" /> <span className="material-symbols-outlined absolute right-2 top-2 text-primary text-sm cursor-pointer">arrow_forward</span> </div> </div> </div></div> </div> </div></main>
+    <Shell title="Roles & Access">
+      <div className="flex flex-col gap-6 pb-16">
+        <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+              Access & audit trail
+            </p>
+            <h1 className="text-2xl font-bold text-foreground">Roles &amp; access activity</h1>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Every member who can sign in to this workspace, the permissions they hold and the
+              requests still waiting for approval.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {isAdmin ? (
+              <Link
+                to="/access-control"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+              >
+                <ShieldCheck className="h-4 w-4" /> Manage access
+              </Link>
+            ) : null}
+            <Link
+              to="/messages"
+              className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted"
+            >
+              <MessagesSquare className="h-4 w-4" /> Team chat
+            </Link>
+            <Link
+              to="/approvals"
+              className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted"
+            >
+              <ClipboardList className="h-4 w-4" /> Change approvals
+            </Link>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {[
+            { label: "Members", value: stats.total, Icon: Users, note: "All sign-ins on record" },
+            { label: "Approved", value: stats.approved, Icon: UserCheck, note: "Can use the workspace" },
+            { label: "Awaiting approval", value: stats.pending, Icon: UserPlus, note: "Needs a decision" },
+            {
+              label: "No permissions yet",
+              value: stats.unassigned,
+              Icon: ShieldCheck,
+              note: "Approved but no role set",
+            },
+          ].map(({ label, value, Icon, note }) => (
+            <Link
+              key={label}
+              to={isAdmin ? "/access-control" : "/roles-access"}
+              className="rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary hover:bg-muted/50"
+            >
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <span>{label}</span>
+                <Icon className="h-4 w-4 text-primary" />
+              </div>
+              <p className="mt-3 text-2xl font-bold text-foreground">{value}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{note}</p>
+            </Link>
+          ))}
+        </div>
+
+        <section className="rounded-2xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border p-5">
+            <h2 className="text-lg font-bold text-foreground">Members and permissions</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isAdmin
+                ? "Open Manage access to approve a member or change their permissions."
+                : "Only an admin can change permissions here."}
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="p-3">Member</th>
+                  <th className="p-3">Email</th>
+                  <th className="p-3">Permissions</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">Joined</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {isPending ? (
+                  <tr>
+                    <td className="p-6 text-center text-muted-foreground" colSpan={5}>
+                      Loading members…
+                    </td>
+                  </tr>
+                ) : null}
+                {!isPending && members.length === 0 ? (
+                  <tr>
+                    <td className="p-6 text-center text-muted-foreground" colSpan={5}>
+                      No members visible to you yet.
+                    </td>
+                  </tr>
+                ) : null}
+                {members.map((m) => (
+                  <tr key={m.id} className="hover:bg-muted/40">
+                    <td className="p-3 font-semibold">
+                      {m.full_name || "—"}
+                      {m.id === user?.id ? (
+                        <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
+                          You
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="p-3 text-muted-foreground">{m.email || "—"}</td>
+                    <td className="p-3">
+                      {m.roles.length ? (
+                        <span className="flex flex-wrap gap-1">
+                          {m.roles.map((r) => (
+                            <span
+                              key={r}
+                              className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium"
+                            >
+                              {roleSlugToLabel[r]}
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">None assigned</span>
+                      )}
+                    </td>
+                    <td className="p-3 capitalize">{m.status}</td>
+                    <td className="p-3 text-muted-foreground">
+                      {m.created_at ? m.created_at.slice(0, 10) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-foreground">What each permission can open</h2>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {(Object.keys(roleSlugToLabel) as RoleSlug[]).map((slug) => (
+              <div key={slug} className="rounded-xl border border-border p-4">
+                <p className="text-sm font-semibold text-foreground">{roleSlugToLabel[slug]}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {(byRole.get(slug) ?? []).length} member
+                  {(byRole.get(slug) ?? []).length === 1 ? "" : "s"}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {(byRole.get(slug) ?? []).map((m) => m.full_name || m.email).join(", ") || "Nobody yet"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </Shell>
   );

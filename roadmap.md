@@ -130,3 +130,23 @@
 - 2026-09-21: Rebuilt /vendor-lifecycle live (vendors, approved PO value, stock items, pending bills; vendor-wise spend table; tool cards all link to live pages).
 - 2026-09-21: Rebuild /brand-benchmark live (user asked what it is + make it working like other pages).
 - 2026-09-21: DONE — /brand-benchmark live (brand_preferences vs boq_items vs price_quote_items; verdict badges, saving tile, CSV, links to brand-preferences/price-ocr/budget-fit). /vendor-lifecycle + /price-intelligence live; build OK, all pages 200.
+
+## 2026-09-21 — Accounts & Audit static buttons
+- bills-payments: four totals cards now filter the list (all / paid / outstanding balance / retention held); filter dropdown gained the two new options.
+- billing-expenditure: totals cards filter the register (vendor bills / statutory / all / paid); each row has a "View bill" / "View charge" link.
+- financial-ingestion: KPI cards link to capital ledger, bills & payments, common expenses, cost dashboard.
+- financial-forecast: KPI cards link to BOQ engine, capital ledger, bills & payments, cost dashboard (Kpi gained optional `to`).
+- roles-access: replaced the static Stitch chat mock with a live members & permissions page (profiles + user_roles, stats, role breakdown, links to access-control/messages/approvals). Removed from SAMPLE_DATA_ROUTES.
+
+## Requested 2026-09-21 — apply the same "no dead buttons / live data" treatment app-wide
+All Accounts & Audit and Stock pages are project-scoped (useActiveProject + eq project_id), so they already work for both projects.
+Still fully static (no queries, no working buttons) — to be rebuilt live:
+- [ ] /site-execution (stage progress, workforce, material runway)
+- [ ] /contractors-labour (headcount, productivity)
+- [ ] /field-console (attendance, field activity)
+- [ ] /pour-cards (pour schedule + approvals)
+- [ ] /qa and /qa-inspection (inspections, defects)
+- [ ] /site-media and /media-upload-studio (project media storage)
+- [ ] /command-operations (activity feed)
+- [ ] /project-controls (schedule/cost indices)
+- [ ] /system-directory (directory records)

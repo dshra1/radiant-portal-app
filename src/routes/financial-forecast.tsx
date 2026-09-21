@@ -373,6 +373,7 @@ function Page() {
                 label="Forecast total cost"
                 value={inr(m.forecastCost)}
                 note={`BOQ ${inr(m.boqTotal)} + charges ${inr(m.chargesTotal)} + contingency ${inr(m.contingency)}`}
+                to="/boq-engine"
               />
               <Kpi
                 icon={<Wallet className="h-4 w-4" />}
@@ -380,12 +381,14 @@ function Page() {
                 value={inr(m.fundsInHand)}
                 note={`Owner funding ${inr(m.inflow)} − spent ${inr(m.spentToDate)}`}
                 tone={m.fundsInHand < 0 ? "bad" : "good"}
+                to="/capital-ledger"
               />
               <Kpi
                 icon={<TrendingUp className="h-4 w-4" />}
                 label="Cost to complete"
                 value={inr(m.costToComplete)}
                 note={`${inr(m.committedNow)} already committed in bills & charges`}
+                to="/bills-payments"
               />
               <Kpi
                 icon={<AlertTriangle className="h-4 w-4" />}
@@ -397,7 +400,9 @@ function Page() {
                     : "Funds in hand cover the remaining work"
                 }
                 tone={gapCritical ? "bad" : "good"}
+                to="/cost-dashboard"
               />
+
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -572,15 +577,17 @@ function Kpi({
   value,
   note,
   tone,
+  to,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   note: string;
   tone?: "good" | "bad";
+  to?: "/boq-engine" | "/capital-ledger" | "/bills-payments" | "/cost-dashboard";
 }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+  const body = (
+    <>
       <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
         <span>{label}</span>
         <span className="rounded-lg bg-muted p-1.5 text-foreground">{icon}</span>
@@ -593,9 +600,18 @@ function Kpi({
         {value}
       </p>
       <p className="mt-1 text-xs text-muted-foreground">{note}</p>
-    </div>
+    </>
   );
+  const cls = "block rounded-2xl border border-border bg-card p-5 shadow-sm";
+  if (to)
+    return (
+      <Link to={to} className={`${cls} transition hover:border-primary hover:bg-muted/50`}>
+        {body}
+      </Link>
+    );
+  return <div className={cls}>{body}</div>;
 }
+
 
 function Row({
   label,

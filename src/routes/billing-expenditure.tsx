@@ -150,7 +150,10 @@ function Page() {
   }, [bills, charges, payments]);
 
   const filtered = rows.filter((r) => {
-    if (kind !== "all" && r.kind !== kind) return false;
+    if (kind === "paid") {
+      if (r.paid <= 0) return false;
+    } else if (kind !== "all" && r.kind !== kind) return false;
+
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return [r.reference, r.payee, r.category, r.detail, r.status].some((v) =>
@@ -197,22 +200,55 @@ function Page() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Vendor bills", value: totals.billTotal, Icon: FileText },
-            { label: "Statutory charges", value: totals.chargeTotal, Icon: Landmark },
-            { label: "Total expenditure", value: totals.total, Icon: Receipt },
-            { label: "Paid so far", value: totals.paid, Icon: Wallet },
-          ].map(({ label, value, Icon }) => (
-            <div key={label} className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
+            {
+              label: "Vendor bills",
+              value: totals.billTotal,
+              Icon: FileText,
+              kind: "Vendor bill",
+              note: "Show vendor bills only",
+            },
+            {
+              label: "Statutory charges",
+              value: totals.chargeTotal,
+              Icon: Landmark,
+              kind: "Statutory charge",
+              note: "Show statutory charges only",
+            },
+            {
+              label: "Total expenditure",
+              value: totals.total,
+              Icon: Receipt,
+              kind: "all",
+              note: "Show every entry",
+            },
+            {
+              label: "Paid so far",
+              value: totals.paid,
+              Icon: Wallet,
+              kind: "paid",
+              note: "Show settled entries",
+            },
+          ].map(({ label, value, Icon, kind: k, note }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setKind(k)}
+              className={`text-left rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 transition hover:bg-muted/50 ${
+                kind === k ? "border-primary ring-1 ring-primary" : ""
+              }`}
+            >
               <div className="rounded-xl bg-muted p-3 text-primary">
                 <Icon className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{inr(value)}</p>
                 <p className="text-xs font-medium text-muted-foreground mt-0.5">{label}</p>
+                <p className="text-[11px] text-muted-foreground">{note}</p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
+
 
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b">
@@ -230,6 +266,8 @@ function Page() {
               <option value="all">All entries</option>
               <option value="Vendor bill">Vendor bills only</option>
               <option value="Statutory charge">Statutory charges only</option>
+              <option value="paid">Paid entries only</option>
+
             </select>
           </div>
           <div className="overflow-x-auto">
@@ -244,7 +282,9 @@ function Page() {
                   <th className="py-3 px-4 text-right">Amount</th>
                   <th className="py-3 px-4 text-right">Paid</th>
                   <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Open</th>
                 </tr>
+
               </thead>
               <tbody className="divide-y text-sm">
                 {filtered.map((r) => (
@@ -268,18 +308,27 @@ function Page() {
                     <td className="py-3 px-4 text-right font-semibold">{inr(r.amount)}</td>
                     <td className="py-3 px-4 text-right">{inr(r.paid)}</td>
                     <td className="py-3 px-4 capitalize">{r.status}</td>
+                    <td className="py-3 px-4 text-right">
+                      <Link
+                        to={r.kind === "Vendor bill" ? "/bills-payments" : "/common-expenses"}
+                        className="text-primary text-xs font-semibold hover:underline"
+                      >
+                        {r.kind === "Vendor bill" ? "View bill" : "View charge"}
+                      </Link>
+                    </td>
                   </tr>
+
                 ))}
                 {!loading && filtered.length === 0 ? (
                   <tr>
-                    <td className="py-12 text-center text-muted-foreground" colSpan={8}>
+                    <td className="py-12 text-center text-muted-foreground" colSpan={9}>
                       No bills or statutory charges recorded for this project yet.
                     </td>
                   </tr>
                 ) : null}
                 {loading ? (
                   <tr>
-                    <td className="py-12 text-center text-muted-foreground" colSpan={8}>
+                    <td className="py-12 text-center text-muted-foreground" colSpan={9}>
                       Loading expenditure…
                     </td>
                   </tr>

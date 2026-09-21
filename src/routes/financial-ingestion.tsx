@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -329,12 +329,40 @@ function Page() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "Owner funding received", value: totals.inflow, Icon: ArrowDownCircle },
-            { label: "Paid to vendors", value: totals.vendorOut, Icon: ArrowUpCircle },
-            { label: "Statutory charges", value: totals.statutoryOut, Icon: Landmark },
-            { label: "Funds in hand", value: totals.balance, Icon: Wallet },
-          ].map(({ label, value, Icon }) => (
-            <div key={label} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            {
+              label: "Owner funding received",
+              value: totals.inflow,
+              Icon: ArrowDownCircle,
+              to: "/capital-ledger" as const,
+              note: "Open the capital ledger",
+            },
+            {
+              label: "Paid to vendors",
+              value: totals.vendorOut,
+              Icon: ArrowUpCircle,
+              to: "/bills-payments" as const,
+              note: "Open bills & payments",
+            },
+            {
+              label: "Statutory charges",
+              value: totals.statutoryOut,
+              Icon: Landmark,
+              to: "/common-expenses" as const,
+              note: "Open common & statutory expenses",
+            },
+            {
+              label: "Funds in hand",
+              value: totals.balance,
+              Icon: Wallet,
+              to: "/cost-dashboard" as const,
+              note: "Open the cost dashboard",
+            },
+          ].map(({ label, value, Icon, to, note }) => (
+            <Link
+              key={label}
+              to={to}
+              className="rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary hover:bg-muted/50"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {label}
@@ -342,9 +370,11 @@ function Page() {
                 <Icon className="h-5 w-5 text-primary" />
               </div>
               <p className="mt-3 text-2xl font-bold text-foreground">{inr(value)}</p>
-            </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">{note}</p>
+            </Link>
           ))}
         </div>
+
 
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="text-lg font-bold text-foreground">Upload financial documents</h2>
