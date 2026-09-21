@@ -141,7 +141,9 @@ function Page() {
       const { data, error } = await supabase
         .from("owner_decisions")
         .select("id,request_id,owner_name,owner_role,decision,comment,decided_at")
-        .eq("project_id", activeId);
+        .eq("project_id", activeId)
+        .order("owner_name", { ascending: true });
+
       if (error) throw error;
       return (data ?? []) as Decision[];
     },
