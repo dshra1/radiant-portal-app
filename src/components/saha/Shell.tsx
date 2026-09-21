@@ -134,9 +134,19 @@ export function Shell({
   );
   const [open, setOpen] = useState<Record<string, boolean>>({ [activeGroup]: true });
 
+  /** Group the user last pressed in the sidebar; its items show in the top bar. */
+  const [pickedGroup, setPickedGroup] = useState<string | null>(null);
+
   useEffect(() => {
     setOpen((prev) => ({ ...prev, [activeGroup]: true }));
+    // Follow navigation: once the user lands on a page, its group owns the top bar.
+    setPickedGroup(null);
   }, [activeGroup]);
+
+  const topGroup = useMemo(() => {
+    const id = pickedGroup ?? activeGroup;
+    return groups.find((g) => g.id === id) ?? groups.find((g) => g.id === activeGroup) ?? groups[0];
+  }, [groups, pickedGroup, activeGroup]);
 
   const { data: projects = [] } = useQuery({
     queryKey: ["site_projects", "navigation-summary"],
