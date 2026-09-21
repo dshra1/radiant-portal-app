@@ -1,14 +1,41 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Shell } from "@/components/saha/Shell";
+import { Section, StatusBadge } from "@/components/saha/ui";
+import { supabase } from "@/integrations/supabase/client";
+import { useSessionUser } from "@/lib/access";
 import { useActiveProject } from "@/hooks/useActiveProject";
+import { inr, inrCompact } from "@/data/saha";
+import { STATUS_LABEL, lineTotals, type PoItem, type PoRecord } from "@/lib/po";
+import {
+  ShoppingCart,
+  FileText,
+  CheckCircle2,
+  IndianRupee,
+  Store,
+  ScanSearch,
+  BarChart3,
+  HardHat,
+  ArrowRight,
+  Plus,
+} from "lucide-react";
 
 export const Route = createFileRoute("/purchasing-center")({
   head: () => ({
     meta: [
       { title: "Purchasing & Vendor Command Center | Saha OS" },
-      { name: "description", content: "Purchase order pipeline, material document OCR, price database and master vendor directory in one procurement command center." },
+      {
+        name: "description",
+        content:
+          "Live purchase order pipeline, committed spend, vendor directory and procurement tools for your project.",
+      },
       { property: "og:title", content: "Purchasing & Vendor Command Center | Saha OS" },
-      { property: "og:description", content: "Purchase order pipeline, material document OCR, price database and master vendor directory in one procurement command center." },
+      {
+        property: "og:description",
+        content:
+          "Live purchase order pipeline, committed spend, vendor directory and procurement tools for your project.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -16,36 +43,223 @@ export const Route = createFileRoute("/purchasing-center")({
   component: Page,
 });
 
+const cardCls =
+  "group relative overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md";
+
 function Page() {
+  const user = useSessionUser();
   const project = useActiveProject();
+
+  const { data: orders } = useQuery({
+    queryKey: ["purchase_orders", "purchasing-center", project.id],
+    enabled: Boolean(user?.id) && Boolean(project.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .select("*")
+        .eq("project_id", project.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as PoRecord[];
+    },
+  });
+
+  const { data: items } = useQuery({
+    queryKey: ["purchase_order_items", "purchasing-center", project.id, (orders ?? []).length],
+    enabled: Boolean(orders?.length),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("purchase_order_items")
+        .select("*")
+        .in("po_id", (orders ?? []).map((o) => o.id));
+      if (error) throw error;
+      return (data ?? []) as (PoItem & { po_id: string })[];
+    },
+  });
+
+  const { data: vendors } = useQuery({
+    queryKey: ["vendors", "purchasing-center"],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("vendors").select("id, name, category");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const valueByPo = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const it of items ?? []) {
+      map.set(it.po_id, (map.get(it.po_id) ?? 0) + lineTotals(it).total);
+    }
+    for (const o of orders ?? []) {
+      map.set(
+        o.id,
+        (map.get(o.id) ?? 0) + Number(o.freight_charges ?? 0) + Number(o.other_charges ?? 0),
+      );
+    }
+    return map;
+  }, [items, orders]);
+
+  const active = (orders ?? []).filter((o) => o.status === "pending" || o.status === "approved");
+  const drafts = (orders ?? []).filter((o) => o.status === "draft");
+  const approved = (orders ?? []).filter((o) => o.status === "approved");
+  const committed = approved.reduce((s, o) => s + (valueByPo.get(o.id) ?? 0), 0);
+  const recent = (orders ?? []).slice(0, 6);
+
   return (
-    <Shell title={"Purchasing & Vendor Command Center | Saha OS"}>
-      <div className="m3">
-        <main className="flex flex-col relative w-full px-gutter-normal pt-16 pb-24 bg-surface flex-grow"><div className="flex flex-col w-full text-on-surface">  <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-2xl"> <div className="flex flex-col"> <div className="flex items-center gap-space-xs mb-space-2xs"> <span className="text-label-sm font-label-sm text-primary uppercase tracking-wider">Enterprise Procurement & Supply</span> <span className="text-label-sm text-outline">•</span> <span className="text-label-sm font-label-sm text-on-surface-variant">PRJ-79687 • {project.name}</span> </div> <h2 className="font-display-lg text-display-lg text-on-surface">Purchasing & Vendor Command Center</h2> </div> <div className="flex items-center gap-space-sm flex-wrap"> <button className="bg-primary hover:bg-primary-container text-on-primary font-title-md px-space-base py-space-sm rounded-xl flex items-center gap-space-xs transition-all shadow-sm"> <span className="material-symbols-outlined text-[18px]">add_shopping_cart</span> <span>Create PO</span> </button> <button className="bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md px-space-base py-space-sm rounded-xl flex items-center gap-space-xs transition-all"> <span className="material-symbols-outlined text-[18px]">bolt</span> <span>Command Center</span> </button> <button className="bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md px-space-base py-space-sm rounded-xl flex items-center gap-space-xs transition-all"> <span className="material-symbols-outlined text-[18px]">table_view</span> <span>Import Excel</span> </button> <input className="hidden" id="excel-upload" type="file" /> </div> </div>  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-space-md mb-space-2xl">  <div className="bg-surface-container-lowest p-space-base rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all"> <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-primary/5 rounded-full pointer-events-none group-hover:scale-125 transition-transform" /> <div> <div className="text-label-sm font-label-sm text-on-surface-variant uppercase mb-space-2xs">Active Purchase Orders</div> <div className="font-tabular-metric text-tabular-metric text-on-surface">42 Units</div> </div> <div className="mt-space-md flex items-center gap-space-2xs"> <span className="inline-flex items-center px-space-2xs py-0.5 rounded text-[11px] font-medium bg-[#ECFDF5] text-[#059669]"> <span className="material-symbols-outlined text-[12px] mr-0.5">trending_up</span> +12% vs last mo
-        </span> </div> </div>  <div className="bg-surface-container-lowest p-space-base rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all"> <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-secondary/5 rounded-full pointer-events-none group-hover:scale-125 transition-transform" /> <div> <div className="text-label-sm font-label-sm text-on-surface-variant uppercase mb-space-2xs">Draft Orders</div> <div className="font-tabular-metric text-tabular-metric text-on-surface">08 POs</div> </div> <div className="mt-space-md flex items-center gap-space-2xs"> <span className="inline-flex items-center px-space-2xs py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface-variant">
-          Pending Verification
-        </span> </div> </div>  <div className="bg-surface-container-lowest p-space-base rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all"> <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-primary/5 rounded-full pointer-events-none group-hover:scale-125 transition-transform" /> <div> <div className="text-label-sm font-label-sm text-on-surface-variant uppercase mb-space-2xs">Approved POs</div> <div className="font-tabular-metric text-tabular-metric text-on-surface">128 Orders</div> </div> <div className="mt-space-md flex items-center gap-space-2xs"> <span className="inline-flex items-center px-space-2xs py-0.5 rounded text-[11px] font-medium bg-[#ECFDF5] text-[#059669]">
-          99.2% Fully Cleared
-        </span> </div> </div>  <div className="bg-surface-container-lowest p-space-base rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all"> <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-tertiary-fixed/30 rounded-full pointer-events-none group-hover:scale-125 transition-transform" /> <div> <div className="text-label-sm font-label-sm text-on-surface-variant uppercase mb-space-2xs">Committed Value</div> <div className="font-tabular-metric text-tabular-metric text-on-surface">₹4.82 Cr</div> </div> <div className="mt-space-md flex items-center gap-space-2xs"> <span className="inline-flex items-center px-space-2xs py-0.5 rounded text-[11px] font-medium bg-[#FEF2F2] text-[#DC2626]"> <span className="material-symbols-outlined text-[12px] mr-0.5">warning</span> 84% Budget Utilized
-        </span> </div> </div>  <div className="bg-surface-container-lowest p-space-base rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all sm:col-span-2 lg:col-span-1"> <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-primary/5 rounded-full pointer-events-none group-hover:scale-125 transition-transform" /> <div> <div className="text-label-sm font-label-sm text-on-surface-variant uppercase mb-space-2xs">Vendor Count & Ratings</div> <div className="font-tabular-metric text-tabular-metric text-on-surface">64 Active</div> </div> <div className="mt-space-md flex items-center justify-between text-body-sm text-on-surface-variant"> <span>On-Time: <strong className="text-on-surface">94%</strong></span> <span>Quality: <strong className="text-on-surface">4.8★</strong></span> </div> </div> </div>  <div className="flex border-b border-surface-container-high mb-space-xl overflow-x-auto"> <button className="px-space-xl py-space-sm font-title-md text-on-surface-variant hover:text-on-surface border-b-2 border-transparent whitespace-nowrap transition-colors flex items-center gap-space-xs" id="tab-purchasing"> <span className="material-symbols-outlined text-[18px]">shopping_bag</span> Purchasing Orders
-    </button> <button className="px-space-xl py-space-sm font-title-md text-on-surface-variant hover:text-on-surface border-b-2 border-transparent whitespace-nowrap transition-colors flex items-center gap-space-xs" id="tab-ocr"> <span className="material-symbols-outlined text-[18px]">document_scanner</span> Material Document OCR
-    </button> <button className="px-space-xl py-space-sm font-title-md text-on-surface-variant hover:text-on-surface border-b-2 border-transparent whitespace-nowrap transition-colors flex items-center gap-space-xs" id="tab-prices"> <span className="material-symbols-outlined text-[18px]">payments</span> Price Database
-    </button> <button className="px-space-xl py-space-sm font-title-md text-primary border-b-2 border-primary whitespace-nowrap transition-colors flex items-center gap-space-xs" id="tab-vendors"><span className="material-symbols-outlined text-[18px]">storefront</span> Master Vendor Directory</button> <button className="px-space-xl py-space-sm font-title-md text-on-surface-variant hover:text-on-surface border-b-2 border-transparent whitespace-nowrap transition-colors flex items-center gap-space-xs" id="tab-contractors"> <span className="material-symbols-outlined text-[18px]">engineering</span> Contractors & Labour
-    </button> </div>   <div className="space-y-space-xl hidden" id="content-purchasing">  <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col md:flex-row items-center justify-between gap-space-md"> <div className="relative w-full md:w-96"> <span className="absolute inset-y-0 left-0 flex items-center pl-space-md pointer-events-none text-on-surface-variant"> <span className="material-symbols-outlined text-[20px]">search</span> </span> <input className="w-full bg-surface-container-low pl-10 pr-space-md py-space-sm rounded-xl text-on-surface placeholder:text-on-surface-variant text-body-md outline-none focus:ring-2 focus:ring-primary/20 transition-all" id="po-search" placeholder="Search PO ID, vendor, category..." type="text" /> </div> <div className="flex items-center gap-space-sm w-full md:w-auto justify-end"> <select className="bg-surface-container-low px-space-md py-space-sm rounded-xl text-on-surface font-title-md outline-none" id="status-filter"><option value="">All Statuses</option><option value="Delivered">Delivered</option><option value="In Transit">In Transit</option><option value="Pending QA">Pending QA</option><option value="Draft">Draft</option></select> <select className="bg-surface-container-low px-space-md py-space-sm rounded-xl text-on-surface font-title-md outline-none" id="category-filter"><option value="">All Categories</option><option value="Steel & Rebar">Steel & Rebar</option><option value="Cement & Aggregates">Cement & Aggregates</option><option value="Electrical & MEP">Electrical & MEP</option><option value="Formwork & Shuttering">Formwork & Shuttering</option></select> </div> </div>  <div className="bg-surface-container-lowest rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] overflow-hidden"> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse" id="po-table"><thead><tr className="bg-surface-container-low text-on-surface-variant font-label-md text-label-md uppercase"><th className="p-space-md">PO ID</th><th className="p-space-md">Vendor Name</th><th className="p-space-md">Category</th><th className="p-space-md">Items & Spec</th><th className="p-space-md">Net Value (₹)</th><th className="p-space-md">Delivery Status</th><th className="p-space-md text-right">Actions</th></tr></thead><tbody className="divide-y divide-surface-container-high text-body-md text-on-surface"><tr className="hover:bg-surface-container-low/50 transition-colors" data-category="Steel & Rebar" data-search="po-8921 tata steels fe500d" data-status="In Transit"><td className="p-space-md font-tabular-metric-sm text-primary">PO-8921</td><td className="p-space-md font-title-md">Tata Steels Ltd</td><td className="p-space-md text-on-surface-variant">Steel & Rebar</td><td className="p-space-md">Fe500D TMT Bars (16mm) - 45 MT</td><td className="p-space-md font-tabular-metric-sm">₹28,45,000</td><td className="p-space-md"><span className="px-2 py-0.5 rounded text-[11px] font-medium bg-tertiary-fixed/30 text-tertiary-container">In Transit</span></td><td className="p-space-md text-right space-x-space-xs"> <button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface" title="Audit"> <span className="material-symbols-outlined text-[18px]">fact_check</span> </button> <button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface" title="View OCR"> <span className="material-symbols-outlined text-[18px]">document_scanner</span> </button> <button className="p-1.5 hover:bg-primary/10 rounded-lg text-primary" title="Approve"> <span className="material-symbols-outlined text-[18px]">check_circle</span> </button> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors" data-category="Cement & Aggregates" data-search="po-8922 ultratech cement" data-status="Delivered"><td className="p-space-md font-tabular-metric-sm text-primary">PO-8922</td><td className="p-space-md font-title-md">UltraTech Cement</td><td className="p-space-md text-on-surface-variant">Cement & Aggregates</td><td className="p-space-md">PPC Grade 53 Bags - 1,200 Units</td><td className="p-space-md font-tabular-metric-sm">₹4,80,000</td><td className="p-space-md"><span className="px-2 py-0.5 rounded text-[11px] font-medium bg-[#ECFDF5] text-[#059669]">Delivered</span></td><td className="p-space-md text-right space-x-space-xs"> <button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">fact_check</span></button> <button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">document_scanner</span></button> <button className="p-1.5 hover:bg-primary/10 rounded-lg text-primary"><span className="material-symbols-outlined text-[18px]">check_circle</span></button> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors" data-category="Electrical & MEP" data-search="po-8923 schneider electric cables" data-status="Pending QA"><td className="p-space-md font-tabular-metric-sm text-primary">PO-8923</td><td className="p-space-md font-title-md">Schneider Electric</td><td className="p-space-md text-on-surface-variant">Electrical & MEP</td><td className="p-space-md">Armored Copper Cables 4C x 95 sq.mm</td><td className="p-space-md font-tabular-metric-sm">₹14,20,000</td><td className="p-space-md"><span className="px-2 py-0.5 rounded text-[11px] font-medium bg-[#FEF3C7] text-[#D97706]">Pending QA</span></td><td className="p-space-md text-right space-x-space-xs"> <button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">fact_check</span></button> <button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">document_scanner</span></button> <button className="p-1.5 hover:bg-primary/10 rounded-lg text-primary"><span className="material-symbols-outlined text-[18px]">check_circle</span></button> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors" data-category="Formwork & Shuttering" data-search="po-8924 peri formwork" data-status="Draft"><td className="p-space-md font-tabular-metric-sm text-primary">PO-8924</td><td className="p-space-md font-title-md">PERI Formwork Systems</td><td className="p-space-md text-on-surface-variant">Formwork & Shuttering</td><td className="p-space-md">Modular Steel Panels & Props Set</td><td className="p-space-md font-tabular-metric-sm">₹35,60,000</td><td className="p-space-md"><span className="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface-variant">Draft</span></td><td className="p-space-md text-right space-x-space-xs"> <button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">fact_check</span></button> <button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[18px]">document_scanner</span></button> <button className="p-1.5 hover:bg-primary/10 rounded-lg text-primary"><span className="material-symbols-outlined text-[18px]">check_circle</span></button> </td></tr></tbody></table> </div> </div> </div>  <div className="space-y-space-xl hidden" id="content-ocr"> <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-xl">  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[360px]"> <div className="absolute inset-0 bg-cover bg-center opacity-15" data-alt="A scanned delivery challan document with item quantities, signatures, and company stamps on a dark textured engineering background." style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBPQfATv2YgD8UgHxMfN8ceXdMu8m_jvbnODWYRjsjgrZaZUbNxbuoNmoZD68CiEiNdLUY1-ukSjMJIla0uSNJJP2MHcQ3EO7a2rzlH-JBkOVd1nftE_eNRVgQJioAjUf8iuL_KBa3W014V6-8m9Vgn0Qdlii2yYnU4VDjkn9IStlt43cU8f6vgVyPnFFpySBKTSZRh4RwvHB5pillJhswWdcg4_90jvuDyn5lsVHPpirMVOlA2V0QE')"}} /> <div className="relative z-10 flex flex-col items-center"> <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-space-md"> <span className="material-symbols-outlined text-[32px]">document_scanner</span> </div> <h3 className="font-headline-lg text-on-surface mb-space-xs">Live OCR Extraction</h3> <p className="text-body-md text-on-surface-variant max-w-sm mb-space-lg">AI Vision successfully parsed delivery challan <strong className="text-on-surface">#CH-9921</strong> with 99.4% confidence match against PO-8921.</p> <button className="bg-primary hover:bg-primary-container text-on-primary font-title-md px-space-xl py-space-sm rounded-xl transition-all">
-            Scan New Challan
-          </button> </div> </div>  <div className="lg:col-span-2 bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-md"> <h3 className="font-headline-md text-on-surface">Extracted Field Verification</h3> <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-[#ECFDF5] text-[#059669]">Match Verified</span> </div> <div className="space-y-space-md"> <div className="grid grid-cols-2 gap-space-md bg-surface-container-low p-space-md rounded-xl"> <div> <span className="text-label-sm text-on-surface-variant uppercase">Vendor Detected</span> <p className="font-title-md text-on-surface">Tata Steels Ltd (Plant-4)</p> </div> <div> <span className="text-label-sm text-on-surface-variant uppercase">Challan Date</span> <p className="font-title-md text-on-surface">24 Oct 2023, 08:30 AM</p> </div> </div> <div className="border border-surface-container-high rounded-xl overflow-hidden"> <table className="w-full text-left text-body-md"><tbody><tr className="bg-surface-container-low text-on-surface-variant font-label-md text-label-md"><th className="p-space-sm">Item Description</th><th className="p-space-sm">Challan Qty</th><th className="p-space-sm">PO Qty</th><th className="p-space-sm">Variance</th></tr><tr className="border-t border-surface-container-high"><td className="p-space-sm">Fe500D TMT Bars (16mm)</td><td className="p-space-sm font-tabular-metric-sm">45 MT</td><td className="p-space-sm font-tabular-metric-sm">45 MT</td><td className="p-space-sm text-[#059669] font-medium">0.00 (Exact)</td></tr><tr className="border-t border-surface-container-high"><td className="p-space-sm">Binding Wire (Galvanized)</td><td className="p-space-sm font-tabular-metric-sm">1.2 MT</td><td className="p-space-sm font-tabular-metric-sm">1.2 MT</td><td className="p-space-sm text-[#059669] font-medium">0.00 (Exact)</td></tr></tbody></table> </div> </div> </div> <div className="flex items-center justify-end gap-space-sm mt-space-lg"> <button className="bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md px-space-base py-space-sm rounded-xl">Reject Challan</button> <button className="bg-primary hover:bg-primary-container text-on-primary font-title-md px-space-base py-space-sm rounded-xl">Auto-Match & Post GRN</button> </div> </div> </div> </div>  <div className="space-y-space-xl hidden" id="content-prices"> <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex items-center justify-between mb-space-lg"> <h3 className="font-headline-lg text-on-surface">Material Benchmark Price Intelligence</h3> <span className="text-body-sm text-on-surface-variant">Updated daily via commodity feeds</span> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-space-lg"> <div className="bg-surface-container-low p-space-md rounded-xl"> <div className="flex items-center justify-between mb-space-xs"> <span className="text-label-sm font-label-sm text-on-surface-variant uppercase">TMT Steel (Fe500D)</span> <span className="text-[#059669] text-[11px] font-medium bg-[#ECFDF5] px-2 py-0.5 rounded">▼ 1.4% this wk</span> </div> <div className="font-tabular-metric text-tabular-metric text-on-surface">₹58,400 <span className="text-body-sm font-normal text-on-surface-variant">/ MT</span></div> <p className="text-body-sm text-on-surface-variant mt-space-xs">Prev: ₹59,250 | Market Benchmark: ₹59,000</p> </div> <div className="bg-surface-container-low p-space-md rounded-xl"> <div className="flex items-center justify-between mb-space-xs"> <span className="text-label-sm font-label-sm text-on-surface-variant uppercase">OPC 53 Grade Cement</span> <span className="text-[#DC2626] text-[11px] font-medium bg-[#FEF2F2] px-2 py-0.5 rounded">▲ 2.1% this wk</span> </div> <div className="font-tabular-metric text-tabular-metric text-on-surface">₹385 <span className="text-body-sm font-normal text-on-surface-variant">/ Bag</span></div> <p className="text-body-sm text-on-surface-variant mt-space-xs">Prev: ₹377 | Market Benchmark: ₹380</p> </div> <div className="bg-surface-container-low p-space-md rounded-xl"> <div className="flex items-center justify-between mb-space-xs"> <span className="text-label-sm font-label-sm text-on-surface-variant uppercase">River Sand (Zone II)</span> <span className="text-[#059669] text-[11px] font-medium bg-[#ECFDF5] px-2 py-0.5 rounded">Stable</span> </div> <div className="font-tabular-metric text-tabular-metric text-on-surface">₹65 <span className="text-body-sm font-normal text-on-surface-variant">/ Cu.Ft</span></div> <p className="text-body-sm text-on-surface-variant mt-space-xs">Prev: ₹65 | Market Benchmark: ₹68</p> </div> </div> </div> </div>  <div className="space-y-space-xl" id="content-vendors"><div className="space-y-space-xl"><div className="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] flex flex-col md:flex-row items-center justify-between gap-space-md"><div className="relative w-full md:w-96"><span className="absolute inset-y-0 left-0 flex items-center pl-space-md pointer-events-none text-on-surface-variant"><span className="material-symbols-outlined text-[20px]">search</span></span><input className="w-full bg-surface-container-low pl-10 pr-space-md py-space-sm rounded-xl text-on-surface placeholder:text-on-surface-variant text-body-md outline-none focus:ring-2 focus:ring-primary/20 transition-all" id="vendor-search" placeholder="Search vendor, company, category, contact or GSTIN..." type="text" /></div><div className="flex items-center gap-space-sm w-full md:w-auto justify-end flex-wrap"><select className="bg-surface-container-low px-space-md py-space-sm rounded-xl text-on-surface font-title-md outline-none" id="vendor-category-filter"><option value="">All Categories</option><option value="Steel & Rebar">Steel & Rebar</option><option value="Cement & Aggregates">Cement & Aggregates</option><option value="Electrical & MEP">Electrical & MEP</option><option value="Sanitary & CP">Sanitary & CP</option><option value="Formwork">Formwork</option></select><select className="bg-surface-container-low px-space-md py-space-sm rounded-xl text-on-surface font-title-md outline-none" id="vendor-status-filter"><option value="">All Statuses</option><option value="Active">Active</option><option value="Pending">Pending</option><option value="Blacklisted">Blacklisted</option></select><button className="bg-primary hover:bg-primary-container text-on-primary font-title-md px-space-base py-space-sm rounded-xl flex items-center gap-space-xs transition-all shadow-sm"><span className="material-symbols-outlined text-[18px]">add</span><span>Add Vendor</span></button></div></div><div className="bg-surface-container-lowest rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)] overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-left border-collapse"><thead><tr className="bg-surface-container-low text-on-surface-variant font-label-md text-label-md uppercase"><th className="p-space-md">Vendor Name & Legal Entity</th><th className="p-space-md">Category</th><th className="p-space-md">Primary Contact</th><th className="p-space-md">GSTIN</th><th className="p-space-md">City</th><th className="p-space-md">Lead Time</th><th className="p-space-md">On-Time</th><th className="p-space-md">Quality</th><th className="p-space-md">Terms</th><th className="p-space-md text-right">Actions</th></tr></thead><tbody className="divide-y divide-surface-container-high text-body-md text-on-surface"><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="p-space-md"><div className="font-title-md text-on-surface">Tata Steels Ltd</div><div className="text-body-sm text-on-surface-variant">Tata Steel Ltd Corp</div></td><td className="p-space-md text-on-surface-variant">Steel & Rebar</td><td className="p-space-md"><div className="font-title-md text-on-surface">Vikram Singh</div><div className="text-body-sm text-on-surface-variant">+91 98210 12345</div></td><td className="p-space-md font-tabular-metric-sm text-outline">27AAACT1234A1Z5</td><td className="p-space-md">Mumbai</td><td className="p-space-md font-tabular-metric-sm">3 Days</td><td className="p-space-md"><span className="px-2 py-0.5 rounded text-[11px] font-medium bg-[#ECFDF5] text-[#059669]">98%</span></td><td className="p-space-md"><span className="font-bold text-on-surface">4.9★</span></td><td className="p-space-md text-body-sm">30 Days Credit</td><td className="p-space-md text-right space-x-space-xs"><button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface" title="View Orders"><span className="material-symbols-outlined text-[18px]">visibility</span></button><button className="p-1.5 hover:bg-primary/10 rounded-lg text-primary" title="Edit Vendor"><span className="material-symbols-outlined text-[18px]">edit</span></button></td></tr><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="p-space-md"><div className="font-title-md text-on-surface">UltraTech Cement</div><div className="text-body-sm text-on-surface-variant">UltraTech Cement Ltd</div></td><td className="p-space-md text-on-surface-variant">Cement & Aggregates</td><td className="p-space-md"><div className="font-title-md text-on-surface">Ramesh Kumar</div><div className="text-body-sm text-on-surface-variant">+91 98220 56789</div></td><td className="p-space-md font-tabular-metric-sm text-outline">27AABCU5678B1Z2</td><td className="p-space-md">Pune</td><td className="p-space-md font-tabular-metric-sm">2 Days</td><td className="p-space-md"><span className="px-2 py-0.5 rounded text-[11px] font-medium bg-[#ECFDF5] text-[#059669]">96%</span></td><td className="p-space-md"><span className="font-bold text-on-surface">4.7★</span></td><td className="p-space-md text-body-sm">45 Days Credit</td><td className="p-space-md text-right space-x-space-xs"><button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface" title="View Orders"><span className="material-symbols-outlined text-[18px]">visibility</span></button><button className="p-1.5 hover:bg-primary/10 rounded-lg text-primary" title="Edit Vendor"><span className="material-symbols-outlined text-[18px]">edit</span></button></td></tr><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="p-space-md"><div className="font-title-md text-on-surface">Schneider Electric</div><div className="text-body-sm text-on-surface-variant">Schneider India Pvt Ltd</div></td><td className="p-space-md text-on-surface-variant">Electrical & MEP</td><td className="p-space-md"><div className="font-title-md text-on-surface">Amitabh Roy</div><div className="text-body-sm text-on-surface-variant">+91 97111 88990</div></td><td className="p-space-md font-tabular-metric-sm text-outline">29AABCS9876C1Z8</td><td className="p-space-md">Bengaluru</td><td className="p-space-md font-tabular-metric-sm">5 Days</td><td className="p-space-md"><span className="px-2 py-0.5 rounded text-[11px] font-medium bg-[#ECFDF5] text-[#059669]">94%</span></td><td className="p-space-md"><span className="font-bold text-on-surface">4.8★</span></td><td className="p-space-md text-body-sm">Advance (50%)</td><td className="p-space-md text-right space-x-space-xs"><button className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-on-surface" title="View Orders"><span className="material-symbols-outlined text-[18px]">visibility</span></button><button className="p-1.5 hover:bg-primary/10 rounded-lg text-primary" title="Edit Vendor"><span className="material-symbols-outlined text-[18px]">edit</span></button></td></tr></tbody></table></div></div></div></div>  <div className="space-y-space-xl" id="content-contractors"> <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-[0_1px_2px_0_rgba(15,23,42,0.04)]"> <div className="flex flex-col md:flex-row md:items-center justify-between mb-space-lg gap-space-md"> <div> <h3 className="font-headline-lg text-on-surface">Contractor & Labour Trade Assignments</h3> <p className="text-body-md text-on-surface-variant">Real-time headcounts, unit rates, and biometric gate synchronization.</p> </div> <div className="flex items-center gap-space-sm"> <span className="inline-flex items-center px-space-base py-space-xs rounded-xl bg-[#ECFDF5] text-[#059669] font-title-md text-body-md"> <span className="w-2 h-2 rounded-full bg-[#059669] mr-2 animate-pulse" /> Biometric Gate Active (342 Headcount)
-          </span> </div> </div>  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md">  <div className="bg-surface-container-low p-space-md rounded-xl flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-xs"> <h4 className="font-headline-sm text-on-surface">Electrician</h4> <span className="text-label-sm text-on-surface-variant">₹650 / day</span> </div> <p className="text-body-sm text-on-surface-variant mb-space-md">Lead Contractor: Apex Electricals</p> <div className="space-y-space-2xs mb-space-md"> <div className="flex justify-between text-body-sm"> <span>Assigned Headcount:</span> <strong className="text-on-surface">48 Active</strong> </div> <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full rounded-full" style={{"width": "85%"}} /> </div> </div> </div> <button className="w-full bg-primary hover:bg-primary-container text-on-primary font-title-md py-space-xs rounded-lg transition-all">
-            Assign Crews
-          </button> </div>  <div className="bg-surface-container-low p-space-md rounded-xl flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-xs"> <h4 className="font-headline-sm text-on-surface">Shuttering Carpentry</h4> <span className="text-label-sm text-on-surface-variant">₹700 / day</span> </div> <p className="text-body-sm text-on-surface-variant mb-space-md">Lead Contractor: Vajra Formworks</p> <div className="space-y-space-2xs mb-space-md"> <div className="flex justify-between text-body-sm"> <span>Assigned Headcount:</span> <strong className="text-on-surface">95 Active</strong> </div> <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full rounded-full" style={{"width": "92%"}} /> </div> </div> </div> <button className="w-full bg-primary hover:bg-primary-container text-on-primary font-title-md py-space-xs rounded-lg transition-all">
-            Assign Crews
-          </button> </div>  <div className="bg-surface-container-low p-space-md rounded-xl flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-xs"> <h4 className="font-headline-sm text-on-surface">Mason / Mestri</h4> <span className="text-label-sm text-on-surface-variant">₹750 / day</span> </div> <p className="text-body-sm text-on-surface-variant mb-space-md">Lead Contractor: Sri Sai Labour Works</p> <div className="space-y-space-2xs mb-space-md"> <div className="flex justify-between text-body-sm"> <span>Assigned Headcount:</span> <strong className="text-on-surface">110 Active</strong> </div> <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full rounded-full" style={{"width": "78%"}} /> </div> </div> </div> <button className="w-full bg-primary hover:bg-primary-container text-on-primary font-title-md py-space-xs rounded-lg transition-all">
-            Assign Crews
-          </button> </div>  <div className="bg-surface-container-low p-space-md rounded-xl flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-xs"> <h4 className="font-headline-sm text-on-surface">Plumber</h4> <span className="text-label-sm text-on-surface-variant">₹650 / day</span> </div> <p className="text-body-sm text-on-surface-variant mb-space-md">Lead Contractor: Delta Pipe Systems</p> <div className="space-y-space-2xs mb-space-md"> <div className="flex justify-between text-body-sm"> <span>Assigned Headcount:</span> <strong className="text-on-surface">38 Active</strong> </div> <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full rounded-full" style={{"width": "65%"}} /> </div> </div> </div> <button className="w-full bg-primary hover:bg-primary-container text-on-primary font-title-md py-space-xs rounded-lg transition-all">
-            Assign Crews
-          </button> </div>  <div className="bg-surface-container-low p-space-md rounded-xl flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-xs"> <h4 className="font-headline-sm text-on-surface">Waterproofing</h4> <span className="text-label-sm text-on-surface-variant">₹800 / day</span> </div> <p className="text-body-sm text-on-surface-variant mb-space-md">Lead Contractor: Pidilite Tech Services</p> <div className="space-y-space-2xs mb-space-md"> <div className="flex justify-between text-body-sm"> <span>Assigned Headcount:</span> <strong className="text-on-surface">22 Active</strong> </div> <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full rounded-full" style={{"width": "90%"}} /> </div> </div> </div> <button className="w-full bg-primary hover:bg-primary-container text-on-primary font-title-md py-space-xs rounded-lg transition-all">
-            Assign Crews
-          </button> </div> </div> </div> </div>  <div className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-space-md" id="modal-container"> <div className="bg-surface-container-lowest w-full max-w-lg p-space-xl rounded-xl shadow-2xl relative animate-in fade-in zoom-in-95 duration-200" id="modal-content"> <div className="flex items-center justify-between mb-space-lg"> <h3 className="font-headline-lg text-on-surface" id="modal-title">Modal Title</h3> <button className="p-1 rounded-lg hover:bg-surface-container text-on-surface-variant"> <span className="material-symbols-outlined text-[20px]">close</span> </button> </div> <div className="space-y-space-md text-body-md text-on-surface-variant" id="modal-body">  </div> <div className="mt-space-xl flex justify-end gap-space-sm"> <button className="bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md px-space-base py-space-sm rounded-xl">Cancel</button> <button className="bg-primary hover:bg-primary-container text-on-primary font-title-md px-space-base py-space-sm rounded-xl">Confirm Action</button> </div> </div> </div>   </div></main>
+    <Shell
+      title="Purchasing & Vendor Command Center"
+      subtitle={`Live purchase orders and vendors — ${project.name}`}
+      actions={
+        <Link
+          to="/po-create"
+          className="inline-flex items-center gap-2 rounded bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+        >
+          <Plus className="size-4" /> Create PO
+        </Link>
+      }
+    >
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <Link to="/procurement" search={{ status: undefined }} className={cardCls}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="label-caps text-muted-foreground">Active purchase orders</p>
+              <p className="mt-1 font-display text-3xl font-bold">{active.length}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Pending + approved, open on site</p>
+            </div>
+            <ShoppingCart className="size-5 text-primary" />
+          </div>
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+            View list <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
+
+        <Link to="/procurement" search={{ status: "draft" }} className={cardCls}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="label-caps text-muted-foreground">Draft orders</p>
+              <p className="mt-1 font-display text-3xl font-bold">{drafts.length}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Not yet submitted for approval</p>
+            </div>
+            <FileText className="size-5 text-muted-foreground" />
+          </div>
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+            Complete drafts <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
+
+        <Link to="/procurement" search={{ status: "approved" }} className={cardCls}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="label-caps text-muted-foreground">Approved POs</p>
+              <p className="mt-1 font-display text-3xl font-bold">{approved.length}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Cleared by PM, ready to execute</p>
+            </div>
+            <CheckCircle2 className="size-5 text-emerald-600" />
+          </div>
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+            View approved <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
+
+        <Link to="/procurement" search={{ status: "approved" }} className={cardCls}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="label-caps text-muted-foreground">Committed value</p>
+              <p className="mt-1 font-display text-3xl font-bold">{inrCompact(committed)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Total of approved purchase orders</p>
+            </div>
+            <IndianRupee className="size-5 text-amber-600" />
+          </div>
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+            Spend by vendor <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
+
+        <Link to="/vendor-directory" className={cardCls}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="label-caps text-muted-foreground">Vendors</p>
+              <p className="mt-1 font-display text-3xl font-bold">{(vendors ?? []).length}</p>
+              <p className="mt-1 text-xs text-muted-foreground">In your master directory</p>
+            </div>
+            <Store className="size-5 text-primary" />
+          </div>
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+            Open directory <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
       </div>
+
+      <Section title="Recent purchase orders" className="mt-4" action={
+        <Link to="/procurement" search={{ status: undefined }} className="text-xs font-semibold text-primary">
+          View all
+        </Link>
+      }>
+        {recent.length === 0 ? (
+          <p className="p-4 text-sm text-muted-foreground">
+            No purchase orders yet for {project.name}. Use “Create PO” to raise the first one.
+          </p>
+        ) : (
+          <div className="divide-y divide-border">
+            {recent.map((o) => (
+              <Link
+                key={o.id}
+                to="/purchase-orders"
+                search={{ po: o.po_number }}
+                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 hover:bg-secondary/40"
+              >
+                <div>
+                  <p className="font-semibold tnum">{o.po_number}</p>
+                  <p className="text-xs text-muted-foreground">{o.vendor_name || "Vendor not set"}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold tnum">{inr(valueByPo.get(o.id) ?? 0)}</span>
+                  <StatusBadge
+                    tone={
+                      o.status === "approved"
+                        ? "emerald"
+                        : o.status === "pending"
+                          ? "amber"
+                          : o.status === "rejected"
+                            ? "red"
+                            : "slate"
+                    }
+                  >
+                    {STATUS_LABEL[o.status]}
+                  </StatusBadge>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section title="Procurement tools" className="mt-4">
+        <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link to="/price-ocr" className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40">
+            <ScanSearch className="size-5 text-primary" />
+            <p className="mt-2 text-sm font-semibold">Price OCR</p>
+            <p className="text-xs text-muted-foreground">Scan proforma invoices into the price database</p>
+          </Link>
+          <Link to="/price-intelligence" className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40">
+            <BarChart3 className="size-5 text-primary" />
+            <p className="mt-2 text-sm font-semibold">Price intelligence</p>
+            <p className="text-xs text-muted-foreground">Benchmark material rates and brand alternatives</p>
+          </Link>
+          <Link to="/vendor-directory" className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40">
+            <Store className="size-5 text-primary" />
+            <p className="mt-2 text-sm font-semibold">Vendor directory</p>
+            <p className="text-xs text-muted-foreground">Add, import and manage your vendor master list</p>
+          </Link>
+          <Link to="/contractors-labour" className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40">
+            <HardHat className="size-5 text-primary" />
+            <p className="mt-2 text-sm font-semibold">Contractors & labour</p>
+            <p className="text-xs text-muted-foreground">Labour contracts and trade-wise market rates</p>
+          </Link>
+        </div>
+      </Section>
     </Shell>
   );
 }
