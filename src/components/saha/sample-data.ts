@@ -5,7 +5,6 @@ export const SAMPLE_DATA_ROUTES: Record<string, string> = {
   "/qa": "QA gates, defect counts and inspection history",
   "/qa-inspection": "inspection checklists and pass/fail counts",
   "/pour-cards": "pour card schedule and approvals",
-  "/procurement": "procurement pipeline and vendor quotes",
   "/purchasing-center": "purchase requests and order values",
   "/price-intelligence": "mandi / market rate feeds",
   "/brand-benchmark": "brand comparison rates",
