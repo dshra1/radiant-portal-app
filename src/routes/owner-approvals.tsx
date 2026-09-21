@@ -420,6 +420,48 @@ function Page() {
               </select>
             </label>
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Send to
+              <select
+                value={form.audience}
+                onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal normal-case tracking-normal text-foreground"
+              >
+                <option value="all">All owners</option>
+                <option value="owner">One owner only (private)</option>
+              </select>
+            </label>
+            {form.audience === "owner" ? (
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Owner
+                <select
+                  value={form.target_owner_name}
+                  onChange={(e) => setForm((f) => ({ ...f, target_owner_name: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal normal-case tracking-normal text-foreground"
+                >
+                  <option value="">Choose owner…</option>
+                  {owners.map((o) => (
+                    <option key={String(o.name)} value={String(o.name)}>
+                      {o.name} {o.role ? `· ${o.role}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Flat / unit (optional)
+              <input
+                value={form.unit_label}
+                onChange={(e) => setForm((f) => ({ ...f, unit_label: e.target.value }))}
+                placeholder="e.g. Flat 402, A block"
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal normal-case tracking-normal text-foreground"
+              />
+            </label>
+            {form.audience === "owner" ? (
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                Private: only the PMC team and this owner can see this item and the reply.
+              </p>
+            ) : null}
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Reply needed by
               <input
                 type="date"
