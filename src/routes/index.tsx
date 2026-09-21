@@ -477,7 +477,7 @@ function Index() {
                   />
                 </div>
               </div>
-            </div>
+            </button>
           )}
 
           {/* Action Centre */}
