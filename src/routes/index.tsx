@@ -400,86 +400,94 @@ function Index() {
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-none gap-6 px-5 py-6 lg:grid-cols-12 lg:px-8">
-        {/* Left column: stats + action centre */}
-        <div className="flex flex-col gap-6 lg:col-span-8">
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard
-              label="Active Projects"
-              value={String(stats.totalProjects)}
-              hint={stats.totalProjects > 1 ? `${stats.totalProjects} running` : undefined}
-              tone="primary"
-              icon={Building2}
-            />
-            <StatCard
-              label="Active Budget"
-              value={inrCompact(stats.activeBudget)}
-              hint={stats.activeBudget > 0 ? `${Math.round((stats.activeSpend / (stats.activeBudget || 1)) * 100)}% spent` : undefined}
-              tone="success"
-              icon={TrendingUp}
-            />
-            <StatCard
-              label="Workforce on Site"
-              value={num(stats.activeStaff)}
-              hint={stats.activeStaff > 0 ? "Total staff" : undefined}
-              tone="info"
-              icon={Users}
-            />
-            <StatCard
-              label="Attention Items"
-              value={String(pendingCount + pendingPOs)}
-              hint={pendingPOs > 0 ? `${pendingPOs} PO pending` : undefined}
-              tone={pendingCount + pendingPOs > 0 ? "warning" : "success"}
-              icon={Bell}
-            />
+      <main className="mx-auto flex w-full max-w-none flex-col gap-6 px-5 py-6 lg:px-8">
+        {/* Projects — tap a card to open its dashboard */}
+        <section>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="display-title text-lg">Your projects</h2>
+              <p className="text-sm text-muted-foreground">
+                {projects.length === 0
+                  ? "No projects yet — add your first site."
+                  : "Tap a project to open its Command Dashboard."}
+              </p>
+            </div>
+            <Link
+              to="/projects"
+              className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary-hover"
+            >
+              <Plus className="size-3.5" /> New project
+            </Link>
           </div>
 
-          {/* Active project summary */}
-          {activeRow && (
-            <button
-              type="button"
-              onClick={() => {
-                if (activeRow?.id && activeRow.id !== activeProject.id) setActiveProject(activeRow.id);
-                void navigate({ to: "/dashboard" });
-              }}
-              title={`Open ${activeProject.name} dashboard`}
-              className="group block w-full cursor-pointer rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-card p-5 text-left transition-all hover:border-primary/40 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40"
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="label-caps rounded bg-primary-soft px-2 py-0.5 text-primary">{activeProject.health}</span>
-                    <span className="text-xs text-muted-foreground">{activeProject.type}</span>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {projects.map((p) => {
+              const budget = Number(p.target_budget ?? 0);
+              const spend = Number(p.spend ?? 0);
+              const pct = Math.min(100, budget ? (spend / budget) * 100 : 0);
+              const isActive = p.id === activeProject.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveProject(p.id);
+                    void navigate({ to: "/dashboard" });
+                  }}
+                  title={`Open ${p.name} dashboard`}
+                  className={cn(
+                    "group block w-full cursor-pointer rounded-2xl border bg-gradient-to-br from-primary/10 to-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40",
+                    isActive ? "border-primary/40" : "border-border",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="label-caps rounded bg-primary-soft px-2 py-0.5 text-primary">
+                          {p.health || "—"}
+                        </span>
+                        {isActive && (
+                          <span className="label-caps rounded bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="mt-2 display-title truncate text-xl">{p.name}</h3>
+                      <p className="truncate text-sm text-muted-foreground">{p.location || "—"}</p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground opacity-90 transition-opacity group-hover:opacity-100">
+                      Open <ChevronRight className="size-3.5" />
+                    </span>
                   </div>
-                  <h2 className="mt-2 display-title text-xl sm:text-2xl">{activeProject.name}</h2>
-                  <p className="text-sm text-muted-foreground">{activeProject.location}</p>
-                </div>
-                <span className="inline-flex shrink-0 items-center gap-1 self-start rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground opacity-90 transition-opacity group-hover:opacity-100 sm:self-center">
-                  Open dashboard <ChevronRight className="size-3.5" />
-                </span>
-                <div className="grid grid-cols-3 gap-3">
-                  <MiniMetric label="BOQ Items" value={String(boqCount)} />
-                  <MiniMetric label="Built-up" value={`${num(stats.activeBuiltUp)} sft`} />
-                  <MiniMetric label="POs Pending" value={String(pendingPOs)} />
-                </div>
-              </div>
-              <div className="mt-5">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-muted-foreground">Budget consumed</span>
-                  <span className="font-semibold">
-                    {inrCompact(stats.activeSpend)} / {inrCompact(stats.activeBudget)}
-                  </span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${Math.min(100, (stats.activeSpend / (stats.activeBudget || 1)) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            </button>
-          )}
+
+                  <div className="mt-4 grid grid-cols-3 gap-3">
+                    <MiniMetric label="Built-up" value={`${num(Number(p.total_built_up_sft ?? 0))} sft`} />
+                    <MiniMetric label="Staff" value={num(Number(p.total_staff ?? 0))} />
+                    <MiniMetric
+                      label={isActive ? "POs Pending" : "BOQ Items"}
+                      value={isActive ? String(pendingPOs) : String(boqCount && isActive ? boqCount : "—")}
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Budget consumed</span>
+                      <span className="font-semibold">
+                        {inrCompact(spend)} / {inrCompact(budget)}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <div className="flex flex-col gap-6">
+
 
           {/* Action Centre */}
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
