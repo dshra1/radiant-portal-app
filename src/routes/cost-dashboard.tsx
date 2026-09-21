@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { IndianRupee, PieChart, ShieldCheck, HardHat, Ruler, Landmark } from "lucide-react";
+import { IndianRupee, PieChart, ShieldCheck, HardHat, Ruler, Landmark, Wallet } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { LABOUR_SECTION } from "@/lib/boq.functions";
 import { useChangeRequests, num } from "@/lib/approvals";
+import { useSessionUser } from "@/lib/access";
+
 
 export const Route = createFileRoute("/cost-dashboard")({
   head: () => ({
@@ -39,11 +41,14 @@ type SavedScope = { feePct?: number; includedTrades?: string[]; mode?: string };
 
 function Page() {
   const [projectId, setProjectId] = useState("");
+  const user = useSessionUser();
 
   const projectsQuery = useQuery({
     queryKey: ["site_projects", "cost-dashboard"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
+
         .from("site_projects")
         .select("id,name,location,target_budget,total_built_up_sft,spend,pmc_scope")
         .order("created_at", { ascending: false });
@@ -96,6 +101,28 @@ function Page() {
     },
   });
   const statutory = (chargesQuery.data ?? []).reduce((s, c) => s + num(c.amount), 0);
+
+  const capitalQuery = useQuery({
+    queryKey: ["capital_entries", "cost-dashboard", activeId],
+    enabled: Boolean(activeId && user?.id),
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("capital_entries")
+        .select("amount,entry_type,status")
+        .eq("project_id", activeId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const ownerFunds = (capitalQuery.data ?? [])
+    .filter((e) => e.entry_type === "receipt")
+    .reduce((s, e) => s + num(e.amount), 0);
+  const openCalls = (capitalQuery.data ?? [])
+    .filter((e) => e.entry_type !== "receipt" && e.status !== "received")
+    .reduce((s, e) => s + num(e.amount), 0);
+
+
 
   const pending = useChangeRequests(activeId, "pending");
 
@@ -191,7 +218,15 @@ function Page() {
       icon: IndianRupee,
       tone: "border-primary/40 bg-primary/5",
     },
+    {
+      label: "Owner funds received",
+      value: crore(ownerFunds),
+      sub: openCalls > 0 ? `Open capital calls ${crore(openCalls)}` : "No open capital calls",
+      icon: Wallet,
+      tone: "border-emerald-600/40 bg-emerald-600/5",
+    },
   ];
+
 
   return (
     <Shell title="Cost Dashboard">

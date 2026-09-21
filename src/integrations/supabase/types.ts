@@ -381,6 +381,68 @@ export type Database = {
           },
         ]
       }
+      capital_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          entry_date: string | null
+          entry_type: string
+          id: string
+          milestone: string
+          mode: string
+          notes: string
+          owner_name: string
+          owner_role: string
+          project_id: string | null
+          reference: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string | null
+          entry_type?: string
+          id?: string
+          milestone?: string
+          mode?: string
+          notes?: string
+          owner_name?: string
+          owner_role?: string
+          project_id?: string | null
+          reference?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string | null
+          entry_type?: string
+          id?: string
+          milestone?: string
+          mode?: string
+          notes?: string
+          owner_name?: string
+          owner_role?: string
+          project_id?: string | null
+          reference?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capital_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string
