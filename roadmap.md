@@ -111,3 +111,4 @@
 - [ ] Landowners & Investment: verify all buttons
 - [ ] Common Expenses: verify
 - [x] Cost Dashboard: owner funds received + open calls tile added
+- [ ] Do not publish until user confirms; verify saving on Money & Owners entry pages
