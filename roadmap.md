@@ -123,3 +123,4 @@
 - [x] /procurement KPI tiles clickable — each filters the PO list below
 - [x] Tender Comparison rebuilt live: rfqs/rfq_items/rfq_bids tables, create RFQ with line items, record vendor quotes, auto L1/L2/L3 ranking, award (Admin/PM/Purchase), CSV export, PO link after award
 - [ ] Security linter: 5 pre-existing SECURITY DEFINER functions executable by authenticated (role helpers) — review/restrict later
+- [ ] Price Intelligence: audit page, remove static buttons, wire to real data/actions
