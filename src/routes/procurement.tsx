@@ -12,8 +12,8 @@ import { Download, Plus, Users } from "lucide-react";
 
 export const Route = createFileRoute("/procurement")({
   validateSearch: (search: Record<string, unknown>) => ({
-    status: (["draft", "pending", "approved", "rejected"].includes(String(search.status))
-      ? String(search.status)
+    status: (["draft", "pending", "approved", "rejected"].includes(String(search["status"]))
+      ? String(search["status"])
       : undefined) as PoStatus | undefined,
   }),
   head: () => ({
