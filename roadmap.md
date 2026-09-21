@@ -129,3 +129,4 @@
 - 2026-09-21: Rebuilt /price-intelligence live (price_quotes+price_quote_items vs boq_items auto-match, KPI tiles link to /price-ocr /vendor-directory /budget-fit, CSV export, quote register, no dead buttons).
 - 2026-09-21: Rebuilt /vendor-lifecycle live (vendors, approved PO value, stock items, pending bills; vendor-wise spend table; tool cards all link to live pages).
 - 2026-09-21: Rebuild /brand-benchmark live (user asked what it is + make it working like other pages).
+- 2026-09-21: DONE — /brand-benchmark live (brand_preferences vs boq_items vs price_quote_items; verdict badges, saving tile, CSV, links to brand-preferences/price-ocr/budget-fit). /vendor-lifecycle + /price-intelligence live; build OK, all pages 200.
