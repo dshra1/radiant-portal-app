@@ -346,6 +346,9 @@ function Page() {
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-3 py-2 rounded-lg border border-border bg-background text-sm capitalize">
             <option value="all">All statuses</option>
             {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            <option value="outstanding">outstanding balance</option>
+            <option value="retention">retention held</option>
+
           </select>
         </div>
 
