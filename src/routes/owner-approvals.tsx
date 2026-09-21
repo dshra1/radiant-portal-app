@@ -620,32 +620,29 @@ function Page() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-2">
-                              {d.decision === "pending" ? (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => decide.mutate({ id: d.id, decision: "approved" })}
-                                    className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white"
-                                  >
-                                    Approve
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => decide.mutate({ id: d.id, decision: "rejected" })}
-                                    className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive"
-                                  >
-                                    Reject
-                                  </button>
-                                </>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => decide.mutate({ id: d.id, decision: "approved" })}
-                                  className="rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-muted-foreground"
-                                >
-                                  Re-approve
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => decide.mutate({ id: d.id, decision: "approved" })}
+                                className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                                  d.decision === "approved"
+                                    ? "border border-border bg-background text-muted-foreground"
+                                    : "bg-emerald-600 text-white"
+                                }`}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => decide.mutate({ id: d.id, decision: "rejected" })}
+                                className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                                  d.decision === "rejected"
+                                    ? "border border-border bg-background text-muted-foreground"
+                                    : "border border-destructive/40 bg-destructive/10 text-destructive"
+                                }`}
+                              >
+                                Reject
+                              </button>
+
                             </div>
                           </td>
                         </tr>
