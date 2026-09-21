@@ -143,7 +143,7 @@ function Page() {
 
   const setStatus = useMutation({
     mutationFn: async (p: { id: string; status: string }) => {
-      const patch: Record<string, unknown> = { status: p.status };
+      const patch: Database["public"]["Tables"]["pour_cards"]["Update"] = { status: p.status };
       if (p.status === "approved") {
         patch["approved_by"] = user?.id ?? null;
         patch["approved_by_name"] = user?.email ?? "PMC";

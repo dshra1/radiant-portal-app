@@ -194,7 +194,7 @@ function Page() {
   });
 
   const patch = useMutation({
-    mutationFn: async (p: { id: string; values: Record<string, unknown> }) => {
+    mutationFn: async (p: { id: string; values: Database["public"]["Tables"]["site_stages"]["Update"] }) => {
       const { error } = await supabase.from("site_stages").update(p.values).eq("id", p.id);
       if (error) throw error;
     },

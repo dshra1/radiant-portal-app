@@ -103,7 +103,7 @@ function Page() {
         const path = `${project.id}/${Date.now()}-${safe}`;
         const { error: upErr } = await supabase.storage.from("site-media").upload(path, file, {
           upsert: false,
-          contentType: file.type || undefined,
+          contentType: file.type || "application/octet-stream",
         });
         if (upErr) throw upErr;
         const { error } = await supabase.from("project_media").insert({
