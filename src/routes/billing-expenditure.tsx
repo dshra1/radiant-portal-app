@@ -321,14 +321,14 @@ function Page() {
                 ))}
                 {!loading && filtered.length === 0 ? (
                   <tr>
-                    <td className="py-12 text-center text-muted-foreground" colSpan={8}>
+                    <td className="py-12 text-center text-muted-foreground" colSpan={9}>
                       No bills or statutory charges recorded for this project yet.
                     </td>
                   </tr>
                 ) : null}
                 {loading ? (
                   <tr>
-                    <td className="py-12 text-center text-muted-foreground" colSpan={8}>
+                    <td className="py-12 text-center text-muted-foreground" colSpan={9}>
                       Loading expenditure…
                     </td>
                   </tr>
