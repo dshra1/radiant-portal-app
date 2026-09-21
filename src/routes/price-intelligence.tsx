@@ -71,9 +71,9 @@ function Page() {
     queryKey: ["boq-rates", project.id],
     enabled,
     queryFn: async () => {
-      const { data, error } = await supabase.from("boq_items").select("id,description,brand,trade,unit,rate,quantity").eq("project_id", project.id!);
+      const { data, error } = await supabase.from("boq_items").select("id,description,brand,category,unit,rate,quantity").eq("project_id", project.id!);
       if (error) throw error;
-      return (data ?? []) as BoqItem[];
+      return (data ?? []).map((b) => ({ id: b.id, description: b.description, brand: b.brand, trade: b.category, unit: b.unit, rate: b.rate, quantity: b.quantity })) as BoqItem[];
     },
   });
 
