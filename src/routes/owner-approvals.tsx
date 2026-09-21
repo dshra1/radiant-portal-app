@@ -605,19 +605,16 @@ function Page() {
                             ) : null}
                           </td>
                           <td className="px-4 py-3">
-                            {d.decision === "pending" ? (
-                              <input
-                                value={comments[d.id] ?? ""}
-                                onChange={(e) =>
-                                  setComments((c) => ({ ...c, [d.id]: e.target.value }))
-                                }
-                                placeholder="Owner remark (optional)"
-                                className="w-full min-w-[160px] rounded-xl border border-border bg-background px-3 py-2 text-sm"
-                              />
-                            ) : (
-                              <span className="text-sm text-muted-foreground">{d.comment || "—"}</span>
-                            )}
+                            <input
+                              value={comments[d.id] ?? d.comment ?? ""}
+                              onChange={(e) =>
+                                setComments((c) => ({ ...c, [d.id]: e.target.value }))
+                              }
+                              placeholder="Owner remark (optional)"
+                              className="w-full min-w-[160px] rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                            />
                           </td>
+
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-2">
                               <button
