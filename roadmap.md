@@ -125,3 +125,6 @@
 - [ ] Security linter: 5 pre-existing SECURITY DEFINER functions executable by authenticated (role helpers) — review/restrict later
 - [ ] Price Intelligence: audit page, remove static buttons, wire to real data/actions
 - [ ] Vendor Lifecycle: currently static demo — rebuild live (vendors, PO flow, payments) per user question
+
+- 2026-09-21: Rebuilt /price-intelligence live (price_quotes+price_quote_items vs boq_items auto-match, KPI tiles link to /price-ocr /vendor-directory /budget-fit, CSV export, quote register, no dead buttons).
+- 2026-09-21: Rebuilt /vendor-lifecycle live (vendors, approved PO value, stock items, pending bills; vendor-wise spend table; tool cards all link to live pages).
