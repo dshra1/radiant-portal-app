@@ -107,7 +107,7 @@
 - OCR credit question answered in chat
 
 ## Money & Owners (full pass, 2026-09-21)
-- [ ] Capital Ledger: functional rebuild (owner entries save to capital_entries)
+- [x] Capital Ledger: functional rebuild (owner entries save to capital_entries)
 - [ ] Landowners & Investment: verify all buttons
 - [ ] Common Expenses: verify
-- [ ] Cost Dashboard: verify owner/statutory figures
+- [x] Cost Dashboard: owner funds received + open calls tile added
