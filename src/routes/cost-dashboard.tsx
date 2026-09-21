@@ -102,6 +102,28 @@ function Page() {
   });
   const statutory = (chargesQuery.data ?? []).reduce((s, c) => s + num(c.amount), 0);
 
+  const capitalQuery = useQuery({
+    queryKey: ["capital_entries", "cost-dashboard", activeId],
+    enabled: Boolean(activeId && user?.id),
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("capital_entries")
+        .select("amount,entry_type,status")
+        .eq("project_id", activeId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const ownerFunds = (capitalQuery.data ?? [])
+    .filter((e) => e.entry_type === "receipt")
+    .reduce((s, e) => s + num(e.amount), 0);
+  const openCalls = (capitalQuery.data ?? [])
+    .filter((e) => e.entry_type !== "receipt" && e.status !== "received")
+    .reduce((s, e) => s + num(e.amount), 0);
+
+
+
   const pending = useChangeRequests(activeId, "pending");
 
   const rows = boqQuery.data ?? [];
