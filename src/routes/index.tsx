@@ -19,6 +19,7 @@ import {
   Bell,
   MessagesSquare,
   ChevronDown,
+  ChevronRight,
   Plus,
   CloudCog,
   Sun,
