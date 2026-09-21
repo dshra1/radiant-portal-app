@@ -167,7 +167,7 @@ function Page() {
                     <td className="p-3 text-foreground">{inrCompact(v.billed)}</td>
                     <td className="p-3">{v.pending > 0 ? <StatusBadge tone="amber">{inrCompact(v.pending)}</StatusBadge> : <StatusBadge tone="emerald">Clear</StatusBadge>}</td>
                     <td className="p-3 text-right">
-                      <Link to="/procurement" className="text-xs font-medium text-primary">POs <ArrowRight className="inline h-3 w-3" /></Link>
+                      <Link to="/procurement" search={{}} className="text-xs font-medium text-primary">POs <ArrowRight className="inline h-3 w-3" /></Link>
                     </td>
                   </tr>
                 ))}
