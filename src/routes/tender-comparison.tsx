@@ -97,7 +97,7 @@ function Page() {
     queryKey: ["rfq-items", rfq?.id],
     enabled: Boolean(rfq?.id),
     queryFn: async () => {
-      const { data, error } = await db.from("rfq_items").select("*").eq("rfq_id", rfq.id).order("sort");
+      const { data, error } = await db.from("rfq_items").select("*").eq("rfq_id", rfq!.id).order("sort");
       if (error) throw error;
       return (data ?? []) as RfqItem[];
     },
@@ -106,7 +106,7 @@ function Page() {
     queryKey: ["rfq-bids", rfq?.id],
     enabled: Boolean(rfq?.id),
     queryFn: async () => {
-      const { data, error } = await db.from("rfq_bids").select("*").eq("rfq_id", rfq.id).order("created_at");
+      const { data, error } = await db.from("rfq_bids").select("*").eq("rfq_id", rfq!.id).order("created_at");
       if (error) throw error;
       return (data ?? []) as RfqBid[];
     },
