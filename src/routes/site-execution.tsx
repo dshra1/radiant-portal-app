@@ -6,6 +6,7 @@ import { Activity, Users, Layers, TrendingUp, Plus, FileDown } from "lucide-reac
 import { Shell } from "@/components/saha/Shell";
 import { StatusBadge } from "@/components/saha/ui";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
 

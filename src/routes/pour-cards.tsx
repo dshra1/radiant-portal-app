@@ -6,6 +6,7 @@ import { CheckCircle2, ClipboardCheck, Clock, Layers, Plus, FileDown } from "luc
 import { Shell } from "@/components/saha/Shell";
 import { StatusBadge } from "@/components/saha/ui";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
 
