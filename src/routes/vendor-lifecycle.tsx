@@ -7,7 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { inrCompact } from "@/data/saha";
-import { Building2, Package, ScanLine, Scale, Receipt, ShoppingCart, Plus, ArrowRight } from "lucide-react";
+import { lineTotals, type PoItem, type PoRecord } from "@/lib/po";
+import { Building2, ScanLine, Scale, Receipt, ShoppingCart, Plus, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/vendor-lifecycle")({
   head: () => ({
@@ -41,11 +42,29 @@ function Page() {
     queryKey: ["vl-pos", project.id],
     enabled,
     queryFn: async () => {
-      const { data, error } = await supabase.from("purchase_orders").select("id,vendor_name,total_value,status").eq("project_id", project.id!);
+      const { data, error } = await supabase.from("purchase_orders").select("*").eq("project_id", project.id!);
       if (error) throw error;
-      return (data ?? []) as { id: string; vendor_name: string; total_value: number; status: string }[];
+      return (data ?? []) as PoRecord[];
     },
   });
+  const poItemsQ = useQuery({
+    queryKey: ["vl-po-items", project.id, (posQ.data ?? []).length],
+    enabled: Boolean(posQ.data?.length),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("purchase_order_items").select("*").in("po_id", (posQ.data ?? []).map((o) => o.id));
+      if (error) throw error;
+      return (data ?? []) as (PoItem & { po_id: string })[];
+    },
+  });
+  const valueByPo = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const it of poItemsQ.data ?? []) map.set(it.po_id, (map.get(it.po_id) ?? 0) + lineTotals(it).total);
+    for (const o of posQ.data ?? []) {
+      const base = map.get(o.id) ?? 0;
+      map.set(o.id, base + Number(o.freight_charges ?? 0) + Number(o.other_charges ?? 0));
+    }
+    return map;
+  }, [poItemsQ.data, posQ.data]);
   const stockQ = useQuery({
     queryKey: ["vl-stock", project.id],
     enabled,
