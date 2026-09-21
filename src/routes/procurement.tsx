@@ -11,6 +11,11 @@ import { STATUS_LABEL, lineTotals, type PoItem, type PoRecord, type PoStatus } f
 import { Download, Plus, Users } from "lucide-react";
 
 export const Route = createFileRoute("/procurement")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    status: (["draft", "pending", "approved", "rejected"].includes(String(search.status))
+      ? String(search.status)
+      : undefined) as PoStatus | undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Procurement & Vendor Commitments | Saha OS" },
