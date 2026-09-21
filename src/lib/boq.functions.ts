@@ -212,7 +212,7 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
 
     for (const trades of batches) {
       const result = streamText({
-        model,
+        model: model as any,
         system,
         prompt: [
           `PROJECT BRIEF (JSON): ${JSON.stringify(brief)}`,
@@ -344,7 +344,7 @@ export const suggestBrandOptions = createServerFn({ method: "POST" })
     }));
 
     const result = streamText({
-      model: gateway(SAHA_MODEL),
+      model: gateway(SAHA_MODEL) as any,
       system: [
         "You are a procurement and value-engineering specialist for building construction in Hyderabad, India.",
         "For each BOQ line item given, propose 3-4 REAL alternative brands / makes available in the Indian market that can supply that item, spanning economy, standard and premium tiers.",
@@ -432,7 +432,7 @@ export const findProductImage = createServerFn({ method: "POST" })
     const gateway = createAiProvider(key);
 
     const result = streamText({
-      model: gateway(SAHA_MODEL),
+      model: gateway(SAHA_MODEL) as any,
       system: [
         "You locate product photographs for Indian construction and bathroom/electrical/finishing products.",
         "Given a product description, return ONLY a JSON array of 6 candidate DIRECT image URLs (ending in .jpg/.jpeg/.png/.webp) from manufacturer or authorised dealer/e-commerce websites.",
@@ -499,7 +499,7 @@ export const generateLabourRates = createServerFn({ method: "POST" })
     const gateway = createAiProvider(key);
 
     const result = streamText({
-      model: gateway(SAHA_MODEL),
+      model: gateway(SAHA_MODEL) as any,
       system: [
         "You are a senior site contracts manager in Hyderabad (Telangana), India, quoting LABOUR-ONLY contract rates (material supplied by the owner) for a building project.",
         "Return ONLY a JSON array, no prose or markdown. Each element:",
