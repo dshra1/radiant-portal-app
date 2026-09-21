@@ -6,6 +6,7 @@ import { Activity, Users, Layers, TrendingUp, Plus, FileDown } from "lucide-reac
 import { Shell } from "@/components/saha/Shell";
 import { StatusBadge } from "@/components/saha/ui";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
 
@@ -194,7 +195,7 @@ function Page() {
   });
 
   const patch = useMutation({
-    mutationFn: async (p: { id: string; values: Record<string, unknown> }) => {
+    mutationFn: async (p: { id: string; values: Database["public"]["Tables"]["site_stages"]["Update"] }) => {
       const { error } = await supabase.from("site_stages").update(p.values).eq("id", p.id);
       if (error) throw error;
     },

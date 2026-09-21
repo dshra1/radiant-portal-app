@@ -6,6 +6,7 @@ import { CheckCircle2, ClipboardCheck, Clock, Layers, Plus, FileDown } from "luc
 import { Shell } from "@/components/saha/Shell";
 import { StatusBadge } from "@/components/saha/ui";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
 
@@ -143,7 +144,7 @@ function Page() {
 
   const setStatus = useMutation({
     mutationFn: async (p: { id: string; status: string }) => {
-      const patch: Record<string, unknown> = { status: p.status };
+      const patch: Database["public"]["Tables"]["pour_cards"]["Update"] = { status: p.status };
       if (p.status === "approved") {
         patch["approved_by"] = user?.id ?? null;
         patch["approved_by_name"] = user?.email ?? "PMC";
