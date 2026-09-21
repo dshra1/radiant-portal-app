@@ -454,6 +454,9 @@ function Index() {
                   <h2 className="mt-2 display-title text-xl sm:text-2xl">{activeProject.name}</h2>
                   <p className="text-sm text-muted-foreground">{activeProject.location}</p>
                 </div>
+                <span className="inline-flex shrink-0 items-center gap-1 self-start rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground opacity-90 transition-opacity group-hover:opacity-100 sm:self-center">
+                  Open dashboard <ChevronRight className="size-3.5" />
+                </span>
                 <div className="grid grid-cols-3 gap-3">
                   <MiniMetric label="BOQ Items" value={String(boqCount)} />
                   <MiniMetric label="Built-up" value={`${num(stats.activeBuiltUp)} sft`} />
