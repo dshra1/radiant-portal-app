@@ -115,9 +115,9 @@ function Page() {
     queryKey: ["vendors-list"],
     enabled: Boolean(user?.id),
     queryFn: async () => {
-      const { data, error } = await supabase.from("vendors").select("name").order("name").limit(200);
+      const { data, error } = await supabase.from("vendors").select("vendor_name").order("vendor_name").limit(200);
       if (error) throw error;
-      return (data ?? []) as { name: string }[];
+      return (data ?? []).map((v) => ({ name: v.vendor_name }));
     },
   });
 
@@ -130,7 +130,7 @@ function Page() {
   );
   const l1 = ranked[0];
   const l3 = ranked[ranked.length - 1];
-  const spread = ranked.length > 1 ? l3.total - l1.total : 0;
+  const spread = l1 && l3 && ranked.length > 1 ? l3.total - l1.total : 0;
   const savingsVsBudget = rfq && l1 ? Number(rfq.budget_estimate || 0) - l1.total : 0;
   const lowestRatePerItem = useMemo(() => {
     const m: Record<string, number> = {};
