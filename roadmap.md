@@ -119,3 +119,5 @@
 - [x] Financial Ingestion: real cash ledger (owner funding, vendor payments, statutory charges) + working document uploads to private storage, CSV export
 
 - [x] Procurement: live PO register (project-scoped values, status filters, vendor commitments, CSV)
+- [x] Purchasing Center rebuilt live: KPI cards link to filtered /procurement lists, vendor directory, tools; /procurement accepts ?status= filter
+- [x] /procurement KPI tiles clickable — each filters the PO list below

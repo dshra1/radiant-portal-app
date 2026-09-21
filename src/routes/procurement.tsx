@@ -177,15 +177,23 @@ function Procurement() {
       }
     >
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricTile label="Total PO value raised" value={inrCompact(total)} delta={`${(orders ?? []).length} orders`} />
-        <MetricTile label="Approved / committed" value={inrCompact(committed)} tone="good" delta="Payable on delivery" />
-        <MetricTile
-          label="Awaiting PM approval"
-          value={String(pendingCount)}
-          tone={pendingCount ? "warn" : "neutral"}
-          delta={inrCompact(pendingValue)}
-        />
-        <MetricTile label="Drafts to complete" value={String(draftCount)} delta="Not yet submitted" />
+        <button type="button" onClick={() => setFilter("all")} className="text-left transition-transform hover:-translate-y-0.5">
+          <MetricTile label="Total PO value raised" value={inrCompact(total)} delta={`${(orders ?? []).length} orders — tap to view`} />
+        </button>
+        <button type="button" onClick={() => setFilter("approved")} className="text-left transition-transform hover:-translate-y-0.5">
+          <MetricTile label="Approved / committed" value={inrCompact(committed)} tone="good" delta="Tap to view approved POs" />
+        </button>
+        <button type="button" onClick={() => setFilter("pending")} className="text-left transition-transform hover:-translate-y-0.5">
+          <MetricTile
+            label="Awaiting PM approval"
+            value={String(pendingCount)}
+            tone={pendingCount ? "warn" : "neutral"}
+            delta={`${inrCompact(pendingValue)} — tap to view`}
+          />
+        </button>
+        <button type="button" onClick={() => setFilter("draft")} className="text-left transition-transform hover:-translate-y-0.5">
+          <MetricTile label="Drafts to complete" value={String(draftCount)} delta="Tap to complete drafts" />
+        </button>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
