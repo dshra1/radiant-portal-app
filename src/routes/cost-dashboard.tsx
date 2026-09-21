@@ -41,11 +41,14 @@ type SavedScope = { feePct?: number; includedTrades?: string[]; mode?: string };
 
 function Page() {
   const [projectId, setProjectId] = useState("");
+  const user = useSessionUser();
 
   const projectsQuery = useQuery({
     queryKey: ["site_projects", "cost-dashboard"],
+    enabled: Boolean(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
+
         .from("site_projects")
         .select("id,name,location,target_budget,total_built_up_sft,spend,pmc_scope")
         .order("created_at", { ascending: false });
