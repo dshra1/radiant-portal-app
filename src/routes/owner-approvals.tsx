@@ -84,7 +84,11 @@ const emptyForm = () => ({
   category: "decision",
   priority: "normal",
   due_date: "",
+  audience: "all",
+  target_owner_name: "",
+  unit_label: "",
 });
+
 
 function Page() {
   const qc = useQueryClient();
