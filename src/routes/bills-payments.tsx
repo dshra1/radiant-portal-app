@@ -322,17 +322,24 @@ function Page() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { label: "Total payable", value: inr(totals.payable) },
-            { label: "Paid", value: inr(totals.paid) },
-            { label: "Outstanding", value: inr(totals.outstanding) },
-            { label: "Retention held", value: inr(totals.retention) },
+            { label: "Total payable", value: inr(totals.payable), key: "all", note: "Show all bills" },
+            { label: "Paid", value: inr(totals.paid), key: "paid", note: "Show paid bills" },
+            { label: "Outstanding", value: inr(totals.outstanding), key: "outstanding", note: "Show bills with balance" },
+            { label: "Retention held", value: inr(totals.retention), key: "retention", note: "Show bills with retention" },
           ].map((k) => (
-            <div key={k.label} className="rounded-xl border border-border bg-card p-4">
+            <button
+              key={k.label}
+              type="button"
+              onClick={() => setStatus(k.key)}
+              className={`text-left rounded-xl border bg-card p-4 transition hover:bg-muted ${status === k.key ? "border-primary ring-1 ring-primary" : "border-border"}`}
+            >
               <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{k.label}</p>
               <p className="text-2xl font-extrabold mt-1">{k.value}</p>
-            </div>
+              <p className="text-[11px] text-muted-foreground mt-1">{k.note}</p>
+            </button>
           ))}
         </div>
+
 
         <div className="flex flex-col md:flex-row gap-3">
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bill no, vendor, category…" className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm" />
