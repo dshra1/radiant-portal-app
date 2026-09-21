@@ -113,3 +113,7 @@
 - [x] Cost Dashboard: owner funds received + open calls tile added
 - [ ] Do not publish until user confirms; verify saving on Money & Owners entry pages
 - [x] Owner Approvals & Suggestions section (notes/files/decisions to owners, approve-reject trail)
+
+## Sep 21
+- [x] Accounts & Audit: Billing & Expenditure now shows entered statutory/permission charges + vendor bills live
+- [x] Financial Ingestion: real cash ledger (owner funding, vendor payments, statutory charges) + working document uploads to private storage, CSV export

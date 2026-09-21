@@ -1,13 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Upload,
+  FileDown,
+  Trash2,
+  ExternalLink,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Landmark,
+  Wallet,
+} from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveProject } from "@/hooks/useActiveProject";
+import { useAccess, useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/financial-ingestion")({
   head: () => ({
     meta: [
-      { title: "Multi-Source Financial Ingestion Hub | Saha OS" },
-      { name: "description", content: "GSTR-2B telemetry, AI transaction categorization and bank reconciliation for Saha OS finance." },
-      { property: "og:title", content: "Multi-Source Financial Ingestion Hub | Saha OS" },
-      { property: "og:description", content: "GSTR-2B telemetry, AI transaction categorization and bank reconciliation for Saha OS finance." },
+      { title: "Financial Ingestion — Statements & Cash Ledger | Saha OS" },
+      {
+        name: "description",
+        content:
+          "Upload bank statements, expense sheets and vouchers, and review the project's real cash ledger of owner funding, vendor payments and statutory charges.",
+      },
+      { property: "og:title", content: "Financial Ingestion — Saha OS" },
+      {
+        property: "og:description",
+        content:
+          "Upload financial documents and review real inflows, vendor payments and statutory charges for the project.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -15,28 +38,474 @@ export const Route = createFileRoute("/financial-ingestion")({
   component: Page,
 });
 
+const BUCKET = "financial-docs";
+
+function num(v: unknown): number {
+  const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+function inr(n: number): string {
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+}
+function fmtSize(bytes: number) {
+  if (!bytes) return "—";
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+function esc(v: string) {
+  return `"${String(v).replace(/"/g, '""')}"`;
+}
+
+const CHARGE_LABELS: Record<string, string> = {
+  permissions: "Permission / Approval charges",
+  lrs: "LRS charges",
+  electrical: "Electrical connection charges",
+  hmwssb: "HMWSSB water & sewerage charges",
+  architectural: "Architectural / consultant fees",
+  other: "Other common charge",
+};
+
+type Txn = {
+  id: string;
+  date: string;
+  direction: "in" | "out";
+  source: "Owner funding" | "Vendor payment" | "Statutory charge";
+  party: string;
+  detail: string;
+  amount: number;
+  mode: string;
+  reference: string;
+};
+
 function Page() {
+  const project = useActiveProject();
+  const user = useSessionUser();
+  const { access } = useAccess();
+  const canEdit = Boolean(
+    access?.isAdmin || access?.roles.some((r) => r === "pm" || r === "accounts"),
+  );
+  const qc = useQueryClient();
+  const enabled = Boolean(user?.id) && Boolean(project.id);
+
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [status, setStatus] = useState("");
+
+  const paymentsQuery = useQuery({
+    queryKey: ["bill_payments", "ingestion", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bill_payments")
+        .select("id,payment_date,amount,mode,reference,paid_from,remarks,bill_id")
+        .eq("project_id", project.id)
+        .order("payment_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const billsQuery = useQuery({
+    queryKey: ["bills", "ingestion", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bills")
+        .select("id,bill_number,vendor_name,category")
+        .eq("project_id", project.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const capitalQuery = useQuery({
+    queryKey: ["capital_entries", "ingestion", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("capital_entries")
+        .select("id,owner_name,owner_role,entry_type,amount,entry_date,mode,reference,status,notes")
+        .eq("project_id", project.id)
+        .order("entry_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const chargesQuery = useQuery({
+    queryKey: ["project_charges", "ingestion", project.id],
+    enabled,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_charges")
+        .select("id,category,description,authority,amount,charge_date,status,allocation")
+        .eq("project_id", project.id)
+        .order("charge_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const filesQuery = useQuery({
+    queryKey: [BUCKET, project.id],
+    enabled: Boolean(project.id),
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from(BUCKET)
+        .list(project.id, { limit: 200, sortBy: { column: "created_at", order: "desc" } });
+      if (error) throw error;
+      return (data ?? []).filter((f) => f.name !== ".emptyFolderPlaceholder");
+    },
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: async (list: FileList) => {
+      for (const file of Array.from(list)) {
+        const path = `${project.id}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
+        const { error } = await supabase.storage.from(BUCKET).upload(path, file);
+        if (error) throw error;
+      }
+      return list.length;
+    },
+    onSuccess: async (n) => {
+      setStatus(`${n} document${n > 1 ? "s" : ""} uploaded for ${project.name}.`);
+      await qc.invalidateQueries({ queryKey: [BUCKET, project.id] });
+    },
+    onError: (e: Error) => setStatus(`Upload failed: ${e.message}`),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const { error } = await supabase.storage.from(BUCKET).remove([`${project.id}/${name}`]);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setStatus("Document removed.");
+      await qc.invalidateQueries({ queryKey: [BUCKET, project.id] });
+    },
+    onError: (e: Error) => setStatus(`Delete failed: ${e.message}`),
+  });
+
+  const openFile = async (name: string) => {
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(`${project.id}/${name}`, 3600);
+    if (error || !data) {
+      setStatus(error?.message ?? "Could not open this document.");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noreferrer");
+  };
+
+  const txns = useMemo<Txn[]>(() => {
+    const billById = new Map((billsQuery.data ?? []).map((b) => [b.id, b]));
+    const out: Txn[] = [];
+    for (const p of paymentsQuery.data ?? []) {
+      const bill = billById.get(p.bill_id);
+      out.push({
+        id: `pay-${p.id}`,
+        date: String(p.payment_date ?? ""),
+        direction: "out",
+        source: "Vendor payment",
+        party: bill?.vendor_name || "Vendor",
+        detail: [bill?.bill_number ? `Bill ${bill.bill_number}` : "", bill?.category, p.remarks]
+          .filter(Boolean)
+          .join(" · "),
+        amount: num(p.amount),
+        mode: String(p.mode ?? ""),
+        reference: String(p.reference || p.paid_from || ""),
+      });
+    }
+    for (const c of capitalQuery.data ?? []) {
+      const isOut = String(c.entry_type) === "withdrawal" || String(c.entry_type) === "refund";
+      out.push({
+        id: `cap-${c.id}`,
+        date: String(c.entry_date ?? ""),
+        direction: isOut ? "out" : "in",
+        source: "Owner funding",
+        party: `${c.owner_name || "Owner"}${c.owner_role ? ` (${c.owner_role})` : ""}`,
+        detail: [String(c.entry_type ?? ""), String(c.status ?? ""), c.notes]
+          .filter(Boolean)
+          .join(" · "),
+        amount: num(c.amount),
+        mode: String(c.mode ?? ""),
+        reference: String(c.reference ?? ""),
+      });
+    }
+    for (const c of chargesQuery.data ?? []) {
+      out.push({
+        id: `chg-${c.id}`,
+        date: String(c.charge_date ?? ""),
+        direction: "out",
+        source: "Statutory charge",
+        party: c.authority || "Authority",
+        detail: [CHARGE_LABELS[String(c.category)] ?? String(c.category), c.description, String(c.status)]
+          .filter(Boolean)
+          .join(" · "),
+        amount: num(c.amount),
+        mode: String(c.allocation) === "per_owner" ? "owner-wise" : "common",
+        reference: "",
+      });
+    }
+    return out.sort((a, b) => b.date.localeCompare(a.date));
+  }, [paymentsQuery.data, billsQuery.data, capitalQuery.data, chargesQuery.data]);
+
+  const filtered = txns.filter((t) => {
+    if (filter === "in" && t.direction !== "in") return false;
+    if (filter === "out" && t.direction !== "out") return false;
+    if (filter !== "all" && filter !== "in" && filter !== "out" && t.source !== filter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return [t.party, t.detail, t.reference, t.mode, String(t.amount)].some((v) =>
+      String(v).toLowerCase().includes(q),
+    );
+  });
+
+  const totals = useMemo(() => {
+    let inflow = 0;
+    let vendorOut = 0;
+    let statutoryOut = 0;
+    for (const t of txns) {
+      if (t.direction === "in") inflow += t.amount;
+      else if (t.source === "Statutory charge") statutoryOut += t.amount;
+      else vendorOut += t.amount;
+    }
+    return { inflow, vendorOut, statutoryOut, balance: inflow - vendorOut - statutoryOut };
+  }, [txns]);
+
+  const exportCsv = () => {
+    if (filtered.length === 0) {
+      setStatus("Nothing to export for this filter yet.");
+      return;
+    }
+    const csv = [
+      ["Date", "Flow", "Source", "Party", "Details", "Amount", "Mode", "Reference"]
+        .map(esc)
+        .join(","),
+      ...filtered.map((t) =>
+        [
+          t.date || "—",
+          t.direction === "in" ? "Inflow" : "Outflow",
+          t.source,
+          t.party,
+          t.detail,
+          String(Math.round(t.amount)),
+          t.mode,
+          t.reference,
+        ]
+          .map(esc)
+          .join(","),
+      ),
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cash-ledger-${(project.name || "project").replace(/\s+/g, "-")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus(`Exported ${filtered.length} rows.`);
+  };
+
+  const loading =
+    paymentsQuery.isPending || capitalQuery.isPending || chargesQuery.isPending;
+  const files = filesQuery.data ?? [];
+
   return (
-    <Shell title={"Multi-Source Financial Ingestion Hub | Saha OS"}>
-      <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full gap-space-2xl">  <div className="grid grid-cols-1 md:grid-cols-4 gap-space-base"> <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm uppercase text-outline tracking-wider">Unreconciled Inflow</span> <span className="material-symbols-outlined text-tertiary">account_balance</span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">₹ 42,85,900</div> <div className="flex items-center gap-space-xs mt-space-2xs text-xs text-on-surface-variant"> <span className="text-error font-bold">14 txns</span> pending validation
-        </div> </div> </div> <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm uppercase text-outline tracking-wider">GST GSTR-2B Match</span> <span className="material-symbols-outlined text-primary">verified</span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">98.4%</div> <div className="flex items-center gap-space-xs mt-space-2xs text-xs text-primary font-medium"> <span className="material-symbols-outlined text-sm">trending_up</span> +1.2% this cycle
-        </div> </div> </div> <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm uppercase text-outline tracking-wider">Petty Cash Float</span> <span className="material-symbols-outlined text-secondary">payments</span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">₹ 1,45,200</div> <div className="flex items-center gap-space-xs mt-space-2xs text-xs text-on-surface-variant">
-          Replenishment due in <span className="font-bold text-on-surface">2 days</span> </div> </div> </div> <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-label-sm uppercase text-outline tracking-wider">Tally ERP Sync</span> <span className="material-symbols-outlined text-primary">sync</span> </div> <div className="mt-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">Synced Today</div> <div className="flex items-center gap-space-xs mt-space-2xs text-xs text-primary font-medium"> <span>Last push at 10:45 AM</span> </div> </div> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-xl">  <div className="lg:col-span-2 bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-base"> <div> <h2 className="font-headline-md text-headline-md text-on-surface">Multi-Source Financial Ingestion Hub</h2> <p className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs">Upload bank statements (PDF/CSV), consolidated expense sheets, or scanned petty cash vouchers.</p> </div> <span className="px-space-sm py-space-xs rounded bg-primary-container text-on-primary-container font-label-sm uppercase">AI Parser v4.2</span> </div> <div className="border-2 border-dashed border-outline-variant/60 rounded-xl p-space-2xl text-center hover:bg-surface-container-low transition-colors cursor-pointer relative group"> <input className="absolute inset-0 opacity-0 cursor-pointer" multiple={true} type="file" /> <div className="flex flex-col items-center"> <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-space-md group-hover:scale-110 transition-transform"> <span className="material-symbols-outlined text-2xl">cloud_upload</span> </div> <span className="font-title-md text-title-md text-on-surface">Drag & Drop financial documents here</span> <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs">Supports HDFC/ICICI Bank PDF, Excel (.xlsx), CSV, and JPEG vouchers up to 50MB</span> <div className="flex items-center gap-space-sm mt-space-lg"> <span className="px-space-sm py-space-xs rounded bg-surface-container text-on-surface font-label-sm">Bank Statements</span> <span className="px-space-sm py-space-xs rounded bg-surface-container text-on-surface font-label-sm">Expense Sheets</span> <span className="px-space-sm py-space-xs rounded bg-surface-container text-on-surface font-label-sm">Vouchers</span> </div> </div> </div> </div> <div className="flex items-center justify-between mt-space-xl pt-space-base border-t border-outline-variant/20"> <div className="flex items-center gap-space-sm"> <span className="material-symbols-outlined text-primary">auto_awesome</span> <span className="font-body-sm text-body-sm text-on-surface-variant">Auto-extracts GSTIN, UTR, line items & vendor codes via OCR.</span> </div> <button className="px-space-lg py-space-sm rounded bg-primary text-on-primary hover:bg-primary-container font-title-md shadow-sm transition-colors flex items-center gap-space-xs"> <span className="material-symbols-outlined text-sm">bolt</span> <span>Run AI Reconciliation</span> </button> </div> </div>  <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div> <h3 className="font-headline-sm text-headline-sm text-on-surface mb-space-xs">GSTR-2B Telemetry</h3> <p className="font-body-sm text-body-sm text-on-surface-variant">Real-time matching against portal filings</p> <div className="mt-space-lg space-y-space-base"> <div> <div className="flex justify-between font-label-md text-on-surface mb-space-2xs"> <span>Matched Invoices</span> <span className="text-primary font-bold">1,420 / 1,443</span> </div> <div className="h-2 w-full bg-surface-container rounded-full overflow-hidden"> <div className="h-full bg-primary rounded-full" style={{"width": "98.4%"}} /> </div> </div> <div> <div className="flex justify-between font-label-md text-on-surface mb-space-2xs"> <span>ITC Claimable</span> <span className="text-on-surface font-bold">₹ 14,82,500</span> </div> <div className="h-2 w-full bg-surface-container rounded-full overflow-hidden"> <div className="h-full bg-tertiary-container rounded-full" style={{"width": "85%"}} /> </div> </div> <div className="p-space-md rounded-lg bg-error-container/40 flex items-start gap-space-sm"> <span className="material-symbols-outlined text-error text-base mt-0.5">warning</span> <div> <div className="font-title-md text-error text-xs font-bold">23 Mismatched Entries</div> <div className="font-body-sm text-error/90 text-xs mt-space-2xs">Vendor GSTIN mismatch detected in Hyderabad Circle 4.</div> </div> </div> </div> </div> <button className="w-full mt-space-lg py-space-sm rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-center transition-colors">
-        Inspect Discrepancies
-      </button> </div> </div>  <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden"> <div className="p-space-xl border-b border-outline-variant/20 flex flex-col md:flex-row md:items-center justify-between gap-space-md"> <div> <h3 className="font-headline-md text-headline-md text-on-surface">AI Automated Transaction Categorization & Matching</h3> <p className="font-body-sm text-body-sm text-on-surface-variant">Cross-referenced against Purchase Orders, Vendor Ledgers, and GST records.</p> </div> <div className="flex items-center gap-space-sm"> <div className="relative"> <span className="material-symbols-outlined absolute left-space-sm top-2.5 text-on-surface-variant text-base">search</span> <input className="pl-9 pr-space-md py-space-xs rounded bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-1 focus:ring-primary w-64" placeholder="Filter UTR, vendor, amount..." type="text" /> </div> <select className="px-space-md py-space-xs rounded bg-surface-container-low text-on-surface text-sm focus:outline-none"><option>All Statuses</option><option>Auto-Matched</option><option>Pending Review</option><option>Discrepancy</option></select> </div> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="bg-surface-container-low text-outline font-label-sm uppercase tracking-wider"><th className="py-space-md px-space-lg font-semibold">Txn Date & UTR</th><th className="py-space-md px-space-lg font-semibold">Particulars / Vendor</th><th className="py-space-md px-space-lg font-semibold">Amount (₹)</th><th className="py-space-md px-space-lg font-semibold">AI Category</th><th className="py-space-md px-space-lg font-semibold">PO / GST Match</th><th className="py-space-md px-space-lg font-semibold text-right">Action</th></tr></thead><tbody className="divide-y divide-outline-variant/20 font-body-md text-on-surface"><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="py-space-md px-space-lg"> <div className="font-title-md text-on-surface">14 Oct 2023</div> <div className="font-body-sm text-outline font-mono text-xs">UTR# HDFC489210294</div> </td><td className="py-space-md px-space-lg"> <div className="font-title-md text-on-surface">Ultratech Cement Ltd</div> <div className="font-body-sm text-on-surface-variant text-xs">PPC Grade 53 Supply (Batch #4)</div> </td><td className="py-space-md px-space-lg font-tabular-metric-sm text-on-surface">₹ 4,50,000</td><td className="py-space-md px-space-lg"> <span className="px-space-sm py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">Raw Material / Cement</span> </td><td className="py-space-md px-space-lg"> <div className="flex items-center gap-space-xs text-primary font-medium text-xs"> <span className="material-symbols-outlined text-sm">check_circle</span> <span>PO-2023-882 (100% Match)</span> </div> <div className="text-xs text-outline font-mono">GSTIN: 36AABCU9603R1ZN</div> </td><td className="py-space-md px-space-lg text-right"> <button className="px-space-md py-space-2xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-title-md">Verified</button> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="py-space-md px-space-lg"> <div className="font-title-md text-on-surface">13 Oct 2023</div> <div className="font-body-sm text-outline font-mono text-xs">UTR# SBIN992810221</div> </td><td className="py-space-md px-space-lg"> <div className="font-title-md text-on-surface">Shreeji TMT Steels</div> <div className="font-body-sm text-on-surface-variant text-xs">Fe500D Rebars 16mm & 20mm</div> </td><td className="py-space-md px-space-lg font-tabular-metric-sm text-on-surface">₹ 12,80,400</td><td className="py-space-md px-space-lg"> <span className="px-space-sm py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">Steel / Reinforcement</span> </td><td className="py-space-md px-space-lg"> <div className="flex items-center gap-space-xs text-primary font-medium text-xs"> <span className="material-symbols-outlined text-sm">check_circle</span> <span>PO-2023-850 (100% Match)</span> </div> <div className="text-xs text-outline font-mono">GSTIN: 27AABCS1429B1Z8</div> </td><td className="py-space-md px-space-lg text-right"> <button className="px-space-md py-space-2xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-title-md">Verified</button> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors bg-error-container/10"><td className="py-space-md px-space-lg"> <div className="font-title-md text-on-surface">12 Oct 2023</div> <div className="font-body-sm text-outline font-mono text-xs">UTR# ICIC002918291</div> </td><td className="py-space-md px-space-lg"> <div className="font-title-md text-on-surface">Apex Earthmovers & Rentals</div> <div className="font-body-sm text-on-surface-variant text-xs">Excavator Rental (Hydrabed South Site)</div> </td><td className="py-space-md px-space-lg font-tabular-metric-sm text-on-surface">₹ 1,75,000</td><td className="py-space-md px-space-lg"> <span className="px-space-sm py-space-2xs rounded bg-tertiary-container text-on-tertiary-container font-label-sm">Machinery Hire</span> </td><td className="py-space-md px-space-lg"> <div className="flex items-center gap-space-xs text-error font-medium text-xs"> <span className="material-symbols-outlined text-sm">error</span> <span>Amount mismatch (PO: ₹1,50,000)</span> </div> <div className="text-xs text-outline font-mono">GSTIN: 36AABCX8811K1ZF</div> </td><td className="py-space-md px-space-lg text-right"> <button className="px-space-md py-space-2xs rounded bg-error text-on-error text-xs font-title-md hover:bg-error/90">Resolve</button> </td></tr><tr className="hover:bg-surface-container-low/50 transition-colors"><td className="py-space-md px-space-lg"> <div className="font-title-md text-on-surface">11 Oct 2023</div> <div className="font-body-sm text-outline font-mono text-xs">UTR# AXIS982310928</div> </td><td className="py-space-md px-space-lg"> <div className="font-title-md text-on-surface">Telangana State Diesel Corp</div> <div className="font-body-sm text-on-surface-variant text-xs">HSD Bulk Fuel for Genset & Transit Mixer</div> </td><td className="py-space-md px-space-lg font-tabular-metric-sm text-on-surface">₹ 3,20,000</td><td className="py-space-md px-space-lg"> <span className="px-space-sm py-space-2xs rounded bg-primary-container text-on-primary-container font-label-sm">Fuel & Energy</span> </td><td className="py-space-md px-space-lg"> <div className="flex items-center gap-space-xs text-primary font-medium text-xs"> <span className="material-symbols-outlined text-sm">check_circle</span> <span>PO-2023-901 (100% Match)</span> </div> <div className="text-xs text-outline font-mono">GSTIN: 36AAACT4921E1ZW</div> </td><td className="py-space-md px-space-lg text-right"> <button className="px-space-md py-space-2xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-title-md">Verified</button> </td></tr></tbody></table> </div> <div className="p-space-base bg-surface-container-low flex items-center justify-between"> <span className="font-body-sm text-on-surface-variant">Showing 4 of 148 transactions needing reconciliation</span> <div className="flex items-center gap-space-xs"> <button className="px-space-sm py-space-xs rounded bg-surface-container text-on-surface text-xs disabled:opacity-50">Previous</button> <button className="px-space-sm py-space-xs rounded bg-primary text-on-primary text-xs">1</button> <button className="px-space-sm py-space-xs rounded bg-surface-container text-on-surface text-xs">2</button> <button className="px-space-sm py-space-xs rounded bg-surface-container text-on-surface text-xs">3</button> <button className="px-space-sm py-space-xs rounded bg-surface-container text-on-surface text-xs">Next</button> </div> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-xl">  <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-base"> <div> <h3 className="font-headline-md text-headline-md text-on-surface">Bank Reconciliation Statement (BRS)</h3> <p className="font-body-sm text-sm text-on-surface-variant">HDFC Bank A/c #5020001928384 • As of 15 Oct 2023</p> </div> <span className="px-space-sm py-space-xs rounded bg-surface-container text-on-surface font-label-sm">Automated</span> </div> <div className="space-y-space-md"> <div className="flex justify-between items-center p-space-md rounded bg-surface-container-low"> <span className="font-title-md text-on-surface">Balance as per Bank Statement</span> <span className="font-tabular-metric text-tabular-metric text-on-surface">₹ 2,48,50,000</span> </div> <div className="pl-space-base space-y-space-sm border-l-2 border-primary/30 my-space-base"> <div className="flex justify-between text-sm"> <span className="text-on-surface-variant">Add: Cheques issued but not presented</span> <span className="font-tabular-metric-sm text-primary">+ ₹ 14,20,000</span> </div> <div className="flex justify-between text-sm"> <span className="text-on-surface-variant">Less: Amounts deposited but not cleared</span> <span className="font-tabular-metric-sm text-error">- ₹ 8,50,000</span> </div> <div className="flex justify-between text-sm"> <span className="text-on-surface-variant">Add: Direct bank interest credited</span> <span className="font-tabular-metric-sm text-primary">+ ₹ 45,200</span> </div> </div> <div className="flex justify-between items-center p-space-lg rounded bg-primary text-on-primary"> <span className="font-headline-sm text-headline-sm">Net Balance as per Cash Book</span> <span className="font-tabular-metric text-tabular-metric">₹ 2,54,65,200</span> </div> </div> </div> <div className="mt-space-xl flex items-center justify-between pt-space-base border-t border-outline-variant/20"> <div className="flex items-center gap-space-xs text-xs text-primary font-medium"> <span className="material-symbols-outlined text-sm">task_alt</span> <span>Zero unresolved bank variance</span> </div> <button className="px-space-md py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-xs">
-          Export BRS Report
-        </button> </div> </div>  <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-base"> <div> <h3 className="font-headline-md text-headline-md text-on-surface">Petty Cash Digital Ledger</h3> <p className="font-body-sm text-sm text-on-surface-variant">Site Supervisor Float • Madhapur Station</p> </div> <button className="px-space-md py-space-xs rounded bg-primary text-on-primary font-title-md text-xs hover:bg-primary-container">
-            + New Voucher
-          </button> </div> <div className="space-y-space-sm"> <div className="p-space-md rounded bg-surface-container-low flex items-center justify-between"> <div className="flex items-center gap-space-md"> <div className="h-8 w-8 rounded bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">PC</div> <div> <div className="font-title-md text-on-surface text-sm">Safety Gear & PPE Replenishment</div> <div className="font-body-sm text-outline text-xs">14 Oct • By Rajesh Kumar (Site Supervisor)</div> </div> </div> <div className="text-right"> <div className="font-tabular-metric-sm text-error">- ₹ 4,500</div> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container text-[10px] uppercase font-bold">Manager Signed</span> </div> </div> <div className="p-space-md rounded bg-surface-container-low flex items-center justify-between"> <div className="flex items-center gap-space-md"> <div className="h-8 w-8 rounded bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">PC</div> <div> <div className="font-title-md text-on-surface text-sm">Emergency Excavator Hydraulic Oil</div> <div className="font-body-sm text-outline text-xs">13 Oct • By Suresh Reddy</div> </div> </div> <div className="text-right"> <div className="font-tabular-metric-sm text-error">- ₹ 8,200</div> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container text-[10px] uppercase font-bold">Manager Signed</span> </div> </div> <div className="p-space-md rounded bg-surface-container-low flex items-center justify-between"> <div className="flex items-center gap-space-md"> <div className="h-8 w-8 rounded bg-amber-500/25 text-amber-700 flex items-center justify-center font-bold text-xs">PC</div> <div> <div className="font-title-md text-on-surface text-sm">Courier & Blueprint Dispatch</div> <div className="font-body-sm text-outline text-xs">12 Oct • By Kiranmai V</div> </div> </div> <div className="text-right"> <div className="font-tabular-metric-sm text-error">- ₹ 650</div> <span className="px-space-xs py-space-2xs rounded bg-amber-100 text-amber-800 text-[10px] uppercase font-bold">Pending Approval</span> </div> </div> </div> </div> <div className="mt-space-xl flex items-center justify-between pt-space-base border-t border-outline-variant/20"> <div className="font-body-sm text-on-surface-variant">Running Balance: <span className="font-bold text-on-surface">₹ 1,45,200</span></div> <button className="px-space-md py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-xs">
-          View All Vouchers & Attachments
-        </button> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm"> <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-lg"> <div> <h3 className="font-headline-md text-headline-md text-on-surface">ERP & Accounting Sync Hub</h3> <p className="font-body-sm text-sm text-on-surface-variant">Direct ledger pushing to Tally Prime XML API and QuickBooks Online connector.</p> </div> <div className="flex items-center gap-space-sm"> <span className="h-3 w-3 rounded-full bg-primary animate-pulse" /> <span className="font-title-md text-sm text-on-surface">Gateway Online (Port 9000)</span> </div> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-space-base"> <div className="p-space-lg rounded-xl bg-surface-container-low flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-sm"> <span className="font-title-md text-on-surface">Tally Prime (Main Server)</span> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container text-xs">Connected</span> </div> <p className="font-body-sm text-on-surface-variant text-xs">Vouchers, Receipt Notes, and Journal entries synchronized automatically at 00:00 & 12:00.</p> </div> <div className="mt-space-lg flex items-center justify-between"> <span className="text-xs font-mono text-outline">Last sync: 2h ago</span> <button className="px-space-md py-space-xs rounded bg-primary text-on-primary font-title-md text-xs hover:bg-primary-container">
-            Sync Now
-          </button> </div> </div> <div className="p-space-lg rounded-xl bg-surface-container-low flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-sm"> <span className="font-title-md text-on-surface">QuickBooks Enterprise</span> <span className="px-space-xs py-space-2xs rounded bg-primary-container text-on-primary-container text-xs">Synced</span> </div> <p className="font-body-sm text-on-surface-variant text-xs">Accounts payable, subcontractor vendor ledgers, and expense categorizations updated.</p> </div> <div className="mt-space-lg flex items-center justify-between"> <span className="text-xs font-mono text-outline">Last sync: 4h ago</span> <button className="px-space-md py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-xs">
-            Sync Now
-          </button> </div> </div> <div className="p-space-lg rounded-xl bg-surface-container-low flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-sm"> <span className="font-title-md text-on-surface">GST E-Invoice / E-Way Portal</span> <span className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface text-xs">Idle</span> </div> <p className="font-body-sm text-on-surface-variant text-xs">IRN generation and GSTR-1 outward supplies reconciliation pipeline.</p> </div> <div className="mt-space-lg flex items-center justify-between"> <span className="text-xs font-mono text-outline">Auto-polling active</span> <button className="px-space-md py-space-xs rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-title-md text-xs">
-            Verify IRNs
-          </button> </div> </div> </div> </div> </div></main>
+    <Shell title="Financial Ingestion">
+      <div className="space-y-6">
+        <header className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+            Cash ledger · {project.name}
+          </p>
+          <h1 className="text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
+            Financial Ingestion
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Upload bank statements, expense sheets and vouchers for this project, and review every
+            recorded inflow, vendor payment and statutory charge in one ledger.
+          </p>
+        </header>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Owner funding received", value: totals.inflow, Icon: ArrowDownCircle },
+            { label: "Paid to vendors", value: totals.vendorOut, Icon: ArrowUpCircle },
+            { label: "Statutory charges", value: totals.statutoryOut, Icon: Landmark },
+            { label: "Funds in hand", value: totals.balance, Icon: Wallet },
+          ].map(({ label, value, Icon }) => (
+            <div key={label} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {label}
+                </span>
+                <Icon className="h-5 w-5 text-primary" />
+              </div>
+              <p className="mt-3 text-2xl font-bold text-foreground">{inr(value)}</p>
+            </div>
+          ))}
+        </div>
+
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="text-lg font-bold text-foreground">Upload financial documents</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Bank statements (PDF/CSV), expense sheets (XLSX) or scanned vouchers, up to 50 MB each.
+            Files stay private to this project.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {canEdit ? (
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+                <Upload className="h-4 w-4" />
+                {uploadMutation.isPending ? "Uploading…" : "Upload documents"}
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      uploadMutation.mutate(e.target.files);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Uploads are limited to Admin, PM and Accounts users.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={exportCsv}
+              className="inline-flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary"
+            >
+              <FileDown className="h-4 w-4" />
+              Export ledger CSV
+            </button>
+          </div>
+          {status ? <p className="mt-3 text-sm text-primary">{status}</p> : null}
+
+          <div className="mt-4 divide-y divide-border rounded-xl border border-border">
+            {files.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">No documents uploaded yet.</p>
+            ) : (
+              files.map((f) => (
+                <div key={f.name} className="flex flex-wrap items-center justify-between gap-3 p-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">{f.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {fmtSize(Number(f.metadata?.['size'] ?? 0))} ·{" "}
+                      {f.created_at ? new Date(f.created_at).toLocaleString("en-IN") : "—"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openFile(f.name)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> Open
+                    </button>
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        onClick={() => deleteMutation.mutate(f.name)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-semibold text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Remove
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card">
+          <div className="flex flex-col gap-3 border-b border-border p-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Recorded money movement</h2>
+              <p className="text-sm text-muted-foreground">
+                {txns.length} entries from owner funding, bill payments and statutory charges.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search party, reference, amount…"
+                className="w-full min-w-[200px] rounded-xl border border-border bg-background px-3 py-2 text-sm md:w-64"
+              />
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="all">All entries</option>
+                <option value="in">Inflows only</option>
+                <option value="out">Outflows only</option>
+                <option value="Owner funding">Owner funding</option>
+                <option value="Vendor payment">Vendor payments</option>
+                <option value="Statutory charge">Statutory charges</option>
+              </select>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Source</th>
+                  <th className="px-4 py-3">Party</th>
+                  <th className="px-4 py-3">Details</th>
+                  <th className="px-4 py-3">Mode</th>
+                  <th className="px-4 py-3">Reference</th>
+                  <th className="px-4 py-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border text-sm">
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                      Loading ledger…
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                      Nothing recorded yet for this project. Add owner funds in Capital Ledger, bills
+                      in Bills & Payments or charges in Common & Statutory Expenses.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((t) => (
+                    <tr key={t.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3">{t.date || "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                          {t.source}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-foreground">{t.party}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{t.detail || "—"}</td>
+                      <td className="px-4 py-3 capitalize">{t.mode || "—"}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{t.reference || "—"}</td>
+                      <td
+                        className={`px-4 py-3 text-right font-semibold ${
+                          t.direction === "in" ? "text-primary" : "text-foreground"
+                        }`}
+                      >
+                        {t.direction === "in" ? "+" : "−"}
+                        {inr(t.amount)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </Shell>
   );
