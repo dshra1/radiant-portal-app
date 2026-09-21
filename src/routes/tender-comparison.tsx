@@ -144,7 +144,7 @@ function Page() {
   async function award(bidId: string, vendor: string) {
     if (!rfq) return;
     const { error } = await db.from("rfqs").update({ status: "awarded", awarded_bid_id: bidId, awarded_vendor_name: vendor }).eq("id", rfq.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`Tender awarded to ${vendor}`);
     qc.invalidateQueries({ queryKey: ["rfqs", project.id] });
   }
