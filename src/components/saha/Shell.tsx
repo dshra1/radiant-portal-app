@@ -252,7 +252,10 @@ export function Shell({
                   <button
                     type="button"
                     aria-expanded={isOpen}
-                    onClick={() => setOpen((p) => ({ ...p, [group.id]: !p[group.id] }))}
+                    onClick={() => {
+                      setPickedGroup(group.id);
+                      setOpen((p) => ({ ...p, [group.id]: !p[group.id] }));
+                    }}
                     className="flex w-full items-center justify-between gap-2 rounded px-3 py-2 text-left text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                   >
                     <span className="flex min-w-0 items-center gap-2">
@@ -456,6 +459,42 @@ export function Shell({
             </span>
           </div>
         </header>
+
+        {topGroup && topGroup.items.length > 0 && (
+          <nav
+            aria-label={`${topGroup.label} pages`}
+            className="sticky top-16 z-10 flex items-center gap-1 overflow-x-auto border-b border-border bg-card/90 px-3 py-1.5 backdrop-blur-md md:px-4"
+          >
+            <span
+              className="label-caps mr-1 hidden shrink-0 items-center gap-1.5 sm:flex"
+              style={{ color: groupTone(topGroup.id) }}
+            >
+              <span
+                className="h-3.5 w-[3px] rounded-full"
+                style={{ background: groupTone(topGroup.id) }}
+              />
+              {topGroup.label}
+            </span>
+            {topGroup.items.map((item) => {
+              const active = pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+                    active
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                  )}
+                >
+                  <item.icon className="size-3.5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
 
         <div className="border-b border-border bg-gradient-to-b from-primary-soft/50 to-card px-4 pb-5 pt-4 md:px-6">
           <div className="mx-auto flex w-full max-w-none flex-wrap items-end justify-between gap-3">
