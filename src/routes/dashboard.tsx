@@ -12,7 +12,9 @@ import {
   TrendPill,
 } from "@/components/saha/ui";
 import { inrCompact, materialRates } from "@/data/saha";
+import { QuickAccess } from "@/components/saha/QuickAccess";
 import { useSessionUser } from "@/lib/access";
+
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
