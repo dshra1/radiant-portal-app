@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { inrCompact, num } from "@/data/saha";
@@ -7,31 +7,19 @@ import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Calculator,
-  ShoppingCart,
-  ClipboardCheck,
-  ScanEye,
-  Building2,
-  FileText,
-  Users,
-  TrendingUp,
   Bell,
+
   MessagesSquare,
   ChevronDown,
   ChevronRight,
   Plus,
   CloudCog,
-  Sun,
-  Wind,
-  Droplets,
-  CloudRain,
   AlertTriangle,
   CheckCircle2,
   Info,
-  MoreHorizontal,
   ArrowRight,
 } from "lucide-react";
+
 import { NotificationBell } from "@/components/saha/NotificationBell";
 
 export const Route = createFileRoute("/")({
@@ -69,32 +57,6 @@ type Notification = {
   recipient_id: string | null;
 };
 
-type Shortcut = {
-  id: string;
-  label: string;
-  to: string;
-  icon: React.ElementType;
-  tone: "primary" | "secondary" | "warning" | "info" | "success";
-};
-
-const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { id: "dashboard", label: "Command", to: "/dashboard", icon: LayoutDashboard, tone: "primary" },
-  { id: "projects", label: "Projects", to: "/projects", icon: Building2, tone: "secondary" },
-  { id: "boq", label: "BOQ Engine", to: "/boq-engine", icon: Calculator, tone: "success" },
-  { id: "po", label: "Raise PO", to: "/po-create", icon: ShoppingCart, tone: "warning" },
-  { id: "qa", label: "QA Audit", to: "/qa-inspection", icon: ScanEye, tone: "info" },
-  { id: "pours", label: "Pour Cards", to: "/pour-cards", icon: ClipboardCheck, tone: "secondary" },
-];
-
-const ALL_SHORTCUTS: Shortcut[] = [
-  ...DEFAULT_SHORTCUTS,
-  { id: "billing", label: "Billing", to: "/billing-expenditure", icon: FileText, tone: "secondary" },
-  { id: "team", label: "Team Chat", to: "/messages", icon: Users, tone: "info" },
-  { id: "forecast", label: "Forecast", to: "/financial-forecast", icon: TrendingUp, tone: "success" },
-];
-
-const SHORTCUT_STORAGE_KEY = "saha-home-shortcuts";
-
 function greetingForHour() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -113,11 +75,6 @@ function timeAgo(iso: string) {
   return `${days}d ago`;
 }
 
-function weatherFromLocation(_location: string) {
-  // Placeholder: in production this can call a weather API. Returns sensible defaults for Hyderabad.
-  return { temp: 31, condition: "Clear", humidity: "High", advice: "Field work recommended before 11:00 AM." };
-}
-
 function priorityTone(priority: string) {
   const p = priority.toLowerCase();
   if (p === "high" || p === "urgent") return "warning";
@@ -126,6 +83,7 @@ function priorityTone(priority: string) {
   return "info";
 }
 
+
 function Index() {
   const { access } = useAccess();
   const user = useSessionUser();
@@ -133,40 +91,6 @@ function Index() {
   const activeProject = useActiveProject();
   const setActiveProject = useActiveProjectSetter();
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
-  const [editShortcuts, setEditShortcuts] = useState(false);
-  const [shortcuts, setShortcuts] = useState<Shortcut[]>(DEFAULT_SHORTCUTS);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const saved = window.localStorage.getItem(SHORTCUT_STORAGE_KEY);
-      if (saved) {
-        const ids: string[] = JSON.parse(saved);
-        const ordered = ids
-          .map((id) => ALL_SHORTCUTS.find((s) => s.id === id))
-          .filter(Boolean) as Shortcut[];
-        if (ordered.length) setShortcuts(ordered);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const saveShortcuts = (next: Shortcut[]) => {
-    setShortcuts(next);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(SHORTCUT_STORAGE_KEY, JSON.stringify(next.map((s) => s.id)));
-    }
-  };
-
-  const toggleShortcut = (s: Shortcut) => {
-    const exists = shortcuts.find((x) => x.id === s.id);
-    if (exists) {
-      saveShortcuts(shortcuts.filter((x) => x.id !== s.id));
-    } else if (shortcuts.length < 8) {
-      saveShortcuts([...shortcuts, s]);
-    }
-  };
 
   const firstName = access?.profile?.full_name?.split(" ")[0] ?? access?.email?.split("@")[0] ?? "Saha";
   const greeting = greetingForHour();
@@ -252,37 +176,8 @@ function Index() {
     enabled: !!activeProject.id,
   });
 
-  const activeRow = useMemo(
-    () => projects.find((p) => p.id === activeProject.id) ?? projects[0],
-    [projects, activeProject.id],
-  );
-
-  const stats = useMemo(() => {
-    const totalBudget = projects.reduce((s, p) => s + Number(p.target_budget ?? 0), 0);
-    const totalSpend = projects.reduce((s, p) => s + Number(p.spend ?? 0), 0);
-    const totalStaff = projects.reduce((s, p) => s + Number(p.total_staff ?? 0), 0);
-    const atRisk = projects.filter((p) => p.health && p.health !== "On Track").length;
-    const active = activeRow;
-    return {
-      totalProjects: projects.length,
-      totalBudget,
-      totalSpend,
-      totalStaff,
-      atRisk,
-      activeBudget: Number(active?.target_budget ?? 0),
-      activeSpend: Number(active?.spend ?? 0),
-      activeStaff: Number(active?.total_staff ?? 0),
-      activeBuiltUp: Number(active?.total_built_up_sft ?? 0),
-      activeHealth: active?.health ?? "—",
-    };
-  }, [projects, activeRow]);
-
   const unreadCount = notifications.filter((n) => !n.is_read).length;
-  const pendingCount = notifications.filter(
-    (n) => !n.is_read && (n.priority.toLowerCase() === "high" || n.priority.toLowerCase() === "urgent"),
-  ).length;
 
-  const weather = weatherFromLocation(activeProject.location);
 
   const markRead = async (id: string) => {
     await supabase.from("notifications").update({ is_read: true }).eq("id", id);
@@ -400,86 +295,94 @@ function Index() {
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-none gap-6 px-5 py-6 lg:grid-cols-12 lg:px-8">
-        {/* Left column: stats + action centre */}
-        <div className="flex flex-col gap-6 lg:col-span-8">
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard
-              label="Active Projects"
-              value={String(stats.totalProjects)}
-              hint={stats.totalProjects > 1 ? `${stats.totalProjects} running` : undefined}
-              tone="primary"
-              icon={Building2}
-            />
-            <StatCard
-              label="Active Budget"
-              value={inrCompact(stats.activeBudget)}
-              hint={stats.activeBudget > 0 ? `${Math.round((stats.activeSpend / (stats.activeBudget || 1)) * 100)}% spent` : undefined}
-              tone="success"
-              icon={TrendingUp}
-            />
-            <StatCard
-              label="Workforce on Site"
-              value={num(stats.activeStaff)}
-              hint={stats.activeStaff > 0 ? "Total staff" : undefined}
-              tone="info"
-              icon={Users}
-            />
-            <StatCard
-              label="Attention Items"
-              value={String(pendingCount + pendingPOs)}
-              hint={pendingPOs > 0 ? `${pendingPOs} PO pending` : undefined}
-              tone={pendingCount + pendingPOs > 0 ? "warning" : "success"}
-              icon={Bell}
-            />
+      <main className="mx-auto flex w-full max-w-none flex-col gap-6 px-5 py-6 lg:px-8">
+        {/* Projects — tap a card to open its dashboard */}
+        <section>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="display-title text-lg">Your projects</h2>
+              <p className="text-sm text-muted-foreground">
+                {projects.length === 0
+                  ? "No projects yet — add your first site."
+                  : "Tap a project to open its Command Dashboard."}
+              </p>
+            </div>
+            <Link
+              to="/projects"
+              className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary-hover"
+            >
+              <Plus className="size-3.5" /> New project
+            </Link>
           </div>
 
-          {/* Active project summary */}
-          {activeRow && (
-            <button
-              type="button"
-              onClick={() => {
-                if (activeRow?.id && activeRow.id !== activeProject.id) setActiveProject(activeRow.id);
-                void navigate({ to: "/dashboard" });
-              }}
-              title={`Open ${activeProject.name} dashboard`}
-              className="group block w-full cursor-pointer rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-card p-5 text-left transition-all hover:border-primary/40 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40"
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="label-caps rounded bg-primary-soft px-2 py-0.5 text-primary">{activeProject.health}</span>
-                    <span className="text-xs text-muted-foreground">{activeProject.type}</span>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {projects.map((p) => {
+              const budget = Number(p.target_budget ?? 0);
+              const spend = Number(p.spend ?? 0);
+              const pct = Math.min(100, budget ? (spend / budget) * 100 : 0);
+              const isActive = p.id === activeProject.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveProject(p.id);
+                    void navigate({ to: "/dashboard" });
+                  }}
+                  title={`Open ${p.name} dashboard`}
+                  className={cn(
+                    "group block w-full cursor-pointer rounded-2xl border bg-gradient-to-br from-primary/10 to-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40",
+                    isActive ? "border-primary/40" : "border-border",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="label-caps rounded bg-primary-soft px-2 py-0.5 text-primary">
+                          {p.health || "—"}
+                        </span>
+                        {isActive && (
+                          <span className="label-caps rounded bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="mt-2 display-title truncate text-xl">{p.name}</h3>
+                      <p className="truncate text-sm text-muted-foreground">{p.location || "—"}</p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground opacity-90 transition-opacity group-hover:opacity-100">
+                      Open <ChevronRight className="size-3.5" />
+                    </span>
                   </div>
-                  <h2 className="mt-2 display-title text-xl sm:text-2xl">{activeProject.name}</h2>
-                  <p className="text-sm text-muted-foreground">{activeProject.location}</p>
-                </div>
-                <span className="inline-flex shrink-0 items-center gap-1 self-start rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground opacity-90 transition-opacity group-hover:opacity-100 sm:self-center">
-                  Open dashboard <ChevronRight className="size-3.5" />
-                </span>
-                <div className="grid grid-cols-3 gap-3">
-                  <MiniMetric label="BOQ Items" value={String(boqCount)} />
-                  <MiniMetric label="Built-up" value={`${num(stats.activeBuiltUp)} sft`} />
-                  <MiniMetric label="POs Pending" value={String(pendingPOs)} />
-                </div>
-              </div>
-              <div className="mt-5">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-muted-foreground">Budget consumed</span>
-                  <span className="font-semibold">
-                    {inrCompact(stats.activeSpend)} / {inrCompact(stats.activeBudget)}
-                  </span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${Math.min(100, (stats.activeSpend / (stats.activeBudget || 1)) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            </button>
-          )}
+
+                  <div className="mt-4 grid grid-cols-3 gap-3">
+                    <MiniMetric label="Built-up" value={`${num(Number(p.total_built_up_sft ?? 0))} sft`} />
+                    <MiniMetric label="Staff" value={num(Number(p.total_staff ?? 0))} />
+                    <MiniMetric
+                      label={isActive ? "POs Pending" : "BOQ Items"}
+                      value={isActive ? String(pendingPOs) : String(boqCount && isActive ? boqCount : "—")}
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Budget consumed</span>
+                      <span className="font-semibold">
+                        {inrCompact(spend)} / {inrCompact(budget)}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <div className="flex flex-col gap-6">
+
 
           {/* Action Centre */}
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -579,163 +482,12 @@ function Index() {
           </div>
         </div>
 
-        {/* Right column: shortcuts + insight */}
-        <div className="flex flex-col gap-6 lg:col-span-4">
-          {/* Quick Access */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="display-title text-sm uppercase tracking-wider text-muted-foreground">Quick Access</h2>
-              <button
-                type="button"
-                onClick={() => setEditShortcuts((v) => !v)}
-                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                title="Edit shortcuts"
-              >
-                <MoreHorizontal className="size-4" />
-              </button>
-            </div>
-
-            {editShortcuts && (
-              <div className="mt-3 rounded-xl border border-border bg-muted/50 p-3">
-                <p className="mb-2 text-xs text-muted-foreground">Tap to pin/unpin shortcuts (max 8)</p>
-                <div className="flex flex-wrap gap-2">
-                  {ALL_SHORTCUTS.map((s) => {
-                    const active = shortcuts.some((x) => x.id === s.id);
-                    const Icon = s.icon;
-                    return (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => toggleShortcut(s)}
-                        className={cn(
-                          "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                          active
-                            ? "border-primary bg-primary-soft text-primary"
-                            : "border-border bg-card text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <Icon className="size-3" />
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {shortcuts.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <Link
-                    key={s.id}
-                    to={s.to}
-                    className={cn(
-                      "group flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-all hover:-translate-y-0.5",
-                      s.tone === "primary" && "border-primary/20 bg-primary-soft/50 hover:border-primary",
-                      s.tone === "secondary" && "border-border bg-secondary/50 hover:border-primary/30",
-                      s.tone === "success" && "border-primary/20 bg-primary-soft/30 hover:border-primary",
-                      s.tone === "warning" && "border-warning/30 bg-warning-soft/50 hover:border-warning",
-                      s.tone === "info" && "border-info/30 bg-info-soft/50 hover:border-info",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "grid size-10 place-items-center rounded-full text-white shadow-sm transition-colors",
-                        s.tone === "primary" && "bg-primary",
-                        s.tone === "secondary" && "bg-muted-foreground/70",
-                        s.tone === "success" && "bg-primary",
-                        s.tone === "warning" && "bg-warning",
-                        s.tone === "info" && "bg-info",
-                      )}
-                    >
-                      <Icon className="size-5" />
-                    </div>
-                    <span className="text-xs font-semibold text-foreground">{s.label}</span>
-                  </Link>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => setEditShortcuts((v) => !v)}
-                className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border p-4 text-center text-muted-foreground transition-colors hover:border-primary/30 hover:bg-muted/30"
-              >
-                <div className="grid size-10 place-items-center rounded-full bg-muted text-muted-foreground">
-                  <Plus className="size-5" />
-                </div>
-                <span className="text-xs font-semibold">Customize</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Contextual insight */}
-          <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-lg">
-            <div className="relative z-10">
-              <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary-foreground/70">
-                <Sun className="size-4" /> Site Context
-              </h3>
-              <div className="mt-3 flex items-baseline gap-3">
-                <span className="display-title text-3xl">{weather.temp}°C</span>
-                <span className="text-sm font-medium">{weather.condition}</span>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-primary-foreground/80">{weather.advice}</p>
-              <div className="mt-4 flex gap-4 text-xs text-primary-foreground/70">
-                <span className="flex items-center gap-1"><Droplets className="size-3" /> {weather.humidity}</span>
-                <span className="flex items-center gap-1"><Wind className="size-3" /> Light breeze</span>
-              </div>
-            </div>
-            <div className="absolute -right-6 -bottom-6 size-32 rounded-full bg-primary-foreground/10 blur-2xl" />
-          </div>
-
-          {/* All modules link */}
-          <Link
-            to="/system-directory"
-            className="flex items-center justify-between rounded-xl border border-border bg-card p-4 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted/50"
-          >
-            Browse all modules
-            <ArrowRight className="size-4 text-muted-foreground" />
-          </Link>
-        </div>
       </main>
+
     </div>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  hint,
-  tone,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  hint?: string | undefined;
-  tone: "primary" | "success" | "info" | "warning" | "secondary";
-  icon: React.ElementType;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-primary/20">
-      <div className="flex items-start justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-        <div
-          className={cn(
-            "grid size-8 place-items-center rounded-lg",
-            tone === "primary" && "bg-primary-soft text-primary",
-            tone === "success" && "bg-primary-soft text-primary",
-            tone === "secondary" && "bg-secondary text-secondary-foreground",
-            tone === "info" && "bg-info-soft text-info",
-            tone === "warning" && "bg-warning-soft text-warning",
-          )}
-        >
-          <Icon className="size-4" />
-        </div>
-      </div>
-      <p className="mt-2 display-title text-2xl">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
-}
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
