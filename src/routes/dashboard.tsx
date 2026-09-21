@@ -106,8 +106,11 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <QuickAccess />
+
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricTile
+
           label="Committed budget"
           value={inrCompact(totalBudget)}
           delta={`${rows.length} project${rows.length === 1 ? "" : "s"}`}
