@@ -7,7 +7,7 @@ import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 import { cn } from "@/lib/utils";
 import {
-  Building2,
+  Bell,
   Bell,
   MessagesSquare,
   ChevronDown,
