@@ -19,6 +19,7 @@ import {
   Bell,
   MessagesSquare,
   ChevronDown,
+  ChevronRight,
   Plus,
   CloudCog,
   Sun,
@@ -436,7 +437,15 @@ function Index() {
 
           {/* Active project summary */}
           {activeRow && (
-            <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-card p-5">
+            <button
+              type="button"
+              onClick={() => {
+                if (activeRow?.id && activeRow.id !== activeProject.id) setActiveProject(activeRow.id);
+                void navigate({ to: "/dashboard" });
+              }}
+              title={`Open ${activeProject.name} dashboard`}
+              className="group block w-full cursor-pointer rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-card p-5 text-left transition-all hover:border-primary/40 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
@@ -446,6 +455,9 @@ function Index() {
                   <h2 className="mt-2 display-title text-xl sm:text-2xl">{activeProject.name}</h2>
                   <p className="text-sm text-muted-foreground">{activeProject.location}</p>
                 </div>
+                <span className="inline-flex shrink-0 items-center gap-1 self-start rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground opacity-90 transition-opacity group-hover:opacity-100 sm:self-center">
+                  Open dashboard <ChevronRight className="size-3.5" />
+                </span>
                 <div className="grid grid-cols-3 gap-3">
                   <MiniMetric label="BOQ Items" value={String(boqCount)} />
                   <MiniMetric label="Built-up" value={`${num(stats.activeBuiltUp)} sft`} />
@@ -466,7 +478,7 @@ function Index() {
                   />
                 </div>
               </div>
-            </div>
+            </button>
           )}
 
           {/* Action Centre */}

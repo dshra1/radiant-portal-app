@@ -104,3 +104,4 @@
 - [x] Guard project queries with sign-in state (home, projects, approvals, PO create, AI programme, brand preferences, budget fit, BOQ engine, project setup)
 - [x] Fix AI SDK version mismatch typecheck errors
 - [ ] Suggest per-user monthly pricing in INR for the SaaS offering
+- OCR credit question answered in chat
