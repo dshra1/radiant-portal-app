@@ -1,13 +1,35 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  TrendingUp,
+  Wallet,
+  Landmark,
+  AlertTriangle,
+  CalendarClock,
+  FileDown,
+} from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveProject } from "@/hooks/useActiveProject";
+import { useSessionUser } from "@/lib/access";
 
 export const Route = createFileRoute("/financial-forecast")({
   head: () => ({
     meta: [
-      { title: "Executive Financial Forecasting & Project Control | Saha OS" },
-      { name: "description", content: "Cash-flow forecasting, cost-to-complete projections and executive project control dashboards." },
-      { property: "og:title", content: "Executive Financial Forecasting & Project Control | Saha OS" },
-      { property: "og:description", content: "Cash-flow forecasting, cost-to-complete projections and executive project control dashboards." },
+      { title: "Financial Forecast — Cash Runway & Cost to Complete | Saha OS" },
+      {
+        name: "description",
+        content:
+          "Live cash-flow forecast for the project: funds in hand, monthly burn, cost to complete, funding gap and projected finish date.",
+      },
+      { property: "og:title", content: "Financial Forecast — Saha OS" },
+      {
+        property: "og:description",
+        content:
+          "Funds in hand, monthly burn rate, cost to complete, funding gap and projected finish date from real project data.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -15,16 +37,585 @@ export const Route = createFileRoute("/financial-forecast")({
   component: Page,
 });
 
+function num(v: unknown): number {
+  const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+function inr(n: number): string {
+  const v = Math.round(n);
+  if (Math.abs(v) >= 10000000) return `₹${(v / 10000000).toFixed(2)} Cr`;
+  if (Math.abs(v) >= 100000) return `₹${(v / 100000).toFixed(2)} L`;
+  return `₹${v.toLocaleString("en-IN")}`;
+}
+function inrFull(n: number): string {
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+}
+function monthKey(d: string): string {
+  return (d || "").slice(0, 7);
+}
+function monthLabel(key: string): string {
+  if (!key) return "—";
+  const [y, m] = key.split("-");
+  const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${names[Number(m) - 1] ?? "?"} ${String(y).slice(2)}`;
+}
+function esc(v: string) {
+  return `"${String(v).replace(/"/g, '""')}"`;
+}
+
 function Page() {
+  const project = useActiveProject();
+  const user = useSessionUser();
+  const enabled = Boolean(user?.id) && Boolean(project.id);
+  const [contingencyPct, setContingencyPct] = useState(5);
+
+  const projectRow = useQuery({
+    queryKey: ["site_projects", "forecast", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_projects")
+        .select("id,name,target_budget,spend,start_date,target_handover_date,total_built_up_sft")
+        .eq("id", project.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const boq = useQuery({
+    queryKey: ["boq_items", "forecast", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("boq_items")
+        .select("quantity,rate")
+        .eq("project_id", project.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const bills = useQuery({
+    queryKey: ["bills", "forecast", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bills")
+        .select(
+          "id,bill_number,vendor_name,due_date,status,basic_amount,gst_amount,other_charges,retention_amount,deductions",
+        )
+        .eq("project_id", project.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const payments = useQuery({
+    queryKey: ["bill_payments", "forecast", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bill_payments")
+        .select("id,bill_id,payment_date,amount")
+        .eq("project_id", project.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const capital = useQuery({
+    queryKey: ["capital_entries", "forecast", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("capital_entries")
+        .select("id,entry_type,amount,entry_date,status,owner_name")
+        .eq("project_id", project.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const charges = useQuery({
+    queryKey: ["project_charges", "forecast", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_charges")
+        .select("id,category,authority,amount,charge_date,status")
+        .eq("project_id", project.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const loading =
+    projectRow.isLoading ||
+    boq.isLoading ||
+    bills.isLoading ||
+    payments.isLoading ||
+    capital.isLoading ||
+    charges.isLoading;
+
+  const m = useMemo(() => {
+    const boqTotal = (boq.data ?? []).reduce(
+      (s, r) => s + num(r.quantity) * num(r.rate),
+      0,
+    );
+    const paidByBill = new Map<string, number>();
+    for (const p of payments.data ?? []) {
+      paidByBill.set(p.bill_id, (paidByBill.get(p.bill_id) ?? 0) + num(p.amount));
+    }
+    const billRows = (bills.data ?? []).map((b) => {
+      const gross =
+        num(b.basic_amount) +
+        num(b.gst_amount) +
+        num(b.other_charges) -
+        num(b.retention_amount) -
+        num(b.deductions);
+      const paid = paidByBill.get(b.id) ?? 0;
+      return { ...b, gross, paid, outstanding: Math.max(gross - paid, 0) };
+    });
+    const billedGross = billRows.reduce((s, r) => s + r.gross, 0);
+    const vendorPaid = (payments.data ?? []).reduce((s, p) => s + num(p.amount), 0);
+    const vendorOutstanding = billRows.reduce((s, r) => s + r.outstanding, 0);
+
+    const chargesTotal = (charges.data ?? []).reduce((s, c) => s + num(c.amount), 0);
+    const chargesPaid = (charges.data ?? [])
+      .filter((c) => String(c.status).toLowerCase() === "paid")
+      .reduce((s, c) => s + num(c.amount), 0);
+    const chargesPending = Math.max(chargesTotal - chargesPaid, 0);
+
+    const inflow = (capital.data ?? [])
+      .filter((c) => String(c.entry_type).toLowerCase() === "deposit")
+      .reduce((s, c) => s + num(c.amount), 0);
+    const outflowOwners = (capital.data ?? [])
+      .filter((c) => ["withdrawal", "refund"].includes(String(c.entry_type).toLowerCase()))
+      .reduce((s, c) => s + num(c.amount), 0);
+
+    const spentToDate = vendorPaid + chargesPaid;
+    const fundsInHand = inflow - outflowOwners - spentToDate;
+
+    const contingency = (boqTotal * contingencyPct) / 100;
+    const forecastCost = boqTotal + chargesTotal + contingency;
+    const costToComplete = Math.max(forecastCost - spentToDate, 0);
+    const committedNow = vendorOutstanding + chargesPending;
+    const fundingGap = Math.max(costToComplete - fundsInHand, 0);
+
+    const targetBudget = num(projectRow.data?.target_budget);
+    const budgetVariance = targetBudget ? targetBudget - forecastCost : 0;
+
+    // monthly series (last 6 months with activity)
+    const keys = new Set<string>();
+    const inMap = new Map<string, number>();
+    const outMap = new Map<string, number>();
+    for (const c of capital.data ?? []) {
+      const k = monthKey(String(c.entry_date ?? ""));
+      if (!k) continue;
+      keys.add(k);
+      const t = String(c.entry_type).toLowerCase();
+      if (t === "deposit") inMap.set(k, (inMap.get(k) ?? 0) + num(c.amount));
+      else outMap.set(k, (outMap.get(k) ?? 0) + num(c.amount));
+    }
+    for (const p of payments.data ?? []) {
+      const k = monthKey(String(p.payment_date ?? ""));
+      if (!k) continue;
+      keys.add(k);
+      outMap.set(k, (outMap.get(k) ?? 0) + num(p.amount));
+    }
+    for (const c of charges.data ?? []) {
+      if (String(c.status).toLowerCase() !== "paid") continue;
+      const k = monthKey(String(c.charge_date ?? ""));
+      if (!k) continue;
+      keys.add(k);
+      outMap.set(k, (outMap.get(k) ?? 0) + num(c.amount));
+    }
+    const months = Array.from(keys)
+      .sort()
+      .slice(-6)
+      .map((k) => ({ key: k, inflow: inMap.get(k) ?? 0, outflow: outMap.get(k) ?? 0 }));
+
+    const burnMonths = months.filter((x) => x.outflow > 0);
+    const monthlyBurn =
+      burnMonths.length > 0
+        ? burnMonths.reduce((s, x) => s + x.outflow, 0) / burnMonths.length
+        : 0;
+    const runwayMonths = monthlyBurn > 0 ? fundsInHand / monthlyBurn : 0;
+    const monthsToComplete = monthlyBurn > 0 ? costToComplete / monthlyBurn : 0;
+    const projectedFinish =
+      monthlyBurn > 0
+        ? new Date(Date.now() + monthsToComplete * 30.4 * 86400000)
+        : null;
+    const targetHandover = projectRow.data?.target_handover_date
+      ? new Date(String(projectRow.data.target_handover_date))
+      : null;
+
+    const dueSoon = billRows
+      .filter((r) => r.outstanding > 0)
+      .sort((a, b) => String(a.due_date ?? "9999").localeCompare(String(b.due_date ?? "9999")))
+      .slice(0, 6);
+
+    return {
+      boqTotal,
+      contingency,
+      chargesTotal,
+      chargesPaid,
+      chargesPending,
+      billedGross,
+      vendorPaid,
+      vendorOutstanding,
+      inflow,
+      outflowOwners,
+      spentToDate,
+      fundsInHand,
+      forecastCost,
+      costToComplete,
+      committedNow,
+      fundingGap,
+      targetBudget,
+      budgetVariance,
+      months,
+      monthlyBurn,
+      runwayMonths,
+      monthsToComplete,
+      projectedFinish,
+      targetHandover,
+      dueSoon,
+    };
+  }, [boq.data, bills.data, payments.data, capital.data, charges.data, projectRow.data, contingencyPct]);
+
+  const maxBar = Math.max(1, ...m.months.map((x) => Math.max(x.inflow, x.outflow)));
+
+  function exportCsv() {
+    const lines: string[] = [];
+    lines.push(["Metric", "Amount (INR)"].join(","));
+    const rows: Array<[string, number]> = [
+      ["BOQ estimated cost", m.boqTotal],
+      [`Contingency @ ${contingencyPct}%`, m.contingency],
+      ["Statutory / common charges", m.chargesTotal],
+      ["Forecast total cost", m.forecastCost],
+      ["Owner funding received", m.inflow],
+      ["Owner withdrawals / refunds", m.outflowOwners],
+      ["Paid to vendors", m.vendorPaid],
+      ["Statutory charges paid", m.chargesPaid],
+      ["Spent to date", m.spentToDate],
+      ["Funds in hand", m.fundsInHand],
+      ["Vendor bills outstanding", m.vendorOutstanding],
+      ["Statutory charges pending", m.chargesPending],
+      ["Cost to complete", m.costToComplete],
+      ["Funding gap", m.fundingGap],
+      ["Average monthly burn", m.monthlyBurn],
+    ];
+    for (const [k, v] of rows) lines.push([esc(k), Math.round(v)].join(","));
+    lines.push("");
+    lines.push(["Month", "Inflow", "Outflow"].join(","));
+    for (const x of m.months)
+      lines.push([monthLabel(x.key), Math.round(x.inflow), Math.round(x.outflow)].join(","));
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `financial-forecast-${project.name.replace(/\s+/g, "-").toLowerCase()}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  const gapCritical = m.fundingGap > 0;
+
   return (
-    <Shell title={"Executive Financial Forecasting & Project Control | Saha OS"}>
-      <div className="m3">
-        <main className="w-full  px-gutter-normal pb-gutter-expanded bg-surface"><div className="flex flex-col w-full gap-space-2xl pb-16">  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-low p-space-lg rounded-xl shadow-sm"> <div className="flex flex-col"> <div className="flex items-center gap-space-sm"> <span className="px-space-xs py-0.5 bg-primary-container text-on-primary-container font-label-sm text-label-sm rounded uppercase">Autonomous Cockpit</span> <span className="text-on-surface-variant font-label-sm">Project ID: HYD-CYBER-P2</span> </div> <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight mt-1">Executive Financial Forecasting & Project Control</h1> </div> <div className="flex items-center gap-space-md flex-wrap"> <div className="flex items-center gap-space-xs bg-surface-container-highest px-space-md py-space-sm rounded-xl"> <span className="material-symbols-outlined text-primary text-[20px]">shield_locked</span> <div className="flex flex-col"> <span className="font-label-sm text-on-surface-variant">Blockchain Sync</span> <span className="font-tabular-metric-sm text-on-surface">Block #18,492,011</span> </div> </div> <button className="flex items-center gap-space-xs bg-primary hover:bg-primary-container text-on-primary font-label-md px-space-lg py-space-sm rounded-xl transition-all shadow-sm"> <span className="material-symbols-outlined text-[18px]">bolt</span> <span>Run Autonomous Simulation</span> </button> </div> </div>  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-space-md">  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-on-surface-variant uppercase">30-Day Cash Runway</span> <span className="p-space-xs bg-primary-fixed/20 text-primary rounded"><span className="material-symbols-outlined text-[16px]">trending_up</span></span> </div> <div className="my-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">₹42.8 Cr</div> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="font-body-sm text-primary font-medium">+12.4%</span> <span className="font-body-sm text-on-surface-variant">vs projected burn</span> </div> </div> <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden"> <div className="bg-primary h-full w-[78%]" /> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-on-surface-variant uppercase">Labor Productivity</span> <span className="p-space-xs bg-tertiary-fixed/30 text-tertiary rounded"><span className="material-symbols-outlined text-[16px]">group</span></span> </div> <div className="my-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">1.84 SFT/Hr</div> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="font-body-sm text-primary font-medium">94.2%</span> <span className="font-body-sm text-on-surface-variant">geofenced active</span> </div> </div> <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden"> <div className="bg-tertiary h-full w-[85%]" /> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-on-surface-variant uppercase">Supplier SLA Index</span> <span className="p-space-xs bg-primary-fixed/20 text-primary rounded"><span className="material-symbols-outlined text-[16px]">local_shipping</span></span> </div> <div className="my-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">98.1%</div> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="font-body-sm text-primary font-medium">0 Rejections</span> <span className="font-body-sm text-on-surface-variant">this cycle</span> </div> </div> <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden"> <div className="bg-primary h-full w-[98%]" /> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between"> <span className="font-label-sm text-on-surface-variant uppercase">IoT Curing Maturity</span> <span className="p-space-xs bg-tertiary-fixed/30 text-tertiary rounded"><span className="material-symbols-outlined text-[16px]">thermostat</span></span> </div> <div className="my-space-md"> <div className="font-tabular-metric text-tabular-metric text-on-surface">88.5 MPa</div> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="font-body-sm text-primary font-medium">Safe Strip</span> <span className="font-body-sm text-on-surface-variant">in 4h 12m</span> </div> </div> <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden"> <div className="bg-primary-container h-full w-[92%]" /> </div> </div>  <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between md:col-span-2 lg:col-span-1"> <div className="flex items-center justify-between"> <span className="font-label-sm text-on-surface-variant uppercase">RERA Audit Hash</span> <span className="p-space-xs bg-inverse-surface text-inverse-on-surface rounded"><span className="material-symbols-outlined text-[16px]">verified</span></span> </div> <div className="my-space-md"> <div className="font-tabular-metric-sm text-on-surface font-mono truncate">0x7F9...4A21</div> <div className="flex items-center gap-space-xs mt-space-2xs"> <span className="font-body-sm text-primary font-medium">Immutable</span> <span className="font-body-sm text-on-surface-variant">Verified 10m ago</span> </div> </div> <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden"> <div className="bg-inverse-surface h-full w-full" /> </div> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg"> <div className="lg:col-span-2 bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between mb-space-lg"> <div> <h2 className="font-headline-md text-headline-md text-on-surface">Predictive Cash Flow & 60-Day Runway</h2> <p className="font-body-sm text-on-surface-variant">Incoming collections vs outgoing vendor and subcontractor liabilities</p> </div> <div className="flex items-center gap-space-xs"> <button className="px-space-sm py-space-xs bg-surface-container font-label-md text-on-surface rounded">30 Days</button> <button className="px-space-sm py-space-xs bg-primary text-on-primary font-label-md rounded">60 Days</button> </div> </div>  <div className="h-64 w-full flex items-end gap-space-sm px-space-md py-space-lg bg-surface-container-low rounded-xl relative"> <div className="absolute inset-x-0 top-8 border-b border-dashed border-outline-variant/30 flex justify-between px-space-md text-[10px] text-on-surface-variant"> <span>₹50 Cr Threshold</span> <span>Target Surplus</span> </div> <div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end"> <div className="w-full bg-primary/80 rounded-t h-[65%] hover:bg-primary transition-colors relative group"> <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] bg-inverse-surface text-inverse-on-surface px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">₹32.4 Cr</span> </div> <span className="font-body-sm text-on-surface-variant text-[10px]">W1</span> </div> <div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end"> <div className="w-full bg-primary/80 rounded-t h-[80%] hover:bg-primary transition-colors relative group"> <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] bg-inverse-surface text-inverse-on-surface px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">₹41.0 Cr</span> </div> <span className="font-body-sm text-on-surface-variant text-[10px]">W2</span> </div> <div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end"> <div className="w-full bg-error/80 rounded-t h-[40%] hover:bg-error transition-colors relative group"> <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] bg-inverse-surface text-inverse-on-surface px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">₹18.2 Cr (Deficit)</span> </div> <span className="font-body-sm text-on-surface-variant text-[10px]">W3</span> </div> <div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end"> <div className="w-full bg-primary/80 rounded-t h-[90%] hover:bg-primary transition-colors relative group"> <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] bg-inverse-surface text-inverse-on-surface px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">₹48.5 Cr</span> </div> <span className="font-body-sm text-on-surface-variant text-[10px]">W4</span> </div> <div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end"> <div className="w-full bg-primary/80 rounded-t h-[70%] hover:bg-primary transition-colors relative group"> <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] bg-inverse-surface text-inverse-on-surface px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">₹35.1 Cr</span> </div> <span className="font-body-sm text-on-surface-variant text-[10px]">W5</span> </div> <div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end"> <div className="w-full bg-primary/80 rounded-t h-[85%] hover:bg-primary transition-colors relative group"> <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] bg-inverse-surface text-inverse-on-surface px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">₹44.0 Cr</span> </div> <span className="font-body-sm text-on-surface-variant text-[10px]">W6</span> </div> <div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end"> <div className="w-full bg-primary/80 rounded-t h-[95%] hover:bg-primary transition-colors relative group"> <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] bg-inverse-surface text-inverse-on-surface px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">₹52.2 Cr</span> </div> <span className="font-body-sm text-on-surface-variant text-[10px]">W7</span> </div> <div className="flex-1 flex flex-col items-center gap-space-2xs h-full justify-end"> <div className="w-full bg-primary/80 rounded-t h-[75%] hover:bg-primary transition-colors relative group"> <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] bg-inverse-surface text-inverse-on-surface px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">₹39.8 Cr</span> </div> <span className="font-body-sm text-on-surface-variant text-[10px]">W8</span> </div> </div> <div className="flex items-center justify-between mt-space-md pt-space-md"> <div className="flex items-center gap-space-md"> <div className="flex items-center gap-space-xs"><span className="w-3 h-3 rounded bg-primary" /><span className="font-body-sm text-on-surface-variant">Inflow Collections</span></div> <div className="flex items-center gap-space-xs"><span className="w-3 h-3 rounded bg-error" /><span className="font-body-sm text-on-surface-variant">Subcontractor Liability Gap</span></div> </div> <span className="font-label-sm text-primary">AI Confidence Interval: 96.4%</span> </div> </div>  <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-md"> <h3 className="font-headline-sm text-headline-sm text-on-surface">Autonomous Mitigation</h3> <span className="material-symbols-outlined text-primary">psychology</span> </div> <p className="font-body-sm text-on-surface-variant mb-space-lg">AI detected a potential INR 4.2 Cr deficit in Week 3 due to overlapping milestone payouts.</p> <div className="flex flex-col gap-space-sm"> <div className="p-space-md bg-surface-container-low rounded-xl"> <div className="flex items-center justify-between mb-space-2xs"> <span className="font-title-md text-on-surface">Defer Steel Advance</span> <span className="font-label-sm text-primary bg-primary-fixed/20 px-1 rounded">Save ₹2.1 Cr</span> </div> <p className="font-body-sm text-on-surface-variant">Reschedule Jindal Panther dispatch by 6 business days without impacting critical path.</p> </div> <div className="p-space-md bg-surface-container-low rounded-xl"> <div className="flex items-center justify-between mb-space-2xs"> <span className="font-title-md text-on-surface">Accelerate Escrow Release</span> <span className="font-label-sm text-primary bg-primary-fixed/20 px-1 rounded">Inflow +₹3.5 Cr</span> </div> <p className="font-body-sm text-on-surface-variant">Trigger automated RERA milestone certificate for Block B podium completion.</p> </div> </div> </div> <button className="w-full mt-space-lg py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md rounded-xl transition-colors">
-        Execute Automated Adjustments
-      </button> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg">  <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-lg"> <h2 className="font-headline-md text-headline-md text-on-surface">Geofenced Attendance</h2> <span className="material-symbols-outlined text-tertiary">fingerprint</span> </div> <div className="flex flex-col gap-space-md"> <div> <div className="flex justify-between font-body-sm mb-space-2xs"> <span className="text-on-surface font-medium">Formwork & Carpentry</span> <span className="text-on-surface-variant">420 / 450 Active</span> </div> <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full w-[93%]" /> </div> </div> <div> <div className="flex justify-between font-body-sm mb-space-2xs"> <span className="text-on-surface font-medium">Steel Fixing (Rebar)</span> <span className="text-on-surface-variant">310 / 320 Active</span> </div> <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full w-[96%]" /> </div> </div> <div> <div className="flex justify-between font-body-sm mb-space-2xs"> <span className="text-on-surface font-medium">Concreting & Pumping</span> <span className="text-on-surface-variant">180 / 200 Active</span> </div> <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden"> <div className="bg-tertiary h-full w-[90%]" /> </div> </div> <div> <div className="flex justify-between font-body-sm mb-space-2xs"> <span className="text-on-surface font-medium">MEP First Fix</span> <span className="text-on-surface-variant">145 / 160 Active</span> </div> <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden"> <div className="bg-primary h-full w-[91%]" /> </div> </div> </div> </div> <div className="mt-space-lg p-space-md bg-surface-container-low rounded-xl flex items-center justify-between"> <div className="flex items-center gap-space-sm"> <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" /> <span className="font-body-sm text-on-surface">GPS Perimeter Lock Active (Zone A-Delta)</span> </div> <span className="font-tabular-metric-sm text-primary">1,055 Total</span> </div> </div>  <div className="lg:col-span-2 bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between mb-space-lg"> <div> <h2 className="font-headline-md text-headline-md text-on-surface">Labor Productivity & Unit Costs</h2> <p className="font-body-sm text-on-surface-variant">Real-time SFT executed per man-hour vs benchmark targets</p> </div> <button className="p-space-xs text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined">more_vert</span></button> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="border-b border-surface-container"><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">Trade Activity</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">SFT Executed</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">Target Rate</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">Actual Unit Cost</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase text-right">Variance</th></tr></thead><tbody className="divide-y divide-surface-container"><tr><td className="py-space-md px-space-md font-title-md text-on-surface">Post-Tensioned Slab (L3)</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">14,200 SFT</td><td className="py-space-md px-space-md font-body-sm text-on-surface-variant">1.75 SFT/Hr</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">₹142 / SFT</td><td className="py-space-md px-space-md text-right"><span className="px-2 py-0.5 bg-primary-fixed/20 text-primary font-label-sm rounded">+6.8% Efficiency</span></td></tr><tr><td className="py-space-md px-space-md font-title-md text-on-surface">Aluform Shear Walls</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">8,900 SFT</td><td className="py-space-md px-space-md font-body-sm text-on-surface-variant">2.10 SFT/Hr</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">₹118 / SFT</td><td className="py-space-md px-space-md text-right"><span className="px-2 py-0.5 bg-primary-fixed/20 text-primary font-label-sm rounded">+4.2% Efficiency</span></td></tr><tr><td className="py-space-md px-space-md font-title-md text-on-surface">Basement Waterproofing</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">5,400 SFT</td><td className="py-space-md px-space-md font-body-sm text-on-surface-variant">1.20 SFT/Hr</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">₹210 / SFT</td><td className="py-space-md px-space-md text-right"><span className="px-2 py-0.5 bg-error-container text-on-error-container font-label-sm rounded">-2.1% Cost Overrun</span></td></tr></tbody></table> </div> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg"> <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-lg"> <h2 className="font-headline-md text-headline-md text-on-surface">Inventory Run-Out Alerts</h2> <span className="material-symbols-outlined text-primary">inventory_2</span> </div> <div className="flex flex-col gap-space-md"> <div className="p-space-md bg-surface-container-low rounded-xl border-l-4 border-primary"> <div className="flex justify-between items-center mb-space-2xs"> <span className="font-title-md text-on-surface">OPC 53 Grade Cement</span> <span className="font-label-sm text-primary bg-primary-fixed/20 px-2 py-0.5 rounded">Auto-Reorder Set</span> </div> <div className="flex justify-between font-body-sm text-on-surface-variant mt-2"> <span>Stock: 180 Metric Tons</span> <span className="text-error font-medium">Run-out in 2.4 Days</span> </div> </div> <div className="p-space-md bg-surface-container-low rounded-xl border-l-4 border-tertiary"> <div className="flex justify-between items-center mb-space-2xs"> <span className="font-title-md text-on-surface">Fe500D TMT Rebar (16mm)</span> <span className="font-label-sm text-tertiary bg-tertiary-fixed/30 px-2 py-0.5 rounded">Dispatch Ready</span> </div> <div className="flex justify-between font-body-sm text-on-surface-variant mt-2"> <span>Stock: 420 Metric Tons</span> <span>Run-out in 6.1 Days</span> </div> </div> </div> </div> <button className="w-full mt-space-lg py-space-sm bg-primary hover:bg-primary-container text-on-primary font-label-md rounded-xl transition-colors">
-        Authorize All Pending POs
-      </button> </div>  <div className="lg:col-span-2 bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between mb-space-lg"> <div> <h2 className="font-headline-md text-headline-md text-on-surface">Supplier SLA & Compliance Scoring</h2> <p className="font-body-sm text-on-surface-variant">Evaluated on delivery punctuality, QA rejection rate, and price variance</p> </div> <span className="font-label-sm text-primary">Live Vendor Feed</span> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="border-b border-surface-container"><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">Vendor Name</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">Material Category</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">Punctuality</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">QA Pass Rate</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase text-right">SLA Score</th></tr></thead><tbody className="divide-y divide-surface-container"><tr><td className="py-space-md px-space-md font-title-md text-on-surface">Ultratech Cement Ltd</td><td className="py-space-md px-space-md font-body-sm text-on-surface-variant">Bulk OPC & Ready Mix</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">99.2%</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">100%</td><td className="py-space-md px-space-md text-right"><span className="font-tabular-metric-sm text-primary">9.8 / 10</span></td></tr><tr><td className="py-space-md px-space-md font-title-md text-on-surface">Jindal Panther Steels</td><td className="py-space-md px-space-md font-body-sm text-on-surface-variant">Fe500D TMT Coils</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">96.8%</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">99.1%</td><td className="py-space-md px-space-md text-right"><span className="font-tabular-metric-sm text-primary">9.4 / 10</span></td></tr><tr><td className="py-space-md px-space-md font-title-md text-on-surface">RMC Readymix India</td><td className="py-space-md px-space-md font-body-sm text-on-surface-variant">M35 Grade Pumping Concrete</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">91.4%</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">97.5%</td><td className="py-space-md px-space-md text-right"><span className="font-tabular-metric-sm text-tertiary">8.9 / 10</span></td></tr></tbody></table> </div> </div> </div>  <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg"> <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div> <div className="flex items-center justify-between mb-space-lg"> <h2 className="font-headline-md text-headline-md text-on-surface">IoT Concrete Maturity</h2> <span className="material-symbols-outlined text-primary animate-pulse">sensors</span> </div> <div className="bg-surface-container-low p-space-lg rounded-xl mb-space-md flex flex-col items-center justify-center text-center"> <span className="font-label-sm text-on-surface-variant uppercase">Current Core Temp</span> <div className="font-display-lg text-display-lg text-on-surface my-1">42.4°C</div> <span className="font-body-sm text-primary font-medium">Optimal Hydration Rate</span> </div> <div className="flex flex-col gap-space-sm"> <div className="flex justify-between text-body-sm"> <span className="text-on-surface-variant">Equivalent Age (M-factor)</span> <span className="text-on-surface font-semibold">34.8 hrs @ 20°C</span> </div> <div className="flex justify-between text-body-sm"> <span className="text-on-surface-variant">Target Cube Strength</span> <span className="text-on-surface font-semibold">35.0 MPa (Achieved 36.2)</span> </div> </div> </div> <div className="mt-space-lg p-space-md bg-primary/10 rounded-xl flex items-center justify-between"> <span className="font-title-md text-primary">Safe Shuttering Countdown</span> <span className="font-tabular-metric text-primary">04h : 12m</span> </div> </div>  <div className="lg:col-span-2 bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col justify-between"> <div className="flex items-center justify-between mb-space-md"> <div> <h2 className="font-headline-md text-headline-md text-on-surface">Slab Pour Thermal Gradient Mapping</h2> <p className="font-body-sm text-on-surface-variant">Real-time wireless thermocouple array embedded in Zone B-North</p> </div> <span className="px-space-sm py-space-xs bg-primary-fixed/20 text-primary font-label-md rounded">Active Sensor Grid (12 Nodes)</span> </div>  <div className="h-64 w-full rounded-xl relative overflow-hidden flex items-center justify-center bg-inverse-surface" data-alt="Top-down structural blueprint schematic of a massive commercial concrete slab pour overlaid with a multi-colored thermal heat map showing green and amber temperature zones, sensor node pinpoints with telemetry numbers, engineering grids, and high-contrast dark slate styling." style={{"backgroundImage": "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBkmcrfhnCIFV6Xq_hbGmpIzt3mCUHW6C3eXd3cYeYSiDvKSeZCE3tHiAwp5A7Kqkl7tf8RqFjzA5LrRCs7ATDQ8OZ-xzrNZ1RtplAHbXqZfq_YufTxyjL5MQipGFQiJx9n55GSZKsS9oadpf_zxNyUYe5Zw_Qe-UFtJtginun6a77FYh8HuHd8ooBZvcl8Xm_X11KBdUUF58_Z_u11huZLk5wlJ2NlTGbFJgBFcLmCxsNKJDagDoes')"}}> <div className="absolute inset-0 bg-inverse-surface/60 backdrop-blur-[2px]" /> <div className="relative z-10 flex flex-col items-center text-center p-space-lg"> <span className="material-symbols-outlined text-primary text-[36px] animate-bounce">hub</span> <span className="font-headline-sm text-inverse-on-surface mt-space-sm">Thermal Gradient Stability: 99.4%</span> <span className="font-body-sm text-secondary-fixed-dim mt-1">No thermal cracking risk detected across all embedded nodes.</span> </div> </div> </div> </div>  <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm"> <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md mb-space-lg"> <div> <h2 className="font-headline-md text-headline-md text-on-surface">Blockchain Immutable Audit Trail</h2> <p className="font-body-sm text-on-surface-variant">Statutory compliance & immutable hash records for RERA and banking inspections</p> </div> <div className="flex items-center gap-space-sm"> <button className="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md rounded-xl transition-colors flex items-center gap-space-xs"> <span className="material-symbols-outlined text-[16px]">download</span> <span>Export RERA Dossier</span> </button> <button className="px-space-md py-space-sm bg-inverse-surface text-inverse-on-surface font-label-md rounded-xl transition-colors flex items-center gap-space-xs"> <span className="material-symbols-outlined text-[16px]">verified</span> <span>Verify Smart Contract</span> </button> </div> </div> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"><thead><tr className="border-b border-surface-container"><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">Transaction / Invoice ID</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">Entity / Vendor</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">Amount (INR)</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase">Block Hash</th><th className="py-space-sm px-space-md font-label-sm text-on-surface-variant uppercase text-right">Status</th></tr></thead><tbody className="divide-y divide-surface-container"><tr><td className="py-space-md px-space-md font-title-md text-on-surface">INV-2023-8891</td><td className="py-space-md px-space-md font-body-sm text-on-surface-variant">Ultratech Cement (Bulk Supply)</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">₹1,42,50,000</td><td className="py-space-md px-space-md font-mono text-body-sm text-on-surface-variant">0x8f9c...3b12</td><td className="py-space-md px-space-md text-right"><span className="px-2 py-0.5 bg-primary-fixed/20 text-primary font-label-sm rounded">Verified & Audited</span></td></tr><tr><td className="py-space-md px-space-md font-title-md text-on-surface">INV-2023-8892</td><td className="py-space-md px-space-md font-body-sm text-on-surface-variant">Jindal Panther Steels</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">₹3,89,00,000</td><td className="py-space-md px-space-md font-mono text-body-sm text-on-surface-variant">0x4a11...9e84</td><td className="py-space-md px-space-md text-right"><span className="px-2 py-0.5 bg-primary-fixed/20 text-primary font-label-sm rounded">Verified & Audited</span></td></tr><tr><td className="py-space-md px-space-md font-title-md text-on-surface">INV-2023-8893</td><td className="py-space-md px-space-md font-body-sm text-on-surface-variant">Apex Formwork Systems</td><td className="py-space-md px-space-md font-tabular-metric-sm text-on-surface">₹95,20,000</td><td className="py-space-md px-space-md font-mono text-body-sm text-on-surface-variant">0x1c77...f290</td><td className="py-space-md px-space-md text-right"><span className="px-2 py-0.5 bg-primary-fixed/20 text-primary font-label-sm rounded">Verified & Audited</span></td></tr></tbody></table> </div> </div> </div></main>
+    <Shell title="Financial Forecast">
+      <div className="flex flex-col gap-6 pb-16">
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              {project.name} · {project.location}
+            </p>
+            <h1 className="text-2xl font-bold text-foreground">Financial forecast</h1>
+            <p className="text-sm text-muted-foreground">
+              Built from your BOQ, vendor bills, payments, owner funding and statutory charges.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Contingency</span>
+              <input
+                type="number"
+                min={0}
+                max={25}
+                value={contingencyPct}
+                onChange={(e) => setContingencyPct(Math.max(0, Math.min(25, num(e.target.value))))}
+                className="w-14 bg-transparent text-right font-semibold outline-none"
+              />
+              <span className="text-muted-foreground">%</span>
+            </label>
+            <button
+              onClick={exportCsv}
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+            >
+              <FileDown className="h-4 w-4" /> Export forecast
+            </button>
+          </div>
+        </div>
+
+        {!project.id ? (
+          <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
+            Add a project first, then the forecast will fill in automatically.
+          </div>
+        ) : loading ? (
+          <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
+            Loading project finances…
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <Kpi
+                icon={<Landmark className="h-4 w-4" />}
+                label="Forecast total cost"
+                value={inr(m.forecastCost)}
+                note={`BOQ ${inr(m.boqTotal)} + charges ${inr(m.chargesTotal)} + contingency ${inr(m.contingency)}`}
+              />
+              <Kpi
+                icon={<Wallet className="h-4 w-4" />}
+                label="Funds in hand"
+                value={inr(m.fundsInHand)}
+                note={`Owner funding ${inr(m.inflow)} − spent ${inr(m.spentToDate)}`}
+                tone={m.fundsInHand < 0 ? "bad" : "good"}
+              />
+              <Kpi
+                icon={<TrendingUp className="h-4 w-4" />}
+                label="Cost to complete"
+                value={inr(m.costToComplete)}
+                note={`${inr(m.committedNow)} already committed in bills & charges`}
+              />
+              <Kpi
+                icon={<AlertTriangle className="h-4 w-4" />}
+                label="Funding gap"
+                value={inr(m.fundingGap)}
+                note={
+                  gapCritical
+                    ? "Extra funding needed to finish at current forecast"
+                    : "Funds in hand cover the remaining work"
+                }
+                tone={gapCritical ? "bad" : "good"}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm lg:col-span-2">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground">Money in vs money out</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Last {m.months.length || 0} month(s) of recorded funding and payments
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <span className="h-2.5 w-2.5 rounded bg-primary" /> In
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="h-2.5 w-2.5 rounded bg-destructive" /> Out
+                    </span>
+                  </div>
+                </div>
+                {m.months.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-muted-foreground">
+                    No dated funding or payments yet. Add entries in the capital ledger and bills to
+                    see the trend.
+                  </p>
+                ) : (
+                  <div className="flex h-56 items-end gap-4">
+                    {m.months.map((x) => (
+                      <div key={x.key} className="flex flex-1 flex-col items-center gap-2">
+                        <div className="flex h-44 w-full items-end justify-center gap-1">
+                          <div
+                            title={`In ${inrFull(x.inflow)}`}
+                            className="w-1/2 rounded-t bg-primary"
+                            style={{ height: `${Math.max((x.inflow / maxBar) * 100, x.inflow > 0 ? 4 : 0)}%` }}
+                          />
+                          <div
+                            title={`Out ${inrFull(x.outflow)}`}
+                            className="w-1/2 rounded-t bg-destructive"
+                            style={{ height: `${Math.max((x.outflow / maxBar) * 100, x.outflow > 0 ? 4 : 0)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground">{monthLabel(x.key)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <h2 className="text-lg font-semibold text-foreground">Runway & timeline</h2>
+                <Row label="Average monthly spend" value={m.monthlyBurn > 0 ? inr(m.monthlyBurn) : "—"} />
+                <Row
+                  label="Cash runway"
+                  value={
+                    m.monthlyBurn > 0
+                      ? `${m.runwayMonths.toFixed(1)} months`
+                      : "Needs payment history"
+                  }
+                />
+                <Row
+                  label="Months to finish at this spend"
+                  value={m.monthlyBurn > 0 ? `${m.monthsToComplete.toFixed(1)} months` : "—"}
+                />
+                <Row
+                  label="Projected finish"
+                  value={
+                    m.projectedFinish
+                      ? m.projectedFinish.toLocaleDateString("en-IN", {
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "—"
+                  }
+                />
+                <Row
+                  label="Target handover"
+                  value={
+                    m.targetHandover
+                      ? m.targetHandover.toLocaleDateString("en-IN", {
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "Not set"
+                  }
+                />
+                {m.targetBudget > 0 && (
+                  <Row
+                    label="Vs target budget"
+                    value={`${m.budgetVariance >= 0 ? "Under by " : "Over by "}${inr(Math.abs(m.budgetVariance))}`}
+                    tone={m.budgetVariance >= 0 ? "good" : "bad"}
+                  />
+                )}
+                <div className="mt-auto flex items-center gap-2 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
+                  <CalendarClock className="h-4 w-4 shrink-0" />
+                  Forecast updates automatically as bills, payments and owner funding are recorded.
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <h2 className="mb-3 text-lg font-semibold text-foreground">Where the forecast comes from</h2>
+                <div className="flex flex-col gap-2 text-sm">
+                  <Row label="BOQ estimated cost" value={inrFull(m.boqTotal)} />
+                  <Row label={`Contingency @ ${contingencyPct}%`} value={inrFull(m.contingency)} />
+                  <Row label="Statutory & common charges" value={inrFull(m.chargesTotal)} />
+                  <Row label="Bills raised (net)" value={inrFull(m.billedGross)} />
+                  <Row label="Paid to vendors" value={inrFull(m.vendorPaid)} />
+                  <Row label="Bills outstanding" value={inrFull(m.vendorOutstanding)} />
+                  <Row label="Charges pending" value={inrFull(m.chargesPending)} />
+                  <Row label="Owner funding received" value={inrFull(m.inflow)} />
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2 text-sm">
+                  <Link to="/bills-payments" className="rounded-lg border border-border px-3 py-1.5">
+                    Bills & payments
+                  </Link>
+                  <Link to="/capital-ledger" className="rounded-lg border border-border px-3 py-1.5">
+                    Capital ledger
+                  </Link>
+                  <Link to="/common-expenses" className="rounded-lg border border-border px-3 py-1.5">
+                    Common expenses
+                  </Link>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <h2 className="mb-3 text-lg font-semibold text-foreground">Payments coming up</h2>
+                {m.dueSoon.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    No outstanding vendor bills right now.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="text-xs uppercase text-muted-foreground">
+                        <tr>
+                          <th className="py-2 pr-3">Bill</th>
+                          <th className="py-2 pr-3">Vendor</th>
+                          <th className="py-2 pr-3">Due</th>
+                          <th className="py-2 text-right">Outstanding</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {m.dueSoon.map((b) => (
+                          <tr key={b.id}>
+                            <td className="py-2 pr-3 font-medium text-foreground">
+                              {b.bill_number || "—"}
+                            </td>
+                            <td className="py-2 pr-3 text-muted-foreground">{b.vendor_name || "—"}</td>
+                            <td className="py-2 pr-3 text-muted-foreground">{b.due_date || "—"}</td>
+                            <td className="py-2 text-right font-semibold text-foreground">
+                              {inrFull(b.outstanding)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </Shell>
+  );
+}
+
+function Kpi({
+  icon,
+  label,
+  value,
+  note,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  note: string;
+  tone?: "good" | "bad";
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+        <span>{label}</span>
+        <span className="rounded-lg bg-muted p-1.5 text-foreground">{icon}</span>
+      </div>
+      <p
+        className={`mt-3 text-2xl font-bold ${
+          tone === "bad" ? "text-destructive" : tone === "good" ? "text-primary" : "text-foreground"
+        }`}
+      >
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">{note}</p>
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "good" | "bad";
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-1.5 text-sm last:border-0">
+      <span className="text-muted-foreground">{label}</span>
+      <span
+        className={`font-semibold ${
+          tone === "bad" ? "text-destructive" : tone === "good" ? "text-primary" : "text-foreground"
+        }`}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
