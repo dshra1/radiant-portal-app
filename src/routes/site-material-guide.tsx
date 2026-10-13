@@ -84,8 +84,8 @@ function ColumnPlan() {
       {c && (
         <div className="mt-3 grid gap-3 md:grid-cols-2 text-xs">
           <dl className="grid grid-cols-2 gap-1 rounded-lg border border-border p-3">
-            {TABLES[40].rows[0].map((h, i) => <><dt key={"h" + i} className="text-muted-foreground">{h}</dt><dd key={"d" + i}>{c.row[i]}</dd></>)}
-            {load && TABLES[42].rows[0].slice(3).map((h, i) => <><dt key={"lh" + i} className="text-muted-foreground">{h}</dt><dd key={"ld" + i}>{load[i + 3]}</dd></>)}
+            {TABLES[40].rows[0].map((h, i) => <div key={"h" + i} className="contents"><dt className="text-muted-foreground">{h}</dt><dd>{c.row[i]}</dd></div>)}
+            {load && TABLES[42].rows[0].slice(3).map((h, i) => <div key={"lh" + i} className="contents"><dt className="text-muted-foreground">{h}</dt><dd>{load[i + 3]}</dd></div>)}
           </dl>
           <div className="space-y-2 rounded-lg border border-border p-3">
             {foot && <p><b>Footing {foot[0]}:</b> {TABLES[43].rows[0].slice(1).map((h, i) => `${h}: ${foot[i + 1]}`).join(" · ")}</p>}

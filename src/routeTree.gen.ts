@@ -55,6 +55,7 @@ import { Route as QaInspectionRouteImport } from './routes/qa-inspection'
 import { Route as RolesAccessRouteImport } from './routes/roles-access'
 import { Route as ScopeBriefRouteImport } from './routes/scope-brief'
 import { Route as SiteExecutionRouteImport } from './routes/site-execution'
+import { Route as SiteMaterialGuideRouteImport } from './routes/site-material-guide'
 import { Route as SiteMediaRouteImport } from './routes/site-media'
 import { Route as SystemDirectoryRouteImport } from './routes/system-directory'
 import { Route as TasksRouteImport } from './routes/tasks'
@@ -295,6 +296,11 @@ const SiteExecutionRoute = SiteExecutionRouteImport.update({
   path: '/site-execution',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SiteMaterialGuideRoute = SiteMaterialGuideRouteImport.update({
+  id: '/site-material-guide',
+  path: '/site-material-guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SiteMediaRoute = SiteMediaRouteImport.update({
   id: '/site-media',
   path: '/site-media',
@@ -388,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/roles-access': typeof RolesAccessRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
+  '/site-material-guide': typeof SiteMaterialGuideRoute
   '/site-media': typeof SiteMediaRoute
   '/system-directory': typeof SystemDirectoryRoute
   '/tasks': typeof TasksRoute
@@ -445,6 +452,7 @@ export interface FileRoutesByTo {
   '/roles-access': typeof RolesAccessRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
+  '/site-material-guide': typeof SiteMaterialGuideRoute
   '/site-media': typeof SiteMediaRoute
   '/system-directory': typeof SystemDirectoryRoute
   '/tasks': typeof TasksRoute
@@ -503,6 +511,7 @@ export interface FileRoutesById {
   '/roles-access': typeof RolesAccessRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
+  '/site-material-guide': typeof SiteMaterialGuideRoute
   '/site-media': typeof SiteMediaRoute
   '/system-directory': typeof SystemDirectoryRoute
   '/tasks': typeof TasksRoute
@@ -562,6 +571,7 @@ export interface FileRouteTypes {
     | '/roles-access'
     | '/scope-brief'
     | '/site-execution'
+    | '/site-material-guide'
     | '/site-media'
     | '/system-directory'
     | '/tasks'
@@ -619,6 +629,7 @@ export interface FileRouteTypes {
     | '/roles-access'
     | '/scope-brief'
     | '/site-execution'
+    | '/site-material-guide'
     | '/site-media'
     | '/system-directory'
     | '/tasks'
@@ -676,6 +687,7 @@ export interface FileRouteTypes {
     | '/roles-access'
     | '/scope-brief'
     | '/site-execution'
+    | '/site-material-guide'
     | '/site-media'
     | '/system-directory'
     | '/tasks'
@@ -734,6 +746,7 @@ export interface RootRouteChildren {
   RolesAccessRoute: typeof RolesAccessRoute
   ScopeBriefRoute: typeof ScopeBriefRoute
   SiteExecutionRoute: typeof SiteExecutionRoute
+  SiteMaterialGuideRoute: typeof SiteMaterialGuideRoute
   SiteMediaRoute: typeof SiteMediaRoute
   SystemDirectoryRoute: typeof SystemDirectoryRoute
   TasksRoute: typeof TasksRoute
@@ -1069,6 +1082,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SiteExecutionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/site-material-guide': {
+      id: '/site-material-guide'
+      path: '/site-material-guide'
+      fullPath: '/site-material-guide'
+      preLoaderRoute: typeof SiteMaterialGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/site-media': {
       id: '/site-media'
       path: '/site-media'
@@ -1182,6 +1202,7 @@ const rootRouteChildren: RootRouteChildren = {
   RolesAccessRoute: RolesAccessRoute,
   ScopeBriefRoute: ScopeBriefRoute,
   SiteExecutionRoute: SiteExecutionRoute,
+  SiteMaterialGuideRoute: SiteMaterialGuideRoute,
   SiteMediaRoute: SiteMediaRoute,
   SystemDirectoryRoute: SystemDirectoryRoute,
   TasksRoute: TasksRoute,
