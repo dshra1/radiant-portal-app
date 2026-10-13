@@ -77,6 +77,7 @@ export const navGroups: NavGroup[] = [
     label: "Site Supervision",
     items: [
       { to: "/site-execution", label: "Site Execution", icon: HardHat },
+      { to: "/site-material-guide", label: "Site Material Guide", icon: FileText },
       { to: "/pour-cards", label: "Pour Cards", icon: ClipboardCheck },
       { to: "/field-console", label: "Field Console", icon: Radio },
       { to: "/site-media", label: "Site Media", icon: Video },
