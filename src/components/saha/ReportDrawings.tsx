@@ -29,6 +29,10 @@ export function ReportDrawings() {
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 px-4 py-3">
         <h2 className="text-sm font-bold uppercase tracking-wider text-primary">Project report drawings</h2>
         <span className="text-xs text-muted-foreground">{(drawings as D[]).length} sheets from the Phase 2 set</span>
+        <span className="w-full rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+          Superseded: these sheets predate the frozen plans (D-118, 4BHK floors 1–2, 3BHK floors 3–5). Use the
+          current drawing sets in the register above.
+        </span>
         <Link to="/site-material-guide" className="ml-auto text-xs font-semibold text-primary underline">Open Site Material Guide</Link>
       </div>
       <div className="flex flex-wrap items-center gap-1 px-4 pt-3 text-xs text-muted-foreground">
