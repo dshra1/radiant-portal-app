@@ -58,6 +58,7 @@ export const navGroups: NavGroup[] = [
       { to: "/projects-setup", label: "Projects & Setup", icon: Settings2 },
       { to: "/brand-preferences", label: "Brand Preferences", icon: Tags },
       { to: "/boq-engine", label: "BOQ Engine", icon: Calculator },
+      { to: "/project-import", label: "Import PMC Workbooks", icon: FileSpreadsheet },
       { to: "/budget-fit", label: "Budget Fit", icon: IndianRupee },
       { to: "/approvals", label: "Change Approvals", icon: ShieldCheck },
       { to: "/cost-dashboard", label: "Cost Dashboard", icon: BadgeIndianRupee },

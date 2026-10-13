@@ -46,6 +46,7 @@ import { Route as PriceIntelligenceRouteImport } from './routes/price-intelligen
 import { Route as PriceOcrRouteImport } from './routes/price-ocr'
 import { Route as ProcurementRouteImport } from './routes/procurement'
 import { Route as ProjectControlsRouteImport } from './routes/project-controls'
+import { Route as ProjectImportRouteImport } from './routes/project-import'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ProjectsSetupRouteImport } from './routes/projects-setup'
 import { Route as PurchaseOrdersRouteImport } from './routes/purchase-orders'
@@ -251,6 +252,11 @@ const ProjectControlsRoute = ProjectControlsRouteImport.update({
   path: '/project-controls',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectImportRoute = ProjectImportRouteImport.update({
+  id: '/project-import',
+  path: '/project-import',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
@@ -385,6 +391,7 @@ export interface FileRoutesByFullPath {
   '/price-ocr': typeof PriceOcrRoute
   '/procurement': typeof ProcurementRoute
   '/project-controls': typeof ProjectControlsRoute
+  '/project-import': typeof ProjectImportRoute
   '/projects': typeof ProjectsRoute
   '/projects-setup': typeof ProjectsSetupRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
@@ -443,6 +450,7 @@ export interface FileRoutesByTo {
   '/price-ocr': typeof PriceOcrRoute
   '/procurement': typeof ProcurementRoute
   '/project-controls': typeof ProjectControlsRoute
+  '/project-import': typeof ProjectImportRoute
   '/projects': typeof ProjectsRoute
   '/projects-setup': typeof ProjectsSetupRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
@@ -502,6 +510,7 @@ export interface FileRoutesById {
   '/price-ocr': typeof PriceOcrRoute
   '/procurement': typeof ProcurementRoute
   '/project-controls': typeof ProjectControlsRoute
+  '/project-import': typeof ProjectImportRoute
   '/projects': typeof ProjectsRoute
   '/projects-setup': typeof ProjectsSetupRoute
   '/purchase-orders': typeof PurchaseOrdersRoute
@@ -562,6 +571,7 @@ export interface FileRouteTypes {
     | '/price-ocr'
     | '/procurement'
     | '/project-controls'
+    | '/project-import'
     | '/projects'
     | '/projects-setup'
     | '/purchase-orders'
@@ -620,6 +630,7 @@ export interface FileRouteTypes {
     | '/price-ocr'
     | '/procurement'
     | '/project-controls'
+    | '/project-import'
     | '/projects'
     | '/projects-setup'
     | '/purchase-orders'
@@ -678,6 +689,7 @@ export interface FileRouteTypes {
     | '/price-ocr'
     | '/procurement'
     | '/project-controls'
+    | '/project-import'
     | '/projects'
     | '/projects-setup'
     | '/purchase-orders'
@@ -737,6 +749,7 @@ export interface RootRouteChildren {
   PriceOcrRoute: typeof PriceOcrRoute
   ProcurementRoute: typeof ProcurementRoute
   ProjectControlsRoute: typeof ProjectControlsRoute
+  ProjectImportRoute: typeof ProjectImportRoute
   ProjectsRoute: typeof ProjectsRoute
   ProjectsSetupRoute: typeof ProjectsSetupRoute
   PurchaseOrdersRoute: typeof PurchaseOrdersRoute
@@ -1019,6 +1032,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectControlsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/project-import': {
+      id: '/project-import'
+      path: '/project-import'
+      fullPath: '/project-import'
+      preLoaderRoute: typeof ProjectImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects': {
       id: '/projects'
       path: '/projects'
@@ -1193,6 +1213,7 @@ const rootRouteChildren: RootRouteChildren = {
   PriceOcrRoute: PriceOcrRoute,
   ProcurementRoute: ProcurementRoute,
   ProjectControlsRoute: ProjectControlsRoute,
+  ProjectImportRoute: ProjectImportRoute,
   ProjectsRoute: ProjectsRoute,
   ProjectsSetupRoute: ProjectsSetupRoute,
   PurchaseOrdersRoute: PurchaseOrdersRoute,
@@ -1216,13 +1237,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

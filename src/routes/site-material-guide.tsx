@@ -114,6 +114,11 @@ function Page() {
   return (
     <Shell title="Site Material Guide" subtitle="Trade → flat → room: what to order, fix and check (Cyber Enclave Phase 2 set, 5 typical floors)">
       {!isCyber && <p className="mb-3 rounded-lg border border-border bg-muted p-3 text-sm">This guide holds the Cyber Enclave report. Switch the project to Cyber Enclave to use it on site.</p>}
+      <p className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+        Superseded: this guide is from the Phase 2 set of 5 identical floors, before the frozen plans (D-118:
+        4BHK floors 1–2, 3BHK floors 3–5, Bedroom-03 as family hall, new switchboard rules). Use the current
+        electrical and plumbing drawing sets in Drawings &amp; Documents and the imported BOQ until this guide is rebuilt.
+      </p>
       <div className="mb-3 flex flex-wrap gap-2">{TRADES.map((t) => <button key={t.id} className={pill(t.id === trade)} onClick={() => setTrade(t.id)}>{t.label}</button>)}</div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {FLATS.map((f) => <button key={f} className={pill(f === flat)} onClick={() => { setFlat(f); setRoom(""); }}>{f}</button>)}
