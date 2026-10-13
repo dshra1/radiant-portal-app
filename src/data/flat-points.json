@@ -1,0 +1,2168 @@
+{
+"Flat-01": {
+"Bedroom-03": [
+{
+"p": "Switchboard at door (2-way light and fan)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside 6 A",
+"h": "1\u20326\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, left (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, right (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "AC1 AC 16 A (1.5 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV point 4\u20320\u2033 (wardrobe niche)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data at TV",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Set-top box 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A1 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A2 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A3 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B1 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B2 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B3 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"Bedroom-02": [
+{
+"p": "Switchboard at door (2-way light and fan)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside 6 A",
+"h": "1\u20326\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, left (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, right (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "AC2 AC 16 A (1.5 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV point 4\u20320\u2033 (wardrobe niche)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data at TV",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Set-top box 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A1 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A2 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A3 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B1 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B2 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B3 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"M.Bedroom": [
+{
+"p": "Switchboard at door (2-way light and fan)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside 6 A",
+"h": "1\u20326\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, left (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, right (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "AC3 AC 16 A (1.5 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV point 4\u20320\u2033 (wardrobe niche)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data at TV",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Set-top box 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A1 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A2 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A3 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B1 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B2 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B3 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"Bedroom-01": [
+{
+"p": "Switchboard at door (2-way light and fan)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside 6 A",
+"h": "1\u20326\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, left (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, right (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Vanity 6 A",
+"h": "3\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Vanity mirror light",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "AC4 AC 16 A (1.5 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV point 4\u20320\u2033 (wall, below the AC)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data at TV",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Set-top box 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A1 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A2 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A3 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B1 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B2 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B3 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"Living": [
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard (living, passage)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV point 4\u20320\u2033 (wall-mounted TV)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data at TV",
+"h": "1\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A",
+"h": "1\u20326\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "TV 16 A",
+"h": "1\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Wi-Fi router point",
+"h": "7\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Router 6 A",
+"h": "7\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Sofa 6 A",
+"h": "1\u2032",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "AC5 AC 16 A (2 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A at 4\u20320\u2033",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row A",
+"h": "ceiling",
+"n": 4,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row B",
+"h": "ceiling",
+"n": 4,
+"t": "electrical"
+}
+],
+"Drawing": [
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Sofa 6 A",
+"h": "1\u2032",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard (drawing, balcony, puja)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row A",
+"h": "ceiling",
+"n": 4,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row B",
+"h": "ceiling",
+"n": 4,
+"t": "electrical"
+}
+],
+"Dining": [
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row A",
+"h": "ceiling",
+"n": 3,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row B",
+"h": "ceiling",
+"n": 3,
+"t": "electrical"
+}
+],
+"Foyer": [
+{
+"p": "Switchboard at main door",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Video door phone monitor",
+"h": "4\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Distribution board (TPN)",
+"h": "5\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row A",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row B",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"Corridor": [
+{
+"p": "Door camera + bell push (VDP outdoor unit)",
+"h": "4\u20329\u2033",
+"n": 1,
+"t": "electrical"
+}
+],
+"Balcony W": [
+{
+"p": "Wall light",
+"h": "7\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Weatherproof 6 A",
+"h": "1\u20326\u2033",
+"n": 1,
+"t": "electrical"
+}
+],
+"Passage": [
+{
+"p": "Switchboard (balcony)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row A",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row B",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row C",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"Balcony NE": [
+{
+"p": "Wall light",
+"h": "7\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Weatherproof 6 A",
+"h": "1\u20326\u2033",
+"n": 1,
+"t": "electrical"
+}
+],
+"Puja": [
+{
+"p": "Ceiling light",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Lamp 6 A",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+}
+],
+"Utility": [
+{
+"p": "Ceiling light",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Washing machine 16 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Geyser 16 A (kitchen hot water)",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"Store": [
+{
+"p": "Ceiling light",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switch",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"Kitchen": [
+{
+"p": "Switchboard 4\u20320\u2033: lights, under-cabinet LED",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Counter twin 16 A",
+"h": "3\u20329\u2033",
+"n": 4,
+"t": "electrical"
+},
+{
+"p": "Counter twin 6 A",
+"h": "3\u20329\u2033",
+"n": 4,
+"t": "electrical"
+},
+{
+"p": "Chimney 6 A",
+"h": "6\u20329\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Hob ignition 6 A",
+"h": "1\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "RO purifier 6 A",
+"h": "5\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Dishwasher 16 A",
+"h": "1\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Microwave 16 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "OTG 16 A",
+"h": "5\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Fridge 16 A",
+"h": "4\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light",
+"h": "ceiling",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Under-cabinet LED driver",
+"h": "4\u20325\u2033",
+"n": 2,
+"t": "electrical"
+}
+],
+"Bedroom-03 bathroom": [
+{
+"p": "Downlight",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Shower downlight IP65",
+"h": "ceiling",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Geyser 16 A",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Basin 6 A",
+"h": "3\u20326\u2033",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Mirror light",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Exhaust fan in V1",
+"h": "7\u20323\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard outside toilet",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"Bedroom-02 bathroom": [
+{
+"p": "Downlight",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Shower downlight IP65",
+"h": "ceiling",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Geyser 16 A",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Basin 6 A",
+"h": "3\u20326\u2033",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Mirror light",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Exhaust fan in V1",
+"h": "7\u20323\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard outside toilet",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"M.Bedroom bathroom": [
+{
+"p": "Downlight",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Shower downlight IP65",
+"h": "ceiling",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Geyser 16 A",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Basin 6 A",
+"h": "3\u20326\u2033",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Mirror light",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Exhaust fan in V1",
+"h": "7\u20323\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard outside toilet",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"Bedroom-01 toilet": [
+{
+"p": "Downlight",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Shower downlight IP65",
+"h": "ceiling",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Geyser 16 A",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Exhaust fan in V1",
+"h": "7\u20323\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard outside toilet",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"Powder room": [
+{
+"p": "Downlight",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Basin 6 A",
+"h": "3\u20326\u2033",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Mirror light",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard outside toilet",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ducted exhaust fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"Drawing + dining": [
+{
+"p": "AC6 AC 16 A (2 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+}
+]
+},
+"Flat-02": {
+"Bedroom-03 / study": [
+{
+"p": "Switchboard at door (2-way light and fan)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside 6 A",
+"h": "1\u20326\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, left (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, right (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Vanity 6 A",
+"h": "3\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Vanity mirror light",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data (study)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "AC1 AC 16 A (1.5 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV point 4\u20320\u2033 (wall)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data at TV",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Set-top box 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A1 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A2 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A3 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B1 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B2 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B3 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"Bedroom-02": [
+{
+"p": "Switchboard at door (2-way light and fan)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside 6 A",
+"h": "1\u20326\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, left (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, right (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "AC2 AC 16 A (1.5 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV point 4\u20320\u2033 (wardrobe niche)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data at TV",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Set-top box 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A1 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A2 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A3 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B1 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B2 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B3 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"M.Bedroom": [
+{
+"p": "Switchboard at door (2-way light and fan)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside 6 A",
+"h": "1\u20326\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, left (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, right (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "AC3 AC 16 A (1.5 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV point 4\u20320\u2033 (wardrobe niche)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data at TV",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Set-top box 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A1 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A2 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A3 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B1 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B2 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B3 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"Bedroom-01": [
+{
+"p": "Switchboard at door (2-way light and fan)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside 6 A",
+"h": "1\u20326\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, left (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Bedside switches, right (light and fan, 2-way / intermediate)",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "AC4 AC 16 A (1.5 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV point 4\u20320\u2033 (wardrobe niche)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data at TV",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Set-top box 6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A1 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A2 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light A3 (row A)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B1 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B2 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light B3 (row B)",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"Drawing": [
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Sofa 6 A",
+"h": "1\u2032",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard (drawing, puja, crockery)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row A",
+"h": "ceiling",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row B",
+"h": "ceiling",
+"n": 2,
+"t": "electrical"
+}
+],
+"Foyer": [
+{
+"p": "Switchboard at main door",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Video door phone monitor",
+"h": "4\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Distribution board (TPN)",
+"h": "5\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row A",
+"h": "ceiling",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row B",
+"h": "ceiling",
+"n": 2,
+"t": "electrical"
+}
+],
+"Corridor": [
+{
+"p": "Door camera + bell push (VDP outdoor unit)",
+"h": "4\u20329\u2033",
+"n": 1,
+"t": "electrical"
+}
+],
+"Living": [
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard (living, passage)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV point 4\u20320\u2033 (wall-mounted TV)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Data at TV",
+"h": "1\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A",
+"h": "1\u20326\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "TV 16 A",
+"h": "1\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Wi-Fi router point",
+"h": "7\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Router 6 A",
+"h": "7\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Sofa 6 A",
+"h": "1\u2032",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "AC5 AC 16 A (2 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "TV 6 A at 4\u20320\u2033",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row A",
+"h": "ceiling",
+"n": 4,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row B",
+"h": "ceiling",
+"n": 4,
+"t": "electrical"
+}
+],
+"Dining": [
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 16 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Twin 6 A",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard (balcony)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "16 A (second power point)",
+"h": "1\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row A",
+"h": "ceiling",
+"n": 3,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row B",
+"h": "ceiling",
+"n": 3,
+"t": "electrical"
+}
+],
+"Balcony E": [
+{
+"p": "Wall light",
+"h": "7\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Weatherproof 6 A",
+"h": "1\u20326\u2033",
+"n": 1,
+"t": "electrical"
+}
+],
+"Puja": [
+{
+"p": "Ceiling light",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Lamp 6 A",
+"h": "2\u20326\u2033",
+"n": 1,
+"t": "electrical"
+}
+],
+"Utility": [
+{
+"p": "Ceiling light",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Washing machine 16 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Geyser 16 A (kitchen hot water)",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "6 A",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"Store": [
+{
+"p": "Ceiling light",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switch",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"Kitchen": [
+{
+"p": "Switchboard 4\u20320\u2033 (beside archway)",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Counter twin 16 A",
+"h": "3\u20329\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Counter twin 6 A",
+"h": "3\u20329\u2033",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Chimney 6 A",
+"h": "6\u20329\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Hob ignition 6 A",
+"h": "1\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "RO purifier 6 A",
+"h": "5\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Fridge 16 A",
+"h": "4\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Microwave 16 A",
+"h": "3\u20329\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ceiling light",
+"h": "ceiling",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Ceiling fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Under-cabinet LED driver",
+"h": "4\u20325\u2033",
+"n": 2,
+"t": "electrical"
+}
+],
+"Bedroom-03 toilet": [
+{
+"p": "Downlight",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Shower downlight IP65",
+"h": "ceiling",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Geyser 16 A",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Exhaust fan in V1",
+"h": "7\u20323\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard outside toilet",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"Bedroom-02 bathroom": [
+{
+"p": "Downlight",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Shower downlight IP65",
+"h": "ceiling",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Geyser 16 A",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Basin 6 A",
+"h": "3\u20326\u2033",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Mirror light",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Exhaust fan in V1",
+"h": "7\u20323\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard outside toilet",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"M.Bedroom bathroom": [
+{
+"p": "Downlight",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Shower downlight IP65",
+"h": "ceiling",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Geyser 16 A",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Basin 6 A",
+"h": "3\u20326\u2033",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Mirror light",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Exhaust fan in V1",
+"h": "7\u20323\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard outside toilet",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"Bedroom-01 bathroom": [
+{
+"p": "Downlight",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Shower downlight IP65",
+"h": "ceiling",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Geyser 16 A",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Basin 6 A",
+"h": "3\u20326\u2033",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Mirror light",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Exhaust fan in V1",
+"h": "7\u20323\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard outside toilet",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+}
+],
+"Powder room": [
+{
+"p": "Downlight",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Basin 6 A",
+"h": "3\u20326\u2033",
+"n": 1,
+"t": "plumbing"
+},
+{
+"p": "Mirror light",
+"h": "6\u20326\u2033",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Switchboard outside toilet",
+"h": "4\u2032",
+"n": 1,
+"t": "electrical"
+},
+{
+"p": "Ducted exhaust fan",
+"h": "ceiling",
+"n": 1,
+"t": "electrical"
+}
+],
+"Drawing + dining": [
+{
+"p": "AC6 AC 16 A (2 TR)",
+"h": "7\u20326\u2033",
+"n": 1,
+"t": "electrical"
+}
+],
+"Passage": [
+{
+"p": "Ceiling light, grid row A",
+"h": "ceiling",
+"n": 2,
+"t": "electrical"
+},
+{
+"p": "Ceiling light, grid row B",
+"h": "ceiling",
+"n": 2,
+"t": "electrical"
+}
+]
+}
+}
