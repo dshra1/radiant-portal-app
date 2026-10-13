@@ -1,11 +1,11 @@
-// Cloudflare Workers deployment of Saha OS, built straight from GitHub (no Lovable publish).
+// Cloudflare Workers deployment of radiant-portal-app (Saha OS), built straight from GitHub (no Lovable publish).
 // Cloudflare build settings:  build command  `npm install && npm run build`
 //                             deploy command `npx wrangler deploy --config cloudflare/wrangler.jsonc`
 // Kept in this folder (not the repo root) so Lovable's own build does not pick it up.
 // Secrets such as GOOGLE_GENERATIVE_AI_API_KEY are set in the Cloudflare dashboard, never here.
 {
   "$schema": "../node_modules/wrangler/config-schema.json",
-  "name": "saha-os",
+  "name": "radiant-portal-app",
   "main": "../.output/server/index.mjs",
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat"],
