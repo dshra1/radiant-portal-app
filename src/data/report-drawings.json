@@ -1,1 +1,222 @@
-[]
+[
+{
+"id": "d01",
+"section": "Flat-01 (West-side) \u00b7 detailed plan",
+"title": "Flat-01 detailed plan with doors and windows"
+},
+{
+"id": "d02",
+"section": "Flat-02 (East-side) \u00b7 detailed plan",
+"title": "Flat-02 detailed plan with doors and windows"
+},
+{
+"id": "d03",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 Bedroom-03 bathroom layout"
+},
+{
+"id": "d04",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 Bedroom-02 bathroom layout"
+},
+{
+"id": "d05",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 M.Bedroom bathroom layout"
+},
+{
+"id": "d06",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 Bedroom-01 toilet layout"
+},
+{
+"id": "d07",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 Powder room layout"
+},
+{
+"id": "d08",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-02 \u00b7 Bedroom-03 toilet layout"
+},
+{
+"id": "d09",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-02 \u00b7 Bedroom-02 bathroom layout"
+},
+{
+"id": "d10",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-02 \u00b7 M.Bedroom bathroom layout"
+},
+{
+"id": "d11",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-02 \u00b7 Bedroom-01 bathroom layout"
+},
+{
+"id": "d12",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-02 \u00b7 Powder room layout"
+},
+{
+"id": "d13",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 Bedroom-03 bathroom key plan with elevation markers"
+},
+{
+"id": "d14",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 Bedroom-03 bathroom, North wall"
+},
+{
+"id": "d15",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 Bedroom-03 bathroom, East wall"
+},
+{
+"id": "d16",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 Bedroom-03 bathroom, South wall"
+},
+{
+"id": "d17",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 Bedroom-03 bathroom, West wall"
+},
+{
+"id": "d18",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 \u00b7 Bedroom-03 bathroom, half wall"
+},
+{
+"id": "d19",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 kitchen \u00b7 10\u20326\u2033 \u00d7 11\u20327\u2033 \u00b7 U-shaped"
+},
+{
+"id": "d20",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-02 kitchen \u00b7 7\u20321\u2033 \u00d7 11\u20327\u2033 \u00b7 L-shaped"
+},
+{
+"id": "d21",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 kitchen \u00b7 10\u20326\u2033 \u00d7 11\u20327\u2033 \u00b7 U-shaped"
+},
+{
+"id": "d22",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 kitchen \u00b7 10\u20326\u2033 \u00d7 11\u20327\u2033 \u00b7 U-shaped, North wall"
+},
+{
+"id": "d23",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 kitchen \u00b7 10\u20326\u2033 \u00d7 11\u20327\u2033 \u00b7 U-shaped, East wall"
+},
+{
+"id": "d24",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 kitchen \u00b7 10\u20326\u2033 \u00d7 11\u20327\u2033 \u00b7 U-shaped, South wall"
+},
+{
+"id": "d25",
+"section": "Toilet layouts: WC on a north or south wall, basin on the shower wall, and a dry area outs",
+"title": "Flat-01 kitchen \u00b7 10\u20326\u2033 \u00d7 11\u20327\u2033 \u00b7 U-shaped, West wall"
+},
+{
+"id": "d26",
+"section": "Whole-flat electrical layout, circuits and conduit",
+"title": "Flat-01 distribution board single-line diagram"
+},
+{
+"id": "d27",
+"section": "Whole-flat electrical layout, circuits and conduit",
+"title": "Flat-02 distribution board single-line diagram"
+},
+{
+"id": "d28",
+"section": "Shafts, slab sleeves, supply and drain runs",
+"title": "Typical plumbing shaft riser diagram"
+},
+{
+"id": "d29",
+"section": "Every wall of every room: box position, height, plate size and the pipes coming down from ",
+"title": "A. Toilet (Bedroom-03) key plan and ceiling points"
+},
+{
+"id": "d30",
+"section": "Every wall of every room: box position, height, plate size and the pipes coming down from ",
+"title": "A. Toilet (Bedroom-03) north wall elevation"
+},
+{
+"id": "d31",
+"section": "Every wall of every room: box position, height, plate size and the pipes coming down from ",
+"title": "A. Toilet (Bedroom-03) east wall elevation"
+},
+{
+"id": "d32",
+"section": "Every wall of every room: box position, height, plate size and the pipes coming down from ",
+"title": "A. Toilet (Bedroom-03) west wall elevation"
+},
+{
+"id": "d33",
+"section": "Every wall of every room: box position, height, plate size and the pipes coming down from ",
+"title": "Legend"
+},
+{
+"id": "d34",
+"section": "20 cars under the slab, 10 under each flat, on one 15\u2032 east\u2013west drive; 32 columns placed ",
+"title": "Stilt parking layout"
+},
+{
+"id": "d35",
+"section": "20 cars under the slab, 10 under each flat, on one 15\u2032 east\u2013west drive; 32 columns placed ",
+"title": "Typical floor with columns and beams"
+},
+{
+"id": "d36",
+"section": "Beams over the walls, three shallow band beams across the open living and dining, combined",
+"title": "Typical floor framing plan"
+},
+{
+"id": "d37",
+"section": "Beams over the walls, three shallow band beams across the open living and dining, combined",
+"title": "Foundation plan"
+},
+{
+"id": "d38",
+"section": "Bore water for everything, municipal water only for drinking: one bore, one municipal sump",
+"title": "Site plan"
+},
+{
+"id": "d39",
+"section": "Bore water for everything, municipal water only for drinking: one bore, one municipal sump",
+"title": "Terrace water plan"
+},
+{
+"id": "d40",
+"section": "Bore water for everything, municipal water only for drinking: one bore, one municipal sump",
+"title": "Water riser diagram"
+},
+{
+"id": "d41",
+"section": "Building load about 131 kVA: ten 3-phase flat connections of about 18 kW, a common service",
+"title": "Site electrical layout"
+},
+{
+"id": "d42",
+"section": "Building load about 131 kVA: ten 3-phase flat connections of about 18 kW, a common service",
+"title": "Building single-line diagram"
+},
+{
+"id": "d43",
+"section": "Sewer at 1 in 40 from 0.6 m deep, storm drains with three to four times the needed capacit",
+"title": "Site plumbing layout"
+},
+{
+"id": "d44",
+"section": "Sewer at 1 in 40 from 0.6 m deep, storm drains with three to four times the needed capacit",
+"title": "Sewer longitudinal sections"
+}
+]
