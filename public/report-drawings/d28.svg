@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" aria-label="Typical plumbing shaft riser diagram" role="img" style="width:100%;height:auto;display:block" viewBox="0 0 820 560"><style>
+/* Layout: drawing set — title block, phase tracker, one sheet per flat plan, then schedules, areas and Vastu sign-off. */
+:root{
+  --bg:#f6f7f8; --sheet:#ffffff; --ink:#1d2730; --muted:#5d6b77; --rule:#c9d1d8;
+  --accent:#1f7a74; --flag:#b7791f; --bad:#b4442f; --win:#2f6db5; --furn:#8a6a4a; --ac:#7a3fb0;
+  --f-bed:#e8eef4; --f-wet:#dcecf0; --f-kit:#f3e7dc; --f-liv:#f4f5ef; --f-puja:#f6edd2; --f-core:#e3e5e8; --f-bal:#eef4ea; --f-svc:#ebe8f1; --f-circ:#f8f8f8;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12171c; --sheet:#182027; --ink:#e3e8ec; --muted:#9aa8b3; --rule:#34414c; --accent:#4cb8ae; --flag:#e0a84a; --bad:#e2735d; --win:#7fb0ef; --furn:#c9a882; --ac:#c39be8;
+  --f-bed:#1f2c38; --f-wet:#1b3238; --f-kit:#352a20; --f-liv:#222820; --f-puja:#3a3220; --f-core:#2a3037; --f-bal:#22301f; --f-svc:#2a2635; --f-circ:#1c2329; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171c; --sheet:#182027; --ink:#e3e8ec; --muted:#9aa8b3; --rule:#34414c; --accent:#4cb8ae; --flag:#e0a84a; --bad:#e2735d; --win:#7fb0ef; --furn:#c9a882; --ac:#c39be8;
+  --f-bed:#1f2c38; --f-wet:#1b3238; --f-kit:#352a20; --f-liv:#222820; --f-puja:#3a3220; --f-core:#2a3037; --f-bal:#22301f; --f-svc:#2a2635; --f-circ:#1c2329; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-block:24px 48px;padding-inline:16px;display:grid;gap:20px}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:4px}
+header.tb{display:grid;grid-template-columns:1fr auto;gap:12px 24px;padding:18px 20px;align-items:end}
+h1{font-family:var(--display);font-weight:600;font-size:1.7rem;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:2px 0 0;font-size:.92rem;max-width:80ch}
+.meta{display:grid;grid-template-columns:repeat(4,auto);gap:2px 18px;font-family:var(--mono);font-size:.78rem}
+.meta dt{color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:.68rem}.meta dd{margin:0}
+.status{color:var(--flag);font-weight:500}
+.sechead{padding:16px 20px 4px;display:grid;gap:4px}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h2{font-family:var(--display);font-weight:600;font-size:1.25rem;margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-weight:600;font-size:1rem;margin:0 0 6px}
+.lead{margin:0;max-width:80ch;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 20px;font-size:.88rem}
+.controls label{display:flex;gap:6px;align-items:center;cursor:pointer}
+input[type=checkbox]{accent-color:var(--accent)} input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.plan{overflow-x:auto;border-top:1px solid var(--rule)}
+.plan svg{display:block;width:100%;min-width:760px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 20px 16px;font-size:.8rem;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border:1px solid var(--rule);display:inline-block}
+.body{padding:16px 20px 20px;display:grid;gap:16px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:20px}.cols>div{min-width:0}
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.83rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--display);font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-size:.72rem}
+td.num,th.num{text-align:right;font-family:var(--mono);white-space:nowrap}
+td.tag{font-family:var(--mono);font-weight:500}
+tfoot td{font-weight:600;border-bottom:none}
+.ok{color:var(--accent);font-weight:500}.fl{color:var(--flag);font-weight:500}.no{color:var(--bad);font-weight:600}
+.track{display:grid;gap:0;border-top:1px solid var(--rule)}
+.track div{display:grid;grid-template-columns:4.5rem 1fr auto;gap:12px;padding:8px 20px;border-bottom:1px solid var(--rule);font-size:.88rem;align-items:baseline}
+.track div:last-child{border-bottom:none}
+.track code{font-family:var(--mono);color:var(--muted)}
+.pill{font-family:var(--mono);font-size:.72rem;padding:1px 8px;border-radius:10px;border:1px solid currentColor;white-space:nowrap}
+.rules{border:1px solid var(--accent);border-radius:4px;padding:10px 14px;display:grid;gap:4px;font-size:.88rem}
+.rules b{font-family:var(--display)}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px}
+.tcard{border:1px solid var(--rule);border-radius:4px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.tcard h4{font-family:var(--display);font-weight:600;font-size:.95rem;margin:0}
+.tcard p{margin:0;font-size:.78rem;color:var(--muted)}
+.tcard svg{width:100%;height:auto;display:block}
+ul.notes{margin:0;padding-left:1.1rem;display:grid;gap:6px;max-width:82ch}
+@media (max-width:640px){header.tb{grid-template-columns:1fr}.meta{grid-template-columns:repeat(2,auto)}.track div{grid-template-columns:3.5rem 1fr}.track .pill{grid-column:2}}
+</style><line stroke="var(--rule)" stroke-width="1" x1="40" x2="560" y1="70" y2="70"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="10" font-weight="400" text-anchor="start" x="44" y="64">Terrace</text><line stroke="var(--rule)" stroke-width="1" x1="40" x2="560" y1="136" y2="136"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="10" font-weight="400" text-anchor="start" x="44" y="130">5th floor</text><line stroke="var(--rule)" stroke-width="1" x1="40" x2="560" y1="202" y2="202"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="10" font-weight="400" text-anchor="start" x="44" y="196">4th floor</text><line stroke="var(--rule)" stroke-width="1" x1="40" x2="560" y1="268" y2="268"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="10" font-weight="400" text-anchor="start" x="44" y="262">3rd floor</text><line stroke="var(--rule)" stroke-width="1" x1="40" x2="560" y1="334" y2="334"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="10" font-weight="400" text-anchor="start" x="44" y="328">2nd floor</text><line stroke="var(--rule)" stroke-width="1" x1="40" x2="560" y1="400" y2="400"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="10" font-weight="400" text-anchor="start" x="44" y="394">1st floor</text><line stroke="var(--rule)" stroke-width="1" x1="40" x2="560" y1="466" y2="466"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="10" font-weight="400" text-anchor="start" x="44" y="460">Stilt (parking)</text><rect fill="var(--sheet)" height="34" rx="3" stroke="var(--win)" stroke-width="1.5" width="120" x="80" y="20"></rect><text fill="var(--win)" font-family="var(--mono)" font-size="10" font-weight="700" text-anchor="middle" x="140" y="42">Overhead tank</text><line stroke="var(--win)" stroke-width="2" x1="140" x2="140" y1="54" y2="76"></line><line stroke="var(--win)" stroke-width="2.5" x1="140" x2="200" y1="76" y2="76"></line><line stroke="var(--win)" stroke-width="3" x1="200" x2="200" y1="76" y2="456"></line><line stroke="var(--bad)" stroke-width="3.2" x1="300" x2="300" y1="136" y2="496"></line><line stroke="var(--accent)" stroke-width="2.4" x1="350" x2="350" y1="136" y2="496"></line><line stroke="var(--muted)" stroke-dasharray="6 3" stroke-width="2.4" x1="400" x2="400" y1="40" y2="496"></line><line stroke="var(--muted)" stroke-dasharray="6 3" stroke-width="2" x1="400" x2="300" y1="146" y2="146"></line><path d="M390 40H410L400 26Z" fill="var(--muted)"></path><text fill="var(--muted)" font-family="var(--mono)" font-size="9.5" font-weight="400" text-anchor="start" x="414" y="38">vent cowl 3′ above terrace</text><line stroke="var(--win)" stroke-width="1.6" x1="200" x2="560" y1="156" y2="156"></line><circle cx="216" cy="156" fill="var(--sheet)" r="4" stroke="var(--win)" stroke-width="1.5"></circle><line stroke="var(--bad)" stroke-width="2" x1="560" x2="300" y1="174" y2="174"></line><line stroke="var(--accent)" stroke-width="1.6" x1="560" x2="350" y1="186" y2="186"></line><text fill="var(--win)" font-family="var(--mono)" font-size="9.5" font-weight="400" text-anchor="start" x="570" y="160">CPVC ¾″ branch, ball valve at entry</text><text fill="var(--bad)" font-family="var(--mono)" font-size="9.5" font-weight="400" text-anchor="start" x="570" y="178">WC 110 mm, 1:40 below the slab (sleeve)</text><text fill="var(--accent)" font-family="var(--mono)" font-size="9.5" font-weight="400" text-anchor="start" x="570" y="190">Shower, floor trap, basin 75 / 50 mm</text><line stroke="var(--win)" stroke-width="1.6" x1="200" x2="560" y1="222" y2="222"></line><circle cx="216" cy="222" fill="var(--sheet)" r="4" stroke="var(--win)" stroke-width="1.5"></circle><line stroke="var(--bad)" stroke-width="2" x1="560" x2="300" y1="240" y2="240"></line><line stroke="var(--accent)" stroke-width="1.6" x1="560" x2="350" y1="252" y2="252"></line><line stroke="var(--win)" stroke-width="1.6" x1="200" x2="560" y1="288" y2="288"></line><circle cx="216" cy="288" fill="var(--sheet)" r="4" stroke="var(--win)" stroke-width="1.5"></circle><line stroke="var(--bad)" stroke-width="2" x1="560" x2="300" y1="306" y2="306"></line><line stroke="var(--accent)" stroke-width="1.6" x1="560" x2="350" y1="318" y2="318"></line><line stroke="var(--win)" stroke-width="1.6" x1="200" x2="560" y1="354" y2="354"></line><circle cx="216" cy="354" fill="var(--sheet)" r="4" stroke="var(--win)" stroke-width="1.5"></circle><line stroke="var(--bad)" stroke-width="2" x1="560" x2="300" y1="372" y2="372"></line><line stroke="var(--accent)" stroke-width="1.6" x1="560" x2="350" y1="384" y2="384"></line><line stroke="var(--win)" stroke-width="1.6" x1="200" x2="560" y1="420" y2="420"></line><circle cx="216" cy="420" fill="var(--sheet)" r="4" stroke="var(--win)" stroke-width="1.5"></circle><line stroke="var(--bad)" stroke-width="2" x1="560" x2="300" y1="438" y2="438"></line><line stroke="var(--accent)" stroke-width="1.6" x1="560" x2="350" y1="450" y2="450"></line><rect fill="var(--sheet)" height="30" rx="3" stroke="var(--ink)" width="160" x="270" y="496"></rect><text fill="var(--ink)" font-family="var(--mono)" font-size="10" font-weight="600" text-anchor="middle" x="350" y="515">Inspection chamber / gully</text><line stroke="var(--ink)" stroke-width="2" x1="430" x2="520" y1="511" y2="511"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="9.5" font-weight="400" text-anchor="start" x="526" y="515">to site drainage and GHMC sewer</text><text fill="var(--win)" font-family="var(--mono)" font-size="9.5" font-weight="400" text-anchor="middle" x="200" y="470">CPVC 1¼″ down-take</text><text fill="var(--bad)" font-family="var(--mono)" font-size="9.5" font-weight="400" text-anchor="end" x="294" y="128">SWR 110 soil</text><text fill="var(--accent)" font-family="var(--mono)" font-size="9.5" font-weight="400" text-anchor="middle" x="350" y="128">75 waste</text><text fill="var(--muted)" font-family="var(--mono)" font-size="9.5" font-weight="400" text-anchor="start" x="406" y="128">75 vent</text><text fill="var(--muted)" font-family="var(--mono)" font-size="10" font-weight="400" text-anchor="start" x="40" y="534">Typical duct (screened, on the north or south face). Kitchen/utility ducts have no soil stack.</text><text fill="var(--muted)" font-family="var(--mono)" font-size="10" font-weight="400" text-anchor="start" x="40" y="550">Cleaning eye at every floor and at the base of each stack.</text></svg>

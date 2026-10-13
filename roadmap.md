@@ -143,3 +143,5 @@
 - [ ] /command-operations and /project-controls still static — rebuild later (user wants to conserve credits)
 - [ ] /system-directory still static — rebuild later
 - [x] Typecheck clean, build OK; published to https://radiant-portal-app.lovable.app (2026-09-21)
+
+- [ ] Import uploaded steel/plumbing/electrical details into BOQ (waiting on user files)

@@ -6,6 +6,7 @@ import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess } from "@/lib/access";
+import { ReportDrawings } from "@/components/saha/ReportDrawings";
 
 export const Route = createFileRoute("/drawing-decipher")({
   head: () => ({
@@ -204,6 +205,8 @@ function Page() {
             </div>
           ))}
         </div>
+
+        {/cyber/i.test(project.name ?? "") ? <ReportDrawings /> : null}
 
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <div className="border-b border-border bg-muted/40 px-4 py-3">

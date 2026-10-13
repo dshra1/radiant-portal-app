@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" aria-label="Legend" id="weLeg" role="img" viewBox="0 0 440 150"><style>
+/* Layout: drawing set — title block, phase tracker, one sheet per flat plan, then schedules, areas and Vastu sign-off. */
+:root{
+  --bg:#f6f7f8; --sheet:#ffffff; --ink:#1d2730; --muted:#5d6b77; --rule:#c9d1d8;
+  --accent:#1f7a74; --flag:#b7791f; --bad:#b4442f; --win:#2f6db5; --furn:#8a6a4a; --ac:#7a3fb0;
+  --f-bed:#e8eef4; --f-wet:#dcecf0; --f-kit:#f3e7dc; --f-liv:#f4f5ef; --f-puja:#f6edd2; --f-core:#e3e5e8; --f-bal:#eef4ea; --f-svc:#ebe8f1; --f-circ:#f8f8f8;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12171c; --sheet:#182027; --ink:#e3e8ec; --muted:#9aa8b3; --rule:#34414c; --accent:#4cb8ae; --flag:#e0a84a; --bad:#e2735d; --win:#7fb0ef; --furn:#c9a882; --ac:#c39be8;
+  --f-bed:#1f2c38; --f-wet:#1b3238; --f-kit:#352a20; --f-liv:#222820; --f-puja:#3a3220; --f-core:#2a3037; --f-bal:#22301f; --f-svc:#2a2635; --f-circ:#1c2329; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171c; --sheet:#182027; --ink:#e3e8ec; --muted:#9aa8b3; --rule:#34414c; --accent:#4cb8ae; --flag:#e0a84a; --bad:#e2735d; --win:#7fb0ef; --furn:#c9a882; --ac:#c39be8;
+  --f-bed:#1f2c38; --f-wet:#1b3238; --f-kit:#352a20; --f-liv:#222820; --f-puja:#3a3220; --f-core:#2a3037; --f-bal:#22301f; --f-svc:#2a2635; --f-circ:#1c2329; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-block:24px 48px;padding-inline:16px;display:grid;gap:20px}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:4px}
+header.tb{display:grid;grid-template-columns:1fr auto;gap:12px 24px;padding:18px 20px;align-items:end}
+h1{font-family:var(--display);font-weight:600;font-size:1.7rem;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:2px 0 0;font-size:.92rem;max-width:80ch}
+.meta{display:grid;grid-template-columns:repeat(4,auto);gap:2px 18px;font-family:var(--mono);font-size:.78rem}
+.meta dt{color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:.68rem}.meta dd{margin:0}
+.status{color:var(--flag);font-weight:500}
+.sechead{padding:16px 20px 4px;display:grid;gap:4px}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h2{font-family:var(--display);font-weight:600;font-size:1.25rem;margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-weight:600;font-size:1rem;margin:0 0 6px}
+.lead{margin:0;max-width:80ch;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 20px;font-size:.88rem}
+.controls label{display:flex;gap:6px;align-items:center;cursor:pointer}
+input[type=checkbox]{accent-color:var(--accent)} input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.plan{overflow-x:auto;border-top:1px solid var(--rule)}
+.plan svg{display:block;width:100%;min-width:760px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 20px 16px;font-size:.8rem;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border:1px solid var(--rule);display:inline-block}
+.body{padding:16px 20px 20px;display:grid;gap:16px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:20px}.cols>div{min-width:0}
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.83rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--display);font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-size:.72rem}
+td.num,th.num{text-align:right;font-family:var(--mono);white-space:nowrap}
+td.tag{font-family:var(--mono);font-weight:500}
+tfoot td{font-weight:600;border-bottom:none}
+.ok{color:var(--accent);font-weight:500}.fl{color:var(--flag);font-weight:500}.no{color:var(--bad);font-weight:600}
+.track{display:grid;gap:0;border-top:1px solid var(--rule)}
+.track div{display:grid;grid-template-columns:4.5rem 1fr auto;gap:12px;padding:8px 20px;border-bottom:1px solid var(--rule);font-size:.88rem;align-items:baseline}
+.track div:last-child{border-bottom:none}
+.track code{font-family:var(--mono);color:var(--muted)}
+.pill{font-family:var(--mono);font-size:.72rem;padding:1px 8px;border-radius:10px;border:1px solid currentColor;white-space:nowrap}
+.rules{border:1px solid var(--accent);border-radius:4px;padding:10px 14px;display:grid;gap:4px;font-size:.88rem}
+.rules b{font-family:var(--display)}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px}
+.tcard{border:1px solid var(--rule);border-radius:4px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.tcard h4{font-family:var(--display);font-weight:600;font-size:.95rem;margin:0}
+.tcard p{margin:0;font-size:.78rem;color:var(--muted)}
+.tcard svg{width:100%;height:auto;display:block}
+ul.notes{margin:0;padding-left:1.1rem;display:grid;gap:6px;max-width:82ch}
+@media (max-width:640px){header.tb{grid-template-columns:1fr}.meta{grid-template-columns:repeat(2,auto)}.track div{grid-template-columns:3.5rem 1fr}.track .pill{grid-column:2}}
+</style><line stroke="var(--ink)" stroke-width="2" x1="10" x2="40" y1="14" y2="14"></line><text fill="var(--ink)" font-family="var(--mono)" font-size="10" x="48" y="18">20 mm power · 9,263 ft in chases, building</text><line stroke="var(--bad)" stroke-width="2" x1="10" x2="40" y1="34" y2="34"></line><text fill="var(--ink)" font-family="var(--mono)" font-size="10" x="48" y="38">25 mm power (16 A, AC) · 1,741 ft in chases, building</text><line stroke="var(--win)" stroke-width="2" x1="10" x2="40" y1="54" y2="54"></line><text fill="var(--ink)" font-family="var(--mono)" font-size="10" x="48" y="58">20 mm low-voltage · 1,289 ft in chases, building</text><line stroke="var(--ac)" stroke-width="2" x1="10" x2="40" y1="74" y2="74"></line><text fill="var(--ink)" font-family="var(--mono)" font-size="10" x="48" y="78">40 mm submain (DB) · 40 ft in chases, building</text><rect fill="var(--sheet)" height="12" stroke="var(--accent)" stroke-width="1.4" width="22" x="14" y="92"></rect><text fill="var(--ink)" font-family="var(--mono)" font-size="10" x="48" y="102">Box / plate, number = tag, @ = centre height</text><rect fill="none" height="12" stroke="var(--furn)" stroke-dasharray="3 2" width="22" x="14" y="116"></rect><text fill="var(--ink)" font-family="var(--mono)" font-size="10" x="48" y="126">Furniture against the wall</text><line stroke="var(--muted)" stroke-dasharray="6 3" x1="10" x2="40" y1="142" y2="142"></line><text fill="var(--ink)" font-family="var(--mono)" font-size="10" x="48" y="146">False ceiling · pipe from top = slab, from bottom = floor</text></svg>

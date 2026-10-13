@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" aria-label="Flat-01 · Bedroom-03 bathroom, East wall" role="img" viewBox="0 0 533.5 276"><style>
+/* Layout: drawing set — title block, phase tracker, one sheet per flat plan, then schedules, areas and Vastu sign-off. */
+:root{
+  --bg:#f6f7f8; --sheet:#ffffff; --ink:#1d2730; --muted:#5d6b77; --rule:#c9d1d8;
+  --accent:#1f7a74; --flag:#b7791f; --bad:#b4442f; --win:#2f6db5; --furn:#8a6a4a; --ac:#7a3fb0;
+  --f-bed:#e8eef4; --f-wet:#dcecf0; --f-kit:#f3e7dc; --f-liv:#f4f5ef; --f-puja:#f6edd2; --f-core:#e3e5e8; --f-bal:#eef4ea; --f-svc:#ebe8f1; --f-circ:#f8f8f8;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12171c; --sheet:#182027; --ink:#e3e8ec; --muted:#9aa8b3; --rule:#34414c; --accent:#4cb8ae; --flag:#e0a84a; --bad:#e2735d; --win:#7fb0ef; --furn:#c9a882; --ac:#c39be8;
+  --f-bed:#1f2c38; --f-wet:#1b3238; --f-kit:#352a20; --f-liv:#222820; --f-puja:#3a3220; --f-core:#2a3037; --f-bal:#22301f; --f-svc:#2a2635; --f-circ:#1c2329; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171c; --sheet:#182027; --ink:#e3e8ec; --muted:#9aa8b3; --rule:#34414c; --accent:#4cb8ae; --flag:#e0a84a; --bad:#e2735d; --win:#7fb0ef; --furn:#c9a882; --ac:#c39be8;
+  --f-bed:#1f2c38; --f-wet:#1b3238; --f-kit:#352a20; --f-liv:#222820; --f-puja:#3a3220; --f-core:#2a3037; --f-bal:#22301f; --f-svc:#2a2635; --f-circ:#1c2329; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-block:24px 48px;padding-inline:16px;display:grid;gap:20px}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:4px}
+header.tb{display:grid;grid-template-columns:1fr auto;gap:12px 24px;padding:18px 20px;align-items:end}
+h1{font-family:var(--display);font-weight:600;font-size:1.7rem;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:2px 0 0;font-size:.92rem;max-width:80ch}
+.meta{display:grid;grid-template-columns:repeat(4,auto);gap:2px 18px;font-family:var(--mono);font-size:.78rem}
+.meta dt{color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:.68rem}.meta dd{margin:0}
+.status{color:var(--flag);font-weight:500}
+.sechead{padding:16px 20px 4px;display:grid;gap:4px}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h2{font-family:var(--display);font-weight:600;font-size:1.25rem;margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-weight:600;font-size:1rem;margin:0 0 6px}
+.lead{margin:0;max-width:80ch;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 20px;font-size:.88rem}
+.controls label{display:flex;gap:6px;align-items:center;cursor:pointer}
+input[type=checkbox]{accent-color:var(--accent)} input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.plan{overflow-x:auto;border-top:1px solid var(--rule)}
+.plan svg{display:block;width:100%;min-width:760px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 20px 16px;font-size:.8rem;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border:1px solid var(--rule);display:inline-block}
+.body{padding:16px 20px 20px;display:grid;gap:16px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:20px}.cols>div{min-width:0}
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.83rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--display);font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-size:.72rem}
+td.num,th.num{text-align:right;font-family:var(--mono);white-space:nowrap}
+td.tag{font-family:var(--mono);font-weight:500}
+tfoot td{font-weight:600;border-bottom:none}
+.ok{color:var(--accent);font-weight:500}.fl{color:var(--flag);font-weight:500}.no{color:var(--bad);font-weight:600}
+.track{display:grid;gap:0;border-top:1px solid var(--rule)}
+.track div{display:grid;grid-template-columns:4.5rem 1fr auto;gap:12px;padding:8px 20px;border-bottom:1px solid var(--rule);font-size:.88rem;align-items:baseline}
+.track div:last-child{border-bottom:none}
+.track code{font-family:var(--mono);color:var(--muted)}
+.pill{font-family:var(--mono);font-size:.72rem;padding:1px 8px;border-radius:10px;border:1px solid currentColor;white-space:nowrap}
+.rules{border:1px solid var(--accent);border-radius:4px;padding:10px 14px;display:grid;gap:4px;font-size:.88rem}
+.rules b{font-family:var(--display)}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px}
+.tcard{border:1px solid var(--rule);border-radius:4px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.tcard h4{font-family:var(--display);font-weight:600;font-size:.95rem;margin:0}
+.tcard p{margin:0;font-size:.78rem;color:var(--muted)}
+.tcard svg{width:100%;height:auto;display:block}
+ul.notes{margin:0;padding-left:1.1rem;display:grid;gap:6px;max-width:82ch}
+@media (max-width:640px){header.tb{grid-template-columns:1fr}.meta{grid-template-columns:repeat(2,auto)}.track div{grid-template-columns:3.5rem 1fr}.track .pill{grid-column:2}}
+</style><rect fill="var(--f-wet)" height="198" stroke="none" width="277.5" x="46" y="48.000000000000014"></rect><line stroke="var(--muted)" stroke-dasharray="5 3" x1="46" x2="323.5" y1="48.000000000000014" y2="48.000000000000014"></line><rect fill="var(--sheet)" height="26.000000000000014" stroke="none" width="277.5" x="46" y="22"></rect><line stroke="var(--ink)" stroke-width="3" x1="46" x2="323.5" y1="22" y2="22"></line><line stroke="var(--ink)" stroke-width="3" x1="40" x2="329.5" y1="246" y2="246"></line><line stroke="var(--ink)" stroke-width="3" x1="46" x2="46" y1="246" y2="22"></line><line stroke="var(--ink)" stroke-width="3" x1="323.5" x2="323.5" y1="246" y2="22"></line><line stroke="var(--muted)" stroke-opacity="0.7" stroke-width="0.45" x1="93.24409448818898" x2="93.24409448818898" y1="246" y2="48.000000000000014"></line><line stroke="var(--muted)" stroke-opacity="0.7" stroke-width="0.45" x1="140.48818897637796" x2="140.48818897637796" y1="246" y2="48.000000000000014"></line><line stroke="var(--muted)" stroke-opacity="0.7" stroke-width="0.45" x1="187.7322834645669" x2="187.7322834645669" y1="246" y2="48.000000000000014"></line><line stroke="var(--muted)" stroke-opacity="0.7" stroke-width="0.45" x1="234.97637795275588" x2="234.97637795275588" y1="246" y2="48.000000000000014"></line><line stroke="var(--muted)" stroke-opacity="0.7" stroke-width="0.45" x1="282.22047244094483" x2="282.22047244094483" y1="246" y2="48.000000000000014"></line><line stroke="var(--muted)" stroke-opacity="0.7" stroke-width="0.45" x1="46" x2="323.5" y1="151.51181102362204" y2="151.51181102362204"></line><line stroke="var(--muted)" stroke-opacity="0.7" stroke-width="0.45" x1="46" x2="323.5" y1="57.023622047244125" y2="57.023622047244125"></line><rect fill="var(--accent)" fill-opacity="0.12" height="198" width="72" x="46" y="48.000000000000014"></rect><rect fill="var(--sheet)" height="192" stroke="var(--ink)" stroke-width="1.4" width="72" x="244" y="54.000000000000014"></rect><line stroke="var(--muted)" stroke-dasharray="3 2" x1="244" x2="280" y1="54.000000000000014" y2="246"></line><line stroke="var(--muted)" stroke-dasharray="3 2" x1="316" x2="280" y1="54.000000000000014" y2="246"></line><line stroke="var(--furn)" stroke-width="3" x1="119.19999999999999" x2="152.8" y1="138" y2="138"></line><rect fill="none" height="7.199999999999999" stroke="var(--accent)" stroke-dasharray="2 2" stroke-width="1.2" width="16" x="320" y="146.4"></rect><path d="M172.2 48.000000000000014L186.2 48.000000000000014L179.2 55.000000000000014Z" fill="var(--flag)"></path><path d="M75 48.000000000000014L89 48.000000000000014L82 55.000000000000014Z" fill="var(--flag)"></path><text fill="var(--ink)" font-family="var(--display)" font-size="11" font-weight="600" text-anchor="middle" x="184.75" y="264">Elevation B · East wall (from inside) · 11′7″</text><line stroke="var(--flag)" stroke-dasharray="1 2" stroke-width="0.5" x1="179.2" x2="331.5" y1="48.000000000000014" y2="48.000000000000014"></line><text fill="var(--flag)" font-family="var(--mono)" font-size="9" x="333.5" y="51.000000000000014">L1 dry-area downlight (FC)</text><line stroke="var(--flag)" stroke-dasharray="1 2" stroke-width="0.5" x1="82" x2="331.5" y1="48.000000000000014" y2="59.000000000000014"></line><text fill="var(--flag)" font-family="var(--mono)" font-size="9" x="333.5" y="62.000000000000014">L2 shower downlight IP65</text><line stroke="var(--accent)" stroke-dasharray="1 2" stroke-width="0.5" x1="82" x2="331.5" y1="55.20000000000001" y2="70.00000000000001"></line><text fill="var(--accent)" font-family="var(--mono)" font-size="9" x="333.5" y="73.00000000000001">Shower zone, tiles to FC</text><line stroke="var(--muted)" stroke-dasharray="1 2" stroke-width="0.5" x1="280" x2="331.5" y1="58.80000000000002" y2="81.00000000000001"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="9" x="333.5" y="84.00000000000001">Door 3′0″ × 8′0″</text><line stroke="var(--furn)" stroke-dasharray="1 2" stroke-width="0.5" x1="152.8" x2="331.5" y1="138" y2="138"></line><text fill="var(--furn)" font-family="var(--mono)" font-size="9" x="333.5" y="141">Towel rod 1′5″ at 4′6″</text><line stroke="var(--accent)" stroke-dasharray="1 2" stroke-width="0.5" x1="328" x2="331.5" y1="150" y2="150"></line><text fill="var(--accent)" font-family="var(--mono)" font-size="9" x="333.5" y="153">Switchboard outside, 4′0″ (dashed)</text><line stroke="var(--muted)" stroke-dasharray="1 2" stroke-width="0.5" x1="82" x2="331.5" y1="222" y2="222"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="9" x="333.5" y="225">Tiles: 600×1200 vertical, accent finish in shower</text><line stroke="var(--muted)" x1="41" x2="46" y1="246" y2="246"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="8" text-anchor="end" x="38" y="249">0</text><line stroke="var(--muted)" x1="41" x2="46" y1="180" y2="180"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="8" text-anchor="end" x="38" y="183">2′9″</text><line stroke="var(--muted)" x1="41" x2="46" y1="150" y2="150"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="8" text-anchor="end" x="38" y="153">4′0″</text><line stroke="var(--muted)" x1="41" x2="46" y1="126.00000000000001" y2="126.00000000000001"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="8" text-anchor="end" x="38" y="129">5′0″</text><line stroke="var(--muted)" x1="41" x2="46" y1="90.00000000000001" y2="90.00000000000001"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="8" text-anchor="end" x="38" y="93.00000000000001">6′6″</text><line stroke="var(--muted)" x1="41" x2="46" y1="54.000000000000014" y2="54.000000000000014"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="8" text-anchor="end" x="38" y="57.000000000000014">8′0″</text><line stroke="var(--muted)" x1="41" x2="46" y1="48.000000000000014" y2="48.000000000000014"></line><text fill="var(--muted)" font-family="var(--mono)" font-size="8" text-anchor="end" x="38" y="51.000000000000014">8′3″ FC</text></svg>
