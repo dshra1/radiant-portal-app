@@ -6,10 +6,36 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// Cloudflare Workers Builds (hosting outside Lovable) sets WORKERS_CI=1. Only then do we
+// name the worker and pass the server-side settings; Lovable's own builds are unchanged.
+// Secrets (GOOGLE_GENERATIVE_AI_API_KEY) are set in the Cloudflare dashboard, never here.
+const cloudflareWorker = process.env["WORKERS_CI"]
+  ? {
+      nitro: {
+        cloudflare: {
+          wrangler: {
+            name: "radiant-portal-app",
+            compatibility_date: "2026-09-01",
+            observability: { enabled: true },
+            vars: {
+              SUPABASE_URL: "https://hnwxfslyyxjhblqzretu.supabase.co",
+              SUPABASE_PUBLISHABLE_KEY: "sb_publishable_HOYWPO-Wo39xak3_mG4fTQ_1qNmR_C1",
+              SUPABASE_PROJECT_ID: "hnwxfslyyxjhblqzretu",
+            },
+          },
+        },
+      },
+    }
+  : {};
+
+// The options type lists only a few nitro keys; nitro itself accepts cloudflare.wrangler.
+type Options = NonNullable<Parameters<typeof defineConfig>[0]>;
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  ...(cloudflareWorker as unknown as Partial<Options>),
 });
