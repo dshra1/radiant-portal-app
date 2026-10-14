@@ -282,7 +282,7 @@ function Cubes({ projectId }: { projectId: string }) {
       </div>
       {rows.length === 0 ? (
         <p className="p-4 text-sm text-muted-foreground">
-          Re-run Import PMC Workbooks (control workbook) to load the 43 pours.
+          Re-run Import PMC Workbooks (control workbook) to load the pours.
         </p>
       ) : (
         <div className="overflow-x-auto">

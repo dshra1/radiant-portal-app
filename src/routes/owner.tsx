@@ -520,6 +520,7 @@ function FlatChoices({
   ownerName: string;
   isManager: boolean;
 }) {
+  const projectName = useActiveProject().name;
   const qc = useQueryClient();
   const q = usePortalData(projectId);
   const { access } = useAccess();
@@ -711,7 +712,7 @@ function FlatChoices({
                   const s = selOf(l.code);
                   const locked = s?.status === "accepted";
                   const value = pick[l.code] ?? s?.option_id ?? "";
-                  const by = chooseByOf(l.code);
+                  const by = chooseByOf(l.code, projectName);
                   const late = by && !s && by < new Date().toISOString().slice(0, 10);
                   return (
                     <Fragment key={l.code}>

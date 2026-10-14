@@ -9,7 +9,7 @@ import { useActiveProject } from "@/hooks/useActiveProject";
 import { inr, inrCompact } from "@/data/saha";
 import { Download, Plus, Trophy, Trash2, FilePlus2, Gavel } from "lucide-react";
 import { toast } from "sonner";
-import { DEPARTMENTS, loadDepartmentTenders } from "@/lib/tender-departments";
+import { DEPARTMENTS, deptAppliesTo, loadDepartmentTenders } from "@/lib/tender-departments";
 import {
   MIN_QUOTES,
   awardSummary,
@@ -290,7 +290,7 @@ function Page() {
           >
             <Download className="h-4 w-4" /> Export comparative
           </button>
-          {canAward && (
+          {canAward && deptAppliesTo(project.name) && (
             <button
               onClick={async () => {
                 setLoadingDepts(true);

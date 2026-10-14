@@ -25,6 +25,24 @@ export type DeptItem = {
 export type Dept = { code: string; name: string; dealer: string; first: string; items: DeptItem[] };
 export const DEPARTMENTS = DEPTS as Dept[];
 
+/**
+ * The procurement master behind these tenders is 77:76's (its BOQ and
+ * programme). Another project (78:93) gets its own once its report is done, so
+ * these tenders, dates and quantities apply to 77:76 only.
+ */
+export const DEPT_PROJECT_PREFIX = "77:76";
+export const deptAppliesTo = (projectName: string | null | undefined) =>
+  (projectName ?? "").trim().startsWith(DEPT_PROJECT_PREFIX);
+
+async function assertDeptProject(projectId: string) {
+  const p = await supabase.from("site_projects").select("name").eq("id", projectId).maybeSingle();
+  if (p.error) throw p.error;
+  if (!deptAppliesTo(p.data?.name))
+    throw new Error(
+      `The department tenders are 77:76's procurement master; ${p.data?.name ?? "this project"} gets its own after its BOQ is imported.`,
+    );
+}
+
 type Log = (text: string, tone?: "ok" | "err") => void;
 const DAY = 86_400_000;
 const addDays = (iso: string, d: number) =>
@@ -44,6 +62,7 @@ export const rfqNumberOf = (deptCode: string) => `CE-${deptCode}`;
  * that have no quotes are removed, since the department tenders cover them.
  */
 export async function loadDepartmentTenders(projectId: string, userId: string | null, log: Log) {
+  await assertDeptProject(projectId);
   const existing = await supabase
     .from("rfqs")
     .select("id,rfq_number,status")
@@ -230,6 +249,7 @@ export async function importVendorQuote(
 ) {
   if (!q.vendor) throw new Error(`${fileName}: the vendor name (Price schedule, cell C2) is empty`);
   if (!q.lines.length) throw new Error(`${fileName}: no rates filled in`);
+  await assertDeptProject(projectId);
   const rfq = await supabase
     .from("rfqs")
     .select("id,status")

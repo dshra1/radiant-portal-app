@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import type { FlatLineRow } from "@/lib/flats";
-import { DEPARTMENTS } from "@/lib/tender-departments";
+import { DEPARTMENTS, deptAppliesTo } from "@/lib/tender-departments";
 
 export type OptionRow = Database["public"]["Tables"]["flat_options"]["Row"];
 export type SelectionRow = Database["public"]["Tables"]["flat_selections"]["Row"];
@@ -50,7 +50,9 @@ const CHOOSE_BY = (() => {
     out.set(k, new Date(Date.parse(`${v}T00:00:00Z`) - 21 * 86_400_000).toISOString().slice(0, 10));
   return out;
 })();
-export const chooseByOf = (code: string) => CHOOSE_BY.get(code) ?? null;
+/** Choose-by date for an item; the dates come from 77:76's programme only. */
+export const chooseByOf = (code: string, projectName?: string | null) =>
+  projectName === undefined || deptAppliesTo(projectName) ? (CHOOSE_BY.get(code) ?? null) : null;
 
 /** Cost of a line incl. GST at a rate (excl. GST). */
 export const lineIncl = (qty: number, rate: number, gstPct: number) =>

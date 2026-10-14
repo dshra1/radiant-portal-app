@@ -6,7 +6,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { DEPARTMENTS, rfqNumberOf } from "@/lib/tender-departments";
+import { DEPARTMENTS, deptAppliesTo, rfqNumberOf } from "@/lib/tender-departments";
 import { chooseByOf, linesOf } from "@/lib/owner-portal";
 
 export type OwnerExtra = {
@@ -68,6 +68,12 @@ export function useOwnerExtras(projectId: string) {
         supabase.from("flat_types").select("code,lines").eq("project_id", projectId),
         supabase.from("flat_options").select("*").eq("project_id", projectId),
       ]);
+      const pr = await supabase
+        .from("site_projects")
+        .select("name")
+        .eq("id", projectId)
+        .maybeSingle();
+      const ownMaster = deptAppliesTo(pr.data?.name);
       for (const r of [sels, flats, types, opts]) if (r.error) throw r.error;
       const rows = sels.data ?? [];
       if (!rows.length) return [];
@@ -116,7 +122,7 @@ export function useOwnerExtras(projectId: string) {
         const line = (typeBy.get(flat?.type_code ?? "") ?? []).find((l) => l.code === s.item_code);
         const opt = s.option_id ? optBy.get(s.option_id) : undefined;
         if (!opt) continue;
-        const dept = deptOf(s.item_code);
+        const dept = ownMaster ? deptOf(s.item_code) : null;
         const marker = extraMarker(s.flat_no);
         const tender = (rfqItems.data ?? []).find(
           (i) => i.item_code === s.item_code && i.description.includes(marker),
@@ -137,7 +143,7 @@ export function useOwnerExtras(projectId: string) {
           gst: Number(opt.gst_pct),
           delta: Number(s.delta),
           needBy: dept?.need ?? null,
-          chooseBy: chooseByOf(s.item_code),
+          chooseBy: chooseByOf(s.item_code, pr.data?.name ?? ""),
           dept: dept ? { code: dept.code, name: dept.name } : null,
           onTender: tender ? (rfqNo.get(tender.rfq_id) ?? "tender") : null,
           po: poByKey.get(extraKey(s.flat_no, s.item_code)) ?? null,
