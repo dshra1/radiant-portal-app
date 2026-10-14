@@ -68,13 +68,12 @@ type Row = {
   [key: string]: unknown;
 };
 
-
 const DEFAULT_PHASES: Phase[] = [
-  { name: "Piling", state: "pending" },
   { name: "Foundation", state: "pending" },
-  { name: "Structural", state: "pending" },
-  { name: "MEP", state: "pending" },
-  { name: "Finishing", state: "pending" },
+  { name: "Frame", state: "pending" },
+  { name: "Masonry", state: "pending" },
+  { name: "Finishes", state: "pending" },
+  { name: "Handover", state: "pending" },
 ];
 
 const emptyForm = {
@@ -178,7 +177,6 @@ function Projects() {
     window.open(data.signedUrl, "_blank", "noreferrer");
   };
 
-
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["site_projects", "full"],
     enabled: Boolean(user?.id),
@@ -189,6 +187,48 @@ function Projects() {
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as Row[];
+    },
+  });
+
+  // Phases follow the imported programme (its stage groups) where a project has one.
+  const { data: livePhases } = useQuery({
+    queryKey: ["site_stages", "phases"],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_stages")
+        .select("project_id,stage_group,sort,actual_pct,closed_at,planned_start,planned_end")
+        .neq("code", "")
+        .order("sort", { ascending: true });
+      if (error) throw error;
+      const today = new Date().toISOString().slice(0, 10);
+      const byProject = new Map<string, Map<string, { done: boolean; active: boolean }>>();
+      for (const r of data ?? []) {
+        if (!r.project_id) continue;
+        const groups = byProject.get(r.project_id) ?? new Map();
+        byProject.set(r.project_id, groups);
+        const g = groups.get(r.stage_group) ?? { done: true, active: false };
+        const finished = Boolean(r.closed_at) || Number(r.actual_pct) >= 100;
+        g.done = g.done && finished;
+        g.active =
+          g.active ||
+          (!finished &&
+            (Number(r.actual_pct) > 0 ||
+              (Boolean(r.planned_start) &&
+                r.planned_start! <= today &&
+                (r.planned_end ?? "") >= today)));
+        groups.set(r.stage_group, g);
+      }
+      const out = new Map<string, Phase[]>();
+      for (const [pid, groups] of byProject)
+        out.set(
+          pid,
+          [...groups.entries()].map(([name, g]) => ({
+            name,
+            state: g.done ? "done" : g.active ? "active" : "pending",
+          })),
+        );
+      return out;
     },
   });
 
@@ -229,9 +269,31 @@ function Projects() {
 
   const buildPayload = () => {
     const n = (v: string) => Number(v) || 0;
+    const original = editingId ? rows.find((r) => r.id === editingId) : undefined;
+    // Keep the stored areas (set from the PMC report) unless the floor geometry was changed here.
+    const geometryChanged =
+      !original ||
+      n(form.single_floor_slab_sft) !== Number(original.single_floor_slab_sft) ||
+      n(form.cellar_floors) !== Number(original.cellar_floors) ||
+      n(form.stilt_floors) !== Number(original.stilt_floors) ||
+      n(form.typical_floors) !== Number(original.typical_floors);
+    // Keep what Landowners & Investment stores for each owner (role, investment, paid, units, notes).
+    const before = Array.isArray(original?.landowners)
+      ? (original!.landowners as unknown as Record<string, unknown>[])
+      : [];
     const cleanOwners = owners
       .filter((o) => o.name.trim() || o.contact.trim())
-      .map((o) => ({ name: o.name.trim(), contact: o.contact.trim(), share_pct: n(o.share_pct) }));
+      .map((o) => ({
+        ...(before.find(
+          (b) =>
+            String(b["name"] ?? "")
+              .trim()
+              .toLowerCase() === o.name.trim().toLowerCase(),
+        ) ?? {}),
+        name: o.name.trim(),
+        contact: o.contact.trim(),
+        share_pct: n(o.share_pct),
+      }));
     const cleanInvestors = investors
       .filter((i) => i.name.trim() || i.contact.trim())
       .map((i) => ({ name: i.name.trim(), contact: i.contact.trim(), amount: n(i.amount) }));
@@ -243,8 +305,8 @@ function Projects() {
       cellar_floors: n(form.cellar_floors),
       stilt_floors: n(form.stilt_floors),
       typical_floors: n(form.typical_floors),
-      total_built_up_sft: derived.builtUp,
-      total_slab_sft: derived.slab,
+      total_built_up_sft: geometryChanged ? derived.builtUp : Number(original!.total_built_up_sft),
+      total_slab_sft: geometryChanged ? derived.slab : Number(original!.total_slab_sft),
       target_budget: n(form.target_budget),
       spend: n(form.spend),
       health: form.health,
@@ -321,33 +383,33 @@ function Projects() {
       map_link: s(p.map_link),
       start_date: s(p.start_date),
       target_handover_date: s(p.target_handover_date),
-      working_days_per_week: s(p['working_days_per_week']) || "6",
-      slab_cycle_days: s(p['slab_cycle_days']) || "14",
-      finishing_days_per_floor: s(p['finishing_days_per_floor']) || "20",
-      procurement_lead_days: s(p['procurement_lead_days']) || "10",
-      concrete_grade: s(p['concrete_grade']) || "M25",
+      working_days_per_week: s(p["working_days_per_week"]) || "6",
+      slab_cycle_days: s(p["slab_cycle_days"]) || "14",
+      finishing_days_per_floor: s(p["finishing_days_per_floor"]) || "20",
+      procurement_lead_days: s(p["procurement_lead_days"]) || "10",
+      concrete_grade: s(p["concrete_grade"]) || "M25",
       steel_grade: s(p.steel_grade) || "Fe500D",
-      steel_ratio_kg_per_sft: s(p['steel_ratio_kg_per_sft']) || "4",
-      cement_bags_per_sft: s(p['cement_bags_per_sft']) || "0.4",
+      steel_ratio_kg_per_sft: s(p["steel_ratio_kg_per_sft"]) || "4",
+      cement_bags_per_sft: s(p["cement_bags_per_sft"]) || "0.4",
       blockwork_type: s(p.blockwork_type) || "AAC Blocks",
-      flooring_spec: s(p['flooring_spec']) || "Standard",
-      paint_spec: s(p['paint_spec']) || "Standard",
-      plumbing_spec: s(p['plumbing_spec']) || "Standard",
-      electrical_spec: s(p['electrical_spec']) || "Standard",
-      doors_windows_spec: s(p['doors_windows_spec']) || "Standard",
-      sanitaryware_spec: s(p['sanitaryware_spec']) || "Standard",
+      flooring_spec: s(p["flooring_spec"]) || "Standard",
+      paint_spec: s(p["paint_spec"]) || "Standard",
+      plumbing_spec: s(p["plumbing_spec"]) || "Standard",
+      electrical_spec: s(p["electrical_spec"]) || "Standard",
+      doors_windows_spec: s(p["doors_windows_spec"]) || "Standard",
+      sanitaryware_spec: s(p["sanitaryware_spec"]) || "Standard",
       finishing_spec: s(p.finishing_spec) || "Standard",
-      contract_type: s(p['contract_type']) || "Item Rate",
-      workflow_template: s(p['workflow_template']) || "Standard RCC Framed",
+      contract_type: s(p["contract_type"]) || "Item Rate",
+      workflow_template: s(p["workflow_template"]) || "Standard RCC Framed",
       total_staff: s(p.total_staff),
-      engineers_count: s(p['engineers_count']),
-      labour_count: s(p['labour_count']),
-      company_name: s(p['company_name']),
-      company_gstin: s(p['company_gstin']),
-      bank_name: s(p['bank_name']),
-      bank_account_name: s(p['bank_account_name']),
-      bank_account_last4: s(p['bank_account_last4']),
-      bank_ifsc: s(p['bank_ifsc']),
+      engineers_count: s(p["engineers_count"]),
+      labour_count: s(p["labour_count"]),
+      company_name: s(p["company_name"]),
+      company_gstin: s(p["company_gstin"]),
+      bank_name: s(p["bank_name"]),
+      bank_account_name: s(p["bank_account_name"]),
+      bank_account_last4: s(p["bank_account_last4"]),
+      bank_ifsc: s(p["bank_ifsc"]),
     });
     const ol = Array.isArray(p.landowners) ? p.landowners : [];
     setOwners(
@@ -356,9 +418,7 @@ function Projects() {
         : [{ name: s(p.landowner_name), contact: "", share_pct: "" }],
     );
     const il = Array.isArray(p.investors) ? p.investors : [];
-    setInvestors(
-      il.map((i) => ({ name: s(i.name), contact: s(i.contact), amount: s(i.amount) })),
-    );
+    setInvestors(il.map((i) => ({ name: s(i.name), contact: s(i.contact), amount: s(i.amount) })));
     setDrawings(Array.isArray(p.drawings) ? p.drawings : []);
     setOpen(true);
     setError(null);
@@ -387,7 +447,6 @@ function Projects() {
     },
     onError: (e: Error) => setError(e.message),
   });
-
 
   const removeProject = useMutation({
     mutationFn: async (id: string) => {
@@ -430,7 +489,6 @@ function Projects() {
           )}
         </ActionButton>
       }
-
     >
       {error && (
         <div className="mb-3 rounded border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive">
@@ -451,7 +509,9 @@ function Projects() {
           }}
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold tracking-tight">{editingId ? "Edit project" : "Add a project"}</h2>
+            <h2 className="text-sm font-semibold tracking-tight">
+              {editingId ? "Edit project" : "Add a project"}
+            </h2>
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <span className="size-2.5 rounded-sm bg-secondary" /> Your input
@@ -487,20 +547,40 @@ function Projects() {
               onChange={set("single_floor_slab_sft")}
               numeric
             />
-            <Field label="Cellar floors" value={form.cellar_floors} onChange={set("cellar_floors")} numeric />
-            <Field label="Stilt floors" value={form.stilt_floors} onChange={set("stilt_floors")} numeric />
+            <Field
+              label="Cellar floors"
+              value={form.cellar_floors}
+              onChange={set("cellar_floors")}
+              numeric
+            />
+            <Field
+              label="Stilt floors"
+              value={form.stilt_floors}
+              onChange={set("stilt_floors")}
+              numeric
+            />
             <Field
               label="Typical floors"
               value={form.typical_floors}
               onChange={set("typical_floors")}
               numeric
             />
-            <Field label="Target budget (₹)" value={form.target_budget} onChange={set("target_budget")} numeric />
+            <Field
+              label="Target budget (₹)"
+              value={form.target_budget}
+              onChange={set("target_budget")}
+              numeric
+            />
             <Field label="Spend to date (₹)" value={form.spend} onChange={set("spend")} numeric />
           </Section>
 
           <Section title="Timeline drivers">
-            <Field label="Start date" value={form.start_date} onChange={set("start_date")} type="date" />
+            <Field
+              label="Start date"
+              value={form.start_date}
+              onChange={set("start_date")}
+              type="date"
+            />
             <Field
               label="Target handover date"
               value={form.target_handover_date}
@@ -556,9 +636,19 @@ function Projects() {
               label="Flooring"
               value={form.flooring_spec}
               onChange={set("flooring_spec")}
-              options={["Standard Vitrified", "Premium Vitrified", "Italian Marble", "Wooden / Luxury"]}
+              options={[
+                "Standard Vitrified",
+                "Premium Vitrified",
+                "Italian Marble",
+                "Wooden / Luxury",
+              ]}
             />
-            <SelectField label="Paint quality" value={form.paint_spec} onChange={set("paint_spec")} options={QUALITY} />
+            <SelectField
+              label="Paint quality"
+              value={form.paint_spec}
+              onChange={set("paint_spec")}
+              options={QUALITY}
+            />
             <SelectField
               label="Plumbing"
               value={form.plumbing_spec}
@@ -624,9 +714,24 @@ function Projects() {
           </Section>
 
           <Section title="Staffing">
-            <Field label="Total staff" value={form.total_staff} onChange={set("total_staff")} numeric />
-            <Field label="Engineers" value={form.engineers_count} onChange={set("engineers_count")} numeric />
-            <Field label="Labour strength" value={form.labour_count} onChange={set("labour_count")} numeric />
+            <Field
+              label="Total staff"
+              value={form.total_staff}
+              onChange={set("total_staff")}
+              numeric
+            />
+            <Field
+              label="Engineers"
+              value={form.engineers_count}
+              onChange={set("engineers_count")}
+              numeric
+            />
+            <Field
+              label="Labour strength"
+              value={form.labour_count}
+              onChange={set("labour_count")}
+              numeric
+            />
           </Section>
 
           <fieldset className="mt-4">
@@ -676,7 +781,9 @@ function Projects() {
                       label="Contact"
                       value={o.contact}
                       onChange={(v) =>
-                        setOwners((prev) => prev.map((x, xi) => (xi === i ? { ...x, contact: v } : x)))
+                        setOwners((prev) =>
+                          prev.map((x, xi) => (xi === i ? { ...x, contact: v } : x)),
+                        )
                       }
                     />
                     <Field
@@ -684,7 +791,9 @@ function Projects() {
                       numeric
                       value={o.share_pct}
                       onChange={(v) =>
-                        setOwners((prev) => prev.map((x, xi) => (xi === i ? { ...x, share_pct: v } : x)))
+                        setOwners((prev) =>
+                          prev.map((x, xi) => (xi === i ? { ...x, share_pct: v } : x)),
+                        )
                       }
                     />
                   </div>
@@ -743,14 +852,18 @@ function Projects() {
                       label="Name"
                       value={iv.name}
                       onChange={(v) =>
-                        setInvestors((prev) => prev.map((x, xi) => (xi === i ? { ...x, name: v } : x)))
+                        setInvestors((prev) =>
+                          prev.map((x, xi) => (xi === i ? { ...x, name: v } : x)),
+                        )
                       }
                     />
                     <Field
                       label="Contact"
                       value={iv.contact}
                       onChange={(v) =>
-                        setInvestors((prev) => prev.map((x, xi) => (xi === i ? { ...x, contact: v } : x)))
+                        setInvestors((prev) =>
+                          prev.map((x, xi) => (xi === i ? { ...x, contact: v } : x)),
+                        )
                       }
                     />
                     <Field
@@ -758,7 +871,9 @@ function Projects() {
                       numeric
                       value={iv.amount}
                       onChange={(v) =>
-                        setInvestors((prev) => prev.map((x, xi) => (xi === i ? { ...x, amount: v } : x)))
+                        setInvestors((prev) =>
+                          prev.map((x, xi) => (xi === i ? { ...x, amount: v } : x)),
+                        )
                       }
                     />
                   </div>
@@ -774,9 +889,10 @@ function Projects() {
             </div>
           </fieldset>
 
-
           <fieldset className="mt-4">
-            <legend className="label-caps text-secondary-foreground">Floor plan drawings (if any)</legend>
+            <legend className="label-caps text-secondary-foreground">
+              Floor plan drawings (if any)
+            </legend>
             <div className="mt-2 rounded border border-secondary/40 bg-secondary/10 p-3">
               <input
                 type="file"
@@ -789,12 +905,17 @@ function Projects() {
                 className="text-sm"
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                {uploading ? "Uploading…" : "PDF, DWG/DXF or images — stored privately in cloud storage."}
+                {uploading
+                  ? "Uploading…"
+                  : "PDF, DWG/DXF or images — stored privately in cloud storage."}
               </p>
               {drawings.length > 0 && (
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {drawings.map((d) => (
-                    <li key={d.path} className="flex items-center gap-2 rounded border border-input bg-card px-2 py-1 text-xs">
+                    <li
+                      key={d.path}
+                      className="flex items-center gap-2 rounded border border-input bg-card px-2 py-1 text-xs"
+                    >
                       <button
                         type="button"
                         onClick={() => void openDrawing(d.path)}
@@ -818,11 +939,14 @@ function Projects() {
           </fieldset>
 
           <Section title="Company & bank (optional)">
-
             <Field label="Company name" value={form.company_name} onChange={set("company_name")} />
             <Field label="GSTIN" value={form.company_gstin} onChange={set("company_gstin")} />
             <Field label="Bank name" value={form.bank_name} onChange={set("bank_name")} />
-            <Field label="Account holder" value={form.bank_account_name} onChange={set("bank_account_name")} />
+            <Field
+              label="Account holder"
+              value={form.bank_account_name}
+              onChange={set("bank_account_name")}
+            />
             <Field
               label="Account last 4 digits"
               value={form.bank_account_last4}
@@ -838,8 +962,14 @@ function Projects() {
               <Result label="Total built-up" value={`${num(derived.builtUp)} sft`} />
               <Result label="Total slab area" value={`${num(derived.slab)} sft`} />
               <Result label="Total floors" value={num(derived.totalFloors)} />
-              <Result label="Structural duration" value={`${num(derived.structuralDays)} work days`} />
-              <Result label="Finishing duration" value={`${num(derived.finishingDays)} work days`} />
+              <Result
+                label="Structural duration"
+                value={`${num(derived.structuralDays)} work days`}
+              />
+              <Result
+                label="Finishing duration"
+                value={`${num(derived.finishingDays)} work days`}
+              />
               <Result label="Programme (calendar)" value={`${num(derived.calendarDays)} days`} />
               <Result label="Projected handover" value={derived.handover} />
               <Result label="Indicative steel" value={`${num(derived.steelTon, 1)} TON`} />
@@ -883,8 +1013,11 @@ function Projects() {
             const builtUp = n(p.total_built_up_sft) || n(p.single_floor_slab_sft) * floors;
             const slab =
               n(p.total_slab_sft) || n(p.single_floor_slab_sft) * (floors ? floors + 1 : 0);
-            const burn = n(p.target_budget) ? Math.round((n(p.spend) / n(p.target_budget)) * 100) : 0;
-            const phases = Array.isArray(p.phases) ? p.phases : DEFAULT_PHASES;
+            const burn = n(p.target_budget)
+              ? Math.round((n(p.spend) / n(p.target_budget)) * 100)
+              : 0;
+            const phases =
+              livePhases?.get(p.id) ?? (Array.isArray(p.phases) ? p.phases : DEFAULT_PHASES);
             const ownerList = (Array.isArray(p.landowners) ? p.landowners : [])
               .map((o) => ({ name: String(o?.name ?? "").trim() }))
               .filter((o) => o.name);
@@ -892,7 +1025,8 @@ function Projects() {
             const investorList = (Array.isArray(p.investors) ? p.investors : [])
               .map((o) => ({ name: String(o?.name ?? "").trim() }))
               .filter((o) => o.name);
-            if (!investorList.length && p.investor_name) investorList.push({ name: p.investor_name });
+            if (!investorList.length && p.investor_name)
+              investorList.push({ name: p.investor_name });
             const mapHref =
               p.map_link ||
               (p.latitude != null && p.longitude != null
@@ -920,7 +1054,11 @@ function Projects() {
                   <div className="flex shrink-0 items-center gap-1.5">
                     <StatusBadge
                       tone={
-                        p.health === "On Track" ? "emerald" : p.health === "At Risk" ? "amber" : "red"
+                        p.health === "On Track"
+                          ? "emerald"
+                          : p.health === "At Risk"
+                            ? "amber"
+                            : "red"
                       }
                     >
                       {p.health}
@@ -934,7 +1072,6 @@ function Projects() {
                       <Pencil className="size-3.5" />
                     </button>
                     <button
-
                       type="button"
                       aria-label={`Delete ${p.name}`}
                       onClick={() => {
@@ -960,7 +1097,6 @@ function Projects() {
                   {Array.isArray(p.drawings) && p.drawings.length > 0 && (
                     <StatusBadge tone="sky">{p.drawings.length} drawing(s)</StatusBadge>
                   )}
-
                 </div>
 
                 <dl className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded border border-border bg-border">
@@ -995,7 +1131,9 @@ function Projects() {
                   </div>
                   <div className="mt-1.5 h-1 w-full rounded-sm bg-border">
                     <div
-                      className={burn > 80 ? "h-1 rounded-sm bg-destructive" : "h-1 rounded-sm bg-primary"}
+                      className={
+                        burn > 80 ? "h-1 rounded-sm bg-destructive" : "h-1 rounded-sm bg-primary"
+                      }
                       style={{ width: `${Math.min(burn, 100)}%` }}
                     />
                   </div>
@@ -1093,15 +1231,7 @@ function Result({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Cell({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string;
-  icon?: React.ReactNode;
-}) {
+function Cell({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
     <div className="bg-card p-2.5">
       <dt className="label-caps flex items-center gap-1 text-muted-foreground">
