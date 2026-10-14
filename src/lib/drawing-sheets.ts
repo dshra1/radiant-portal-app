@@ -6,6 +6,7 @@
  * elevations room by room.
  */
 import index from "@/data/drawing-index.json";
+import index7893 from "@/data/drawing-index-7893.json";
 
 export type Sheet = {
   file: string;
@@ -21,6 +22,11 @@ export type Sheet = {
 export type SheetGroup = { label: string; sheets: Sheet[] };
 
 const SHEETS = index as Sheet[];
+
+/** 78:93's own sheets (78-93-*.pdf), each with the stages (ST01 … ST38) it is issued for. */
+type Sheet7893 = Sheet & { group: string; stages: string[] };
+const SHEETS_7893 = index7893 as Sheet7893[];
+const is7893 = (projectName?: string | null) => /(?:^|\D)78:93(?!\d)/.test(projectName ?? "");
 
 const ELEC = (bhk: 4 | 3) =>
   bhk === 4
@@ -41,6 +47,7 @@ const HANDOVER = "Cyber-Enclave-Owners-Handover-Pack.pdf";
 export function shortFile(file: string) {
   return file
     .replace(/^Cyber-Enclave-/, "")
+    .replace(/^78-93-/, "")
     .replace(/\.pdf$/, "")
     .replace(/-/g, " ");
 }
@@ -89,7 +96,21 @@ function roomGroups(file: string, prefix: string): SheetGroup[] {
 
 const titled = (file: string, re: RegExp) => inFile(file, (s) => re.test(s.title));
 
-export function sheetsForStage(code: string, floor: string): SheetGroup[] {
+/**
+ * The drawing sheets for a stage of the selected project. 78:93 uses its own index
+ * (src/data/drawing-index-7893.json); every other project the 77:76 rules below.
+ */
+export function sheetsForStage(
+  code: string,
+  floor: string,
+  projectName?: string | null,
+): SheetGroup[] {
+  if (is7893(projectName)) {
+    const groups = new Map<string, Sheet[]>();
+    for (const s of SHEETS_7893)
+      if (s.stages.includes(code)) groups.set(s.group, [...(groups.get(s.group) ?? []), s]);
+    return [...groups.entries()].map(([label, sheets]) => ({ label, sheets }));
+  }
   const groups: SheetGroup[] = [];
   const add = (label: string, sheets: Sheet[]) => {
     if (sheets.length) groups.push({ label, sheets });
@@ -158,6 +179,7 @@ function storeListFor(s: Sheet, prefix: string, bhk: 4 | 3) {
   return new RegExp(`(^|[ ·:])${prefix}( |·|$)`).test(s.sub);
 }
 
-export function allSheets() {
+export function allSheets(projectName?: string | null): Sheet[] {
+  if (is7893(projectName)) return SHEETS_7893;
   return SHEETS;
 }

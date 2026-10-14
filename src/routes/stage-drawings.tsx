@@ -68,8 +68,8 @@ function Page() {
   const list = stages.data ?? [];
   const stage = list.find((s) => s.code === search.stage) ?? list[0];
   const groups = useMemo(
-    () => (stage ? sheetsForStage(stage.code, stage.floor ?? "") : []),
-    [stage],
+    () => (stage ? sheetsForStage(stage.code, stage.floor ?? "", project.name) : []),
+    [stage, project.name],
   );
   const firstSheet = groups[0]?.sheets[0];
   const sheet: Sheet | undefined =

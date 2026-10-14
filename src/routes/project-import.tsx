@@ -24,6 +24,10 @@ import {
   parseControl,
   parseQuotation,
   buildBoqRows,
+  workbookProject,
+  fileFitsProject,
+  pdfProject,
+  projectTag,
   type MasterBoq,
   type WorkbookKind,
   type AppBoqRow,
@@ -154,8 +158,17 @@ function Page() {
     const pdfs: File[] = [];
     const quotes: { file: string; quote: VendorQuote }[] = [];
 
+    // Each project keeps its own data: 78:93 files only go into 78:93, 77:76 files only into 77:76.
+    const here = projectTag(project.name) ?? project.name;
+    const wrong = (tag: string | null) =>
+      `Belongs to ${tag ?? "77:76"}, not ${here}. Switch to the ${tag ?? "77:76"} project to import it.`;
     for (const f of Array.from(list)) {
       if (/\.pdf$/i.test(f.name)) {
+        const tag = pdfProject(f.name);
+        if (!fileFitsProject(tag, project.name)) {
+          found.push({ name: f.name, kind: "unknown", error: wrong(tag) });
+          continue;
+        }
         found.push({ name: f.name, kind: "pdf" });
         pdfs.push(f);
         continue;
@@ -171,6 +184,11 @@ function Page() {
       try {
         const wb = readWorkbook(await f.arrayBuffer());
         const kind = detectKind(wb, f.name);
+        const tag = workbookProject(wb);
+        if (kind !== "vendor-quote" && kind !== "unknown" && !fileFitsProject(tag, project.name)) {
+          found.push({ name: f.name, kind: "unknown", error: wrong(tag) });
+          continue;
+        }
         found.push({ name: f.name, kind });
         if (kind === "master") master = parseMasterBoq(wb);
         if (kind === "split") {
@@ -315,9 +333,11 @@ function Page() {
                 {reading ? "Reading workbooks…" : "Select all the workbooks and PDFs together"}
               </span>
               <span className="max-w-xl text-xs text-muted-foreground">
-                Cyber-Enclave-Master-BOQ, -Common-vs-Individual, -Construction-Control,
-                -BOQ-for-Quotation (.xlsx) and the drawing sets (.pdf). Files are read in your
-                browser; nothing is saved until you press Import.
+                {projectTag(project.name) === "78:93"
+                  ? "78-93-App-Master-BOQ, -App-Common-vs-Individual, -App-Construction-Control, -App-BOQ-for-Quotation (.xlsx) and the 78-93 drawing sets (.pdf)."
+                  : "Cyber-Enclave-Master-BOQ, -Common-vs-Individual, -Construction-Control, -BOQ-for-Quotation (.xlsx) and the drawing sets (.pdf)."}{" "}
+                Files are read in your browser; nothing is saved until you press Import. A file made
+                for another project is refused.
               </span>
               <input
                 type="file"

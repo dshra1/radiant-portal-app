@@ -14,7 +14,13 @@ type Cell = string | number | boolean | Date | null;
 type Row = Cell[];
 
 export type WorkbookKind =
-  "master" | "value-engineered" | "split" | "quotation" | "control" | "vendor-quote" | "unknown";
+  | "master"
+  | "value-engineered"
+  | "split"
+  | "quotation"
+  | "control"
+  | "vendor-quote"
+  | "unknown";
 
 export type BoqLine = {
   pkg: string;
@@ -77,6 +83,8 @@ export type ProgrammeStage = {
   steel: StageSteel | null;
   /** Directions: the "Flow of events" sections that apply to this stage. */
   directions: { title: string; steps: string[] }[];
+  /** Flow-of-events section numbers named in the programme (78:93); else by stage code. */
+  flow?: number[];
 };
 
 export type StageCheck = {
@@ -235,13 +243,44 @@ function at(r: Row, i: number): Cell {
   return i >= 0 ? (r[i] ?? null) : null;
 }
 
-// ST01, ST02a, MAA10, EL02-CP, PPB-L, DR-GD, EL-FR
-const CODE_RE = /^[A-Z]{1,4}[0-9]{0,3}[a-z]?(-[A-Z0-9]{1,4})?$/;
+// ST01, ST02a, MAA10, EL02-CP, PPB-L, DR-GD, EL-FR; 78:93 uses P3.01, P10.28
+const CODE_RE = /^[A-Z]{1,4}(?:[0-9]{1,3}\.[0-9]{1,3}|[0-9]{0,3})[a-z]?(-[A-Z0-9]{1,4})?$/;
 
 // ---------- workbook detection ----------
 
 export function readWorkbook(buf: ArrayBuffer): XLSX.WorkBook {
   return XLSX.read(buf, { type: "array", cellDates: true });
+}
+
+/**
+ * The project a workbook belongs to, from the tag at the start of its first cell
+ * ("78:93 · MASTER BOQ …"). The 77:76 workbooks carry no tag, so null means 77:76.
+ */
+export function workbookProject(wb: XLSX.WorkBook): string | null {
+  const first = wb.SheetNames[0];
+  const a1 = str(rows(first ? wb.Sheets[first] : undefined)[0]?.[0]);
+  return /^(\d{2}:\d{2})\b/.exec(a1)?.[1] ?? null;
+}
+
+/** The project tag in a name: "78:93 Cyber Enclave" or "Cyber Enclave 78:93" → "78:93". */
+export function projectTag(name: string | null | undefined): string | null {
+  return /(?:^|\D)(\d{2}:\d{2})(?!\d)/.exec(name ?? "")?.[1] ?? null;
+}
+
+/**
+ * Whether a file belongs in the selected project. A tagged file (78:93 …) goes only
+ * into the project with that tag; an untagged file is 77:76's and goes only into 77:76
+ * (or a project without a tag). PDFs are told apart by their name ("78-93-…").
+ */
+export function fileFitsProject(fileTag: string | null, projectName: string | null | undefined) {
+  const p = projectTag(projectName);
+  if (fileTag) return fileTag === p;
+  return !p || p === "77:76";
+}
+
+export function pdfProject(fileName: string): string | null {
+  const m = /^(\d{2})-(\d{2})-/.exec(fileName);
+  return m ? `${m[1]}:${m[2]}` : null;
 }
 
 export function detectKind(wb: XLSX.WorkBook, fileName: string): WorkbookKind {
@@ -425,11 +464,19 @@ export function parseFlatTypes(wb: XLSX.WorkBook): FlatType[] {
   for (let i = h + 1; i < data.length; i++) {
     const r = data[i] ?? [];
     const label = str(r[0]);
-    const m = /^(Flat-\d+),\s*(\d)\s*BHK\s*\(floors\s*([^:]+):\s*flats\s*([\d,\s]+)\)/i.exec(label);
+    // 77:76: "Flat-01, 4BHK (floors 1–2: flats 101, 201)";
+    // 78:93: "Unit-01, Hostel (floors 1–5: units 101, 201, …)".
+    const m =
+      /^((?:Flat|Unit)-\d+),\s*(\d\s*BHK|[A-Za-z][A-Za-z ]*?)\s*\(floors\s*([^:]+):\s*(?:flats|units)\s*([\d,\s]+)\)/i.exec(
+        label,
+      );
     if (!m) continue;
-    const [, flat, bhk, floors, list] = m;
+    const [, flat, kindRaw, floors, list] = m;
+    const bhkM = /^(\d)\s*BHK$/i.exec(kindRaw!.trim());
+    const bhk = bhkM ? bhkM[1]! : "";
+    const kind = bhkM ? `${bhk}BHK` : kindRaw!.trim();
     const sheet = wb.SheetNames.find(
-      (n) => n.replace(/\s+/g, " ").toLowerCase() === `${flat} ${bhk}BHK`.toLowerCase(),
+      (n) => n.replace(/\s+/g, " ").toLowerCase() === `${flat} ${kind}`.toLowerCase(),
     );
     const lines: FlatLine[] = [];
     const sd = rows(sheet ? wb.Sheets[sheet] : undefined);
@@ -468,9 +515,9 @@ export function parseFlatTypes(wb: XLSX.WorkBook): FlatType[] {
       }
     }
     out.push({
-      code: `${flat}-${bhk}BHK`,
-      label: `${flat} · ${bhk}BHK`,
-      bhk: Number(bhk),
+      code: `${flat}-${kind.replace(/\s+/g, "")}`,
+      label: `${flat} · ${kind}`,
+      bhk: Number(bhk) || 0,
       floors: floors!.trim(),
       flats: list!
         .split(/[,\s]+/)
@@ -498,7 +545,57 @@ function sectionFor(line: { pkg: string; group: string; item: string; code: stri
       if (g.startsWith("b.")) return "RCC Works";
       if (g.startsWith("c.")) return "Reinforcement (Steel)";
       if (g.startsWith("d.")) return "Shuttering / Formwork";
+      // 78:93 structure lines (P3.xx) have no group: by their text.
+      if (line.code.includes(".") && /steel|tmt|reinforcement|binding wire/.test(t))
+        return "Reinforcement (Steel)";
+      if (line.code.includes(".") && /shuttering|formwork/.test(t)) return "Shuttering / Formwork";
       return "RCC Works";
+    // 78:93 packages (common works P1–P13 and the owners' unit works)
+    case "Earthwork":
+      return "Earthwork";
+    case "Masonry plaster WP":
+      if (/waterproof|tanking|membrane|ponding|crystalline/.test(t)) return "Waterproofing";
+      if (/plaster/.test(t)) return "Plastering";
+      return "Masonry";
+    case "Windows and balconies":
+      if (/door/.test(t)) return "Doors";
+      if (/tile|floor/.test(t)) return "Flooring";
+      if (/granite|sill/.test(t)) return "Granite Works";
+      if (/window|ventilator|slider|glass|glazing|w[0-9]|v[0-9]|sd[0-9]/.test(t))
+        return "Windows & Glazing";
+      return "Miscellaneous";
+    case "Facade and external paint":
+      return "Painting";
+    case "Core finishes":
+      if (/granite|stone|coping/.test(t)) return "Granite Works";
+      if (/paint|emulsion|putty/.test(t)) return "Painting";
+      if (/ceiling/.test(t)) return "False Ceiling";
+      if (/tile|vdf|hardener/.test(t)) return "Flooring";
+      return "Miscellaneous";
+    case "Plumbing and water":
+      return "Plumbing";
+    case "Electrical security fire":
+      if (/fire|sprinkler|hydrant|extinguisher/.test(t)) return "Fire Fighting";
+      if (/transformer|dg |generator|panel|meter|ventilation|fan/.test(t))
+        return "Services (Transformer / DG / STP)";
+      return "Electrical";
+    case "Owners hostel units":
+    case "Owners office units":
+      if (/labour/.test(t) && /civil/.test(g)) return "Labour Contracts";
+      if (g.startsWith("civil")) return /plaster/.test(t) ? "Plastering" : "Masonry";
+      if (g.startsWith("floor and wall"))
+        return /wall tile|wall/.test(t) ? "Wall Tiling" : "Flooring";
+      if (g.startsWith("toilets")) {
+        if (/cpvc|supply|waste/.test(t)) return "Plumbing";
+        if (/waterproof/.test(t)) return "Waterproofing";
+        return "Sanitaryware";
+      }
+      if (g.startsWith("kitchen")) return /granite/.test(t) ? "Granite Works" : "CP Fittings";
+      if (g.startsWith("electrical")) return "Electrical";
+      if (g.startsWith("ceilings")) return /ac /.test(`${t} `) ? "Miscellaneous" : "False Ceiling";
+      if (g.startsWith("doors")) return /window grill/.test(t) ? "Miscellaneous" : "Doors";
+      if (g.startsWith("painting")) return "Painting";
+      return "Miscellaneous";
     case "Masonry AAC":
       return "Masonry";
     case "Plaster paint WP":
@@ -724,6 +821,8 @@ export function parseControl(wb: XLSX.WorkBook): ControlData {
       p3: col("pred 3"),
       start: col("start"),
       finish: col("finish"),
+      // 78:93 names the Flow of events sections per stage ("2" or "4, 5").
+      flow: col("flow of events"),
     };
     for (let i = h + 1; i < prog.length; i++) {
       const r = prog[i] ?? [];
@@ -744,6 +843,13 @@ export function parseControl(wb: XLSX.WorkBook): ControlData {
         materials: [],
         steel: null,
         directions: [],
+        flow:
+          c.flow >= 0
+            ? str(at(r, c.flow))
+                .split(/[,\s]+/)
+                .map(Number)
+                .filter((n) => n > 0)
+            : undefined,
       });
     }
   }
@@ -880,7 +986,7 @@ export function parseControl(wb: XLSX.WorkBook): ControlData {
     if (/^construction principles/i.test(a)) notes.principles.push(a);
   }
   for (const st of stages) {
-    st.directions = flowSectionsFor(st.code)
+    st.directions = (st.flow ?? flowSectionsFor(st.code))
       .map((n) =>
         notes.flow.find((f) => f.title.startsWith(`${n} `) || f.title.startsWith(`${n}·`)),
       )
