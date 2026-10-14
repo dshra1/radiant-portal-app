@@ -65,7 +65,7 @@ export async function loadDepartmentTenders(projectId: string, userId: string | 
     const no = rfqNumberOf(d.code);
     const enquiry = addDays(d.first, -45);
     const values = {
-      title: `${d.code} · ${d.name}`,
+      title: d.name,
       spec: [
         `Who quotes: ${d.dealer}.`,
         `Send the enquiry by ${fmt(enquiry)}; first supply needed ${fmt(d.first)}.`,
