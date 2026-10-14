@@ -104,6 +104,7 @@ export const navGroups: NavGroup[] = [
     id: "money",
     label: "Money & Owners",
     items: [
+      { to: "/owner", label: "Owner's Portal (my flat & costs)", icon: Home },
       { to: "/capital-ledger", label: "Capital Ledger", icon: Wallet },
       { to: "/landowners-investment", label: "Landowners & Investment", icon: Landmark },
       { to: "/flats", label: "Flats & Individual Works", icon: Building2 },

@@ -41,6 +41,7 @@ import { Route as ManualRouteImport } from './routes/manual'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as OwnerApprovalsRouteImport } from './routes/owner-approvals'
 import { Route as PmcScopeRouteImport } from './routes/pmc-scope'
 import { Route as PoCreateRouteImport } from './routes/po-create'
@@ -233,6 +234,11 @@ const MessagesRoute = MessagesRouteImport.update({
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerRoute = OwnerRouteImport.update({
+  id: '/owner',
+  path: '/owner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OwnerApprovalsRoute = OwnerApprovalsRouteImport.update({
@@ -434,6 +440,7 @@ export interface FileRoutesByFullPath {
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
+  '/owner': typeof OwnerRoute
   '/owner-approvals': typeof OwnerApprovalsRoute
   '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
@@ -501,6 +508,7 @@ export interface FileRoutesByTo {
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
+  '/owner': typeof OwnerRoute
   '/owner-approvals': typeof OwnerApprovalsRoute
   '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
@@ -569,6 +577,7 @@ export interface FileRoutesById {
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
+  '/owner': typeof OwnerRoute
   '/owner-approvals': typeof OwnerApprovalsRoute
   '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
@@ -638,6 +647,7 @@ export interface FileRouteTypes {
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
+    | '/owner'
     | '/owner-approvals'
     | '/pmc-scope'
     | '/po-create'
@@ -705,6 +715,7 @@ export interface FileRouteTypes {
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
+    | '/owner'
     | '/owner-approvals'
     | '/pmc-scope'
     | '/po-create'
@@ -772,6 +783,7 @@ export interface FileRouteTypes {
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
+    | '/owner'
     | '/owner-approvals'
     | '/pmc-scope'
     | '/po-create'
@@ -840,6 +852,7 @@ export interface RootRouteChildren {
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
   MessagesRoute: typeof MessagesRoute
   NotificationsRoute: typeof NotificationsRoute
+  OwnerRoute: typeof OwnerRoute
   OwnerApprovalsRoute: typeof OwnerApprovalsRoute
   PmcScopeRoute: typeof PmcScopeRoute
   PoCreateRoute: typeof PoCreateRoute
@@ -1099,6 +1112,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/owner': {
+      id: '/owner'
+      path: '/owner'
+      fullPath: '/owner'
+      preLoaderRoute: typeof OwnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/owner-approvals': {
@@ -1368,6 +1388,7 @@ const rootRouteChildren: RootRouteChildren = {
   MediaUploadStudioRoute: MediaUploadStudioRoute,
   MessagesRoute: MessagesRoute,
   NotificationsRoute: NotificationsRoute,
+  OwnerRoute: OwnerRoute,
   OwnerApprovalsRoute: OwnerApprovalsRoute,
   PmcScopeRoute: PmcScopeRoute,
   PoCreateRoute: PoCreateRoute,

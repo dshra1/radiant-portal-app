@@ -2065,6 +2065,183 @@ export type Database = {
         }
         Relationships: []
       }
+      owner_links: {
+        Row: {
+          user_id: string
+          owner_name: string
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          owner_name: string
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          owner_name?: string
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      flat_options: {
+        Row: {
+          id: string
+          project_id: string
+          item_code: string
+          type_code: string
+          label: string
+          make: string
+          rate: number
+          gst_pct: number
+          note: string
+          sort: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          item_code: string
+          type_code?: string
+          label: string
+          make?: string
+          rate?: number
+          gst_pct?: number
+          note?: string
+          sort?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          item_code?: string
+          type_code?: string
+          label?: string
+          make?: string
+          rate?: number
+          gst_pct?: number
+          note?: string
+          sort?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      flat_selections: {
+        Row: {
+          id: string
+          project_id: string
+          flat_no: string
+          item_code: string
+          option_id: string | null
+          delta: number
+          status: string
+          owner_note: string
+          pmc_note: string
+          chosen_by: string | null
+          chosen_at: string | null
+          decided_by: string | null
+          decided_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          flat_no: string
+          item_code: string
+          option_id?: string | null
+          delta?: number
+          status?: string
+          owner_note?: string
+          pmc_note?: string
+          chosen_by?: string | null
+          chosen_at?: string | null
+          decided_by?: string | null
+          decided_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          flat_no?: string
+          item_code?: string
+          option_id?: string | null
+          delta?: number
+          status?: string
+          owner_note?: string
+          pmc_note?: string
+          chosen_by?: string | null
+          chosen_at?: string | null
+          decided_by?: string | null
+          decided_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      owner_change_requests: {
+        Row: {
+          id: string
+          project_id: string
+          owner_name: string
+          scope: string
+          flat_no: string
+          item_code: string
+          subject: string
+          details: string
+          status: string
+          response: string
+          created_by: string | null
+          responded_by: string | null
+          responded_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          owner_name: string
+          scope?: string
+          flat_no?: string
+          item_code?: string
+          subject: string
+          details?: string
+          status?: string
+          response?: string
+          created_by?: string | null
+          responded_by?: string | null
+          responded_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          owner_name?: string
+          scope?: string
+          flat_no?: string
+          item_code?: string
+          subject?: string
+          details?: string
+          status?: string
+          response?: string
+          created_by?: string | null
+          responded_by?: string | null
+          responded_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ncrs: {
         Row: {
           id: string

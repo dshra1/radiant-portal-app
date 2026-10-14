@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,6 +89,13 @@ function Index() {
   const activeProject = useActiveProject();
   const setActiveProject = useActiveProjectSetter();
   const queryClient = useQueryClient();
+
+  // A landowner-only login goes straight to their portal.
+  const ownerOnly =
+    !!access && access.roles.length > 0 && access.roles.every((r) => r === "landowner_investor");
+  useEffect(() => {
+    if (ownerOnly) void navigate({ to: "/owner", replace: true });
+  }, [ownerOnly, navigate]);
 
   const firstName =
     access?.profile?.full_name?.split(" ")[0] ?? access?.email?.split("@")[0] ?? "Saha";

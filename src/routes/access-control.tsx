@@ -103,6 +103,43 @@ function AccessControl() {
     },
   });
 
+  const owners = useQuery({
+    queryKey: ["access-owner-links"],
+    enabled: !!access?.isAdmin,
+    queryFn: async () => {
+      const [pr, links] = await Promise.all([
+        supabase.from("site_projects").select("landowners"),
+        supabase.from("owner_links").select("user_id,owner_name"),
+      ]);
+      if (pr.error) throw pr.error;
+      if (links.error) throw links.error;
+      const names = new Set<string>();
+      for (const p of pr.data ?? [])
+        for (const o of (Array.isArray(p.landowners) ? p.landowners : []) as { name?: string }[])
+          if (o?.name && String(o.name).trim()) names.add(String(o.name).trim());
+      return {
+        names: [...names].sort(),
+        links: new Map((links.data ?? []).map((l) => [l.user_id, l.owner_name])),
+      };
+    },
+  });
+
+  const linkOwner = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const r = name
+        ? await supabase
+            .from("owner_links")
+            .upsert({ user_id: id, owner_name: name, updated_by: access?.userId ?? null })
+        : await supabase.from("owner_links").delete().eq("user_id", id);
+      if (r.error) throw r.error;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["access-owner-links"] });
+      await qc.invalidateQueries({ queryKey: ["owner_links"] });
+      await qc.invalidateQueries({ queryKey: ["owner_portal"] });
+    },
+  });
+
   if (loading) {
     return (
       <Shell title="Access & Permissions" subtitle="Loading">
@@ -141,6 +178,12 @@ function AccessControl() {
             limited to those roles. Admin grants full access, including this page.
           </p>
         </div>
+
+        {linkOwner.isError && (
+          <p className="text-sm font-semibold text-destructive">
+            Could not link the landowner: {(linkOwner.error as Error).message}
+          </p>
+        )}
 
         {members.isError && (
           <p className="text-sm font-semibold text-destructive">
@@ -219,6 +262,28 @@ function AccessControl() {
                     );
                   })}
                 </div>
+
+                {m.roles.includes("landowner_investor") && (
+                  <label className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="font-semibold">This login is landowner:</span>
+                    <select
+                      value={owners.data?.links.get(m.id) ?? ""}
+                      disabled={linkOwner.isPending}
+                      onChange={(e) => linkOwner.mutate({ id: m.id, name: e.target.value })}
+                      className="h-8 rounded-lg border border-border bg-background px-2 text-xs"
+                    >
+                      <option value="">— not linked (sees no flat) —</option>
+                      {(owners.data?.names ?? []).map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-muted-foreground">
+                      Their Owner&apos;s Portal shows this landowner&apos;s share and flats.
+                    </span>
+                  </label>
+                )}
               </div>
             );
           })}
