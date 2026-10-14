@@ -8,6 +8,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSessionUser } from "@/lib/access";
 import { boqTotals } from "@/lib/boq-totals";
+import {
+  APPROVALS_NOTE,
+  approvalsBudget,
+  pmcFee as pmcFeeFor,
+  pmcFeeLabel,
+  type PmcScope,
+} from "@/lib/money";
 
 export const Route = createFileRoute("/financial-forecast")({
   head: () => ({
@@ -32,7 +39,7 @@ export const Route = createFileRoute("/financial-forecast")({
 });
 
 function num(v: unknown): number {
-  const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
+  const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? n : 0;
 }
 function inr(n: number): string {
@@ -74,7 +81,8 @@ function Page() {
   const project = useActiveProject();
   const user = useSessionUser();
   const enabled = Boolean(user?.id) && Boolean(project.id);
-  const [contingencyPct, setContingencyPct] = useState(5);
+  // Contingency defaults to the project's setting (as on the Cost Dashboard); the box overrides it.
+  const [contingencyOverride, setContingencyOverride] = useState<number | null>(null);
 
   const projectRow = useQuery({
     queryKey: ["site_projects", "forecast", project.id],
@@ -82,7 +90,9 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
-        .select("id,name,target_budget,spend,start_date,target_handover_date,total_built_up_sft")
+        .select(
+          "id,name,target_budget,spend,start_date,target_handover_date,total_built_up_sft,contingency_pct,pmc_scope",
+        )
         .eq("id", project.id)
         .maybeSingle();
       if (error) throw error;
@@ -96,7 +106,7 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("boq_items")
-        .select("quantity,rate,gst_pct,item_code,work_scope,package,package_no")
+        .select("quantity,rate,gst_pct,item_code,work_scope,package,package_no,stage")
         .eq("project_id", project.id);
       if (error) throw error;
       return data ?? [];
@@ -165,6 +175,12 @@ function Page() {
     capital.isLoading ||
     charges.isLoading;
 
+  const projectContingency =
+    projectRow.data?.contingency_pct === null || projectRow.data?.contingency_pct === undefined
+      ? 5
+      : num(projectRow.data.contingency_pct);
+  const contingencyPct = contingencyOverride ?? projectContingency;
+
   const m = useMemo(() => {
     // BOQ incl. GST at each line's rate (the report's sub-total); an imported contingency line is skipped.
     const boqTotal = boqTotals(boq.data ?? [], 0).subtotal.incl;
@@ -203,8 +219,11 @@ function Page() {
     const fundsInHand = inflow - outflowOwners - spentToDate;
 
     const contingency = (boqTotal * contingencyPct) / 100;
-    // Statutory charges are part of the BOQ's approvals package: counted in spend, not added again.
-    const forecastCost = boqTotal + contingency;
+    // Same project cost as the Cost Dashboard: BOQ incl. GST + contingency + PMC fee.
+    const pmc = pmcFeeFor(boq.data ?? [], (projectRow.data?.pmc_scope ?? null) as PmcScope | null);
+    const approvals = approvalsBudget(boq.data ?? []);
+    // Statutory charges are part of the BOQ's Approvals package: counted in spend, not added again.
+    const forecastCost = boqTotal + contingency + pmc.fee;
     const costToComplete = Math.max(forecastCost - spentToDate, 0);
     const committedNow = vendorOutstanding + chargesPending;
     const fundingGap = Math.max(costToComplete - fundsInHand, 0);
@@ -262,6 +281,8 @@ function Page() {
     return {
       boqTotal,
       contingency,
+      pmc,
+      approvals,
       chargesTotal,
       chargesPaid,
       chargesPending,
@@ -304,8 +325,10 @@ function Page() {
     const rows: Array<[string, number]> = [
       ["BOQ estimated cost", m.boqTotal],
       [`Contingency @ ${contingencyPct}%`, m.contingency],
-      ["Statutory / common charges", m.chargesTotal],
-      ["Forecast total cost", m.forecastCost],
+      [`${pmcFeeLabel(m.pmc.pct, m.pmc.isDefault)} on BOQ works excl. GST`, m.pmc.fee],
+      ["Forecast total cost (incl. PMC fee)", m.forecastCost],
+      ["BOQ Approvals package budget (inside BOQ, not added)", m.approvals],
+      ["Statutory charges recorded (inside BOQ, not added)", m.chargesTotal],
       ["Owner funding received", m.inflow],
       ["Owner withdrawals / refunds", m.outflowOwners],
       ["Paid to vendors", m.vendorPaid],
@@ -354,7 +377,10 @@ function Page() {
                 min={0}
                 max={25}
                 value={contingencyPct}
-                onChange={(e) => setContingencyPct(Math.max(0, Math.min(25, num(e.target.value))))}
+                title={`Project setting ${projectContingency}%`}
+                onChange={(e) =>
+                  setContingencyOverride(Math.max(0, Math.min(25, num(e.target.value))))
+                }
                 className="w-14 bg-transparent text-right font-semibold outline-none"
               />
               <span className="text-muted-foreground">%</span>
@@ -381,9 +407,9 @@ function Page() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Kpi
                 icon={<Landmark className="h-4 w-4" />}
-                label="Forecast total cost"
+                label="Forecast total cost (incl. PMC fee)"
                 value={inr(m.forecastCost)}
-                note={`BOQ incl. GST ${inr(m.boqTotal)} + contingency ${inr(m.contingency)}`}
+                note={`BOQ incl. GST ${inr(m.boqTotal)} + contingency ${inr(m.contingency)} + PMC fee ${inr(m.pmc.fee)}`}
                 to="/boq-engine"
               />
               <Kpi
@@ -527,13 +553,25 @@ function Page() {
                 <div className="flex flex-col gap-2 text-sm">
                   <Row label="BOQ estimated cost" value={inrFull(m.boqTotal)} />
                   <Row label={`Contingency @ ${contingencyPct}%`} value={inrFull(m.contingency)} />
-                  <Row label="Statutory & common charges" value={inrFull(m.chargesTotal)} />
+                  <Row label={pmcFeeLabel(m.pmc.pct, m.pmc.isDefault)} value={inrFull(m.pmc.fee)} />
+                  <Row
+                    label="Statutory budget (BOQ Approvals, inside BOQ)"
+                    value={inrFull(m.approvals)}
+                  />
+                  <Row label="Statutory charges paid against it" value={inrFull(m.chargesPaid)} />
                   <Row label="Bills raised (net)" value={inrFull(m.billedGross)} />
                   <Row label="Paid to vendors" value={inrFull(m.vendorPaid)} />
                   <Row label="Bills outstanding" value={inrFull(m.vendorOutstanding)} />
                   <Row label="Charges pending" value={inrFull(m.chargesPending)} />
                   <Row label="Owner funding received" value={inrFull(m.inflow)} />
                 </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {APPROVALS_NOTE.replace(
+                    "this page records",
+                    "Common & Statutory Expenses records",
+                  )}{" "}
+                  They are not added on top of the BOQ.
+                </p>
                 <div className="mt-4 flex flex-wrap gap-2 text-sm">
                   <Link
                     to="/bills-payments"

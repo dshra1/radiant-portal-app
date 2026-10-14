@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { useSessionUser } from "@/lib/access";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { ProgrammeFlow } from "@/components/saha/ProgrammeFlow";
 import { useSiteWeek } from "@/lib/site-week";
+import { fmtDay } from "@/lib/programme-progress";
 
 export const Route = createFileRoute("/projects-setup")({
   head: () => ({
@@ -95,7 +96,42 @@ function Page() {
     return { rmc: Math.round(rmc), steelT: Math.round(steelKg / 100) / 10 };
   }, [stageWeek.data]);
   const concreteVolume = fromReport?.rmc ?? Math.round(castingArea * 0.035);
-  const rebarWeight = fromReport?.steelT ?? Math.round((castingArea * 3) / 1000);
+  // Without an imported programme, steel comes from the project's own kg/sft ratio.
+  const steelRatio = Number(project?.steel_ratio_kg_per_sft ?? 0);
+  const rebarWeight =
+    fromReport?.steelT ??
+    (steelRatio > 0 ? Math.round((castingArea * steelRatio) / 100) / 10 : null);
+
+  const stageList = stageWeek.data?.stages ?? [];
+  const stageGroups = useMemo(() => {
+    const m = new Map<
+      string,
+      { count: number; closed: number; start: string | null; end: string | null }
+    >();
+    for (const s of stageWeek.data?.stages ?? []) {
+      const g = m.get(s.group) ?? { count: 0, closed: 0, start: null, end: null };
+      g.count += 1;
+      if (s.closedAt || s.actualPct >= 100) g.closed += 1;
+      if (s.plannedStart && (!g.start || s.plannedStart < g.start)) g.start = s.plannedStart;
+      if (s.plannedEnd && (!g.end || s.plannedEnd > g.end)) g.end = s.plannedEnd;
+      m.set(s.group, g);
+    }
+    return [...m.entries()];
+  }, [stageWeek.data]);
+  const closedStages = stageGroups.reduce((sum, [, g]) => sum + g.closed, 0);
+
+  const { data: flatCount = null } = useQuery({
+    queryKey: ["flats", "count", project?.id ?? ""],
+    enabled: Boolean(project?.id),
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("flats")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", project!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
 
   const saveGeometry = async () => {
     if (!project) throw new Error("Add a project before configuring its geometry.");
@@ -123,23 +159,11 @@ function Page() {
     }
   };
 
-  const recalculate = () => {
-    toast.success("Structural quantities recalculated");
-  };
-
   const generateBoq = async () => {
     setIsGenerating(true);
     try {
       await saveGeometry();
-      window.localStorage.setItem(
-        "saha-generated-boq-input",
-        JSON.stringify({
-          ...geometry,
-          projectId: project?.id,
-          generatedAt: new Date().toISOString(),
-        }),
-      );
-      toast.success("Geometry saved");
+      toast.success("Geometry saved to the project");
       await navigate({ to: "/boq-engine" });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "BOQ blueprint could not be generated");
@@ -155,9 +179,9 @@ function Page() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-lg">
               <div className="flex flex-col">
                 <div className="flex items-center gap-space-xs font-label-md text-label-md text-on-surface-variant mb-space-2xs">
-                  <a className="hover:text-primary transition-colors" href="#">
+                  <Link className="hover:text-primary transition-colors" to="/projects">
                     Projects
-                  </a>
+                  </Link>
                   <span className="material-symbols-outlined text-space-sm leading-none">
                     chevron_right
                   </span>
@@ -175,68 +199,6 @@ function Page() {
                   <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">
                     Project Setup &amp; Structural Geometry Wizard
                   </h1>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm mb-space-xl">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-space-sm relative">
-                <div className="flex items-center gap-space-sm p-space-sm rounded-lg bg-surface-container-low transition-colors">
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-on-primary font-label-md text-label-md">
-                    <span className="material-symbols-outlined text-space-base leading-none">
-                      check
-                    </span>
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-label-sm text-label-sm uppercase tracking-wider text-primary font-bold">
-                      Step 01
-                    </span>
-                    <span className="font-title-md text-title-md text-on-surface truncate">
-                      Project Info &amp; Location
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-space-sm p-space-sm rounded-lg bg-primary-container text-on-primary-container shadow-sm transition-colors">
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-surface-container-lowest text-primary font-label-md text-label-md font-bold">
-                    2
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-primary-container/80 font-bold">
-                      Step 02 • Active
-                    </span>
-                    <span className="font-title-md text-title-md text-on-primary-container truncate font-bold">
-                      Building Geometry &amp; SFT
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-space-sm p-space-sm rounded-lg bg-surface-container-low/60 transition-colors opacity-80">
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md font-bold">
-                    3
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-semibold">
-                      Step 03
-                    </span>
-                    <span className="font-title-md text-title-md text-on-surface truncate">
-                      Drawing Notes &amp; CAD
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-space-sm p-space-sm rounded-lg bg-surface-container-low/60 transition-colors opacity-80">
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md font-bold">
-                    4
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-semibold">
-                      Step 04
-                    </span>
-                    <span className="font-title-md text-title-md text-on-surface truncate">
-                      Milestones &amp; BOQ Output
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -417,27 +379,18 @@ function Page() {
                       </div>
                       <div>
                         <h2 className="font-headline-sm text-headline-sm text-on-surface">
-                          Drawing Ingestion &amp; CAD Extractor
+                          Specifications &amp; Drawings
                         </h2>
                         <p className="font-body-sm text-body-sm text-on-surface-variant">
-                          OCR parsing and structural schedule rules
+                          Saved construction specifications and project drawings
                         </p>
                       </div>
                     </div>
-                    <span className="px-space-xs py-space-2xs rounded bg-surface-container-low text-tertiary font-label-sm text-label-sm font-semibold flex items-center gap-space-2xs">
-                      <span className="material-symbols-outlined text-space-sm leading-none">
-                        auto_awesome
-                      </span>
-                      AI OCR Active
-                    </span>
                   </div>
                   <div className="space-y-space-md">
                     <div className="flex flex-col gap-space-2xs">
                       <label className="font-label-md text-label-md text-on-surface font-semibold flex items-center justify-between">
-                        <span>Drawing Parsing Directives &amp; Internal Notes</span>
-                        <span className="text-on-surface-variant font-label-sm text-label-sm font-normal">
-                          Auto-indexes to Stage BOQs
-                        </span>
+                        <span>Construction specifications</span>
                       </label>
                       <textarea
                         className="w-full p-space-md rounded bg-surface-container-low text-on-surface font-body-sm text-body-sm leading-relaxed"
@@ -530,17 +483,6 @@ function Page() {
                           volumes
                         </p>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-space-xs px-space-sm py-space-xs rounded-full bg-primary-container/10 text-primary self-start sm:self-auto">
-                      <span
-                        className="material-symbols-outlined text-space-base leading-none animate-spin"
-                        style={{ animationDuration: "6s" }}
-                      >
-                        cyclone
-                      </span>
-                      <span className="font-label-sm text-label-sm font-bold uppercase tracking-wider">
-                        Dynamic Formula Active
-                      </span>
                     </div>
                   </div>
 
@@ -752,7 +694,7 @@ function Page() {
 
                       <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
                         <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                          Slab Count (+ Terrace)
+                          Slab Count (incl. terrace)
                         </span>
                         <div className="flex items-baseline gap-space-xs mt-space-2xs">
                           <span
@@ -766,7 +708,8 @@ function Page() {
                           </span>
                         </div>
                         <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">
-                          Stilt top, F1-5 + Terrace
+                          {geometry.cellar + geometry.stilt} cellar/stilt roof + {geometry.typical}{" "}
+                          typical roofs
                         </span>
                       </div>
 
@@ -789,7 +732,8 @@ function Page() {
                           className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate"
                           id="metricBuiltupCalc"
                         >
-                          {totalFloors} floors × {geometry.slabSft.toLocaleString("en-IN")} SFT
+                          {geometry.typical} typical floors ×{" "}
+                          {geometry.slabSft.toLocaleString("en-IN")} SFT
                         </span>
                       </div>
 
@@ -818,7 +762,7 @@ function Page() {
 
                       <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
                         <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                          RMC (from the report)
+                          {fromReport ? "RMC (from the programme)" : "RMC (estimate)"}
                         </span>
                         <div className="flex items-baseline gap-space-xs mt-space-2xs">
                           <span
@@ -833,7 +777,9 @@ function Page() {
                           </span>
                         </div>
                         <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">
-                          Saved grade: {project?.concrete_grade ?? "Not provided"}
+                          {fromReport
+                            ? `Stage ledger · ${project?.concrete_grade ?? "grade not set"}`
+                            : `0.035 m³/sft rule of thumb until the programme is imported`}
                         </span>
                       </div>
 
@@ -846,8 +792,7 @@ function Page() {
                             className="font-tabular-metric text-tabular-metric text-on-surface"
                             id="metricRebarWeight"
                           >
-                            {fromReport ? "" : "~"}
-                            {rebarWeight}
+                            {rebarWeight == null ? "—" : `${fromReport ? "" : "~"}${rebarWeight}`}
                           </span>
                           <span className="font-label-sm text-label-sm text-on-surface-variant">
                             MT
@@ -856,115 +801,79 @@ function Page() {
                         <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">
                           {fromReport
                             ? `Steel order schedule, by stage and bar size · ${project?.steel_grade ?? ""}`
-                            : `Rule of thumb ${Number(project?.steel_ratio_kg_per_sft ?? 0)} kg/sft until the programme is imported`}
+                            : steelRatio > 0
+                              ? `Project ratio ${steelRatio} kg/sft × casting area (no programme imported)`
+                              : "Set the project's steel ratio or import the programme"}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-space-md">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-space-xs">
                         <span className="material-symbols-outlined text-primary text-space-base leading-none">
                           account_tree
                         </span>
                         <h3 className="font-title-md text-title-md text-on-surface font-bold">
-                          Automated 14-Stage Schedule Calibration
+                          Programme stages
                         </h3>
                       </div>
                       <span className="font-label-sm text-label-sm text-primary font-bold">
-                        14 Stages Configured
+                        {stageWeek.isPending
+                          ? "Loading…"
+                          : `${stageList.length} stage${stageList.length === 1 ? "" : "s"} · ${closedStages} done`}
+                        {flatCount != null && ` · ${flatCount} flat${flatCount === 1 ? "" : "s"}`}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-space-sm">
-                      <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-space-2xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-label-sm text-label-sm font-bold text-primary">
-                            Stage 01
-                          </span>
-                          <span className="material-symbols-outlined text-space-sm leading-none text-on-surface-variant">
-                            check_circle
+                    {stageGroups.length === 0 && !stageWeek.isPending ? (
+                      <p className="font-body-sm text-body-sm text-on-surface-variant">
+                        No programme imported yet.{" "}
+                        <Link to="/project-import" className="text-primary underline">
+                          Import the PMC workbooks
+                        </Link>{" "}
+                        to load the stages.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-space-sm">
+                        {stageGroups.map(([name, g]) => (
+                          <div
+                            key={name}
+                            className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-space-2xs"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-title-md text-title-md text-on-surface truncate">
+                                {name}
+                              </span>
+                              <span className="font-label-sm text-label-sm text-primary font-bold shrink-0">
+                                {g.closed}/{g.count}
+                              </span>
+                            </div>
+                            <span className="font-body-sm text-body-sm text-on-surface-variant">
+                              {fmtDay(g.start)} → {fmtDay(g.end)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {stageList.length > 0 && (
+                      <div className="flex flex-col gap-space-2xs pt-space-xs">
+                        <div className="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
+                          <span>Stages closed</span>
+                          <span className="text-primary font-bold">
+                            {Math.round((closedStages / stageList.length) * 100)}%
                           </span>
                         </div>
-                        <span className="font-title-md text-title-md text-on-surface truncate">
-                          Substructure
-                        </span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">
-                          Piling &amp; Footings (18 Col)
-                        </span>
-                      </div>
-
-                      <div className="p-space-sm rounded-lg bg-primary/10 flex flex-col gap-space-2xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-label-sm text-label-sm font-bold text-primary">
-                            Stage 07
-                          </span>
-                          <span className="px-space-2xs py-0.5 rounded bg-primary text-on-primary font-label-sm text-[10px] uppercase font-bold">
-                            7 Slabs
-                          </span>
+                        <div className="w-full h-2 rounded-full overflow-hidden bg-surface-container">
+                          <div
+                            className="h-full bg-primary"
+                            style={{ width: `${(closedStages / stageList.length) * 100}%` }}
+                          />
                         </div>
-                        <span className="font-title-md text-title-md text-on-surface truncate font-bold">
-                          RCC Superstructure
-                        </span>
-                        <span
-                          className="font-body-sm text-body-sm text-on-surface-variant"
-                          id="badgeStageRCC"
-                        >
-                          {castingArea.toLocaleString("en-IN")} SFT pour cards
-                        </span>
                       </div>
-
-                      <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-space-2xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-label-sm text-label-sm font-bold text-tertiary">
-                            Stage 10
-                          </span>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">
-                            20 Flats
-                          </span>
-                        </div>
-                        <span className="font-title-md text-title-md text-on-surface truncate">
-                          MEP In-Wall Rough-in
-                        </span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">
-                          Concealed conduits &amp; pipes
-                        </span>
-                      </div>
-
-                      <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-space-2xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-label-sm text-label-sm font-bold text-secondary">
-                            Stage 14
-                          </span>
-                          <span className="font-label-sm text-label-sm text-on-surface-variant">
-                            Final QA
-                          </span>
-                        </div>
-                        <span className="font-title-md text-title-md text-on-surface truncate">
-                          Snagging &amp; Handover
-                        </span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">
-                          Terrace waterproofing check
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-space-2xs pt-space-xs">
-                      <div className="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
-                        <span>Dynamic Construction Milestones Alignment</span>
-                        <span className="text-primary font-bold">Ready to Compile BOQ</span>
-                      </div>
-                      <div className="flex items-center gap-0.5 w-full h-2 rounded-full overflow-hidden bg-surface-container">
-                        <div className="h-full bg-primary flex-1"></div>
-                        <div className="h-full bg-primary flex-1"></div>
-                        <div className="h-full bg-primary flex-1"></div>
-                        <div className="h-full bg-primary-container flex-1 animate-pulse"></div>
-                        <div className="h-full bg-surface-container-highest flex-1"></div>
-                        <div className="h-full bg-surface-container-highest flex-1"></div>
-                        <div className="h-full bg-surface-container-highest flex-1"></div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -987,18 +896,6 @@ function Page() {
                   className="h-auto px-space-md py-space-xs font-title-md text-title-md"
                 >
                   Save as Draft
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={recalculate}
-                  className="h-auto px-space-md py-space-xs font-title-md text-title-md"
-                  id="btnRecalculate"
-                >
-                  <span className="material-symbols-outlined text-space-base leading-none text-primary">
-                    sync
-                  </span>
-                  <span>Recalculate</span>
                 </Button>
                 <Button
                   type="button"

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Camera,
   CheckCircle2,
@@ -359,16 +359,20 @@ function DailyReport({
         });
         if (error) throw error;
       }
-      await supabase.from("team_messages").insert({
-        channel: "Daily report",
+      // Always post the report (work done, issues, labour) to the "Daily report" channel —
+      // this is what Team Chat and the list below show, whether or not labour was booked.
+      const { error: postErr } = await supabase.from("team_messages").insert({
+        channel: DAILY_REPORT_CHANNEL,
         author_name: who.name,
         author_role: "Site",
         body: [
           `Daily report ${date} · stage ${stage || "—"}`,
           `Weather: ${weather}`,
-          headcount ? `Labour: ${headcount} (${trade}${contractor ? `, ${contractor}` : ""})` : "",
-          `Done: ${done}`,
-          issues ? `Issues / needs: ${issues}` : "",
+          headcount
+            ? `Labour: ${headcount} (${trade}${contractor ? `, ${contractor}` : ""})`
+            : "Labour: none booked today",
+          `Done: ${done.trim()}`,
+          issues.trim() ? `Issues / needs: ${issues.trim()}` : "",
         ]
           .filter(Boolean)
           .join("\n"),
@@ -376,8 +380,9 @@ function DailyReport({
         project_id: projectId,
         sender_id: who.id,
       });
-      if (issues.trim())
-        await supabase.from("notifications").insert({
+      if (postErr) throw postErr;
+      if (issues.trim()) {
+        const { error: noteErr } = await supabase.from("notifications").insert({
           title: `Site issue ${date}${stage ? ` (${stage})` : ""}`,
           body: issues,
           category: "Site plan",
@@ -386,15 +391,19 @@ function DailyReport({
           project_id: projectId,
           sender_id: who.id,
         });
+        if (noteErr) toast.error(`Report saved, but the PM alert failed: ${noteErr.message}`);
+      }
       toast.success("Daily report saved");
       setDone("");
       setIssues("");
       setHeadcount(0);
       await qc.invalidateQueries({ queryKey: ["labour_entries", projectId] });
+      await qc.invalidateQueries({ queryKey: ["team_messages"] });
     } catch (e) {
       toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
 
   const field = "h-12 w-full rounded-xl border border-border bg-background px-3 text-[15px]";
@@ -474,6 +483,63 @@ function DailyReport({
           Send daily report
         </button>
       </div>
+      <RecentDailyReports projectId={projectId} />
     </section>
+  );
+}
+
+const DAILY_REPORT_CHANNEL = "Daily report";
+
+/** The last 7 daily reports posted for this project (team chat channel "Daily report"). */
+function RecentDailyReports({ projectId }: { projectId: string }) {
+  const q = useQuery({
+    queryKey: ["team_messages", "daily-reports", projectId],
+    enabled: Boolean(projectId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("team_messages")
+        .select("id,author_name,body,created_at")
+        .eq("channel", DAILY_REPORT_CHANNEL)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(7);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  return (
+    <div className="mt-4 border-t border-border pt-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-bold">Recent daily reports</h3>
+        <Link to="/messages" className="text-xs font-semibold text-primary underline">
+          Open in Team Chat
+        </Link>
+      </div>
+      {q.isPending && <p className="mt-1 text-sm text-muted-foreground">Loading…</p>}
+      {q.isError && (
+        <p className="mt-1 text-sm text-destructive">
+          Could not load reports: {(q.error as Error).message}
+        </p>
+      )}
+      {q.data?.length === 0 && (
+        <p className="mt-1 text-sm text-muted-foreground">No daily reports yet.</p>
+      )}
+      <ul className="mt-2 space-y-2">
+        {(q.data ?? []).map((r) => (
+          <li key={r.id} className="rounded-xl border border-border bg-background p-2.5 text-sm">
+            <p className="text-xs text-muted-foreground">
+              {new Date(r.created_at).toLocaleString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}{" "}
+              · {r.author_name}
+            </p>
+            <p className="mt-1 whitespace-pre-wrap">{r.body}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

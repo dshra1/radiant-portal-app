@@ -69,7 +69,7 @@ const STATUSES = ["draft", "verified", "approved", "paid"] as const;
 const MODES = ["bank transfer", "cheque", "cash", "UPI", "RTGS/NEFT"];
 
 function num(v: unknown): number {
-  const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
+  const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? n : 0;
 }
 function inr(n: number): string {
@@ -236,11 +236,22 @@ function Page() {
       if (error) throw error;
       const paid = (paidByBill.get(bill.id) ?? 0) + payDraft.amount;
       if (paid >= billPayable(bill) - 1) {
-        await supabase.from("bills").update({ status: "paid" }).eq("id", bill.id);
+        // The payment is already saved: report a status failure without re-throwing,
+        // so the user does not record the same payment twice.
+        const { error: statusError } = await supabase
+          .from("bills")
+          .update({ status: "paid" })
+          .eq("id", bill.id);
+        if (statusError) return { statusError: statusError.message };
       }
+      return { statusError: null as string | null };
     },
-    onSuccess: () => {
-      toast.success("Payment recorded");
+    onSuccess: (res) => {
+      if (res.statusError)
+        toast.error(
+          `Payment recorded, but the bill could not be marked paid: ${res.statusError}. Set its status manually.`,
+        );
+      else toast.success("Payment recorded");
       setPayFor(null);
       setPayDraft({
         payment_date: new Date().toISOString().slice(0, 10),

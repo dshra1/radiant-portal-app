@@ -49,8 +49,10 @@ export function InstallAppButton() {
     window.setTimeout(() => setHint(false), 6000);
   };
 
+  // Desktop bottom-right already holds "All screens" (bottom-4) and the Saha AI
+  // button (bottom-[4.5rem]); this sits above both so nothing overlaps.
   return (
-    <div className="fixed bottom-20 left-4 z-[200] flex flex-col items-start gap-2 md:bottom-6 md:left-auto md:right-6 md:items-end">
+    <div className="fixed bottom-20 left-4 z-[200] flex flex-col items-start gap-2 md:bottom-32 md:left-auto md:right-4 md:items-end">
       <button
         type="button"
         onClick={handleClick}
@@ -63,9 +65,8 @@ export function InstallAppButton() {
       </button>
       {hint ? (
         <div className="max-w-[240px] rounded-lg border border-border bg-card px-3 py-2 text-[11px] leading-snug text-card-foreground shadow-lg">
-          To install: open the browser menu and choose{" "}
-          <strong>Add to Home screen</strong> (Android) or{" "}
-          <strong>Share → Add to Home Screen</strong> (iPhone).
+          To install: open the browser menu and choose <strong>Add to Home screen</strong> (Android)
+          or <strong>Share → Add to Home Screen</strong> (iPhone).
         </div>
       ) : null}
     </div>

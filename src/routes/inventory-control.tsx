@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
-import { useSessionUser } from "@/lib/access";
+import { useAccess, useSessionUser } from "@/lib/access";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
@@ -61,6 +61,8 @@ type Movement = {
   party: string;
   handled_by: string;
   remarks: string;
+  /** Receipt against this purchase order ('' when not linked). */
+  po_number: string;
 };
 
 type ItemDraft = Omit<Item, "id" | "project_id">;
@@ -81,7 +83,7 @@ const ITEM_COLUMNS: { key: keyof ItemDraft; label: string; numeric?: boolean }[]
 ];
 
 function num(v: unknown): number {
-  const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
+  const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? n : 0;
 }
 function str(v: unknown): string {
@@ -122,6 +124,7 @@ function emptyMove(type: string): MoveDraft {
     party: "",
     handled_by: "",
     remarks: "",
+    po_number: "",
   };
 }
 
@@ -145,6 +148,12 @@ function Page() {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [moveDraft, setMoveDraft] = useState<MoveDraft | null>(null);
   const [tab, setTab] = useState<"stock" | "ledger">("stock");
+  /** Direction of a stock adjustment: a physical count can correct either way. */
+  const [adjustDir, setAdjustDir] = useState<"increase" | "decrease">("increase");
+  /** Set when a manager has seen the "goes below zero" warning and wants to record anyway. */
+  const [negativeAck, setNegativeAck] = useState(false);
+  const { access } = useAccess();
+  const isManager = Boolean(access && (access.isAdmin || access.roles.includes("pm")));
 
   const enabled = Boolean(user?.id) && Boolean(project.id);
 
@@ -176,7 +185,7 @@ function Page() {
       const { data, error } = await supabase
         .from("stock_movements")
         .select(
-          "id,project_id,item_id,item_code,description,unit,movement_type,quantity,rate,movement_date,reference,party,handled_by,remarks",
+          "id,project_id,item_id,item_code,description,unit,movement_type,quantity,rate,movement_date,reference,party,handled_by,remarks,po_number",
         )
         .eq("project_id", project.id)
         .order("movement_date", { ascending: false })
@@ -187,6 +196,22 @@ function Page() {
         quantity: num(r.quantity),
         rate: num(r.rate),
       })) as Movement[];
+    },
+  });
+
+  // approved purchase orders of this project, to link a receipt to
+  const { data: approvedPos = [] } = useQuery({
+    queryKey: ["purchase_orders", "approved-for-stock", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .select("id,po_number,vendor_name,po_date")
+        .eq("project_id", project.id)
+        .eq("status", "approved")
+        .order("po_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
@@ -263,6 +288,8 @@ function Page() {
       const cur = map.get(key) ?? { received: 0, issued: 0 };
       if (m.movement_type === "receipt" || m.movement_type === "return") cur.received += m.quantity;
       else if (m.movement_type === "issue") cur.issued += m.quantity;
+      // adjustments are signed: + adds stock, − removes it (physical count correction)
+      else if (m.quantity < 0) cur.issued += -m.quantity;
       else cur.received += m.quantity;
       map.set(key, cur);
     }
@@ -349,6 +376,7 @@ function Page() {
               Party: m.party,
               Handled_By: m.handled_by,
               Remarks: m.remarks,
+              PO_Number: m.po_number,
             }))
           : [{ Date: "", Type: "", Item_Code: "", Quantity: "" }],
       ),
@@ -637,7 +665,11 @@ function Page() {
                 {filteredLedger.map((m) => (
                   <tr key={m.id} className="border-t border-border">
                     <td className="p-3">{m.movement_date}</td>
-                    <td className="p-3 capitalize font-semibold">{m.movement_type}</td>
+                    <td className="p-3 capitalize font-semibold">
+                      {m.movement_type === "adjustment"
+                        ? `adjustment ${m.quantity < 0 ? "(−)" : "(+)"}`
+                        : m.movement_type}
+                    </td>
                     <td className="p-3">
                       <p className="font-semibold">{m.item_code || "—"}</p>
                       <p className="text-xs text-muted-foreground">{m.description}</p>
@@ -647,7 +679,14 @@ function Page() {
                     </td>
                     <td className="p-3 text-right">{inr(m.rate)}</td>
                     <td className="p-3">
-                      <p>{m.reference || "—"}</p>
+                      <p>
+                        {m.reference || "—"}
+                        {m.po_number && (
+                          <span className="ml-1 text-xs font-semibold text-primary">
+                            · {m.po_number}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {m.party} {m.handled_by && `· ${m.handled_by}`}
                       </p>
@@ -730,7 +769,14 @@ function Page() {
                 <select
                   className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background capitalize"
                   value={moveDraft.movement_type}
-                  onChange={(e) => setMoveDraft({ ...moveDraft, movement_type: e.target.value })}
+                  onChange={(e) => {
+                    setNegativeAck(false);
+                    setMoveDraft({
+                      ...moveDraft,
+                      movement_type: e.target.value,
+                      po_number: e.target.value === "receipt" ? moveDraft.po_number : "",
+                    });
+                  }}
                 >
                   {MOVEMENT_TYPES.map((t) => (
                     <option key={t} value={t}>
@@ -764,9 +810,65 @@ function Page() {
                   type="number"
                   className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
                   value={moveDraft.quantity}
-                  onChange={(e) => setMoveDraft({ ...moveDraft, quantity: num(e.target.value) })}
+                  onChange={(e) => {
+                    setNegativeAck(false);
+                    setMoveDraft({ ...moveDraft, quantity: num(e.target.value) });
+                  }}
                 />
               </label>
+              {moveDraft.movement_type === "adjustment" && (
+                <fieldset className="md:col-span-2">
+                  <legend className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                    Adjustment direction
+                  </legend>
+                  <div className="mt-1 flex gap-2">
+                    {(["increase", "decrease"] as const).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => {
+                          setNegativeAck(false);
+                          setAdjustDir(d);
+                        }}
+                        className={`px-3 py-1.5 rounded-lg border text-sm font-semibold capitalize ${
+                          adjustDir === d
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border hover:bg-muted"
+                        }`}
+                      >
+                        {d === "increase" ? "+ Increase stock" : "− Decrease stock"}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+              {moveDraft.movement_type === "receipt" && (
+                <label className="md:col-span-2">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                    Against purchase order (optional)
+                  </span>
+                  <select
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                    value={moveDraft.po_number}
+                    onChange={(e) => {
+                      const po = approvedPos.find((p) => p.po_number === e.target.value);
+                      setMoveDraft({
+                        ...moveDraft,
+                        po_number: e.target.value,
+                        party: moveDraft.party || po?.vendor_name || "",
+                        reference: moveDraft.reference || e.target.value,
+                      });
+                    }}
+                  >
+                    <option value="">Not linked to a PO</option>
+                    {approvedPos.map((p) => (
+                      <option key={p.id} value={p.po_number}>
+                        {p.po_number} · {p.vendor_name || "vendor"} · {p.po_date}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label>
                 <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
                   Rate
@@ -830,9 +932,18 @@ function Page() {
                 />
               </label>
             </div>
+            {negativeAck && (
+              <p className="mt-4 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning">
+                Warning: this takes the stock balance below zero. Check the receipts first; click
+                again to record it anyway.
+              </p>
+            )}
             <div className="flex justify-end gap-2 mt-5">
               <button
-                onClick={() => setMoveDraft(null)}
+                onClick={() => {
+                  setNegativeAck(false);
+                  setMoveDraft(null);
+                }}
                 className="px-4 py-2 rounded-lg border border-border text-sm font-semibold"
               >
                 Cancel
@@ -848,11 +959,41 @@ function Page() {
                     toast.error("Enter a quantity");
                     return;
                   }
-                  saveMove.mutate(moveDraft);
+                  const removes =
+                    moveDraft.movement_type === "issue" ||
+                    (moveDraft.movement_type === "adjustment" && adjustDir === "decrease");
+                  if (removes) {
+                    const current = balances.find((b) => b.id === moveDraft.item_id)?.balance ?? 0;
+                    if (current - moveDraft.quantity < 0) {
+                      if (!isManager) {
+                        toast.error(
+                          `Only ${qty(current)} ${moveDraft.unit} in stock — this would take the balance below zero. Record the receipt first, or ask a PM / admin.`,
+                        );
+                        return;
+                      }
+                      if (!negativeAck) {
+                        setNegativeAck(true);
+                        return;
+                      }
+                    }
+                  }
+                  const signed =
+                    moveDraft.movement_type === "adjustment" && adjustDir === "decrease"
+                      ? -moveDraft.quantity
+                      : moveDraft.quantity;
+                  saveMove.mutate({
+                    ...moveDraft,
+                    quantity: signed,
+                    po_number: moveDraft.movement_type === "receipt" ? moveDraft.po_number : "",
+                  });
                 }}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
               >
-                {saveMove.isPending ? "Saving…" : "Record entry"}
+                {saveMove.isPending
+                  ? "Saving…"
+                  : negativeAck
+                    ? "Record anyway (balance goes negative)"
+                    : "Record entry"}
               </button>
             </div>
           </div>

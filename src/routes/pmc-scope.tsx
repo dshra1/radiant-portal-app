@@ -5,6 +5,14 @@ import { Ruler, Save, Calculator, CheckSquare, Square } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
+import {
+  COMMITTED_LABEL,
+  approvedPoCommitted,
+  packageInScope,
+  pmcFeeLabel,
+  pmcFeePct,
+  pmcPackages,
+} from "@/lib/money";
 
 export const Route = createFileRoute("/pmc-scope")({
   head: () => ({
@@ -44,7 +52,7 @@ function crore(v: number) {
 
 type SavedScope = {
   mode?: string;
-  feePct?: number;
+  feePct?: number | null;
   includedTrades?: string[];
 };
 
@@ -53,6 +61,7 @@ function Page() {
   const [projectId, setProjectId] = useState("");
   const [mode, setMode] = useState<string>(SCOPE_MODES[0]);
   const [feePct, setFeePct] = useState(3);
+  const [feeSaved, setFeeSaved] = useState(false);
   const [included, setIncluded] = useState<string[]>([]);
   const [loadedFor, setLoadedFor] = useState("");
   const [status, setStatus] = useState("");
@@ -82,7 +91,7 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("boq_items")
-        .select("stage,quantity,rate")
+        .select("stage,quantity,rate,gst_pct,item_code,package,package_no")
         .eq("project_id", activeId);
       if (error) throw error;
       return data ?? [];
@@ -104,26 +113,26 @@ function Page() {
     },
   });
 
-  const packages = useMemo(() => {
-    const map = new Map<string, { cost: number; items: number }>();
-    for (const it of boqQuery.data ?? []) {
-      const key = String(it.stage ?? "Miscellaneous");
-      const prev = map.get(key) ?? { cost: 0, items: 0 };
-      map.set(key, {
-        cost: prev.cost + toNum(it.quantity) * toNum(it.rate),
-        items: prev.items + 1,
-      });
-    }
-    return [...map.entries()]
-      .map(([trade, v]) => ({ trade, ...v }))
-      .sort((a, b) => b.cost - a.cost);
-  }, [boqQuery.data]);
+  // Same packages and amounts as the BOQ Engine: CONT line skipped, GST per line.
+  // The PMC fee is charged on the excl. GST works value.
+  const packages = useMemo(
+    () =>
+      pmcPackages(boqQuery.data ?? []).map((p) => ({
+        ...p,
+        trade: p.key,
+        cost: p.excl,
+        items: p.lines,
+      })),
+    [boqQuery.data],
+  );
 
   useEffect(() => {
     if (!project || loadedFor === activeId) return;
     const saved = (project.pmc_scope ?? {}) as SavedScope;
     setMode(saved.mode && SCOPE_MODES.includes(saved.mode as never) ? saved.mode : SCOPE_MODES[0]);
-    setFeePct(toNum(saved.feePct) || 3);
+    const fee = pmcFeePct(saved);
+    setFeePct(fee.pct);
+    setFeeSaved(!fee.isDefault);
     setIncluded(Array.isArray(saved.includedTrades) ? saved.includedTrades.map(String) : []);
     setLoadedFor(activeId);
   }, [project, activeId, loadedFor]);
@@ -137,30 +146,13 @@ function Page() {
     }
   }, [packages, loadedFor, activeId, project, included.length]);
 
-  const committed = useMemo(() => {
-    let total = 0;
-    for (const po of poQuery.data ?? []) {
-      if (String(po.status ?? "").toLowerCase() === "rejected") continue;
-      const lines = (po.purchase_order_items ?? []) as {
-        quantity: number;
-        rate: number;
-        discount_pct: number;
-        gst_pct: number;
-      }[];
-      for (const l of lines) {
-        const base = toNum(l.quantity) * toNum(l.rate);
-        const afterDisc = base * (1 - toNum(l.discount_pct) / 100);
-        total += afterDisc * (1 + toNum(l.gst_pct) / 100);
-      }
-      total += toNum(po.freight_charges) + toNum(po.other_charges);
-    }
-    return total;
-  }, [poQuery.data]);
+  // Committed = approved purchase orders only (incl. GST), same as the Cost Dashboard.
+  const committed = useMemo(() => approvedPoCommitted(poQuery.data ?? []), [poQuery.data]);
 
-  const inScopeCost = packages
-    .filter((p) => included.includes(p.trade))
-    .reduce((sum, p) => sum + p.cost, 0);
+  const isOn = (p: (typeof packages)[number]) => packageInScope(p, included);
+  const inScopeCost = packages.filter(isOn).reduce((sum, p) => sum + p.cost, 0);
   const totalBoq = packages.reduce((sum, p) => sum + p.cost, 0);
+  const totalBoqIncl = packages.reduce((sum, p) => sum + p.incl, 0);
   const pmcFee = (inScopeCost * feePct) / 100;
   const budget = toNum(project?.target_budget);
   const sft = toNum(project?.total_built_up_sft);
@@ -174,15 +166,18 @@ function Page() {
       if (error) throw error;
     },
     onSuccess: async () => {
+      setFeeSaved(true);
       setStatus("PMC scope saved for this project.");
       await qc.invalidateQueries({ queryKey: ["site_projects"] });
     },
     onError: (e: Error) => setStatus(`Save failed: ${e.message}`),
   });
 
-  const toggle = (trade: string) =>
+  const toggle = (p: (typeof packages)[number]) =>
     setIncluded((prev) =>
-      prev.includes(trade) ? prev.filter((t) => t !== trade) : [...prev, trade],
+      isOn(p)
+        ? prev.filter((t) => t !== p.trade && !p.stages.has(t))
+        : [...prev.filter((t) => !p.stages.has(t)), p.trade],
     );
 
   return (
@@ -197,8 +192,10 @@ function Page() {
             PMC Appointment Scope
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Tick the work packages your PMC is appointed for. Costs come straight from this
-            project's BOQ, and committed value from its approved purchase orders.
+            Tick the work packages your PMC is appointed for. Package totals match the BOQ Engine
+            (excl. GST; the imported contingency line is not counted). The PMC fee is the fee % on
+            the excl. GST works value of the ticked packages. Committed = approved purchase orders
+            only.
           </p>
         </header>
 
@@ -248,7 +245,10 @@ function Page() {
               step="0.1"
               min={0}
               value={feePct}
-              onChange={(e) => setFeePct(toNum(e.target.value))}
+              onChange={(e) => {
+                setFeePct(toNum(e.target.value));
+                setFeeSaved(true);
+              }}
               className="w-20 rounded-xl border border-sky-500/40 bg-sky-500/5 px-2 py-1.5 text-sm font-normal normal-case text-foreground"
             />
           </label>
@@ -282,21 +282,21 @@ function Page() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
             {
-              label: "Cost in PMC scope",
+              label: "Works in PMC scope (excl. GST)",
               value: crore(inScopeCost),
-              sub: `${included.length} of ${packages.length} packages`,
+              sub: `${packages.filter(isOn).length} of ${packages.length} packages`,
             },
             {
-              label: `PMC fee @ ${feePct}%`,
+              label: pmcFeeLabel(feePct, !feeSaved),
               value: inr(pmcFee),
-              sub: sft > 0 ? `${(pmcFee / sft).toFixed(2)} /sft` : "—",
+              sub: `on ${crore(inScopeCost)} excl. GST${sft > 0 ? ` · ${(pmcFee / sft).toFixed(2)} /sft` : ""}`,
             },
             {
-              label: "Committed via POs",
+              label: COMMITTED_LABEL,
               value: crore(committed),
               sub:
-                totalBoq > 0
-                  ? `${((committed / totalBoq) * 100).toFixed(1)}% of BOQ`
+                totalBoqIncl > 0
+                  ? `${((committed / totalBoqIncl) * 100).toFixed(1)}% of BOQ incl. GST`
                   : "No BOQ yet",
             },
             {
@@ -354,20 +354,20 @@ function Page() {
                     <th className="px-4 py-2">In PMC scope</th>
                     <th className="px-4 py-2">Work package</th>
                     <th className="px-4 py-2 text-right">Line items</th>
-                    <th className="px-4 py-2 text-right">Est. cost</th>
+                    <th className="px-4 py-2 text-right">Est. cost (excl. GST)</th>
                     <th className="px-4 py-2 text-right">₹/sft</th>
                     <th className="px-4 py-2 text-right">Share</th>
                   </tr>
                 </thead>
                 <tbody>
                   {packages.map((p) => {
-                    const on = included.includes(p.trade);
+                    const on = isOn(p);
                     return (
                       <tr key={p.trade} className="border-b border-border/60">
                         <td className="px-4 py-2">
                           <button
                             type="button"
-                            onClick={() => toggle(p.trade)}
+                            onClick={() => toggle(p)}
                             className="inline-flex items-center gap-2 text-sm font-semibold text-foreground"
                           >
                             {on ? (
@@ -394,7 +394,7 @@ function Page() {
                 <tfoot>
                   <tr className="bg-muted/30 font-bold">
                     <td className="px-4 py-3" />
-                    <td className="px-4 py-3">Total BOQ</td>
+                    <td className="px-4 py-3">Total BOQ (excl. GST, before contingency)</td>
                     <td className="px-4 py-3 text-right">
                       {packages.reduce((s, p) => s + p.items, 0)}
                     </td>

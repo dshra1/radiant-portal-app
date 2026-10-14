@@ -6,6 +6,7 @@ import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
+import { APPROVALS_NOTE, approvalsBudget } from "@/lib/money";
 
 export const Route = createFileRoute("/common-expenses")({
   head: () => ({
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/common-expenses")({
       {
         name: "description",
         content:
-          "Track building permission charges, LRS per landowner, electrical connection, HMWSSB and architectural fees as common project expenses shared with owners.",
+          "Statutory charges are budgeted in the BOQ Approvals package; record what has been paid against it — permissions, LRS, electrical connection, HMWSSB and architect fees.",
       },
       { property: "og:title", content: "Common & Statutory Expenses — Saha OS" },
       {
@@ -123,6 +124,21 @@ function Page() {
   });
   const charges = chargesQuery.data ?? [];
 
+  // The statutory budget lives in the BOQ Approvals package (AP01–AP06).
+  const boqQuery = useQuery({
+    queryKey: ["boq_items", "common-expenses", activeId],
+    enabled: Boolean(activeId && user?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("boq_items")
+        .select("quantity,rate,gst_pct,item_code,package,package_no")
+        .eq("project_id", activeId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const approvals = useMemo(() => approvalsBudget(boqQuery.data ?? []), [boqQuery.data]);
+
   const addCharge = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("project_charges").insert({
@@ -220,9 +236,9 @@ function Page() {
             Common &amp; Statutory Expenses
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Permission charges, LRS (land wise, per owner), electrical connection, HMWSSB water
-            &amp; sewerage and architectural fees. These sit outside the material BOQ and are shared
-            with the landowners as common project expenses.
+            {APPROVALS_NOTE} Permission charges, LRS (land wise, per owner), electrical connection,
+            HMWSSB water &amp; sewerage and architectural fees, shared with the landowners. Only
+            charges marked Paid count as money spent.
           </p>
         </header>
 
@@ -376,15 +392,20 @@ function Page() {
           </form>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {[
             {
-              label: "Total common expenses",
+              label: "BOQ Approvals budget (incl. GST)",
+              value: approvals,
+              tone: "border-slate-500/40 bg-slate-500/5",
+            },
+            {
+              label: "Charges recorded (paid + planned)",
               value: totals.total,
               tone: "border-primary/40 bg-primary/5",
             },
             {
-              label: "Paid so far",
+              label: "Paid against budget",
               value: totals.paid,
               tone: "border-emerald-600/30 bg-emerald-600/5",
             },

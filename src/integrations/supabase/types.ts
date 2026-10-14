@@ -579,6 +579,32 @@ export type Database = {
           },
         ]
       }
+      notification_reads: {
+        Row: {
+          notification_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          notification_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          notification_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_reads_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owner_decisions: {
         Row: {
           comment: string
@@ -2166,6 +2192,7 @@ export type Database = {
       }
       stock_movements: {
         Row: {
+          po_number: string
           stage_code: string
           created_at: string
           created_by: string | null
@@ -2186,6 +2213,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          po_number?: string
           stage_code?: string
           created_at?: string
           created_by?: string | null
@@ -2206,6 +2234,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          po_number?: string
           stage_code?: string
           created_at?: string
           created_by?: string | null
@@ -2414,6 +2443,10 @@ export type Database = {
       is_approved: { Args: { _user_id: string }; Returns: boolean }
       is_pmc_team: { Args: { _user_id: string }; Returns: boolean }
       next_po_number: { Args: never; Returns: string }
+      save_purchase_order: {
+        Args: { p_header: Json; p_id?: string; p_items: Json }
+        Returns: Json
+      }
     }
     Enums: {
       app_role:

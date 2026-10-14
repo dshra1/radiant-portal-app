@@ -5,6 +5,13 @@ import { Bell, Check, CheckCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
 import { cn } from "@/lib/utils";
+import {
+  isUnreadFor,
+  markAllNotificationsRead,
+  setNotificationRead,
+  useNotificationReadIds,
+  useUnreadNotificationCount,
+} from "@/lib/notification-reads";
 
 type Note = {
   id: string;
@@ -15,6 +22,7 @@ type Note = {
   link: string;
   is_read: boolean;
   created_at: string;
+  recipient_id: string | null;
 };
 
 function timeAgo(iso: string) {
@@ -56,7 +64,7 @@ export function NotificationBell({
     queryFn: async () => {
       let q = supabase
         .from("notifications")
-        .select("id,title,body,category,priority,link,is_read,created_at")
+        .select("id,title,body,category,priority,link,is_read,created_at,recipient_id")
         .order("created_at", { ascending: false })
         .limit(12);
       if (user?.id) q = q.or(`recipient_id.eq.${user.id},recipient_id.is.null`);
@@ -68,23 +76,23 @@ export function NotificationBell({
     refetchOnWindowFocus: true,
   });
 
-  const unread = notes.filter((n) => !n.is_read).length;
+  const { data: readIds = new Set<string>() } = useNotificationReadIds(user?.id);
+  const { data: unread = 0 } = useUnreadNotificationCount(user?.id);
+  const unreadFor = (n: Note) => isUnreadFor(n, readIds);
   const invalidate = () => void qc.invalidateQueries({ queryKey: ["notifications"] });
 
   const markOne = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
-      if (error) throw error;
+    mutationFn: async (n: Note) => {
+      if (!user?.id) return;
+      await setNotificationRead(n, user.id, true);
     },
     onSuccess: invalidate,
   });
 
   const markAll = useMutation({
     mutationFn: async () => {
-      const ids = notes.filter((n) => !n.is_read).map((n) => n.id);
-      if (ids.length === 0) return;
-      const { error } = await supabase.from("notifications").update({ is_read: true }).in("id", ids);
-      if (error) throw error;
+      if (!user?.id) return;
+      await markAllNotificationsRead(user.id);
     },
     onSuccess: invalidate,
   });
@@ -144,12 +152,14 @@ export function NotificationBell({
             {notes.map((n) => (
               <li
                 key={n.id}
-                className={cn("flex gap-2 px-3 py-2.5", !n.is_read && "bg-primary-soft/40")}
+                className={cn("flex gap-2 px-3 py-2.5", unreadFor(n) && "bg-primary-soft/40")}
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-semibold text-foreground">{n.title}</p>
                   {n.body && (
-                    <p className="mt-0.5 line-clamp-2 text-[12px] text-muted-foreground">{n.body}</p>
+                    <p className="mt-0.5 line-clamp-2 text-[12px] text-muted-foreground">
+                      {n.body}
+                    </p>
                   )}
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                     <span>{timeAgo(n.created_at)}</span>
@@ -157,7 +167,10 @@ export function NotificationBell({
                     {n.link && (
                       <Link
                         to={n.link}
-                        onClick={() => setOpen(false)}
+                        onClick={() => {
+                          if (unreadFor(n)) markOne.mutate(n);
+                          setOpen(false);
+                        }}
                         className="font-semibold text-primary underline"
                       >
                         Open
@@ -165,10 +178,10 @@ export function NotificationBell({
                     )}
                   </div>
                 </div>
-                {!n.is_read && (
+                {unreadFor(n) && (
                   <button
                     type="button"
-                    onClick={() => markOne.mutate(n.id)}
+                    onClick={() => markOne.mutate(n)}
                     title="Mark as read"
                     aria-label="Mark as read"
                     className="h-fit rounded-md border border-input bg-card p-1.5 text-muted-foreground hover:text-foreground"

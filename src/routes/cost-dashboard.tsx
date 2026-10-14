@@ -4,11 +4,20 @@ import { useQuery } from "@tanstack/react-query";
 import { IndianRupee, PieChart, ShieldCheck, HardHat, Ruler, Landmark, Wallet } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
-import { LABOUR_SECTION } from "@/lib/boq.functions";
 import { useChangeRequests, num } from "@/lib/approvals";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 import { reportCost } from "@/lib/boq-totals";
+import {
+  APPROVALS_NOTE,
+  COMMITTED_LABEL,
+  approvalsBudget,
+  approvedPoCommitted,
+  pmcFee as pmcFeeFor,
+  pmcFeeLabel,
+  statutoryPaid,
+  type PmcScope,
+} from "@/lib/money";
 
 export const Route = createFileRoute("/cost-dashboard")({
   head: () => ({
@@ -38,8 +47,6 @@ function inr(v: number) {
 function crore(v: number) {
   return `₹${(v / 10000000).toFixed(2)} Cr`;
 }
-
-type SavedScope = { feePct?: number; includedTrades?: string[]; mode?: string };
 
 function Page() {
   const [projectId, setProjectId] = useState("");
@@ -105,13 +112,14 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("project_charges")
-        .select("id,category,amount")
+        .select("id,category,amount,status")
         .eq("project_id", activeId);
       if (error) throw error;
       return data ?? [];
     },
   });
-  const statutory = (chargesQuery.data ?? []).reduce((s, c) => s + num(c.amount), 0);
+  // Only charges marked paid; planned ones are not money spent.
+  const statutory = statutoryPaid(chargesQuery.data ?? []);
 
   const capitalQuery = useQuery({
     queryKey: ["capital_entries", "cost-dashboard", activeId],
@@ -127,15 +135,15 @@ function Page() {
     },
   });
   const ownerFunds = (capitalQuery.data ?? [])
-    .filter((e) => e.entry_type === "receipt")
+    .filter((e) => e.entry_type === "receipt" || e.entry_type === "deposit")
     .reduce((s, e) => s + num(e.amount), 0);
   const openCalls = (capitalQuery.data ?? [])
-    .filter((e) => e.entry_type !== "receipt" && e.status !== "received")
+    .filter((e) => e.entry_type === "call" && e.status !== "received")
     .reduce((s, e) => s + num(e.amount), 0);
 
   const pending = useChangeRequests(activeId, "pending");
 
-  const rows = boqQuery.data ?? [];
+  const rows = useMemo(() => boqQuery.data ?? [], [boqQuery.data]);
   // The report's split (incl. GST): material + machinery + misc, and labour; contingency on top.
   const report = useMemo(
     () =>
@@ -150,47 +158,27 @@ function Page() {
   const material = report.material + report.machinery + report.misc;
   const labour = report.labour;
   const contingency = report.totals.contingency.incl;
+  const contingencyPctLabel = `${report.totals.contingencyPct}%`;
 
-  const scope = (project?.pmc_scope ?? {}) as SavedScope;
-  const feePct = num(scope.feePct) || 3;
-  const included = Array.isArray(scope.includedTrades) ? scope.includedTrades.map(String) : null;
-  const inScope = useMemo(() => {
-    if (!included) return material;
-    return rows
-      .filter((r) => r.stage !== LABOUR_SECTION && included.includes(String(r.stage)))
-      .reduce((s, r) => s + num(r.quantity) * num(r.rate), 0);
-  }, [rows, included, material]);
-  const pmcFee = (inScope * feePct) / 100;
+  // PMC fee: fee % × BOQ works excl. GST of the packages in PMC scope (all when none saved).
+  const pmc = useMemo(
+    () => pmcFeeFor(rows, (project?.pmc_scope ?? null) as PmcScope | null),
+    [rows, project?.pmc_scope],
+  );
+  const inScope = pmc.basisExcl;
+  const pmcFee = pmc.fee;
+  const feeLabel = pmcFeeLabel(pmc.pct, pmc.isDefault);
+  const approvals = useMemo(() => approvalsBudget(rows), [rows]);
 
-  const committed = useMemo(() => {
-    const orders = (poQuery.data ?? []) as Array<{
-      status: string;
-      freight_charges: number | null;
-      other_charges: number | null;
-      purchase_order_items: Array<{
-        quantity: number | null;
-        rate: number | null;
-        discount_pct: number | null;
-        gst_pct: number | null;
-      }> | null;
-    }>;
-    return orders
-      .filter((o) => String(o.status).toLowerCase() === "approved")
-      .reduce((sum, o) => {
-        const lines = (o.purchase_order_items ?? []).reduce((s, li) => {
-          const base = num(li.quantity) * num(li.rate);
-          const afterDisc = base * (1 - num(li.discount_pct) / 100);
-          return s + afterDisc * (1 + num(li.gst_pct) / 100);
-        }, 0);
-        return sum + lines + num(o.freight_charges) + num(o.other_charges);
-      }, 0);
-  }, [poQuery.data]);
+  // Committed = approved purchase orders only.
+  const committed = useMemo(() => approvedPoCommitted(poQuery.data ?? []), [poQuery.data]);
 
   const pendingSaving = (pending.data ?? []).reduce((s, r) => s + num(r.saving), 0);
 
   const budget = num(project?.target_budget);
   const sft = num(project?.saleable_sft) || num(project?.total_built_up_sft);
-  // Statutory charges are inside the BOQ's approvals package: shown, not added again.
+  // Project cost = BOQ incl. GST + contingency + PMC fee (same as the Financial Forecast).
+  // Statutory charges are inside the BOQ's Approvals package: shown, not added again.
   const projectCost = material + labour + contingency + pmcFee;
   const remaining = budget - projectCost;
   const remainingAfterPending = budget - (projectCost - pendingSaving);
@@ -217,23 +205,23 @@ function Page() {
       tone: "border-amber-500/40 bg-amber-500/5",
     },
     {
-      label: `PMC fee @ ${feePct}%`,
+      label: feeLabel,
       value: crore(pmcFee),
-      sub: `on ${crore(inScope)} in scope`,
+      sub: `on ${crore(inScope)} works excl. GST${pmc.scopeSaved ? " in PMC scope" : " (all packages — scope not saved)"}`,
       icon: Ruler,
       tone: "border-violet-500/40 bg-violet-500/5",
     },
     {
       label: "Contingency",
       value: crore(contingency),
-      sub: `Statutory charges paid so far ${crore(statutory)} (inside the BOQ approvals package)`,
+      sub: `${contingencyPctLabel} of BOQ incl. GST`,
       icon: Landmark,
       tone: "border-rose-500/40 bg-rose-500/5",
     },
     {
-      label: "Total project cost",
+      label: "Total project cost (incl. PMC fee)",
       value: crore(projectCost),
-      sub: sft > 0 ? `${(projectCost / sft).toFixed(0)} /sft` : "—",
+      sub: `BOQ incl. GST + contingency + PMC fee${sft > 0 ? ` · ${(projectCost / sft).toFixed(0)} /sft` : ""}`,
       icon: IndianRupee,
       tone: "border-primary/40 bg-primary/5",
     },
@@ -243,6 +231,13 @@ function Page() {
       sub: openCalls > 0 ? `Open capital calls ${crore(openCalls)}` : "No open capital calls",
       icon: Wallet,
       tone: "border-emerald-600/40 bg-emerald-600/5",
+    },
+    {
+      label: "Statutory charges paid",
+      value: crore(statutory),
+      sub: `of ${crore(approvals)} budgeted in the BOQ Approvals package (already in the cost above)`,
+      icon: Landmark,
+      tone: "border-slate-500/40 bg-slate-500/5",
     },
   ];
 
@@ -375,7 +370,7 @@ function Page() {
 
           <div className="rounded-2xl border border-border bg-card p-5">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Committed on approved purchase orders
+              {COMMITTED_LABEL}
             </p>
             <p className="mt-1 text-2xl font-extrabold text-foreground">{crore(committed)}</p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -400,11 +395,11 @@ function Page() {
           <table className="w-full text-sm">
             <tbody className="divide-y divide-border">
               {[
-                ["Material BOQ", material],
-                ["Labour contracts", labour],
-                [`PMC fee @ ${feePct}%`, pmcFee],
-                ["Permissions, LRS, HMWSSB, electricity & architect fees", statutory],
-                ["Total project cost", projectCost],
+                ["Material, machinery & misc BOQ (incl. GST, incl. Approvals package)", material],
+                ["Labour contracts (incl. GST)", labour],
+                [`Contingency`, contingency],
+                [feeLabel, pmcFee],
+                ["Total project cost (incl. PMC fee)", projectCost],
               ].map(([label, value]) => (
                 <tr key={String(label)}>
                   <td className="px-4 py-3 font-semibold text-foreground">{String(label)}</td>
@@ -421,6 +416,10 @@ function Page() {
               ))}
             </tbody>
           </table>
+          <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
+            {APPROVALS_NOTE.replace("this page records", "Common & Statutory Expenses records")}{" "}
+            Paid so far {inr(statutory)} of {inr(approvals)} budgeted — not added to the total.
+          </p>
         </div>
       </div>
     </Shell>

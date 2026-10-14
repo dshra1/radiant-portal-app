@@ -6,6 +6,12 @@ import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
 import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
+import {
+  isUnreadFor,
+  markAllNotificationsRead,
+  setNotificationRead,
+  useNotificationReadIds,
+} from "@/lib/notification-reads";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({
@@ -93,26 +99,25 @@ function Notifications() {
     refetchInterval: 15000,
   });
 
+  const { data: readIds = new Set<string>() } = useNotificationReadIds(user?.id);
+  const unreadFor = (n: Note) => isUnreadFor(n, readIds);
+  // only the recipient (or anyone, for team-wide notices) can change their own read state
+  const canToggle = (n: Note) => !n.recipient_id || n.recipient_id === user?.id;
+
   const invalidate = () => void qc.invalidateQueries({ queryKey: ["notifications"] });
 
   const toggleRead = useMutation({
     mutationFn: async (n: Note) => {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ is_read: !n.is_read })
-        .eq("id", n.id);
-      if (error) throw error;
+      if (!user?.id) throw new Error("Sign in first");
+      await setNotificationRead(n, user.id, unreadFor(n));
     },
     onSuccess: invalidate,
   });
 
   const markAll = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ is_read: true })
-        .eq("is_read", false);
-      if (error) throw error;
+      if (!user?.id) throw new Error("Sign in first");
+      await markAllNotificationsRead(user.id);
     },
     onSuccess: invalidate,
   });
@@ -153,8 +158,8 @@ function Notifications() {
     },
   });
 
-  const unread = data.filter((n) => !n.is_read).length;
-  const rows = filter === "unread" ? data.filter((n) => !n.is_read) : data;
+  const unread = data.filter((n) => canToggle(n) && unreadFor(n)).length;
+  const rows = filter === "unread" ? data.filter((n) => unreadFor(n)) : data;
 
   return (
     <Shell
@@ -271,6 +276,11 @@ function Notifications() {
       )}
 
       <ActiveSiteWeek focus="all" />
+      {(toggleRead.isError || markAll.isError || remove.isError) && (
+        <p className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+          {((toggleRead.error ?? markAll.error ?? remove.error) as Error).message}
+        </p>
+      )}
       <div className="mb-3 flex items-center gap-2">
         {(["all", "unread"] as const).map((f) => (
           <button
@@ -297,11 +307,12 @@ function Notifications() {
         )}
         {rows.map((n) => {
           const recipient = members.find((m) => m.id === n.recipient_id);
+          const isUnread = unreadFor(n);
           return (
             <article
               key={n.id}
               className={`flex flex-wrap items-start gap-3 rounded-xl border p-3.5 ${
-                n.is_read ? "border-border bg-card" : "border-primary/30 bg-primary-soft/40"
+                isUnread ? "border-primary/30 bg-primary-soft/40" : "border-border bg-card"
               }`}
             >
               <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-card text-primary">
@@ -328,21 +339,29 @@ function Notifications() {
                 <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11.5px] text-muted-foreground">
                   <span>{new Date(n.created_at).toLocaleString("en-IN")}</span>
                   {n.link && (
-                    <Link to={n.link} className="font-semibold text-primary underline">
+                    <Link
+                      to={n.link}
+                      onClick={() => {
+                        if (isUnread && canToggle(n)) toggleRead.mutate(n);
+                      }}
+                      className="font-semibold text-primary underline"
+                    >
                       Open screen
                     </Link>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => toggleRead.mutate(n)}
-                  title={n.is_read ? "Mark unread" : "Mark read"}
-                  className="rounded-md border border-input bg-card p-1.5 text-muted-foreground hover:text-foreground"
-                >
-                  <Check className="size-3.5" />
-                </button>
+                {canToggle(n) && (
+                  <button
+                    type="button"
+                    onClick={() => toggleRead.mutate(n)}
+                    title={isUnread ? "Mark read" : "Mark unread"}
+                    className="rounded-md border border-input bg-card p-1.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <Check className="size-3.5" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => remove.mutate(n.id)}

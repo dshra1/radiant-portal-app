@@ -663,7 +663,24 @@ function NewRfqForm({
       return;
     }
     setSaving(true);
-    const rfqNumber = `RFQ-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    // sequential per project: RFQ-0001, RFQ-0002 … (imported CE-PKG-/CE-D packages are numbered apart)
+    const { data: existingNos, error: noErr } = await db
+      .from("rfqs")
+      .select("rfq_number")
+      .eq("project_id", projectId);
+    if (noErr) {
+      setSaving(false);
+      toast.error(noErr.message);
+      return;
+    }
+    const lastNo = Math.max(
+      0,
+      ...((existingNos ?? []) as { rfq_number: string }[])
+        .map((r) => r.rfq_number ?? "")
+        .filter((no) => !/^CE-(PKG|D)/i.test(no))
+        .map((no) => Number(/^RFQ-(\d+)$/i.exec(no.trim())?.[1] ?? 0)),
+    );
+    const rfqNumber = `RFQ-${String(lastNo + 1).padStart(4, "0")}`;
     const { data, error } = await db
       .from("rfqs")
       .insert({

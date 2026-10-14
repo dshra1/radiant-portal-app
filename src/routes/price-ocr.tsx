@@ -101,6 +101,12 @@ function Page() {
   const [fileName, setFileName] = useState("");
   const [search, setSearch] = useState("");
   const [trade, setTrade] = useState("all");
+  /** In-page confirmation: deleting one price line, or a whole quotation. */
+  const [confirmDel, setConfirmDel] = useState<{
+    kind: "line" | "quote";
+    id: string;
+    rowId: string;
+  } | null>(null);
 
   const { data: quotes = [] } = useQuery({
     queryKey: ["price_quotes"],
@@ -187,10 +193,11 @@ function Page() {
     mutationFn: async (q: ExtractedQuote) => {
       const rows = q.items.filter((i) => i.description.trim() || i.item_code.trim());
       if (!rows.length) throw new Error("Add at least one priced line before saving");
+      if (!project.id) throw new Error("Add or choose a project first — quotes are filed under it");
       const { data: inserted, error } = await supabase
         .from("price_quotes")
         .insert({
-          project_id: project.id && project.id !== "fallback" ? project.id : null,
+          project_id: project.id,
           vendor_name: q.vendor_name,
           vendor_gstin: q.vendor_gstin,
           vendor_contact: q.vendor_contact,
@@ -220,7 +227,11 @@ function Page() {
           sort_order: idx,
         })),
       );
-      if (itemErr) throw itemErr;
+      if (itemErr) {
+        // don't leave an empty quotation behind
+        await supabase.from("price_quotes").delete().eq("id", inserted.id);
+        throw itemErr;
+      }
       return rows.length;
     },
     onSuccess: async (count) => {
@@ -239,9 +250,23 @@ function Page() {
       if (error) throw error;
     },
     onSuccess: async () => {
+      setConfirmDel(null);
       await queryClient.invalidateQueries({ queryKey: ["price_quotes"] });
       await queryClient.invalidateQueries({ queryKey: ["price_quote_items"] });
       toast.success("Quotation removed");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeLine = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("price_quote_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setConfirmDel(null);
+      await queryClient.invalidateQueries({ queryKey: ["price_quote_items"] });
+      toast.success("Price line removed");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -616,14 +641,64 @@ function Page() {
                           {q?.quote_date ? <span className="block">{q.quote_date}</span> : null}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => q && removeQuote.mutate(q.id)}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600"
-                            aria-label="Delete this quotation"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {confirmDel?.rowId === i.id ? (
+                            <div className="flex flex-col items-end gap-1 text-xs">
+                              <span className="font-semibold text-rose-700">
+                                {confirmDel.kind === "line"
+                                  ? "Delete this price line?"
+                                  : `Delete the whole quotation (${
+                                      items.filter((x) => x.quote_id === i.quote_id).length
+                                    } lines)?`}
+                              </span>
+                              <span className="flex gap-1">
+                                <button
+                                  type="button"
+                                  disabled={removeLine.isPending || removeQuote.isPending}
+                                  onClick={() =>
+                                    confirmDel.kind === "line"
+                                      ? removeLine.mutate(confirmDel.id)
+                                      : removeQuote.mutate(confirmDel.id)
+                                  }
+                                  className="rounded-md bg-rose-600 px-2 py-1 font-semibold text-white disabled:opacity-50"
+                                >
+                                  Delete
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDel(null)}
+                                  className="rounded-md border border-slate-200 px-2 py-1 font-semibold text-slate-600"
+                                >
+                                  Cancel
+                                </button>
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setConfirmDel({ kind: "line", id: i.id, rowId: i.id })
+                                }
+                                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600"
+                                aria-label="Delete this price line"
+                                title="Delete this price line"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                              {q && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setConfirmDel({ kind: "quote", id: q.id, rowId: i.id })
+                                  }
+                                  className="rounded-lg px-1.5 py-1 text-[11px] font-semibold text-slate-400 hover:bg-slate-100 hover:text-rose-600"
+                                  title="Delete the whole quotation and all its lines"
+                                >
+                                  Delete quotation
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );

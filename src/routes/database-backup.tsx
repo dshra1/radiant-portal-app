@@ -61,57 +61,81 @@ function Page() {
       );
     } catch (e) {
       say(`Stopped: ${(e as Error).message}`);
+    } finally {
+      setBusy("");
     }
-    setBusy("");
   }
 
   async function findFiles() {
     setBusy("list");
-    const { files: list, errors } = await listAllFiles();
-    setFiles(list);
-    say(`Files: ${list.length} found (${kb(list.reduce((s, f) => s + f.size, 0))}).`);
-    for (const e of errors) say(`Could not list ${e}`);
-    setBusy("");
+    try {
+      const { files: list, errors } = await listAllFiles();
+      setFiles(list);
+      say(`Files: ${list.length} found (${kb(list.reduce((s, f) => s + f.size, 0))}).`);
+      for (const e of errors) say(`Could not list ${e}`);
+    } catch (e) {
+      say(`Stopped listing files: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy("");
+    }
   }
 
   async function downloadFiles() {
     if (!files) return;
     setBusy("files");
     let n = 0;
-    for (const f of files) {
-      const { data, error } = await supabase.storage.from(f.bucket).download(f.path);
-      if (error || !data) {
-        say(`✕ ${f.bucket}/${f.path}: ${error?.message ?? "no data"}`);
-        continue;
+    try {
+      for (const f of files) {
+        try {
+          const { data, error } = await supabase.storage.from(f.bucket).download(f.path);
+          if (error || !data) {
+            say(`✕ ${f.bucket}/${f.path}: ${error?.message ?? "no data"}`);
+            continue;
+          }
+          downloadBlob(data, packedName(f));
+          n++;
+        } catch (e) {
+          say(`✕ ${f.bucket}/${f.path}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+        await new Promise((r) => setTimeout(r, 400));
       }
-      downloadBlob(data, packedName(f));
-      n++;
-      await new Promise((r) => setTimeout(r, 400));
+      say(
+        `Downloaded ${n} of ${files.length} files. Keep their names as they are: the name says where each file goes back.`,
+      );
+    } catch (e) {
+      say(`Stopped after ${n} files: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy("");
     }
-    say(
-      `Downloaded ${n} of ${files.length} files. Keep their names as they are: the name says where each file goes back.`,
-    );
-    setBusy("");
   }
 
-  async function restoreFiles(list: FileList) {
+  async function restoreFiles(list: File[]) {
     setBusy("restore");
     let ok = 0;
-    for (const file of Array.from(list)) {
-      const target = unpackName(file.name.replace(/ \(\d+\)(\.[^.]+)$/, "$1"));
-      if (!target) {
-        say(`Skipped ${file.name}: not a backup file name`);
-        continue;
+    try {
+      for (const file of list) {
+        const target = unpackName(file.name.replace(/ \(\d+\)(\.[^.]+)$/, "$1"));
+        if (!target) {
+          say(`Skipped ${file.name}: not a backup file name`);
+          continue;
+        }
+        try {
+          const { error } = await supabase.storage.from(target.bucket).upload(target.path, file, {
+            upsert: true,
+            ...(file.type ? { contentType: file.type } : {}),
+          });
+          if (error) say(`✕ ${target.bucket}/${target.path}: ${error.message}`);
+          else ok++;
+        } catch (e) {
+          say(`✕ ${target.bucket}/${target.path}: ${e instanceof Error ? e.message : String(e)}`);
+        }
       }
-      const { error } = await supabase.storage.from(target.bucket).upload(target.path, file, {
-        upsert: true,
-        ...(file.type ? { contentType: file.type } : {}),
-      });
-      if (error) say(`✕ ${target.bucket}/${target.path}: ${error.message}`);
-      else ok++;
+      say(`Restored ${ok} file${ok === 1 ? "" : "s"} into this database.`);
+    } catch (e) {
+      say(`Stopped after ${ok} files: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy("");
     }
-    say(`Restored ${ok} file${ok === 1 ? "" : "s"} into this database.`);
-    setBusy("");
   }
 
   return (
@@ -213,7 +237,9 @@ function Page() {
                     className="hidden"
                     disabled={Boolean(busy)}
                     onChange={(e) => {
-                      if (e.target.files?.length) void restoreFiles(e.target.files);
+                      // copy before clearing the input, which empties its file list
+                      const picked = Array.from(e.target.files ?? []);
+                      if (picked.length) void restoreFiles(picked);
                       e.target.value = "";
                     }}
                   />

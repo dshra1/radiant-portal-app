@@ -17,7 +17,9 @@ import {
   type StageCheck,
 } from "@/lib/site-week";
 
-const CHANNEL = "Site plan";
+/** Team Chat channel the site plan posts its stage instructions to. */
+export const SITE_PLAN_CHANNEL = "Site plan";
+const CHANNEL = SITE_PLAN_CHANNEL;
 
 type Who = { id: string | null; name: string };
 

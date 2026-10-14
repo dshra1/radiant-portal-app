@@ -103,7 +103,11 @@ export async function approveChangeRequest(
   decider: { id: string | null; name: string },
   note = "",
 ) {
-  if (req.boq_item_id) {
+  if (req.boq_item_id && req.change_type === "delete") {
+    // An approved removal deletes the BOQ line.
+    const { error } = await supabase.from("boq_items").delete().eq("id", req.boq_item_id);
+    if (error) throw error;
+  } else if (req.boq_item_id) {
     const patch: Record<string, string | number> = {};
     for (const field of COMMERCIAL_FIELDS) {
       const value = (req.proposed_values ?? {})[field];

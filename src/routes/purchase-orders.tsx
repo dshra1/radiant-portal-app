@@ -15,7 +15,7 @@ import {
   type PoRecord,
   type PoStatus,
 } from "@/lib/po";
-import { CheckCircle2, Plus, Printer, Send, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Pencil, Plus, Printer, Send, Trash2, XCircle } from "lucide-react";
 import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 import { useActiveProject } from "@/hooks/useActiveProject";
 
@@ -80,6 +80,11 @@ function Page() {
   }, [orders, search.po, selectedId]);
 
   const selected = orders?.find((o) => o.id === selectedId) ?? null;
+  // Draft, pending and rejected POs can be edited by whoever raised them, or an admin / PM.
+  const canEdit =
+    !!selected &&
+    ["draft", "pending", "rejected"].includes(selected.status) &&
+    (canApprove || (!!access?.userId && selected.raised_by === access.userId));
 
   const { data: items } = useQuery({
     queryKey: ["purchase_order_items", selectedId],
@@ -239,6 +244,15 @@ function Page() {
                         <XCircle className="size-4" /> Reject
                       </button>
                     </>
+                  )}
+                  {canEdit && (
+                    <Link
+                      to="/po-create"
+                      search={{ edit: selected.id } as never}
+                      className="inline-flex items-center gap-2 rounded border border-border px-3 py-1.5 text-sm font-semibold hover:bg-secondary"
+                    >
+                      <Pencil className="size-4" /> Edit
+                    </Link>
                   )}
                   <button
                     type="button"

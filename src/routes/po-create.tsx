@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
 import { useEffect, useMemo, useState } from "react";
+import type { Json } from "@/integrations/supabase/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess } from "@/lib/access";
@@ -11,11 +12,14 @@ import { StageSelect } from "@/components/saha/StageSelect";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSiteWeek } from "@/lib/site-week";
 
-type Search = { stage?: string };
+/** `edit` = id or number of an existing draft / pending / rejected PO to edit. */
+type Search = { stage?: string; edit?: string };
 
 export const Route = createFileRoute("/po-create")({
-  validateSearch: (s: Record<string, unknown>): Search =>
-    typeof s["stage"] === "string" ? { stage: s["stage"] } : {},
+  validateSearch: (s: Record<string, unknown>): Search => ({
+    ...(typeof s["stage"] === "string" ? { stage: s["stage"] } : {}),
+    ...(typeof s["edit"] === "string" && s["edit"] ? { edit: s["edit"] } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Raise Purchase Order | Saha OS" },
@@ -96,11 +100,13 @@ function Page() {
   const project = projects?.find((p) => p.id === projectId) ?? null;
 
   const [poNumber, setPoNumber] = useState("");
+  const editKey = search.edit ?? "";
   useEffect(() => {
-    supabase.rpc("next_po_number").then(({ data }) => {
+    if (editKey) return; // editing keeps its own number
+    void supabase.rpc("next_po_number").then(({ data }) => {
       if (typeof data === "string") setPoNumber(data);
     });
-  }, []);
+  }, [editKey]);
 
   const [vendor, setVendor] = useState({
     vendor_name: "",
@@ -123,6 +129,88 @@ function Page() {
   });
 
   const [items, setItems] = useState<PoItem[]>([emptyItem(0)]);
+
+  // Editing an existing PO: load its header and lines once.
+  const isManager = Boolean(access && (access.isAdmin || access.roles.includes("pm")));
+  const editQuery = useQuery({
+    queryKey: ["purchase_orders", "edit", editKey],
+    enabled: Boolean(editKey && access?.userId),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const uuid = /^[0-9a-f-]{36}$/i.test(editKey);
+      const { data: po, error } = await supabase
+        .from("purchase_orders")
+        .select("*")
+        .eq(uuid ? "id" : "po_number", editKey)
+        .maybeSingle();
+      if (error) throw error;
+      if (!po) throw new Error(`Purchase order ${editKey} not found`);
+      const { data: lines, error: lErr } = await supabase
+        .from("purchase_order_items")
+        .select("*")
+        .eq("po_id", po.id)
+        .order("sort_order");
+      if (lErr) throw lErr;
+      return { po, lines: lines ?? [] };
+    },
+  });
+  const editing = editQuery.data?.po ?? null;
+  const editBlock = !editing
+    ? ""
+    : !["draft", "pending", "rejected"].includes(editing.status)
+      ? `${editing.po_number} is ${editing.status} and can no longer be edited.`
+      : !(editing.raised_by === access?.userId || isManager)
+        ? `Only the person who raised ${editing.po_number} or an admin / PM can edit it.`
+        : "";
+  const [loadedEdit, setLoadedEdit] = useState("");
+  useEffect(() => {
+    const d = editQuery.data;
+    if (!d || loadedEdit === d.po.id) return;
+    const po = d.po;
+    setProjectId(po.project_id ?? "");
+    setPoNumber(po.po_number);
+    setPoStage(po.stage_code ?? "");
+    setPrefilled(po.stage_code ?? ""); // don't overwrite the lines with the stage's material
+    setVendor({
+      vendor_name: po.vendor_name,
+      vendor_address: po.vendor_address,
+      vendor_gstin: po.vendor_gstin,
+      vendor_contact: po.vendor_contact,
+      vendor_email: po.vendor_email,
+      quote_reference: po.quote_reference,
+    });
+    setMeta({
+      po_date: po.po_date,
+      delivery_date: po.delivery_date ?? "",
+      payment_terms: po.payment_terms,
+      delivery_terms: po.delivery_terms,
+      tax_mode: po.tax_mode === "inter" ? "inter" : "intra",
+      freight_charges: Number(po.freight_charges),
+      other_charges: Number(po.other_charges),
+      notes: po.notes,
+      terms: po.terms,
+    });
+    setItems(
+      d.lines.length
+        ? d.lines.map((l, i) => ({
+            id: l.id,
+            item_code: l.item_code,
+            description: l.description,
+            brand: l.brand,
+            unit: l.unit,
+            quantity: Number(l.quantity),
+            rate: Number(l.rate),
+            discount_pct: Number(l.discount_pct),
+            gst_pct: Number(l.gst_pct),
+            sort_order: i,
+            material_key: l.material_key,
+            stage_code: l.stage_code,
+          }))
+        : [emptyItem(0)],
+    );
+    setLoadedEdit(po.id);
+  }, [editQuery.data, loadedEdit]);
 
   // Opened from the site plan for a stage: start with that stage's material to order.
   const week = useSiteWeek(projectId);
@@ -208,58 +296,55 @@ function Page() {
       const rows = items.filter((it) => it.description.trim() || n(it.quantity) > 0);
       if (!vendor.vendor_name.trim()) throw new Error("Vendor name is required");
       if (rows.length === 0) throw new Error("Add at least one line item");
+      if (editKey && !editing) throw new Error("The purchase order is still loading");
+      if (editBlock) throw new Error(editBlock);
 
-      let number = poNumber;
-      const { data: fresh } = await supabase.rpc("next_po_number");
-      if (typeof fresh === "string") number = fresh;
-
-      const { data: po, error } = await supabase
-        .from("purchase_orders")
-        .insert({
-          po_number: number,
-          project_id: projectId || null,
-          project_name: project?.name ?? "",
-          site_address: project?.location ?? "",
-          ...vendor,
-          po_date: meta.po_date,
-          delivery_date: meta.delivery_date || null,
-          payment_terms: meta.payment_terms,
-          delivery_terms: meta.delivery_terms,
-          freight_charges: n(meta.freight_charges),
-          other_charges: n(meta.other_charges),
-          tax_mode: meta.tax_mode,
-          stage_code: poStage,
-          terms: meta.terms,
-          notes: meta.notes,
-          status,
-          raised_by: access?.userId ?? null,
-          raised_by_name: access?.profile?.full_name || access?.email || "",
-        })
-        .select("id,po_number")
-        .single();
+      // Header and lines are saved together in one database transaction (new or edit):
+      // a failed line never leaves a PO without its lines.
+      const header = {
+        project_id: projectId || null,
+        project_name: project?.name ?? "",
+        site_address: project?.location ?? "",
+        ...vendor,
+        po_date: meta.po_date,
+        delivery_date: meta.delivery_date || null,
+        payment_terms: meta.payment_terms,
+        delivery_terms: meta.delivery_terms,
+        freight_charges: n(meta.freight_charges),
+        other_charges: n(meta.other_charges),
+        tax_mode: meta.tax_mode,
+        stage_code: poStage,
+        terms: meta.terms,
+        notes: meta.notes,
+        status,
+        raised_by_name: access?.profile?.full_name || access?.email || "",
+      };
+      const lines = rows.map((it, i) => ({
+        item_code: it.item_code,
+        description: it.description,
+        brand: it.brand,
+        unit: it.unit,
+        quantity: n(it.quantity),
+        rate: n(it.rate),
+        discount_pct: n(it.discount_pct),
+        gst_pct: n(it.gst_pct),
+        sort_order: i,
+        stage_code: it.stage_code || poStage,
+        material_key: it.material_key ?? "",
+      }));
+      const { data, error } = await supabase.rpc("save_purchase_order", {
+        p_header: header as unknown as Json,
+        p_items: lines as unknown as Json,
+        ...(editing ? { p_id: editing.id } : {}),
+      });
       if (error) throw error;
-
-      const { error: itemErr } = await supabase.from("purchase_order_items").insert(
-        rows.map((it, i) => ({
-          po_id: po.id,
-          item_code: it.item_code,
-          description: it.description,
-          brand: it.brand,
-          unit: it.unit,
-          quantity: n(it.quantity),
-          rate: n(it.rate),
-          discount_pct: n(it.discount_pct),
-          gst_pct: n(it.gst_pct),
-          sort_order: i,
-          stage_code: it.stage_code || poStage,
-          material_key: it.material_key ?? "",
-        })),
-      );
-      if (itemErr) throw itemErr;
+      const po = data as { id: string; po_number: string } | null;
+      if (!po?.po_number) throw new Error("The purchase order was not saved");
       return po;
     },
     onSuccess: async (po) => {
       await qc.invalidateQueries({ queryKey: ["purchase_orders"] });
+      await qc.invalidateQueries({ queryKey: ["purchase_order_items"] });
       navigate({ to: "/purchase-orders", search: { po: po.po_number } as never });
     },
     onError: (e: unknown) => setMessage(e instanceof Error ? e.message : "Could not save PO"),
@@ -267,7 +352,7 @@ function Page() {
 
   return (
     <Shell
-      title="Raise Purchase Order"
+      title={editKey ? "Edit Purchase Order" : "Raise Purchase Order"}
       subtitle="GST-format purchase order routed to the PM for approval"
     >
       <div className="mx-auto flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
@@ -275,7 +360,13 @@ function Page() {
           <div>
             <p className="section-title text-primary">PO NUMBER</p>
             <p className="text-sm text-muted-foreground">
-              {poNumber ? poNumber : "Generating PO number…"} — assigned when you save
+              {editKey
+                ? editing
+                  ? `Editing ${editing.po_number} (${editing.status}) — saving sends it back as draft or for approval`
+                  : editQuery.isError
+                    ? "Could not load the purchase order"
+                    : "Loading purchase order…"
+                : `${poNumber ? poNumber : "Generating PO number…"} — assigned when you save`}
             </p>
           </div>
           <label className="text-sm">
@@ -293,7 +384,7 @@ function Page() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={save.isPending}
+              disabled={save.isPending || Boolean(editKey && (!editing || editBlock))}
               onClick={() => save.mutate("draft")}
               className="inline-flex items-center gap-2 rounded border border-border px-3 py-2 text-sm font-semibold hover:bg-secondary"
             >
@@ -301,7 +392,7 @@ function Page() {
             </button>
             <button
               type="button"
-              disabled={save.isPending}
+              disabled={save.isPending || Boolean(editKey && (!editing || editBlock))}
               onClick={() => save.mutate("pending")}
               className="inline-flex items-center gap-2 rounded bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
             >
@@ -309,6 +400,17 @@ function Page() {
             </button>
           </div>
         </header>
+
+        {(editQuery.isError || editBlock) && (
+          <div className="rounded border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive">
+            {editQuery.isError ? (editQuery.error as Error).message : editBlock}
+          </div>
+        )}
+        {editing?.status === "rejected" && editing.rejection_reason && (
+          <div className="rounded border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning">
+            Rejected: {editing.rejection_reason}
+          </div>
+        )}
 
         {message && (
           <div className="rounded border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive">

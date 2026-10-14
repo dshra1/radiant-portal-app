@@ -15,13 +15,13 @@ import {
   BOQ_TRADES,
   BOQ_SECTIONS,
   LABOUR_SECTION,
-  generateLabourRates,
   findProductImage,
   generateBoqEstimate,
   suggestBrandOptions,
   type BrandSuggestion,
 } from "@/lib/boq.functions";
 import { brandLogoUrl } from "@/lib/brand-images";
+import { previewLabourRates, type LabourEstimate } from "@/lib/labour-rates.functions";
 import { boqTotals, crore } from "@/lib/boq-totals";
 import { BoqPackageSummary } from "@/components/saha/BoqPackageSummary";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
@@ -305,7 +305,12 @@ function Page() {
     count: number;
   } | null>(null);
   const generate = useServerFn(generateBoqEstimate);
-  const genLabour = useServerFn(generateLabourRates);
+  const genLabour = useServerFn(previewLabourRates);
+  /** AI labour rates waiting for the user to confirm before anything is written. */
+  const [labourPreview, setLabourPreview] = useState<LabourEstimate[] | null>(null);
+  const [replaceAiLabour, setReplaceAiLabour] = useState(false);
+  /** Line awaiting in-page delete confirmation. */
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string>("");
   const suggestBrands = useServerFn(suggestBrandOptions);
   const findImage = useServerFn(findProductImage);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -649,10 +654,54 @@ function Page() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      const row = items.find((it) => it.id === id);
+      // With the approval gate on, removing a line is a cost change like a rate edit:
+      // raise a request (quantity → 0) instead of deleting.
+      if (gateOn && row) {
+        await raiseChangeRequest({
+          projectId: activeId,
+          itemId: id,
+          trade: row.stage,
+          description: row.description,
+          unit: row.unit,
+          quantity: toNum(row.quantity),
+          currentValues: {
+            quantity: toNum(row.quantity),
+            rate: toNum(row.rate),
+            brand: row.brand,
+            supplier: row.supplier,
+          },
+          proposedValues: {
+            quantity: 0,
+            rate: toNum(row.rate),
+            brand: row.brand,
+            supplier: row.supplier,
+          },
+          changeType: "delete",
+          source: "boq-engine",
+          note: `Remove line ${row.item_code || ""} "${row.description}" (quantity to 0 on approval)`,
+          requestedBy: decider.id,
+          requestedByName: decider.name,
+        });
+        return "requested" as const;
+      }
       const { error } = await supabase.from("boq_items").delete().eq("id", id);
       if (error) throw error;
+      return "deleted" as const;
     },
-    onSuccess: refresh,
+    onSuccess: async (result) => {
+      setConfirmDeleteId("");
+      if (result === "requested") {
+        setStatus(
+          "Removal sent for partner approval — the line stays in the BOQ until it is approved.",
+        );
+        await qc.invalidateQueries({ queryKey: ["boq_change_requests"] });
+      } else {
+        setStatus("Line item deleted.");
+      }
+      await refresh();
+    },
+    onError: (e: Error) => setStatus(`Delete failed: ${e.message}`),
   });
 
   const addMutation = useMutation({
@@ -709,16 +758,61 @@ function Page() {
   });
 
   // Market labour rates (labour-only contract rates) for the Labour Contracts section.
+  // Step 1: ask the AI and show the rows as estimates; nothing is written yet.
   const labourRatesMutation = useMutation({
     mutationFn: async () => genLabour({ data: { projectId: activeId } }),
-    onSuccess: async (res) => {
+    onSuccess: (res) => {
+      setReplaceAiLabour(false);
+      setLabourPreview(res.rows);
+      setStatus("");
+    },
+    onError: (e: Error) => setStatus(`Labour rates failed: ${e.message}`),
+  });
+  const aiLabourCount = items.filter(
+    (it) => it.stage === LABOUR_SECTION && it.source === "ai-labour",
+  ).length;
+  // Step 2: the user confirms — insert as AI estimates, optionally replacing earlier AI rows.
+  const insertLabourMutation = useMutation({
+    mutationFn: async (rows: LabourEstimate[]) => {
+      if (replaceAiLabour) {
+        const { error } = await supabase
+          .from("boq_items")
+          .delete()
+          .eq("project_id", activeId)
+          .eq("stage", LABOUR_SECTION)
+          .eq("source", "ai-labour");
+        if (error) throw error;
+      }
+      const start = replaceAiLabour ? 0 : aiLabourCount;
+      const { error } = await supabase.from("boq_items").insert(
+        rows.map((r, index) => ({
+          project_id: activeId,
+          stage: LABOUR_SECTION,
+          category: r.category,
+          item_code: `LAB-AI-${String(start + index + 1).padStart(3, "0")}`,
+          description: r.description,
+          unit: r.unit,
+          quantity: r.quantity,
+          rate: r.rate,
+          brand: "",
+          supplier: r.supplier,
+          notes: `AI estimate — not a contract rate. ${r.notes}`.trim(),
+          source: "ai-labour",
+          sort_order: 900 + start + index,
+        })),
+      );
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: async (count) => {
+      setLabourPreview(null);
       setStage(LABOUR_SECTION);
       setStatus(
-        `${res.inserted} labour packages priced at estimated Hyderabad market rates — edit any rate or vendor name to your agreed contract.`,
+        `${count} labour packages added as AI estimates (marked "AI estimate") — replace each rate and vendor with your agreed contract.`,
       );
       await refresh();
     },
-    onError: (e: Error) => setStatus(`Labour rates failed: ${e.message}`),
+    onError: (e: Error) => setStatus(`Could not add labour rates: ${e.message}`),
   });
 
   const uploadMutation = useMutation({
@@ -1070,6 +1164,77 @@ function Page() {
           />
 
           {status && <p className="mt-2 text-sm font-medium text-primary">{status}</p>}
+          {labourPreview && (
+            <div className="mt-3 rounded-lg border border-warning/40 bg-warning-soft/40 p-3">
+              <p className="text-sm font-semibold text-foreground">
+                AI estimates — {labourPreview.length} labour packages (labour-only, Hyderabad
+                market). Check before adding: these are not quotations or agreed contract rates.
+              </p>
+              <div className="mt-2 max-h-64 overflow-auto">
+                <table className="w-full text-xs">
+                  <thead className="text-muted-foreground">
+                    <tr>
+                      <th className="px-2 py-1 text-left">Package</th>
+                      <th className="px-2 py-1 text-left">Description</th>
+                      <th className="px-2 py-1 text-right">Qty</th>
+                      <th className="px-2 py-1 text-left">Unit</th>
+                      <th className="px-2 py-1 text-right">Rate (AI estimate)</th>
+                      <th className="px-2 py-1 text-left">Basis</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {labourPreview.map((r, i) => (
+                      <tr key={i} className="border-t border-border/60">
+                        <td className="px-2 py-1">{r.category}</td>
+                        <td className="px-2 py-1">{r.description}</td>
+                        <td className="px-2 py-1 text-right">{num(r.quantity)}</td>
+                        <td className="px-2 py-1">{r.unit}</td>
+                        <td className="px-2 py-1 text-right">
+                          {inr(r.rate)}{" "}
+                          <span className="rounded bg-warning-soft px-1 text-[10px] font-bold uppercase text-warning">
+                            AI estimate
+                          </span>
+                        </td>
+                        <td className="px-2 py-1 text-muted-foreground">{r.notes}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {aiLabourCount > 0 && (
+                <label className="mt-2 flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={replaceAiLabour}
+                    onChange={(e) => setReplaceAiLabour(e.target.checked)}
+                  />
+                  Replace the {aiLabourCount} earlier AI-estimated labour row(s) (rows you added or
+                  imported are kept). Leave unticked to add alongside them.
+                </label>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={insertLabourMutation.isPending}
+                  onClick={() => insertLabourMutation.mutate(labourPreview)}
+                  className="inline-flex h-9 items-center gap-2 rounded bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                >
+                  {insertLabourMutation.isPending
+                    ? "Adding…"
+                    : replaceAiLabour
+                      ? `Replace with ${labourPreview.length} AI estimates`
+                      : `Add ${labourPreview.length} rows as AI estimates`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLabourPreview(null)}
+                  className="inline-flex h-9 items-center rounded border border-input bg-background px-3 text-sm font-medium"
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          )}
         </header>
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -1406,15 +1571,45 @@ function Page() {
                           <span className="mt-1 inline-block rounded bg-secondary px-1.5 py-0.5 text-[10px] uppercase">
                             {it.source}
                           </span>
+                          {it.source === "ai-labour" && (
+                            <span className="ml-1 mt-1 inline-block rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-warning">
+                              AI estimate
+                            </span>
+                          )}
                         </td>
                         <td className="px-2 py-2">
-                          <button
-                            onClick={() => deleteMutation.mutate(it.id)}
-                            className="rounded p-1.5 text-destructive hover:bg-destructive-soft"
-                            aria-label="Delete line item"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
+                          {confirmDeleteId === it.id ? (
+                            <div className="flex w-36 flex-col gap-1 text-[11px]">
+                              <span className="font-semibold text-destructive">
+                                {gateOn ? "Ask approval to remove this line?" : "Delete this line?"}
+                              </span>
+                              <span className="flex gap-1">
+                                <button
+                                  type="button"
+                                  disabled={deleteMutation.isPending}
+                                  onClick={() => deleteMutation.mutate(it.id)}
+                                  className="rounded bg-destructive px-2 py-0.5 font-semibold text-destructive-foreground disabled:opacity-50"
+                                >
+                                  {gateOn ? "Request" : "Delete"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteId("")}
+                                  className="rounded border border-input px-2 py-0.5 font-semibold"
+                                >
+                                  Cancel
+                                </button>
+                              </span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDeleteId(it.id)}
+                              className="rounded p-1.5 text-destructive hover:bg-destructive-soft"
+                              aria-label="Delete line item"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                       {suggestions[it.id] && (

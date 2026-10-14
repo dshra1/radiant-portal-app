@@ -7,6 +7,7 @@ import { ActionButton, PhaseBar, StatusBadge } from "@/components/saha/ui";
 import { inrCompact, num } from "@/data/saha";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
+import { DRAWINGS_BUCKET, drawingFileName } from "@/lib/project-import";
 
 export const Route = createFileRoute("/projects")({
   head: () => ({
@@ -144,20 +145,38 @@ function Projects() {
   const [error, setError] = useState<string | null>(null);
   const [drawings, setDrawings] = useState<{ name: string; path: string }[]>([]);
   const [uploading, setUploading] = useState(false);
+  /** Drawings picked for a project that is not saved yet: uploaded under its id on save. */
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const set = (k: keyof typeof emptyForm) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const uploadDrawings = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  /**
+   * Drawings go in the project's folder of the drawings bucket (`<projectId>/<file>`),
+   * the same place the Drawings register and Stage Drawings read from.
+   */
+  const putDrawings = async (projectId: string, files: File[]) => {
+    const added: { name: string; path: string }[] = [];
+    for (const file of files) {
+      const path = `${projectId}/${drawingFileName(file.name)}`;
+      const { error: upErr } = await supabase.storage
+        .from(DRAWINGS_BUCKET)
+        .upload(path, file, { upsert: true, ...(file.type ? { contentType: file.type } : {}) });
+      if (upErr) throw new Error(`Drawing ${file.name}: ${upErr.message}`);
+      added.push({ name: file.name, path });
+    }
+    return added;
+  };
+
+  const uploadDrawings = async (files: File[]) => {
+    if (files.length === 0) return;
+    if (!editingId) {
+      // new project: no folder yet — keep them and upload once the project is saved
+      setPendingFiles((p) => [...p, ...files]);
+      return;
+    }
     setUploading(true);
     try {
-      const added: { name: string; path: string }[] = [];
-      for (const file of Array.from(files)) {
-        const path = `${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]/g, "_")}`;
-        const { error: upErr } = await supabase.storage.from("project-drawings").upload(path, file);
-        if (upErr) throw upErr;
-        added.push({ name: file.name, path });
-      }
-      setDrawings((d) => [...d, ...added]);
+      const added = await putDrawings(editingId, files);
+      setDrawings((d) => [...d.filter((x) => !added.some((a) => a.path === x.path)), ...added]);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Drawing upload failed.");
@@ -168,7 +187,7 @@ function Projects() {
 
   const openDrawing = async (path: string) => {
     const { data, error: sErr } = await supabase.storage
-      .from("project-drawings")
+      .from(DRAWINGS_BUCKET)
       .createSignedUrl(path, 3600);
     if (sErr || !data) {
       setError(sErr?.message ?? "Could not open drawing.");
@@ -360,6 +379,7 @@ function Projects() {
     setOwners([emptyOwner()]);
     setInvestors([]);
     setDrawings([]);
+    setPendingFiles([]);
     setEditingId(null);
   };
 
@@ -432,10 +452,31 @@ function Projects() {
         const { error } = await supabase.from("site_projects").update(payload).eq("id", editingId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data: created, error } = await supabase
           .from("site_projects")
-          .insert({ ...payload, phases: DEFAULT_PHASES });
+          .insert({ ...payload, phases: DEFAULT_PHASES })
+          .select("id")
+          .single();
         if (error) throw error;
+        if (pendingFiles.length > 0) {
+          setUploading(true);
+          try {
+            const added = await putDrawings(created.id, pendingFiles);
+            const { error: dErr } = await supabase
+              .from("site_projects")
+              .update({ drawings: [...drawings, ...added] })
+              .eq("id", created.id);
+            if (dErr) throw dErr;
+          } catch (e) {
+            throw new Error(
+              `Project saved, but the drawings did not upload: ${
+                e instanceof Error ? e.message : String(e)
+              }. Edit the project to add them again.`,
+            );
+          } finally {
+            setUploading(false);
+          }
+        }
       }
     },
     onSuccess: async () => {
@@ -899,16 +940,41 @@ function Projects() {
                 multiple
                 accept=".pdf,.dwg,.dxf,image/*"
                 onChange={(e) => {
-                  void uploadDrawings(e.target.files);
+                  // copy before clearing the input, which empties its file list
+                  const picked = Array.from(e.target.files ?? []);
                   e.target.value = "";
+                  void uploadDrawings(picked);
                 }}
                 className="text-sm"
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 {uploading
                   ? "Uploading…"
-                  : "PDF, DWG/DXF or images — stored privately in cloud storage."}
+                  : "PDF, DWG/DXF or images — stored privately in this project's drawing folder (shown in the Drawings register and Stage Drawings)."}
               </p>
+              {pendingFiles.length > 0 && (
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {pendingFiles.map((f, i) => (
+                    <li
+                      key={`${f.name}-${i}`}
+                      className="flex items-center gap-2 rounded border border-dashed border-input bg-card px-2 py-1 text-xs"
+                    >
+                      <span className="font-medium">{f.name}</span>
+                      <span className="text-muted-foreground">uploads on save</span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${f.name}`}
+                        onClick={() =>
+                          setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))
+                        }
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               {drawings.length > 0 && (
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {drawings.map((d) => (

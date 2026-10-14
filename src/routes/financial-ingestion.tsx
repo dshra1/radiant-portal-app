@@ -19,13 +19,13 @@ import { useAccess, useSessionUser } from "@/lib/access";
 export const Route = createFileRoute("/financial-ingestion")({
   head: () => ({
     meta: [
-      { title: "Financial Ingestion — Statements & Cash Ledger | Saha OS" },
+      { title: "Cash Ledger — Owner Funding, Vendor & Statutory Payments | Saha OS" },
       {
         name: "description",
         content:
-          "Upload bank statements, expense sheets and vouchers, and review the project's real cash ledger of owner funding, vendor payments and statutory charges.",
+          "The project's cash ledger of owner money received, vendor payments and statutory charges paid, with a store for bank statements and vouchers.",
       },
-      { property: "og:title", content: "Financial Ingestion — Saha OS" },
+      { property: "og:title", content: "Cash Ledger — Saha OS" },
       {
         property: "og:description",
         content:
@@ -41,7 +41,7 @@ export const Route = createFileRoute("/financial-ingestion")({
 const BUCKET = "financial-docs";
 
 function num(v: unknown): number {
-  const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
+  const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? n : 0;
 }
 function inr(n: number): string {
@@ -75,6 +75,8 @@ type Txn = {
   amount: number;
   mode: string;
   reference: string;
+  /** False for demands and planned charges: listed for reference, not counted as cash. */
+  counted: boolean;
 };
 
 function Page() {
@@ -162,7 +164,7 @@ function Page() {
   const uploadMutation = useMutation({
     mutationFn: async (list: FileList) => {
       for (const file of Array.from(list)) {
-        const path = `${project.id}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
+        const path = `${project.id}/${Date.now()}-${file.name.replace(/[^\w.-]+/g, "_")}`;
         const { error } = await supabase.storage.from(BUCKET).upload(path, file);
         if (error) throw error;
       }
@@ -215,22 +217,31 @@ function Page() {
         amount: num(p.amount),
         mode: String(p.mode ?? ""),
         reference: String(p.reference || p.paid_from || ""),
+        counted: true,
       });
     }
     for (const c of capitalQuery.data ?? []) {
-      const isOut = String(c.entry_type) === "withdrawal" || String(c.entry_type) === "refund";
+      const type = String(c.entry_type);
+      const isOut = type === "withdrawal" || type === "refund";
+      // Only receipts/deposits are money in; a capital call is a demand, not cash.
+      const isIn = type === "receipt" || type === "deposit";
       out.push({
         id: `cap-${c.id}`,
         date: String(c.entry_date ?? ""),
         direction: isOut ? "out" : "in",
         source: "Owner funding",
         party: `${c.owner_name || "Owner"}${c.owner_role ? ` (${c.owner_role})` : ""}`,
-        detail: [String(c.entry_type ?? ""), String(c.status ?? ""), c.notes]
+        detail: [
+          type === "call" ? "capital call (demand — not cash)" : type,
+          String(c.status ?? ""),
+          c.notes,
+        ]
           .filter(Boolean)
           .join(" · "),
         amount: num(c.amount),
         mode: String(c.mode ?? ""),
         reference: String(c.reference ?? ""),
+        counted: isIn || isOut,
       });
     }
     for (const c of chargesQuery.data ?? []) {
@@ -243,21 +254,23 @@ function Page() {
         detail: [
           CHARGE_LABELS[String(c.category)] ?? String(c.category),
           c.description,
-          String(c.status),
+          String(c.status) === "paid" ? "paid" : `${String(c.status)} — not paid yet`,
         ]
           .filter(Boolean)
           .join(" · "),
         amount: num(c.amount),
         mode: String(c.allocation) === "per_owner" ? "owner-wise" : "common",
         reference: "",
+        // Only paid statutory charges are cash spent.
+        counted: String(c.status) === "paid",
       });
     }
     return out.sort((a, b) => b.date.localeCompare(a.date));
   }, [paymentsQuery.data, billsQuery.data, capitalQuery.data, chargesQuery.data]);
 
   const filtered = txns.filter((t) => {
-    if (filter === "in" && t.direction !== "in") return false;
-    if (filter === "out" && t.direction !== "out") return false;
+    if (filter === "in" && (t.direction !== "in" || !t.counted)) return false;
+    if (filter === "out" && (t.direction !== "out" || !t.counted)) return false;
     if (filter !== "all" && filter !== "in" && filter !== "out" && t.source !== filter)
       return false;
     const q = search.trim().toLowerCase();
@@ -272,6 +285,7 @@ function Page() {
     let vendorOut = 0;
     let statutoryOut = 0;
     for (const t of txns) {
+      if (!t.counted) continue;
       if (t.direction === "in") inflow += t.amount;
       else if (t.source === "Statutory charge") statutoryOut += t.amount;
       else vendorOut += t.amount;
@@ -291,7 +305,7 @@ function Page() {
       ...filtered.map((t) =>
         [
           t.date || "—",
-          t.direction === "in" ? "Inflow" : "Outflow",
+          !t.counted ? "Not cash (demand / planned)" : t.direction === "in" ? "Inflow" : "Outflow",
           t.source,
           t.party,
           t.detail,
@@ -316,18 +330,21 @@ function Page() {
   const files = filesQuery.data ?? [];
 
   return (
-    <Shell title="Financial Ingestion">
+    <Shell title="Cash Ledger">
       <div className="space-y-6">
         <header className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
             Cash ledger · {project.name}
           </p>
           <h1 className="text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
-            Financial Ingestion
+            Cash Ledger
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Upload bank statements, expense sheets and vouchers for this project, and review every
-            recorded inflow, vendor payment and statutory charge in one ledger.
+            Every rupee actually received from owners (Capital Ledger receipts and deposits), paid
+            to vendors (Bills &amp; Payments) and paid as statutory charges (Common &amp; Statutory
+            Expenses). Capital calls and planned charges are listed for reference but not counted as
+            cash. Statutory charges are budgeted in the BOQ Approvals package; this ledger records
+            what has been paid against it.
           </p>
         </header>
 
@@ -348,7 +365,7 @@ function Page() {
               note: "Open bills & payments",
             },
             {
-              label: "Statutory charges",
+              label: "Statutory charges paid",
               value: totals.statutoryOut,
               Icon: Landmark,
               to: "/common-expenses" as const,
@@ -380,10 +397,12 @@ function Page() {
         </div>
 
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="text-lg font-bold text-foreground">Upload financial documents</h2>
+          <h2 className="text-lg font-bold text-foreground">Stored financial documents</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Bank statements (PDF/CSV), expense sheets (XLSX) or scanned vouchers, up to 50 MB each.
-            Files stay private to this project.
+            Files are stored privately for this project as reference documents only — they are not
+            read or parsed, and nothing in them is added to the ledger below. Record the money in
+            Capital Ledger, Bills &amp; Payments or Common &amp; Statutory Expenses.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             {canEdit ? (
@@ -460,7 +479,9 @@ function Page() {
             <div>
               <h2 className="text-lg font-bold text-foreground">Recorded money movement</h2>
               <p className="text-sm text-muted-foreground">
-                {txns.length} entries from owner funding, bill payments and statutory charges.
+                {txns.length} entries from owner funding, bill payments and statutory charges;{" "}
+                {txns.filter((t) => !t.counted).length} demands / planned charges are not counted as
+                cash.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -526,10 +547,15 @@ function Page() {
                       <td className="px-4 py-3 font-mono text-xs">{t.reference || "—"}</td>
                       <td
                         className={`px-4 py-3 text-right font-semibold ${
-                          t.direction === "in" ? "text-primary" : "text-foreground"
+                          !t.counted
+                            ? "text-muted-foreground italic"
+                            : t.direction === "in"
+                              ? "text-primary"
+                              : "text-foreground"
                         }`}
+                        title={!t.counted ? "Not cash — demand or planned, not counted" : undefined}
                       >
-                        {t.direction === "in" ? "+" : "−"}
+                        {!t.counted ? "" : t.direction === "in" ? "+" : "−"}
                         {inr(t.amount)}
                       </td>
                     </tr>

@@ -17,8 +17,8 @@ import {
 } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
-import { roles } from "@/components/saha/nav";
-import { useSessionUser } from "@/lib/access";
+import { useAccess, useSessionUser } from "@/lib/access";
+import { SITE_PLAN_CHANNEL } from "@/lib/site-week-actions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/messages")({
@@ -73,7 +73,13 @@ const groups = [
   { id: "purchase", label: "Purchase & stores" },
   { id: "accounts", label: "Accounts" },
   { id: "qa", label: "QA & safety" },
+  // posted by Site Today (daily report) and the site plan (stage instructions)
+  { id: "Daily report", label: "Daily reports" },
+  { id: SITE_PLAN_CHANNEL, label: "Site plan" },
 ];
+
+/** Notification categories that count towards the chat unread badges. */
+const CHAT_CATEGORIES = ["Chat", "Task"];
 
 const DIRECT = "direct";
 
@@ -135,14 +141,18 @@ function AttachmentChip({ file }: { file: Attachment }) {
 function Messages() {
   const qc = useQueryClient();
   const user = useSessionUser();
+  const { access } = useAccess();
+  const isManager = Boolean(access && (access.isAdmin || access.roles.includes("pm")));
+  // the signed-in member's own profile name, not a free-text name
+  const name = access?.profile?.full_name?.trim() || access?.email || user?.email || "Member";
+  const role = access?.labels[0] ?? "Member";
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [conv, setConv] = useState<Conversation>({
     kind: "group",
     id: "general",
     label: "General",
   });
   const [body, setBody] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<string>(roles[0]);
   const [isTask, setIsTask] = useState(false);
   const [dueDate, setDueDate] = useState("");
   const [projectId, setProjectId] = useState<string>("");
@@ -153,8 +163,6 @@ function Messages() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setName(localStorage.getItem("saha.chat.name") ?? "Site user");
-    setRole(localStorage.getItem("saha.role") ?? roles[0]);
     const storedProject = localStorage.getItem("saha-active-project-id");
     if (storedProject) setProjectId(storedProject);
     inputRef.current?.focus();
@@ -195,7 +203,8 @@ function Messages() {
         .from("notifications")
         .select("sender_id,is_read,category")
         .eq("is_read", false)
-        .eq("recipient_id", user!.id);
+        .eq("recipient_id", user!.id)
+        .in("category", CHAT_CATEGORIES);
       if (error) throw error;
       const map: Record<string, number> = {};
       for (const n of data ?? []) {
@@ -231,6 +240,27 @@ function Messages() {
     endRef.current?.scrollIntoView({ block: "nearest" });
   }, [data.length, conv.id]);
 
+  // Opening a direct conversation reads it: clear my unread chat / task alerts from that
+  // person (the same rows the People badges here and the top-bar chat badge count).
+  const unreadFromOpen = conv.kind === "dm" ? (unreadBySender[conv.id] ?? 0) : 0;
+  useEffect(() => {
+    if (!user?.id || conv.kind !== "dm" || unreadFromOpen === 0) return;
+    let active = true;
+    void supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("recipient_id", user.id)
+      .eq("sender_id", conv.id)
+      .eq("is_read", false)
+      .in("category", CHAT_CATEGORIES)
+      .then(({ error }) => {
+        if (active && !error) void qc.invalidateQueries({ queryKey: ["notifications"] });
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.id, conv.kind, conv.id, unreadFromOpen, data.length, qc]);
+
   const send = useMutation({
     mutationFn: async () => {
       const text = body.trim();
@@ -239,7 +269,7 @@ function Messages() {
 
       const uploaded: Attachment[] = [];
       for (const f of files) {
-        const path = `${senderId ?? "anon"}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, "_")}`;
+        const path = `${senderId ?? "anon"}/${Date.now()}-${f.name.replace(/[^\w.-]+/g, "_")}`;
         const { error } = await supabase.storage.from("chat-attachments").upload(path, f, {
           contentType: f.type || "application/octet-stream",
         });
@@ -250,7 +280,7 @@ function Messages() {
       const recipientId = conv.kind === "dm" ? conv.id : null;
       const insert = {
         channel: conv.kind === "dm" ? DIRECT : conv.id,
-        author_name: name.trim() || "Site user",
+        author_name: name,
         author_role: role,
         body: text,
         sender_id: senderId,
@@ -269,8 +299,8 @@ function Messages() {
 
       if (recipientId && recipientId !== senderId) {
         const project = projects.find((p) => p.id === projectId);
-        const who = name.trim() || "Site user";
-        await supabase.from("notifications").insert({
+        const who = name;
+        const { error: noteErr } = await supabase.from("notifications").insert({
           title: isTask ? `New task assigned by ${who}` : `New message from ${who}`,
           body:
             (text || `${uploaded.length} attachment${uploaded.length === 1 ? "" : "s"}`) +
@@ -283,6 +313,7 @@ function Messages() {
           sender_id: senderId,
           project_id: projectId || null,
         });
+        if (noteErr) throw new Error(`Message sent, but the alert failed: ${noteErr.message}`);
       }
       return msg;
     },
@@ -302,8 +333,12 @@ function Messages() {
       const { error } = await supabase.from("team_messages").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["team_messages"] }),
+    onSuccess: () => {
+      setConfirmDeleteId(null);
+      void qc.invalidateQueries({ queryKey: ["team_messages"] });
+    },
   });
+  const canDelete = (m: Message) => isManager || (!!user?.id && m.sender_id === user.id);
 
   const canSend = (body.trim() || files.length > 0) && !send.isPending;
 
@@ -374,20 +409,11 @@ function Messages() {
           </div>
 
           <div className="mt-3 border-t border-border px-2 pt-3">
-            <label className="label-caps text-muted-foreground" htmlFor="chat-name">
-              Your name
-            </label>
-            <input
-              id="chat-name"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                localStorage.setItem("saha.chat.name", e.target.value);
-              }}
-              className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1.5 text-[13px]"
-              placeholder="Name"
-            />
-            <p className="mt-2 text-[11px] text-muted-foreground">Posting as {role}</p>
+            <p className="label-caps text-muted-foreground">Posting as</p>
+            <p className="mt-1 truncate text-[13px] font-semibold text-foreground">{name}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {role} · name from your sign-up profile
+            </p>
           </div>
         </aside>
 
@@ -435,14 +461,36 @@ function Messages() {
                     </span>
                   )}
                   <span className="text-[11px] text-muted-foreground">{timeOf(m.created_at)}</span>
-                  <button
-                    type="button"
-                    onClick={() => remove.mutate(m.id)}
-                    aria-label="Delete message"
-                    className="ml-auto text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
+                  {canDelete(m) &&
+                    (confirmDeleteId === m.id ? (
+                      <span className="ml-auto inline-flex items-center gap-1.5 text-[11.5px]">
+                        <span className="font-semibold text-destructive">Delete message?</span>
+                        <button
+                          type="button"
+                          disabled={remove.isPending}
+                          onClick={() => remove.mutate(m.id)}
+                          className="rounded bg-destructive px-2 py-0.5 font-semibold text-destructive-foreground disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="rounded border border-input px-2 py-0.5 font-semibold text-muted-foreground"
+                        >
+                          Cancel
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(m.id)}
+                        aria-label="Delete message"
+                        className="ml-auto text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 focus:opacity-100"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    ))}
                 </header>
                 {m.body && (
                   <p className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-foreground">
@@ -600,7 +648,14 @@ function Messages() {
           </form>
           {send.isError && (
             <p className="px-3 pb-3 text-[12px] text-destructive">
-              Could not send. Check the connection or file size and try again.
+              {(send.error as Error)?.message?.startsWith("Message sent")
+                ? (send.error as Error).message
+                : "Could not send. Check the connection or file size and try again."}
+            </p>
+          )}
+          {remove.isError && (
+            <p className="px-3 pb-3 text-[12px] text-destructive">
+              Could not delete: {(remove.error as Error).message}
             </p>
           )}
         </section>

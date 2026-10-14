@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { inr, inrCompact } from "@/data/saha";
+import { RATE_BASIS_NOTE, cheapestQuote, compareRate, quoteRateExclGst } from "@/lib/rate-compare";
 import { ScanLine, Scale, Sparkles, Download, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/price-intelligence")({
@@ -138,9 +139,9 @@ function Page() {
     },
   });
 
-  const quotes = quotesQ.data ?? [];
-  const quoteItems = itemsQ.data ?? [];
-  const boq = boqQ.data ?? [];
+  const quotes = useMemo(() => quotesQ.data ?? [], [quotesQ.data]);
+  const quoteItems = useMemo(() => itemsQ.data ?? [], [itemsQ.data]);
+  const boq = useMemo(() => boqQ.data ?? [], [boqQ.data]);
   const quoteById = useMemo(() => Object.fromEntries(quotes.map((x) => [x.id, x])), [quotes]);
 
   const trades = useMemo(
@@ -148,44 +149,47 @@ function Page() {
     [quoteItems],
   );
 
-  // Best (lowest net) quoted rate per normalized description.
-  const bestRates = useMemo(() => {
-    const m = new Map<string, { item: QuoteItem; vendor: string }>();
+  // Quoted lines grouped by normalized description.
+  const quotesByKey = useMemo(() => {
+    const m = new Map<string, QuoteItem[]>();
     for (const it of quoteItems) {
       const key = norm(it.description);
       if (!key) continue;
-      const cur = m.get(key);
-      if (!cur || it.net_rate < cur.item.net_rate)
-        m.set(key, { item: it, vendor: quoteById[it.quote_id]?.vendor_name ?? "" });
+      m.set(key, [...(m.get(key) ?? []), it]);
     }
     return m;
-  }, [quoteItems, quoteById]);
+  }, [quoteItems]);
 
-  // Compare BOQ lines against quoted rates.
+  // Compare BOQ lines (excl. GST) against the cheapest matching quote, also excl. GST.
   const comparisons = useMemo(() => {
     const rows = boq.map((b) => {
-      let best: { item: QuoteItem; vendor: string } | undefined;
+      let bestKey: string | undefined;
       let bestScore = 0;
-      for (const [key, v] of bestRates) {
+      for (const key of quotesByKey.keys()) {
         const score = similar(b.description, key);
         if (score > bestScore) {
           bestScore = score;
-          best = v;
+          bestKey = key;
         }
       }
-      const matched = bestScore >= 0.6 && best ? best : undefined;
-      const delta =
-        matched && b.rate > 0 ? ((matched.item.net_rate - b.rate) / b.rate) * 100 : null;
-      return { boq: b, match: matched, delta };
+      const item =
+        bestScore >= 0.6 && bestKey
+          ? cheapestQuote(quotesByKey.get(bestKey) ?? [], b.unit)
+          : undefined;
+      if (!item) return { boq: b, match: undefined, cmp: undefined, delta: null };
+      const cmp = compareRate(b, item);
+      return {
+        boq: b,
+        match: { item, vendor: quoteById[item.quote_id]?.vendor_name ?? "" },
+        cmp,
+        delta: cmp.delta,
+      };
     });
     return rows.filter((r) => r.match);
-  }, [boq, bestRates]);
+  }, [boq, quotesByKey, quoteById]);
 
-  const potentialSaving = comparisons.reduce((s, r) => {
-    if (r.delta !== null && r.delta < 0 && r.match)
-      s += (r.boq.rate - r.match.item.net_rate) * (r.boq.quantity || 0);
-    return s;
-  }, 0);
+  const potentialSaving = comparisons.reduce((s, r) => s + (r.cmp?.saving ?? 0), 0);
+  const unitMismatches = comparisons.filter((r) => r.cmp && !r.cmp.unitsMatch).length;
   const vendorCount = new Set(quotes.map((x) => x.vendor_name)).size;
 
   const filteredQuotes = quotes.filter(
@@ -208,7 +212,9 @@ function Page() {
       "Brand",
       "Trade",
       "Unit",
-      "Net rate",
+      "Net rate (incl. GST)",
+      "GST %",
+      "Rate excl. GST",
       "Vendor",
       "Quote ref",
       "Quote date",
@@ -219,6 +225,8 @@ function Page() {
       i.trade,
       i.unit,
       String(i.net_rate),
+      String(i.gst_pct ?? ""),
+      quoteRateExclGst(i).toFixed(2),
       quoteById[i.quote_id]?.vendor_name ?? "",
       quoteById[i.quote_id]?.quote_ref ?? "",
       quoteById[i.quote_id]?.quote_date ?? "",
@@ -284,7 +292,7 @@ function Page() {
             label="Potential BOQ saving"
             value={inrCompact(potentialSaving)}
             tone={potentialSaving > 0 ? "good" : "neutral"}
-            delta="Tap to apply via Budget Fit"
+            delta={`Excl. GST, same units only${unitMismatches ? ` · ${unitMismatches} unit mismatches skipped` : ""}`}
           />
         </Link>
       </div>
@@ -356,7 +364,8 @@ function Page() {
         )}
       </Section>
 
-      <Section title="BOQ vs quoted rates (auto-matched)">
+      <Section title="BOQ vs quoted rates (auto-matched, excl. GST)">
+        <p className="px-4 pt-3 text-xs text-muted-foreground">{RATE_BASIS_NOTE}</p>
         {comparisons.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">
             No matches yet — once scanned quote items resemble BOQ descriptions, the comparison
@@ -368,8 +377,10 @@ function Page() {
               <thead>
                 <tr className="border-b border-border bg-muted/40 text-left">
                   <th className="p-3 font-semibold text-foreground">BOQ line item</th>
-                  <th className="p-3 font-semibold text-foreground">BOQ rate</th>
-                  <th className="p-3 font-semibold text-foreground">Best quoted rate</th>
+                  <th className="p-3 font-semibold text-foreground">BOQ rate (excl. GST)</th>
+                  <th className="p-3 font-semibold text-foreground">
+                    Best quoted rate (excl. GST)
+                  </th>
                   <th className="p-3 font-semibold text-foreground">Vendor</th>
                   <th className="p-3 font-semibold text-foreground">Variance</th>
                 </tr>
@@ -377,7 +388,7 @@ function Page() {
               <tbody>
                 {comparisons
                   .filter((r) => tradeFilter === "all" || r.match?.item.trade === tradeFilter)
-                  .sort((a, b) => (a.delta ?? 0) - (b.delta ?? 0))
+                  .sort((a, b) => (a.delta ?? Infinity) - (b.delta ?? Infinity))
                   .slice(0, 50)
                   .map((r) => (
                     <tr key={r.boq.id} className="border-b border-border/60">
@@ -389,11 +400,26 @@ function Page() {
                       </td>
                       <td className="p-3 text-foreground">{inr(r.boq.rate)}</td>
                       <td className="p-3 text-foreground">
-                        {r.match ? inr(r.match.item.net_rate) : "—"}
+                        {r.match && r.cmp ? (
+                          <>
+                            <div>
+                              {inr(r.cmp.quoteExcl)} / {r.match.item.unit || "—"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {inr(r.match.item.net_rate)} incl. {r.match.item.gst_pct ?? 18}% GST
+                            </div>
+                          </>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="p-3 text-muted-foreground">{r.match?.vendor}</td>
                       <td className="p-3">
-                        {r.delta === null ? (
+                        {r.cmp && !r.cmp.unitsMatch ? (
+                          <StatusBadge tone="slate">
+                            Units differ ({r.boq.unit || "—"} vs {r.match?.item.unit || "—"})
+                          </StatusBadge>
+                        ) : r.delta === null ? (
                           "—"
                         ) : (
                           <StatusBadge

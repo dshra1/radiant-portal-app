@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shell } from "@/components/saha/Shell";
 import { MetricTile, Section, StatusBadge } from "@/components/saha/ui";
@@ -116,18 +116,57 @@ function Page() {
     },
   });
 
+  const paymentsQ = useQuery({
+    queryKey: ["vl-bill-payments", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bill_payments")
+        .select("bill_id,amount")
+        .eq("project_id", project.id!);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const paidByBill = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of paymentsQ.data ?? [])
+      m.set(p.bill_id, (m.get(p.bill_id) ?? 0) + Number(p.amount ?? 0));
+    return m;
+  }, [paymentsQ.data]);
+
   const vendors = vendorsQ.data ?? [];
-  const pos = posQ.data ?? [];
-  const bills = billsQ.data ?? [];
+  const pos = useMemo(() => posQ.data ?? [], [posQ.data]);
+  const bills = useMemo(() => billsQ.data ?? [], [billsQ.data]);
   const committed = pos
     .filter((p) => p.status === "approved")
     .reduce((s, p) => s + (valueByPo.get(p.id) ?? 0), 0);
-  const pendingBills = bills.filter((b) => b.status !== "paid");
-  const pendingAmount = pendingBills.reduce(
-    (s, b) =>
-      s + (b.basic_amount + b.gst_amount + b.other_charges - b.retention_amount - b.deductions),
-    0,
+  // Outstanding on a bill = payable (gross − retention − deductions) − payments recorded.
+  const outstandingOf = useCallback(
+    (b: {
+      status: string;
+      id: string;
+      basic_amount: number;
+      gst_amount: number;
+      other_charges: number;
+      retention_amount: number;
+      deductions: number;
+    }) =>
+      b.status === "paid"
+        ? 0
+        : Math.max(
+            b.basic_amount +
+              b.gst_amount +
+              b.other_charges -
+              b.retention_amount -
+              b.deductions -
+              (paidByBill.get(b.id) ?? 0),
+            0,
+          ),
+    [paidByBill],
   );
+  const pendingBills = bills.filter((b) => outstandingOf(b) > 0);
+  const pendingAmount = pendingBills.reduce((s, b) => s + outstandingOf(b), 0);
 
   const spendByVendor = useMemo(() => {
     const m = new Map<string, { pos: number; value: number; billed: number; pending: number }>();
@@ -144,13 +183,18 @@ function Page() {
       const gross =
         b.basic_amount + b.gst_amount + b.other_charges - b.retention_amount - b.deductions;
       v.billed += gross;
-      if (b.status !== "paid") v.pending += gross;
+      v.pending += outstandingOf(b);
       m.set(b.vendor_name, v);
     }
     return [...m.entries()].sort((a, b) => b[1].value - a[1].value).slice(0, 20);
-  }, [pos, bills]);
+  }, [pos, bills, valueByPo, outstandingOf]);
 
-  const loading = vendorsQ.isLoading || posQ.isLoading || billsQ.isLoading;
+  const loading =
+    vendorsQ.isLoading ||
+    posQ.isLoading ||
+    billsQ.isLoading ||
+    poItemsQ.isLoading ||
+    paymentsQ.isLoading;
 
   return (
     <Shell title="Vendor Lifecycle">
@@ -209,7 +253,7 @@ function Page() {
             label="Pending payments"
             value={inrCompact(pendingAmount)}
             tone={pendingBills.length ? "warn" : "good"}
-            delta={`${pendingBills.length} unpaid bills`}
+            delta={`${pendingBills.length} bills with a balance (after part-payments)`}
           />
         </Link>
       </div>

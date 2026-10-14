@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { inr, inrCompact } from "@/data/saha";
+import { RATE_BASIS_NOTE, cheapestQuote, compareRate, quoteRateExclGst } from "@/lib/rate-compare";
 import { Download, ScanLine, Sparkles, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/brand-benchmark")({
@@ -48,6 +49,7 @@ type QItem = {
   brand: string;
   unit: string;
   net_rate: number;
+  gst_pct: number | null;
 };
 type QHead = { id: string; vendor_name: string };
 
@@ -137,7 +139,7 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("price_quote_items")
-        .select("id,quote_id,description,brand,unit,net_rate")
+        .select("id,quote_id,description,brand,unit,net_rate,gst_pct")
         .in("quote_id", quoteIds);
       if (error) throw error;
       return (data ?? []) as QItem[];
@@ -165,24 +167,24 @@ function Page() {
         }
       }
       if (boqScore < 0.5) boqLine = undefined;
-      // Cheapest quoted line matching the material (any brand).
-      let best: { item: QItem; vendor: string } | undefined;
-      let bestScore = 0;
-      for (const it of quoted) {
-        const s = score(`${it.description} ${it.brand}`, label);
-        if (s > bestScore) {
-          bestScore = s;
-          best = { item: it, vendor: vendorByQuote[it.quote_id] ?? "" };
-        }
-      }
-      if (bestScore < 0.5) best = undefined;
-      const base = boqLine?.rate ?? 0;
-      const delta = best && base > 0 ? ((best.item.net_rate - base) / base) * 100 : null;
-      const saving =
-        best && boqLine && best.item.net_rate < boqLine.rate
-          ? (boqLine.rate - best.item.net_rate) * (boqLine.quantity || 0)
-          : 0;
-      return { pref: p, boqLine, best, delta, saving };
+      // Cheapest (excl. GST) quoted line among all lines matching the material (any
+      // brand), preferring lines in the BOQ line's unit.
+      const candidates = quoted.filter(
+        (it) => score(`${it.description} ${it.brand}`, label) >= 0.5,
+      );
+      const cheapest = cheapestQuote(candidates, boqLine ? boqLine.unit : undefined);
+      const best = cheapest
+        ? { item: cheapest, vendor: vendorByQuote[cheapest.quote_id] ?? "" }
+        : undefined;
+      const cmp = best && boqLine ? compareRate(boqLine, best.item) : undefined;
+      return {
+        pref: p,
+        boqLine,
+        best,
+        cmp,
+        delta: cmp?.delta ?? null,
+        saving: cmp?.saving ?? 0,
+      };
     });
   }, [prefs, boqQ.data, qItemsQ.data, vendorByQuote]);
 
@@ -198,9 +200,11 @@ function Page() {
       "Material",
       "Preferred brand",
       "Series/Grade",
-      "BOQ rate",
+      "BOQ rate (excl. GST)",
       "Unit",
-      "Best quoted rate",
+      "Best quoted rate (excl. GST)",
+      "Quoted unit",
+      "Quoted net rate (incl. GST)",
       "Best quoted brand",
       "Vendor",
       "Variance %",
@@ -212,10 +216,12 @@ function Page() {
       r.pref.series,
       r.boqLine ? String(r.boqLine.rate) : "",
       r.boqLine?.unit ?? "",
+      r.cmp ? r.cmp.quoteExcl.toFixed(2) : "",
+      r.best?.item.unit ?? "",
       r.best ? String(r.best.item.net_rate) : "",
       r.best?.item.brand ?? "",
       r.best?.vendor ?? "",
-      r.delta === null ? "" : r.delta.toFixed(1),
+      r.cmp && !r.cmp.unitsMatch ? "units differ" : r.delta === null ? "" : r.delta.toFixed(1),
       r.saving ? r.saving.toFixed(0) : "",
     ]);
     const csv = [head, ...body]
@@ -285,7 +291,7 @@ function Page() {
             label="Potential saving"
             value={inrCompact(totalSaving)}
             tone={totalSaving > 0 ? "good" : "neutral"}
-            delta="Tap to apply in Budget Fit"
+            delta="Excl. GST, same units only"
           />
         </Link>
       </div>
@@ -301,6 +307,7 @@ function Page() {
           />
         }
       >
+        <p className="px-4 pt-3 text-xs text-muted-foreground">{RATE_BASIS_NOTE}</p>
         {loading ? (
           <p className="p-4 text-sm text-muted-foreground">Benchmarking your brands…</p>
         ) : prefs.length === 0 ? (
@@ -318,8 +325,8 @@ function Page() {
                 <tr className="border-b border-border bg-muted/40 text-left">
                   <th className="p-3 font-semibold text-foreground">Material</th>
                   <th className="p-3 font-semibold text-foreground">Your brand</th>
-                  <th className="p-3 font-semibold text-foreground">BOQ rate</th>
-                  <th className="p-3 font-semibold text-foreground">Best quoted</th>
+                  <th className="p-3 font-semibold text-foreground">BOQ rate (excl. GST)</th>
+                  <th className="p-3 font-semibold text-foreground">Best quoted (excl. GST)</th>
                   <th className="p-3 font-semibold text-foreground">Quoted brand / vendor</th>
                   <th className="p-3 font-semibold text-foreground">Verdict</th>
                 </tr>
@@ -338,13 +345,28 @@ function Page() {
                       {r.boqLine ? `${inr(r.boqLine.rate)} / ${r.boqLine.unit}` : "—"}
                     </td>
                     <td className="p-3 text-foreground">
-                      {r.best ? `${inr(r.best.item.net_rate)} / ${r.best.item.unit}` : "—"}
+                      {r.best ? (
+                        <>
+                          <div>
+                            {inr(quoteRateExclGst(r.best.item))} /{r.best.item.unit}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {inr(r.best.item.net_rate)} incl. {r.best.item.gst_pct ?? 18}% GST
+                          </div>
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="p-3 text-muted-foreground">
                       {r.best ? `${r.best.item.brand || "—"} · ${r.best.vendor}` : "—"}
                     </td>
                     <td className="p-3">
-                      {r.delta === null ? (
+                      {r.cmp && !r.cmp.unitsMatch ? (
+                        <StatusBadge tone="slate">Units differ — not compared</StatusBadge>
+                      ) : r.best && !r.boqLine ? (
+                        <StatusBadge tone="slate">No BOQ line to compare</StatusBadge>
+                      ) : r.delta === null ? (
                         <StatusBadge tone="slate">No quote yet</StatusBadge>
                       ) : r.delta < 0 ? (
                         <StatusBadge tone="emerald">

@@ -1,69 +1,75 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Building2,
   Calculator,
-  ShoppingCart,
   ClipboardCheck,
   ScanEye,
   PanelLeftClose,
   PanelLeft,
-  Bell,
   MessagesSquare,
-  Search,
   Home,
-  Sun,
-  CloudCog,
-  FileText,
-  BarChart3,
-  HardHat,
-  Video,
-  Store,
-  Receipt,
-  Landmark,
-  Wallet,
   ChevronRight,
   ChevronDown,
   Plus,
   UnfoldVertical,
   Bot,
   LogOut,
-  Info,
   LifeBuoy,
+  KeyRound,
+  Check,
+  Receipt,
+  HardHat,
+  Users,
+  FileSpreadsheet,
+  Wallet,
+  ShieldAlert,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 import { navForRole, roles, type NavItem } from "@/components/saha/nav";
 import { useAccess, useSessionUser } from "@/lib/access";
-import { SAMPLE_DATA_ROUTES } from "@/components/saha/sample-data";
-
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
+import { useOnline } from "@/lib/use-online";
 import { NotificationBell } from "@/components/saha/NotificationBell";
+import { CommandSearch } from "@/components/saha/CommandSearch";
 
-function SignOutButton() {
+function useSignOut() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  return async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  };
+}
+
+/** Transparent full-screen layer that closes an open dropdown when clicked. */
+function Backdrop({ onClose }: { onClose: () => void }) {
   return (
     <button
       type="button"
-      aria-label="Sign out"
-      title="Sign out"
-      onClick={async () => {
-        await queryClient.cancelQueries();
-        queryClient.clear();
-        await supabase.auth.signOut();
-        navigate({ to: "/auth", replace: true });
-      }}
-      className="inline-flex shrink-0 items-center justify-center rounded-md bg-muted p-2 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
-    >
-      <LogOut className="size-4" />
-    </button>
+      aria-label="Close menu"
+      tabIndex={-1}
+      onClick={onClose}
+      className="fixed inset-0 z-40 cursor-default"
+    />
   );
 }
+
+const quickAdd: { to: string; label: string; icon: typeof Receipt }[] = [
+  { to: "/bills-payments", label: "New bill", icon: Receipt },
+  { to: "/site-today", label: "Daily report", icon: HardHat },
+  { to: "/contractors-labour", label: "Labour entry", icon: Users },
+  { to: "/po-create", label: "Raise PO", icon: FileSpreadsheet },
+  { to: "/capital-ledger", label: "Record receipt", icon: Wallet },
+];
 
 const mobileNav: NavItem[] = [
   { to: "/", label: "Hub", icon: Home },
@@ -120,8 +126,13 @@ export function Shell({
   useEffect(() => {
     if (typeof window !== "undefined") window.localStorage.setItem("saha-role", role);
   }, [role]);
-  const [sunlight, setSunlight] = useState(false);
   const [projectMenu, setProjectMenu] = useState(false);
+  const [addMenu, setAddMenu] = useState(false);
+  const [userMenu, setUserMenu] = useState(false);
+  const online = useOnline();
+  const signOut = useSignOut();
+  const active = useActiveProject();
+  const setActiveProject = useActiveProjectSetter();
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -160,24 +171,6 @@ export function Shell({
       return data ?? [];
     },
   });
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["notifications", "unread-count", user?.id],
-    enabled: Boolean(user?.id),
-    queryFn: async () => {
-      let q = supabase
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("is_read", false);
-      if (user?.id) {
-        q = q.or(`recipient_id.eq.${user.id},recipient_id.is.null`);
-      }
-      const { count, error } = await q;
-      if (error) throw error;
-      return count ?? 0;
-    },
-    refetchInterval: 6000,
-    refetchOnWindowFocus: true,
-  });
   const { data: unreadChats = 0 } = useQuery({
     queryKey: ["notifications", "unread-chat-count", user?.id],
     enabled: Boolean(user?.id),
@@ -194,7 +187,15 @@ export function Shell({
     refetchInterval: 6000,
     refetchOnWindowFocus: true,
   });
-  const current = projects[0];
+  const current = projects.find((p) => p.id === active.id);
+  const displayName = access?.profile?.full_name?.trim() || user?.email || "";
+  const initials =
+    displayName
+      .split(/[\s@._-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]!.toUpperCase())
+      .join("") || "?";
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -332,7 +333,7 @@ export function Shell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 overflow-hidden border-b border-border bg-card/80 px-4 py-2.5 backdrop-blur-md">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card px-4 py-2.5">
           <Link
             to="/"
             aria-label="Go home"
@@ -340,8 +341,6 @@ export function Shell({
           >
             <Home className="size-4" />
           </Link>
-
-          <SignOutButton />
 
           <div className="relative hidden min-w-0 sm:block">
             <button
@@ -353,7 +352,7 @@ export function Shell({
               <span className="min-w-0">
                 <span className="flex items-center gap-1.5">
                   <span className="truncate text-[13px] font-semibold text-secondary-foreground">
-                    {current?.name ?? "No active project"}
+                    {current?.name ?? active.name}
                   </span>
                   {current && (
                     <span className="label-caps rounded bg-primary-soft px-1.5 py-0.5 text-primary">
@@ -362,22 +361,23 @@ export function Shell({
                   )}
                 </span>
                 <span className="block truncate text-xs text-secondary-foreground/75">
-                  {current?.location ?? "Add a project to begin"}
+                  {current?.location ?? active.location}
                 </span>
               </span>
               <UnfoldVertical className="size-3.5 shrink-0 text-secondary-foreground/70" />
             </button>
 
+            {projectMenu && <Backdrop onClose={() => setProjectMenu(false)} />}
             {projectMenu && (
               <div className="absolute left-0 top-full z-50 mt-2 w-80 rounded-xl border border-border bg-card p-3 shadow-lg">
                 <div className="flex items-center justify-between gap-2 border-b border-border pb-2">
-                  <span className="text-sm font-semibold">Projects management</span>
+                  <span className="text-sm font-semibold">Switch project</span>
                   <Link
                     to="/projects"
                     onClick={() => setProjectMenu(false)}
                     className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary-hover"
                   >
-                    <Plus className="size-3" /> Add project
+                    Manage projects
                   </Link>
                 </div>
                 <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto">
@@ -386,10 +386,16 @@ export function Shell({
                   )}
                   {projects.map((p) => (
                     <li key={p.id}>
-                      <Link
-                        to="/projects"
-                        onClick={() => setProjectMenu(false)}
-                        className="flex items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-secondary"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveProject(p.id);
+                          setProjectMenu(false);
+                        }}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left hover:bg-secondary",
+                          p.id === active.id && "bg-secondary",
+                        )}
                       >
                         <span className="min-w-0">
                           <span className="block truncate text-[13px] font-medium">{p.name}</span>
@@ -397,10 +403,11 @@ export function Shell({
                             {p.location}
                           </span>
                         </span>
-                        <span className="label-caps shrink-0 text-muted-foreground">
+                        <span className="flex shrink-0 items-center gap-1 label-caps text-muted-foreground">
                           {p.health}
+                          {p.id === active.id && <Check className="size-3.5 text-primary" />}
                         </span>
-                      </Link>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -408,32 +415,24 @@ export function Shell({
             )}
           </div>
 
-          <div className="hidden items-center gap-2 rounded border border-input bg-background px-2.5 py-1.5 lg:flex">
-            <Search className="size-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Search projects, BOQs, vendors…</span>
-          </div>
+          <CommandSearch groups={groups} projectId={active.id} />
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <span className="hidden items-center gap-1.5 rounded-full bg-primary-soft px-2 py-1 text-[11px] font-medium text-primary xl:flex">
-              <CloudCog className="size-3.5" /> 3 cached — syncing
-            </span>
-            <span className="hidden items-center gap-1.5 label-caps text-muted-foreground xl:flex">
-              <Sun className="size-3.5" /> 31°C Clear • Madhapur
-            </span>
-            <button
-              type="button"
-              onClick={() => setSunlight((v) => !v)}
-              aria-pressed={sunlight}
-              title="Sunlight Mode"
+            <span
               className={cn(
-                "hidden items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors sm:inline-flex",
-                sunlight
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-input text-muted-foreground hover:text-foreground",
+                "hidden items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium xl:flex",
+                online ? "bg-primary-soft text-primary" : "bg-destructive/10 text-destructive",
               )}
+              title={
+                online ? "Connected" : "No connection — changes will fail until you are back online"
+              }
             >
-              <Sun className="size-3.5" /> Sunlight
-            </button>
+              {online ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
+              {online ? "Online" : "Offline"}
+            </span>
+            {!online && (
+              <WifiOff className="size-4 text-destructive xl:hidden" aria-label="Offline" />
+            )}
             <Link
               to="/messages"
               className="relative inline-flex shrink-0 items-center"
@@ -448,15 +447,103 @@ export function Shell({
               )}
             </Link>
             <NotificationBell size="sm" />
-            <Link
-              to="/projects"
-              className="hidden items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover sm:inline-flex"
-            >
-              <Plus className="size-3.5" /> Add Entry
-            </Link>
-            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground">
-              SD
-            </span>
+            <div className="relative hidden sm:block">
+              <button
+                type="button"
+                onClick={() => setAddMenu((v) => !v)}
+                aria-expanded={addMenu}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+              >
+                <Plus className="size-3.5" /> Add Entry
+                <ChevronDown className="size-3" />
+              </button>
+              {addMenu && <Backdrop onClose={() => setAddMenu(false)} />}
+              {addMenu && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-52 rounded-xl border border-border bg-card p-1.5 shadow-lg">
+                  {quickAdd.map((q) => (
+                    <Link
+                      key={q.to}
+                      to={q.to}
+                      onClick={() => setAddMenu(false)}
+                      className="flex items-center gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-secondary"
+                    >
+                      <q.icon className="size-3.5 text-muted-foreground" />
+                      {q.label}
+                    </Link>
+                  ))}
+                  <Link
+                    to="/quality"
+                    search={{ tab: "ncr" }}
+                    onClick={() => setAddMenu(false)}
+                    className="flex items-center gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-secondary"
+                  >
+                    <ShieldAlert className="size-3.5 text-muted-foreground" />
+                    Raise NCR
+                  </Link>
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setUserMenu((v) => !v)}
+                aria-expanded={userMenu}
+                aria-label="Account menu"
+                title={displayName}
+                className="grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground hover:ring-2 hover:ring-primary/40"
+              >
+                {initials}
+              </button>
+              {userMenu && <Backdrop onClose={() => setUserMenu(false)} />}
+              {userMenu && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-border bg-card p-1.5 shadow-lg">
+                  <div className="border-b border-border px-2 pb-2 pt-1">
+                    {access?.profile?.full_name && (
+                      <p className="truncate text-[13px] font-semibold">
+                        {access.profile.full_name}
+                      </p>
+                    )}
+                    <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+                    {(access?.labels.length ?? 0) > 0 && (
+                      <p className="mt-1 flex flex-wrap gap-1">
+                        {access!.labels.map((l) => (
+                          <span
+                            key={l}
+                            className="rounded bg-primary-soft px-1.5 py-0.5 text-[10px] font-semibold text-primary"
+                          >
+                            {l}
+                          </span>
+                        ))}
+                      </p>
+                    )}
+                  </div>
+                  <Link
+                    to="/manual"
+                    onClick={() => setUserMenu(false)}
+                    className="mt-1 flex items-center gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-secondary"
+                  >
+                    <LifeBuoy className="size-3.5 text-muted-foreground" /> How to use
+                  </Link>
+                  <Link
+                    to="/reset-password"
+                    onClick={() => setUserMenu(false)}
+                    className="flex items-center gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-secondary"
+                  >
+                    <KeyRound className="size-3.5 text-muted-foreground" /> Change password
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserMenu(false);
+                      void signOut();
+                    }}
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] text-destructive hover:bg-secondary"
+                  >
+                    <LogOut className="size-3.5" /> Sign out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -509,26 +596,13 @@ export function Shell({
         </div>
 
         <main className="flex-1 p-4 md:p-6">
-          <div className="mx-auto w-full max-w-none">
-            {SAMPLE_DATA_ROUTES[pathname] && (
-              <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2 text-[12px] text-warning">
-                <Info className="mt-0.5 size-3.5 shrink-0" />
-                <p>
-                  <span className="font-bold uppercase tracking-wide">Sample data</span> — the{" "}
-                  {SAMPLE_DATA_ROUTES[pathname]} shown here are illustrative placeholders, not your
-                  project&apos;s numbers. Live screens today: Project Details, Project Setup, BOQ
-                  Engine, Command Center, Notifications and Chat.
-                </p>
-              </div>
-            )}
-            {children}
-          </div>
+          <div className="mx-auto w-full max-w-none">{children}</div>
         </main>
 
         <Link
           to="/ai"
           aria-label="Saha AI Assistant"
-          className="fixed bottom-20 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover md:bottom-6 md:right-6"
+          className="fixed bottom-20 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover md:bottom-[4.5rem]"
         >
           <Bot className="size-4" />
           <span className="hidden sm:inline">Saha AI Assistant</span>

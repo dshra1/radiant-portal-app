@@ -99,6 +99,9 @@ function Page() {
     access.access?.isAdmin || roles.some((r) => ["pm", "accounts"].includes(r)),
   );
   const canDelete = Boolean(access.access?.isAdmin || roles.includes("pm"));
+  // Only the owner deciding (landowner / investor login) or an admin records a decision;
+  // the database enforces the same rule (owner_decisions_guard trigger).
+  const canDecide = Boolean(access.access?.isAdmin || roles.includes("landowner_investor"));
 
   const [projectId, setProjectId] = useState("");
   const [form, setForm] = useState(emptyForm());
@@ -233,15 +236,20 @@ function Page() {
           project_id: activeId,
           sender_id: user?.id ?? null,
         }));
-        await supabase.from("notifications").insert(notes);
+        const { error: nErr } = await supabase.from("notifications").insert(notes);
+        if (nErr) return { id: data.id, notifyError: nErr.message };
       }
-      return data.id;
+      return { id: data.id, notifyError: "" };
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       setForm(emptyForm());
       setFiles([]);
       setShowForm(false);
-      setNote("Sent to owners for approval.");
+      setNote(
+        res.notifyError
+          ? `Saved, but the owners were NOT notified: ${res.notifyError}. Tell them directly or re-send.`
+          : "Sent to owners for approval.",
+      );
       invalidate();
     },
     onError: (e: Error) => setNote(e.message),
@@ -249,6 +257,8 @@ function Page() {
 
   const decide = useMutation({
     mutationFn: async (args: { id: string; decision: "approved" | "rejected" }) => {
+      if (!canDecide)
+        throw new Error("Only the landowner / investor (or an admin) can record a decision.");
       const { error } = await supabase
         .from("owner_decisions")
         .update({
@@ -709,6 +719,7 @@ function Page() {
                           </td>
                           <td className="px-4 py-3">
                             <input
+                              disabled={!canDecide}
                               value={comments[d.id] ?? d.comment ?? ""}
                               onChange={(e) =>
                                 setComments((c) => ({ ...c, [d.id]: e.target.value }))
@@ -719,30 +730,38 @@ function Page() {
                           </td>
 
                           <td className="px-4 py-3">
-                            <div className="flex justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => decide.mutate({ id: d.id, decision: "approved" })}
-                                className={`rounded-xl px-3 py-2 text-xs font-semibold ${
-                                  d.decision === "approved"
-                                    ? "border border-border bg-background text-muted-foreground"
-                                    : "bg-emerald-600 text-white"
-                                }`}
-                              >
-                                Approve
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => decide.mutate({ id: d.id, decision: "rejected" })}
-                                className={`rounded-xl px-3 py-2 text-xs font-semibold ${
-                                  d.decision === "rejected"
-                                    ? "border border-border bg-background text-muted-foreground"
-                                    : "border border-destructive/40 bg-destructive/10 text-destructive"
-                                }`}
-                              >
-                                Reject
-                              </button>
-                            </div>
+                            {!canDecide ? (
+                              <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
+                                <Lock className="h-3 w-3" /> Owner or admin decides
+                              </p>
+                            ) : (
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  disabled={decide.isPending}
+                                  onClick={() => decide.mutate({ id: d.id, decision: "approved" })}
+                                  className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                                    d.decision === "approved"
+                                      ? "border border-border bg-background text-muted-foreground"
+                                      : "bg-emerald-600 text-white"
+                                  }`}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={decide.isPending}
+                                  onClick={() => decide.mutate({ id: d.id, decision: "rejected" })}
+                                  className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                                    d.decision === "rejected"
+                                      ? "border border-border bg-background text-muted-foreground"
+                                      : "border border-destructive/40 bg-destructive/10 text-destructive"
+                                  }`}
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))}

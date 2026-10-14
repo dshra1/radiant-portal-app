@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ListChecks, Plus, User, X, Trash2 } from "lucide-react";
@@ -107,7 +107,7 @@ function TaskTracker() {
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ["tasks"] });
-    void qc.invalidateQueries({ queryKey: ["messages"] });
+    void qc.invalidateQueries({ queryKey: ["team_messages"] });
   };
 
   const update = useMutation({
@@ -342,15 +342,10 @@ function TaskTracker() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={5}
+                <ProgressSlider
+                  key={`${t.id}-${progress}`}
                   value={progress}
-                  aria-label="Progress"
-                  onChange={(e) => update.mutate({ id: t.id, progress: Number(e.target.value) })}
-                  className="w-32 accent-[hsl(var(--primary))]"
+                  onCommit={(value) => update.mutate({ id: t.id, progress: value })}
                 />
                 <select
                   value={t.status}
@@ -386,5 +381,31 @@ function TaskTracker() {
         })}
       </div>
     </Shell>
+  );
+}
+
+/** Range input that keeps its own draft and only saves when the user lets go. */
+function ProgressSlider({ value, onCommit }: { value: number; onCommit: (v: number) => void }) {
+  const [draft, setDraft] = useState(value);
+  const saved = useRef(value);
+  const commit = () => {
+    if (draft === saved.current) return;
+    saved.current = draft;
+    onCommit(draft);
+  };
+  return (
+    <input
+      type="range"
+      min={0}
+      max={100}
+      step={5}
+      value={draft}
+      aria-label="Progress"
+      onChange={(e) => setDraft(Number(e.target.value))}
+      onPointerUp={commit}
+      onKeyUp={commit}
+      onBlur={commit}
+      className="w-32 accent-[hsl(var(--primary))]"
+    />
   );
 }

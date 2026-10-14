@@ -1,25 +1,23 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { isUnreadFor, setNotificationRead, useNotificationReadIds } from "@/lib/notification-reads";
 import { inrCompact, num } from "@/data/saha";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 import { cn } from "@/lib/utils";
 import {
   Bell,
-  MessagesSquare,
-  ChevronDown,
   ChevronRight,
   Plus,
-  CloudCog,
   AlertTriangle,
   CheckCircle2,
   Info,
   ArrowRight,
 } from "lucide-react";
 
-import { NotificationBell } from "@/components/saha/NotificationBell";
+import { Shell } from "@/components/saha/Shell";
 import { SiteWeekPanel } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/")({
@@ -89,7 +87,7 @@ function Index() {
   const navigate = useNavigate();
   const activeProject = useActiveProject();
   const setActiveProject = useActiveProjectSetter();
-  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const firstName =
     access?.profile?.full_name?.split(" ")[0] ?? access?.email?.split("@")[0] ?? "Saha";
@@ -132,35 +130,23 @@ function Index() {
     enabled: Boolean(user?.id),
   });
 
-  const { data: unreadChats = 0 } = useQuery({
-    queryKey: ["notifications", "unread-chat-count", user?.id],
-    enabled: Boolean(user?.id),
+  const projectIds = projects.map((p) => p.id);
+  const { data: boqCounts = {} } = useQuery({
+    queryKey: ["boq_items", "count-by-project", projectIds],
+    enabled: projectIds.length > 0,
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("is_read", false)
-        .eq("recipient_id", user!.id)
-        .in("category", ["Chat", "Task"]);
-      if (error) throw error;
-      return count ?? 0;
+      const entries = await Promise.all(
+        projectIds.map(async (id) => {
+          const { count, error } = await supabase
+            .from("boq_items")
+            .select("id", { count: "exact", head: true })
+            .eq("project_id", id);
+          if (error) throw error;
+          return [id, count ?? 0] as const;
+        }),
+      );
+      return Object.fromEntries(entries) as Record<string, number>;
     },
-    refetchInterval: 6000,
-    refetchOnWindowFocus: true,
-  });
-
-  const { data: boqCount = 0 } = useQuery({
-    queryKey: ["boq_items", "count", activeProject.id],
-    queryFn: async () => {
-      if (!activeProject.id) return 0;
-      const { count, error } = await supabase
-        .from("boq_items")
-        .select("id", { count: "exact", head: true })
-        .eq("project_id", activeProject.id);
-      if (error) throw error;
-      return count ?? 0;
-    },
-    enabled: !!activeProject.id,
   });
 
   const { data: pendingPOs = 0 } = useQuery({
@@ -178,130 +164,35 @@ function Index() {
     enabled: !!activeProject.id,
   });
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  // Read status is per person (team-wide notices use notification_reads).
+  const { data: readIds = new Set<string>() } = useNotificationReadIds(user?.id);
+  const unread = notifications.filter((n) => isUnreadFor(n, readIds));
+  const unreadCount = unread.length;
 
-  const markRead = async (id: string) => {
-    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+  const markRead = async (ids: string[]) => {
+    if (!ids.length || !user?.id) return;
+    try {
+      for (const n of notifications.filter((x) => ids.includes(x.id)))
+        await setNotificationRead(n, user.id, true);
+    } catch (e) {
+      toast.error(`Could not mark as read: ${(e as Error).message}`);
+    }
+    // Refreshes this list, the bell, the chat badge and the Action Centre page.
+    await queryClient.invalidateQueries({ queryKey: ["notifications"] });
   };
 
-  const markAllRead = async () => {
-    const ids = notifications.filter((n) => !n.is_read).map((n) => n.id);
-    if (!ids.length) return;
-    await supabase.from("notifications").update({ is_read: true }).in("id", ids);
-  };
+  const markAllRead = () => markRead(unread.map((n) => n.id));
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Top greeting bar */}
-      <header className="border-b border-border bg-card px-5 py-6 sm:px-8">
-        <div className="mx-auto flex w-full max-w-none flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="display-title text-2xl sm:text-3xl">
-              {greeting}, <span className="text-primary">{firstName}</span>
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {unreadCount > 0
-                ? `You have ${unreadCount} notification${unreadCount === 1 ? "" : "s"} requiring attention.`
-                : "No pending notifications. Your projects are up to date."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              to="/messages"
-              className="relative inline-flex shrink-0 items-center rounded-full bg-secondary p-2.5 text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
-              aria-label="Team chat"
-              title="Team chat"
-            >
-              <MessagesSquare className="size-5" />
-              {unreadChats > 0 && (
-                <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
-                  {unreadChats > 9 ? "9+" : unreadChats}
-                </span>
-              )}
-            </Link>
-            <NotificationBell size="lg" />
-
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setProjectMenuOpen((v) => !v)}
-                className="flex min-w-[14rem] items-center justify-between gap-3 rounded-xl border border-border bg-secondary px-4 py-2.5 text-left transition-colors hover:bg-secondary/70"
-              >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-secondary-foreground">
-                    {activeProject.name}
-                  </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {activeProject.location}
-                  </span>
-                </span>
-                <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-              </button>
-
-              {projectMenuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-border bg-card p-3 shadow-lg">
-                  <div className="flex items-center justify-between gap-2 border-b border-border pb-2">
-                    <span className="text-sm font-semibold">Active project</span>
-                    <Link
-                      to="/projects"
-                      onClick={() => setProjectMenuOpen(false)}
-                      className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary-hover"
-                    >
-                      <Plus className="size-3" /> New
-                    </Link>
-                  </div>
-                  <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto">
-                    {projects.length === 0 && (
-                      <li className="px-1 py-2 text-xs text-muted-foreground">No projects yet.</li>
-                    )}
-                    {projects.map((p) => (
-                      <li key={p.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveProject(p.id);
-                            setProjectMenuOpen(false);
-                            void navigate({ to: "/site-execution" });
-                          }}
-                          className={cn(
-                            "flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left hover:bg-secondary",
-                            p.id === activeProject.id && "bg-primary-soft",
-                          )}
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate text-[13px] font-medium">{p.name}</span>
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {p.location}
-                            </span>
-                          </span>
-                          {p.id === activeProject.id && (
-                            <span className="label-caps shrink-0 rounded bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
-                              Active
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="hidden items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-right sm:flex">
-              <CloudCog className="size-4 text-primary" />
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Sync status
-                </p>
-                <p className="text-xs font-semibold text-foreground">Online · Synced</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-none flex-col gap-6 px-5 py-6 lg:px-8">
+    <Shell
+      title="Saha OS Hub"
+      subtitle={`${greeting}, ${firstName} · ${
+        unreadCount > 0
+          ? `${unreadCount} notification${unreadCount === 1 ? "" : "s"} need attention`
+          : "no pending notifications"
+      }`}
+    >
+      <div className="flex w-full flex-col gap-6">
         {activeProject.id ? <SiteWeekPanel projectId={activeProject.id} /> : null}
         {/* Projects — tap a card to open its dashboard */}
         <section>
@@ -311,7 +202,7 @@ function Index() {
               <p className="text-sm text-muted-foreground">
                 {projects.length === 0
                   ? "No projects yet — add your first site."
-                  : "Tap a project to open its Command Dashboard."}
+                  : "Tap a project to open Site Execution."}
               </p>
             </div>
             <Link
@@ -362,7 +253,7 @@ function Index() {
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-3">
+                  <div className={cn("mt-4 grid gap-3", isActive ? "grid-cols-4" : "grid-cols-3")}>
                     <MiniMetric
                       label={Number(p.saleable_sft ?? 0) ? "Saleable" : "Built-up"}
                       value={`${num(Number(p.saleable_sft || p.total_built_up_sft || 0))} sft`}
@@ -374,13 +265,10 @@ function Index() {
                       }
                     />
                     <MiniMetric
-                      label={isActive ? "POs Pending" : "BOQ Items"}
-                      value={
-                        isActive
-                          ? String(pendingPOs)
-                          : String(boqCount && isActive ? boqCount : "—")
-                      }
+                      label="BOQ Items"
+                      value={p.id in boqCounts ? num(boqCounts[p.id] ?? 0) : "…"}
                     />
+                    {isActive && <MiniMetric label="POs Pending" value={String(pendingPOs)} />}
                   </div>
 
                   <div className="mt-4">
@@ -431,7 +319,7 @@ function Index() {
                 {unreadCount > 0 && (
                   <button
                     type="button"
-                    onClick={markAllRead}
+                    onClick={() => void markAllRead()}
                     className="text-xs font-semibold text-muted-foreground hover:text-foreground"
                   >
                     Mark read
@@ -456,7 +344,7 @@ function Index() {
                     key={n.id}
                     className={cn(
                       "group flex items-start gap-4 px-5 py-4 transition-colors hover:bg-muted/40",
-                      !n.is_read && "bg-primary-soft/30",
+                      isUnreadFor(n, readIds) && "bg-primary-soft/30",
                     )}
                   >
                     <div
@@ -478,7 +366,10 @@ function Index() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <h3
-                          className={cn("text-sm font-semibold", !n.is_read && "text-foreground")}
+                          className={cn(
+                            "text-sm font-semibold",
+                            isUnreadFor(n, readIds) && "text-foreground",
+                          )}
                         >
                           {n.title}
                         </h3>
@@ -491,16 +382,16 @@ function Index() {
                         {n.link && (
                           <Link
                             to={n.link}
-                            onClick={() => markRead(n.id)}
+                            onClick={() => void markRead([n.id])}
                             className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary-hover"
                           >
                             Review <ArrowRight className="size-3" />
                           </Link>
                         )}
-                        {!n.is_read && (
+                        {isUnreadFor(n, readIds) && (
                           <button
                             type="button"
-                            onClick={() => markRead(n.id)}
+                            onClick={() => void markRead([n.id])}
                             className="text-xs text-muted-foreground hover:text-foreground"
                           >
                             Dismiss
@@ -514,8 +405,8 @@ function Index() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </Shell>
   );
 }
 

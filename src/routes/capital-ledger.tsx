@@ -8,6 +8,7 @@ import { LandownerBreakup } from "@/components/saha/LandownerBreakup";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
+import { useOwnerLiability } from "@/lib/owner-liability";
 
 export const Route = createFileRoute("/capital-ledger")({
   head: () => ({
@@ -186,6 +187,7 @@ function Page() {
       setForm(emptyForm());
       setShowForm(false);
       await qc.invalidateQueries({ queryKey: ["capital_entries"] });
+      await qc.invalidateQueries({ queryKey: ["owner_liability"] });
     },
     onError: (e: unknown) => setStatus(e instanceof Error ? e.message : "Could not save the entry"),
   });
@@ -198,6 +200,7 @@ function Page() {
     onSuccess: async () => {
       setStatus("Entry deleted.");
       await qc.invalidateQueries({ queryKey: ["capital_entries"] });
+      await qc.invalidateQueries({ queryKey: ["owner_liability"] });
     },
     onError: (e: unknown) => setStatus(e instanceof Error ? e.message : "Could not delete"),
   });
@@ -217,47 +220,48 @@ function Page() {
     onSuccess: async () => {
       setStatus("Capital call marked as received.");
       await qc.invalidateQueries({ queryKey: ["capital_entries"] });
+      await qc.invalidateQueries({ queryKey: ["owner_liability"] });
     },
     onError: (e: unknown) => setStatus(e instanceof Error ? e.message : "Could not update"),
   });
 
-  const budget = num(project?.target_budget);
+  // One source of truth for owner money: BOQ-based liability (common works by share,
+  // own flats, unallotted flats) and receipts/deposits in this ledger. The manual
+  // "paid" figure on the landowner sheet is not added on top (it would double count).
+  const liabilityQuery = useOwnerLiability(activeId);
+  const liabilities = useMemo(() => liabilityQuery.data?.list ?? [], [liabilityQuery.data]);
 
   const ownerRows = useMemo(() => {
-    const byOwner = new Map<string, { received: number; called: number }>();
-    for (const e of entries) {
-      const key = e.owner_name || "Unassigned";
-      const cur = byOwner.get(key) ?? { received: 0, called: 0 };
-      if (e.entry_type === "receipt") cur.received += num(e.amount);
-      else cur.called += num(e.amount);
-      byOwner.set(key, cur);
-    }
+    const byKey = new Map(liabilities.map((l) => [l.name.trim().toLowerCase(), l]));
     const names = new Set<string>([
-      ...owners.map((o) => (o.name ?? "").toString()),
-      ...Array.from(byOwner.keys()),
+      ...liabilities.map((l) => l.name),
+      ...owners
+        .map((o) => (o.name ?? "").toString().trim())
+        .filter((n) => !byKey.has(n.toLowerCase())),
     ]);
     return Array.from(names)
       .filter(Boolean)
       .map((name) => {
-        const owner = owners.find((o) => (o.name ?? "") === name);
-        const share = num(owner?.share_pct);
-        const agg = byOwner.get(name) ?? { received: 0, called: 0 };
-        const committed = num(owner?.invested) || (budget * share) / 100;
-        const received = agg.received + num(owner?.paid);
+        const l = byKey.get(name.trim().toLowerCase());
+        const owner = owners.find(
+          (o) => (o.name ?? "").toString().trim().toLowerCase() === name.trim().toLowerCase(),
+        );
+        const liability = l?.total ?? 0;
+        const received = l?.received ?? 0;
         return {
           name,
-          role: (owner?.role ?? "Investor").toString(),
+          role: (l?.role ?? owner?.role ?? "Investor").toString(),
           contact: (owner?.contact ?? "").toString(),
-          share,
-          liability: committed,
+          share: l?.share ?? num(owner?.share_pct),
+          liability,
           received,
-          pending: Math.max(committed - received, 0),
-          called: agg.called,
+          pending: Math.max(liability - received, 0),
+          called: l?.openCalls ?? 0,
         };
       })
       .filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => b.share - a.share);
-  }, [entries, owners, budget, search]);
+  }, [liabilities, owners, search]);
 
   const totals = useMemo(() => {
     const share = ownerRows.reduce((s, r) => s + r.share, 0);
@@ -283,6 +287,7 @@ function Page() {
           Received: r.received,
           Pending: r.pending,
           "Open calls": r.called,
+          Basis: "BOQ liability; ledger receipts only",
         })),
       ),
       "Owner summary",
@@ -399,17 +404,17 @@ function Page() {
             {
               label: "Total liability",
               value: cr(totals.liability),
-              sub: `Project budget ${cr(budget)}`,
+              sub: "BOQ-based: common works by share + own & unallotted flats",
               icon: BadgeIndianRupee,
             },
             {
               label: "Received to date",
               value: cr(totals.received),
-              sub: `${entries.filter((e) => e.entry_type === "receipt").length} receipts`,
+              sub: `${entries.filter((e) => e.entry_type === "receipt" || e.entry_type === "deposit").length} receipts in this ledger`,
               icon: Wallet,
             },
             {
-              label: "Pending dues",
+              label: "Balance to fund",
               value: cr(totals.pending),
               sub: `Open calls ${cr(totals.openCalls)}`,
               icon: Landmark,
@@ -568,8 +573,8 @@ function Page() {
             <div>
               <h2 className="text-base font-bold text-slate-900">Owner &amp; investor directory</h2>
               <p className="text-xs text-slate-500">
-                Share, liability, money received and pending dues — owners come from the project
-                record.
+                Liability from the BOQ (same as the breakup above); received = receipts and deposits
+                in this ledger only.
               </p>
             </div>
             <input

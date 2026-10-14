@@ -10,6 +10,7 @@ import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSessionUser } from "@/lib/access";
 import { fmtDay } from "@/lib/programme-progress";
 import { useSiteWeek, type StageCheck } from "@/lib/site-week";
+import { groupResults, sampleResult } from "@/lib/cube-acceptance";
 
 type Tab = "checks" | "cubes" | "ncr" | "itp";
 type Search = { tab?: Tab };
@@ -33,23 +34,8 @@ export const Route = createFileRoute("/quality")({
 const today = () => new Date().toISOString().slice(0, 10);
 const addDays = (iso: string | null, d: number) =>
   iso ? new Date(Date.parse(`${iso}T00:00:00Z`) + d * 86_400_000).toISOString().slice(0, 10) : null;
-const fck = (grade: string) => Number(/M(\d+)/.exec(grade)?.[1] ?? 30);
-
-/** IS 456 Table 11 (M20 and above): 28-day mean ≥ fck + 4 and each ≥ fck − 4. */
-function cubeResult(c: {
-  grade: string;
-  cube_28_1: number | null;
-  cube_28_2: number | null;
-  cube_28_3: number | null;
-}) {
-  const vals = [c.cube_28_1, c.cube_28_2, c.cube_28_3].filter(
-    (v): v is number => v !== null && v !== undefined,
-  );
-  if (vals.length < 3) return { mean: null as number | null, status: "pending" };
-  const mean = vals.reduce((a, b) => a + Number(b), 0) / 3;
-  const ok = mean >= fck(c.grade) + 4 && vals.every((v) => Number(v) >= fck(c.grade) - 4);
-  return { mean, status: ok ? "pass" : "fail" };
-}
+/** IS 456 Table 11 individual criterion for one pour (see src/lib/cube-acceptance.ts). */
+const cubeResult = sampleResult;
 
 function Page() {
   const search = Route.useSearch();
@@ -259,14 +245,24 @@ function Cubes({ projectId }: { projectId: string }) {
   const rows = q.data ?? [];
   const totalM3 = rows.reduce((t, r) => t + Number(r.volume_m3), 0);
   const failed = rows.filter((r) => cubeResult(r).status === "fail").length;
+  const groups = groupResults(rows);
+  const groupsFailed = groups.groups.filter((g) => g.status === "fail").length;
   return (
     <section className="rounded-2xl border border-border bg-card">
       <div className="flex flex-wrap gap-3 border-b border-border p-3 text-sm">
         <b>{rows.length} pours</b> · {Math.round(totalM3)} m³ RMC ·{" "}
-        {rows.filter((r) => cubeResult(r).status === "pass").length} passed ·{" "}
-        <span className={failed ? "font-semibold text-destructive" : ""}>{failed} failed</span>
-        <span className="text-muted-foreground">
-          Pass at 28 days: mean ≥ fck + 4 and each cube ≥ fck − 4 N/mm² (IS 456 Table 11).
+        {rows.filter((r) => cubeResult(r).status === "pass").length} samples pass (individual) ·{" "}
+        <span className={failed ? "font-semibold text-destructive" : ""}>{failed} failed</span> ·{" "}
+        {groups.groups.length} groups of 4 checked
+        {groupsFailed > 0 && (
+          <span className="font-semibold text-destructive"> · {groupsFailed} group(s) fail</span>
+        )}
+        <span className="basis-full text-muted-foreground">
+          IS 456:2000 Table 11 (M20 and above). Test result = mean of the 3 cubes of one sample.
+          Individual: each test result ≥ fck − 4 N/mm². Group: mean of 4 non-overlapping consecutive
+          test results of the same grade ≥ max(fck + 0.825 × s, fck + 4), with s = 5 N/mm² for M25+
+          until the site's standard deviation is established — i.e. fck + 4.125 (e.g. M25 ≥ 29.1,
+          M30 ≥ 34.1).
         </span>
       </div>
       {rows.length === 0 ? (
@@ -287,7 +283,8 @@ function Cubes({ projectId }: { projectId: string }) {
                 <th>7-day mean</th>
                 <th>28-day due</th>
                 <th>28-day cubes (N/mm²)</th>
-                <th>Result</th>
+                <th>Result (individual)</th>
+                <th>Group of 4</th>
               </tr>
             </thead>
             <tbody>
@@ -353,8 +350,28 @@ function Cubes({ projectId }: { projectId: string }) {
                       className={`text-center font-semibold ${res.status === "pass" ? "text-emerald-700" : res.status === "fail" ? "text-destructive" : "text-muted-foreground"}`}
                     >
                       {res.status}
-                      {res.mean !== null ? ` (${res.mean.toFixed(1)})` : ""}
+                      {res.mean !== null ? ` (${res.mean.toFixed(1)} vs ≥ ${res.min})` : ""}
                     </td>
+                    {(() => {
+                      const g = groups.byId.get(r.id);
+                      if (!g)
+                        return (
+                          <td className="px-2 text-center text-muted-foreground">
+                            {res.mean === null
+                              ? "—"
+                              : `waiting (${groups.waiting.get(r.grade) ?? 0}/4 tested)`}
+                          </td>
+                        );
+                      return (
+                        <td
+                          className={`px-2 text-center font-semibold ${g.status === "pass" ? "text-emerald-700" : "text-destructive"}`}
+                          title={`Pours in group: ${g.ids.length}; mean ${g.mean.toFixed(2)} vs required ${g.required.toFixed(3)}`}
+                        >
+                          {g.grade} G{g.index}: {g.status} ({g.mean.toFixed(1)} vs ≥{" "}
+                          {g.required.toFixed(2)})
+                        </td>
+                      );
+                    })()}
                   </tr>
                 );
               })}
@@ -395,7 +412,18 @@ function Ncrs({ projectId }: { projectId: string }) {
       toast.error("Describe what is wrong");
       return;
     }
-    const n = (q.data ?? []).length + 1;
+    // next number after the highest existing NCR-### (row count repeats after deletes)
+    const { data: existing, error: noErr } = await supabase
+      .from("ncrs")
+      .select("ncr_no")
+      .eq("project_id", projectId);
+    if (noErr) {
+      toast.error(noErr.message);
+      return;
+    }
+    const n =
+      Math.max(0, ...(existing ?? []).map((r) => Number(/NCR-(\d+)/i.exec(r.ncr_no)?.[1] ?? 0))) +
+      1;
     const { error } = await supabase.from("ncrs").insert({
       project_id: projectId,
       ncr_no: `NCR-${String(n).padStart(3, "0")}`,
@@ -408,7 +436,7 @@ function Ncrs({ projectId }: { projectId: string }) {
       toast.error(error.message);
       return;
     }
-    await supabase.from("notifications").insert({
+    const { error: noteErr } = await supabase.from("notifications").insert({
       title: `NCR raised${draft.stage_code ? ` on ${draft.stage_code}` : ""}: ${draft.what_wrong.slice(0, 60)}`,
       body: `Correction: ${draft.correction || "to agree"} · close before the next hold point on this area.`,
       category: "Site plan",
@@ -417,6 +445,8 @@ function Ncrs({ projectId }: { projectId: string }) {
       project_id: projectId,
       sender_id: user?.id ?? null,
     });
+    if (noteErr) toast.error(`NCR saved, but the team alert failed: ${noteErr.message}`);
+    else toast.success(`NCR-${String(n).padStart(3, "0")} raised`);
     setDraft({
       stage_code: "",
       location: "",

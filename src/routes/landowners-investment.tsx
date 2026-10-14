@@ -130,7 +130,9 @@ function Page() {
   });
   const liability = useOwnerLiability(activeId);
   const charges = chargesQuery.data ?? [];
-  const statutoryTotal = charges.reduce((s, c) => s + num(c.amount), 0);
+  const statutoryPaid = charges
+    .filter((c) => String(c.status) === "paid")
+    .reduce((s, c) => s + num(c.amount), 0);
 
   const save = useMutation({
     mutationFn: async (next: Owner[]) => {
@@ -161,13 +163,26 @@ function Page() {
     onError: (e: unknown) => setStatus(e instanceof Error ? e.message : "Could not save"),
   });
 
-  const budget = num(project?.target_budget);
   const totals = useMemo(() => {
     const share = rows.reduce((s, o) => s + num(o.share_pct), 0);
     const invested = rows.reduce((s, o) => s + num(o.invested), 0);
-    const paid = rows.reduce((s, o) => s + num(o.paid), 0);
-    return { share, invested, paid, outstanding: Math.max(budget - paid, 0) };
-  }, [rows, budget]);
+    return { share, invested };
+  }, [rows]);
+  // Owner money has one source of truth: BOQ-based liability and Capital Ledger receipts.
+  const funding = useMemo(() => {
+    const list = liability.data?.list ?? [];
+    const total = list.reduce((s, l) => s + l.total, 0);
+    const received = list.reduce((s, l) => s + l.received, 0);
+    return { total, received, balance: Math.max(total - received, 0) };
+  }, [liability.data]);
+  const liabilityOf = (name: unknown) =>
+    liability.data?.list.find(
+      (l) =>
+        l.name.toLowerCase() ===
+        String(name ?? "")
+          .trim()
+          .toLowerCase(),
+    );
 
   const update = (i: number, patch: Partial<Owner>) => {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -181,8 +196,10 @@ function Page() {
         Role: o.role ?? "",
         Contact: o.contact ?? "",
         "Share %": num(o.share_pct),
-        "Investment committed": num(o.invested),
-        "Amount paid": num(o.paid),
+        "Commitment note ₹": num(o.invested),
+        "Liability (BOQ)": liabilityOf(o.name)?.total ?? 0,
+        "Received (Capital Ledger)": liabilityOf(o.name)?.received ?? 0,
+        "Balance to fund": liabilityOf(o.name)?.balance ?? 0,
         "Assigned units": o.units ?? "",
         Notes: o.notes ?? "",
       })),
@@ -201,7 +218,6 @@ function Page() {
         Contact: "98xxxxxxx",
         "Share %": 30,
         "Investment committed": 5000000,
-        "Amount paid": 2500000,
         "Assigned units": "Flat 302, 304",
         Notes: "Land sharing agreement",
       },
@@ -225,7 +241,8 @@ function Page() {
           role: String(r["Role"] ?? r["role"] ?? "Land Holder"),
           contact: String(r["Contact"] ?? r["contact"] ?? ""),
           share_pct: num(r["Share %"] ?? r["share_pct"]),
-          invested: num(r["Investment committed"] ?? r["invested"]),
+          invested: num(r["Investment committed"] ?? r["Commitment note ₹"] ?? r["invested"]),
+          // Payments are recorded in the Capital Ledger; an imported paid column is kept as-is.
           paid: num(r["Amount paid"] ?? r["paid"]),
           units: String(r["Assigned units"] ?? r["units"] ?? ""),
           notes: String(r["Notes"] ?? r["notes"] ?? ""),
@@ -252,7 +269,8 @@ function Page() {
             </p>
             <h1 className="text-2xl font-bold text-slate-900">Landowners & Investment Hub</h1>
             <p className="text-sm text-slate-500">
-              Owner scope, share, investment committed, payments received and outstanding funding.
+              Owner scope and share. Liability comes from the BOQ; money received comes from the
+              Capital Ledger.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -343,22 +361,31 @@ function Page() {
             </select>
             <p className="mt-3 text-sm text-slate-500">{project?.location || "—"}</p>
             <p className="mt-1 text-xs text-slate-400">
-              Statutory & common charges recorded: {cr(statutoryTotal)}
+              Statutory charges paid: {cr(statutoryPaid)} — budgeted in the BOQ Approvals package;
+              Common &amp; Statutory Expenses records what has been paid against it.
             </p>
           </div>
           <div className="lg:col-span-9 grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: "Project budget", value: cr(budget), tone: "text-slate-900" },
+              {
+                label: "Total liability (BOQ)",
+                value: liability.isLoading ? "…" : cr(funding.total),
+                tone: "text-slate-900",
+              },
               {
                 label: "Share allocated",
                 value: `${totals.share.toFixed(1)}%`,
                 tone: shareWarning ? "text-rose-600" : "text-emerald-600",
               },
-              { label: "Investment committed", value: cr(totals.invested), tone: "text-slate-900" },
               {
-                label: "Paid / outstanding",
-                value: `${cr(totals.paid)} · ${cr(totals.outstanding)}`,
-                tone: "text-slate-900",
+                label: "Received (Capital Ledger)",
+                value: liability.isLoading ? "…" : cr(funding.received),
+                tone: "text-emerald-700",
+              },
+              {
+                label: "Balance to fund",
+                value: liability.isLoading ? "…" : cr(funding.balance),
+                tone: funding.balance > 0 ? "text-rose-600" : "text-slate-900",
               },
             ].map((c) => (
               <div
@@ -404,13 +431,7 @@ function Page() {
             <div className="divide-y divide-slate-200">
               {rows.map((o, i) => {
                 const share = num(o.share_pct);
-                const li = liability.data?.list.find(
-                  (l) =>
-                    l.name.toLowerCase() ===
-                    String(o.name ?? "")
-                      .trim()
-                      .toLowerCase(),
-                );
+                const li = liabilityOf(o.name);
                 return (
                   <div key={i} className="p-4 space-y-3">
                     <div className="flex items-center gap-3">
@@ -463,17 +484,19 @@ function Page() {
                         disabled={!canEdit}
                       />
                       <Field
-                        label="Committed ₹"
+                        label="Commitment note ₹"
                         value={String(o.invested ?? "")}
                         onChange={(v) => update(i, { invested: v })}
                         disabled={!canEdit}
                       />
-                      <Field
-                        label="Paid ₹"
-                        value={String(o.paid ?? "")}
-                        onChange={(v) => update(i, { paid: v })}
-                        disabled={!canEdit}
-                      />
+                      <label className="block" title="Record payments in the Capital Ledger">
+                        <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                          Paid ₹ (ledger)
+                        </span>
+                        <span className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-700">
+                          {li ? inr(li.received) : "—"}
+                        </span>
+                      </label>
                       <Field
                         label="Assigned units"
                         value={String(o.units ?? "")}
