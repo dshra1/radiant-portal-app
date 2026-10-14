@@ -22,6 +22,16 @@ const cloudflareWorker = process.env["WORKERS_CI"]
               SUPABASE_PUBLISHABLE_KEY: "sb_publishable_PNSCAjWJSk5pqRaY7D0imQ_dYwhuG27",
               SUPABASE_PROJECT_ID: "kimwplrodbviijzaoypl",
             },
+            // Branch previews (`wrangler preview`) refuse to run without this block.
+            // There is no separate test database, so previews use the live one:
+            // anything saved in a preview is saved for real.
+            previews: {
+              vars: {
+                SUPABASE_URL: "https://kimwplrodbviijzaoypl.supabase.co",
+                SUPABASE_PUBLISHABLE_KEY: "sb_publishable_PNSCAjWJSk5pqRaY7D0imQ_dYwhuG27",
+                SUPABASE_PROJECT_ID: "kimwplrodbviijzaoypl",
+              },
+            },
           },
         },
       },
