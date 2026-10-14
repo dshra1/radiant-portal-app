@@ -365,3 +365,43 @@ export async function importDrawings(projectId: string, files: File[], log: Log)
   }
   log(`Drawings: ${n} PDF${n === 1 ? "" : "s"} in the drawing register.`);
 }
+
+/**
+ * Quality registers from the control workbook: the checklist log (one ITP check per
+ * stage, planned date) and the cube-test register (every pour). Results entered on
+ * site are kept: only the planned columns are written on a re-import.
+ */
+export async function importQuality(projectId: string, control: ControlData, log: Log) {
+  const checks = control.checklist.map((c) => ({
+    project_id: projectId,
+    stage_code: c.stage,
+    floor: c.floor,
+    itp_id: c.itp,
+    check_name: c.check,
+    point: c.point,
+    planned_date: c.planned,
+  }));
+  for (const part of chunks(checks)) {
+    const up = await supabase
+      .from("quality_checks")
+      .upsert(part, { onConflict: "project_id,stage_code,itp_id" });
+    if (up.error) throw new Error(`Checklist: ${up.error.message}`);
+  }
+  const cubes = control.cubes.map((c) => ({
+    project_id: projectId,
+    stage_code: c.stage,
+    pour: c.pour,
+    grade: c.grade,
+    volume_m3: c.volume,
+    planned_pour_date: c.planned,
+    samples: c.samples,
+    cubes: c.cubes,
+  }));
+  for (const part of chunks(cubes)) {
+    const up = await supabase
+      .from("cube_tests")
+      .upsert(part, { onConflict: "project_id,stage_code,pour" });
+    if (up.error) throw new Error(`Cube register: ${up.error.message}`);
+  }
+  log(`Quality: ${checks.length} checklist lines and ${cubes.length} pours in the cube register.`);
+}

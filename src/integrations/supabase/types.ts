@@ -1799,6 +1799,186 @@ export type Database = {
         }
         Relationships: []
       }
+      quality_checks: {
+        Row: {
+          id: string
+          project_id: string
+          stage_code: string
+          floor: string
+          itp_id: string
+          check_name: string
+          point: string
+          planned_date: string | null
+          inspected_on: string | null
+          result: string
+          inspector: string
+          signed_by: string
+          ncr_no: string
+          remarks: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          stage_code: string
+          floor?: string
+          itp_id: string
+          check_name?: string
+          point?: string
+          planned_date?: string | null
+          inspected_on?: string | null
+          result?: string
+          inspector?: string
+          signed_by?: string
+          ncr_no?: string
+          remarks?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          stage_code?: string
+          floor?: string
+          itp_id?: string
+          check_name?: string
+          point?: string
+          planned_date?: string | null
+          inspected_on?: string | null
+          result?: string
+          inspector?: string
+          signed_by?: string
+          ncr_no?: string
+          remarks?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cube_tests: {
+        Row: {
+          id: string
+          project_id: string
+          stage_code: string
+          pour: string
+          grade: string
+          volume_m3: number
+          planned_pour_date: string | null
+          actual_pour_date: string | null
+          samples: number
+          cubes: number
+          mean_7: number | null
+          cube_28_1: number | null
+          cube_28_2: number | null
+          cube_28_3: number | null
+          lab: string
+          remarks: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          stage_code: string
+          pour: string
+          grade?: string
+          volume_m3?: number
+          planned_pour_date?: string | null
+          actual_pour_date?: string | null
+          samples?: number
+          cubes?: number
+          mean_7?: number | null
+          cube_28_1?: number | null
+          cube_28_2?: number | null
+          cube_28_3?: number | null
+          lab?: string
+          remarks?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          stage_code?: string
+          pour?: string
+          grade?: string
+          volume_m3?: number
+          planned_pour_date?: string | null
+          actual_pour_date?: string | null
+          samples?: number
+          cubes?: number
+          mean_7?: number | null
+          cube_28_1?: number | null
+          cube_28_2?: number | null
+          cube_28_3?: number | null
+          lab?: string
+          remarks?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ncrs: {
+        Row: {
+          id: string
+          project_id: string
+          ncr_no: string
+          raised_on: string
+          stage_code: string
+          location: string
+          itp_id: string
+          what_wrong: string
+          cause: string
+          correction: string
+          raised_by: string
+          target_date: string | null
+          closed_on: string | null
+          status: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          ncr_no: string
+          raised_on?: string
+          stage_code?: string
+          location?: string
+          itp_id?: string
+          what_wrong?: string
+          cause?: string
+          correction?: string
+          raised_by?: string
+          target_date?: string | null
+          closed_on?: string | null
+          status?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          ncr_no?: string
+          raised_on?: string
+          stage_code?: string
+          location?: string
+          itp_id?: string
+          what_wrong?: string
+          cause?: string
+          correction?: string
+          raised_by?: string
+          target_date?: string | null
+          closed_on?: string | null
+          status?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stock_items: {
         Row: {
           first_needed: string | null

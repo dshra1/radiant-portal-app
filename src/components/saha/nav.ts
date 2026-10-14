@@ -120,7 +120,10 @@ export const navGroups: NavGroup[] = [
   {
     id: "qa",
     label: "QA & Inspect",
-    items: [{ to: "/qa-inspection", label: "QA Inspection", icon: ClipboardCheck }],
+    items: [
+      { to: "/qa-inspection", label: "QA Inspection", icon: ClipboardCheck },
+      { to: "/quality", label: "Quality Control", icon: ClipboardCheck },
+    ],
   },
 ];
 

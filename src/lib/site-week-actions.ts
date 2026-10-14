@@ -203,6 +203,13 @@ export async function recordCheck(
     .select("id")
     .single();
   if (ins.error) throw ins.error;
+  // The checklist log line for this stage and check.
+  await supabase
+    .from("quality_checks")
+    .update({ inspected_on: on, result, inspector, remarks: notes })
+    .eq("project_id", projectId)
+    .eq("stage_code", stage.code)
+    .eq("itp_id", check.id);
   const checks: Record<string, CheckResult> = { ...(stage.evidence.checks ?? {}) };
   checks[check.id] = { result, by: inspector, on, inspectionId: ins.data.id };
   const up = await supabase

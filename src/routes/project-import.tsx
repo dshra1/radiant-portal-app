@@ -38,6 +38,7 @@ import {
   importTenders,
   importDrawings,
   drawingFileName,
+  importQuality,
 } from "@/lib/project-import";
 
 export const Route = createFileRoute("/project-import")({
@@ -228,6 +229,8 @@ function Page() {
       await step("Programme", () => importProgramme(project.id, parsed.control!, say));
     if (pick.dates && pick.programme && parsed.control)
       await step("Project dates", () => importProjectDates(project.id, parsed.control!, say));
+    if (pick.programme && parsed.control)
+      await step("Quality", () => importQuality(project.id, parsed.control!, say));
     if (pick.materials && parsed.control)
       await step("Materials", () => importMaterials(project.id, parsed.control!, say));
     if (pick.tenders && parsed.tenders)

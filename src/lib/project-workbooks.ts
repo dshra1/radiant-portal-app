@@ -142,12 +142,33 @@ export type QuotePackage = {
   }[];
 };
 
+export type ChecklistRow = {
+  stage: string;
+  floor: string;
+  itp: string;
+  check: string;
+  point: string;
+  planned: string | null;
+};
+
+export type CubeRow = {
+  stage: string;
+  pour: string;
+  grade: string;
+  volume: number;
+  planned: string | null;
+  samples: number;
+  cubes: number;
+};
+
 export type ControlData = {
   startDate: string | null;
   completion: string | null;
   stages: ProgrammeStage[];
   materials: MaterialLine[];
   notes: ControlNotes;
+  checklist: ChecklistRow[];
+  cubes: CubeRow[];
 };
 
 // ---------- small helpers ----------
@@ -805,7 +826,51 @@ export function parseControl(wb: XLSX.WorkBook): ControlData {
     const line = st?.materials.find((x) => x.material === m.material && x.unit === m.unit);
     if (line) line.orderBy = m.orderBy;
   }
-  return { startDate, completion, stages, materials, notes };
+  // Checklist log: one line per stage per ITP check (planned dates; results are entered in the app).
+  const checklist: ChecklistRow[] = [];
+  const cl = rows(wb.Sheets["Checklist log"]);
+  const ch = findHeader(cl, ["stage", "floor", "itp", "check"]);
+  if (ch >= 0) {
+    const col = columns(cl[ch] ?? []);
+    for (let i = ch + 1; i < cl.length; i++) {
+      const r = cl[i] ?? [];
+      const stage = str(at(r, col("stage")));
+      const itp = str(at(r, col("itp")));
+      if (!stage || !itp) continue;
+      const floorRaw = at(r, col("floor"));
+      checklist.push({
+        stage,
+        floor: typeof floorRaw === "number" ? (floorRaw ? `Floor ${floorRaw}` : "") : str(floorRaw),
+        itp,
+        check: str(at(r, col("check"))),
+        point: str(at(r, col("point"))).toUpperCase(),
+        planned: isoDate(at(r, col("planned"))),
+      });
+    }
+  }
+  // Cube-test register: every RMC pour with IS 456 samples.
+  const cubes: CubeRow[] = [];
+  const ct = rows(wb.Sheets["Cube tests"]);
+  const cth = findHeader(ct, ["stage", "pour", "grade"]);
+  if (cth >= 0) {
+    const col = columns(ct[cth] ?? []);
+    for (let i = cth + 1; i < ct.length; i++) {
+      const r = ct[i] ?? [];
+      const stage = str(at(r, col("stage")));
+      const pour = str(at(r, col("pour")));
+      if (!stage || !pour) continue;
+      cubes.push({
+        stage,
+        pour,
+        grade: str(at(r, col("grade"))) || "M30",
+        volume: num(at(r, col("volume"))),
+        planned: isoDate(at(r, col("planned"))),
+        samples: num(at(r, col("samples"))),
+        cubes: num(at(r, col("cubes"))),
+      });
+    }
+  }
+  return { startDate, completion, stages, materials, notes, checklist, cubes };
 }
 
 /** Which "Flow of events" sections (1–7) give the directions for a stage code. */
