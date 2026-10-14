@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { inrCompact } from "@/data/saha";
 import { useSessionUser } from "@/lib/access";
+import { useActiveProject } from "@/hooks/useActiveProject";
+import { ProgrammeFlow } from "@/components/saha/ProgrammeFlow";
 
 export const Route = createFileRoute("/projects-setup")({
   head: () => ({
@@ -43,7 +45,11 @@ function Page() {
     },
   });
 
-  const project = projects.find((item) => item.id === activeProjectId) ?? projects[0];
+  const globalProject = useActiveProject();
+  const project =
+    projects.find((item) => item.id === activeProjectId) ??
+    projects.find((item) => item.id === globalProject.id) ??
+    projects[0];
 
   useEffect(() => {
     if (!project) return;
@@ -188,6 +194,16 @@ function Page() {
 </div>
 </div>
 </div>
+
+{project ? (
+<section className="mb-space-2xl flex flex-col gap-3">
+<div>
+<h2 className="font-headline-sm text-headline-sm text-on-surface">Construction flow · material and directions for each step</h2>
+<p className="font-body-sm text-body-sm text-on-surface-variant">From the PMC Construction Control workbook: every stage in order, what it needs, how to do it and what must be signed before the next step.</p>
+</div>
+<ProgrammeFlow projectId={project.id} />
+</section>
+) : null}
 
 <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start mb-space-2xl">
 

@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
+import { ProgrammeFlow } from "@/components/saha/ProgrammeFlow";
+import { plannedPctToday } from "@/lib/programme-progress";
 
 export const Route = createFileRoute("/site-execution")({
   head: () => ({
@@ -43,26 +45,11 @@ type Stage = {
   actual_end: string | null;
   status: string;
   notes: string;
+  duration_days?: number;
 };
 
 type Draft = Omit<Stage, "id">;
 
-const DEFAULT_STAGES = [
-  "Site mobilisation",
-  "Excavation & earthwork",
-  "Foundation & footings",
-  "Cellar / retaining walls",
-  "RCC superstructure",
-  "Blockwork",
-  "Plastering",
-  "Plumbing rough-in",
-  "Electrical rough-in",
-  "Flooring & tiling",
-  "Doors & windows",
-  "Painting",
-  "External development",
-  "Handover",
-];
 
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
@@ -100,7 +87,7 @@ function Page() {
       const { data, error } = await supabase
         .from("site_stages")
         .select(
-          "id,name,sort,planned_pct,actual_pct,planned_start,planned_end,actual_start,actual_end,status,notes",
+          "id,name,sort,planned_pct,actual_pct,planned_start,planned_end,actual_start,actual_end,status,notes,duration_days",
         )
         .eq("project_id", project.id)
         .order("sort", { ascending: true });
@@ -108,8 +95,11 @@ function Page() {
       return (data ?? []).map((s) => ({
         ...s,
         sort: num(s.sort),
-        planned_pct: num(s.planned_pct),
+        // Planned % follows the programme dates whenever the stage has them.
+        planned_pct:
+          s.planned_start && s.planned_end ? plannedPctToday(s) : num(s.planned_pct),
         actual_pct: num(s.actual_pct),
+        duration_days: num(s.duration_days),
       })) as Stage[];
     },
   });
@@ -154,7 +144,10 @@ function Page() {
   });
 
   const stages = stagesQuery.data ?? [];
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["site_stages", project.id] });
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["site_stages", project.id] });
+    void queryClient.invalidateQueries({ queryKey: ["programme_flow", project.id] });
+  };
 
   const save = useMutation({
     mutationFn: async (p: { draft: Draft; id: string | null }) => {
@@ -171,24 +164,6 @@ function Page() {
       toast.success("Stage saved");
       setDraft(null);
       setEditingId(null);
-      refresh();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const seed = useMutation({
-    mutationFn: async () => {
-      const rows = DEFAULT_STAGES.map((name, i) => ({
-        project_id: project.id,
-        name,
-        sort: i + 1,
-        created_by: user?.id ?? null,
-      }));
-      const { error } = await supabase.from("site_stages").insert(rows);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Standard construction stages added");
       refresh();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -216,11 +191,13 @@ function Page() {
   });
 
   const totals = useMemo(() => {
-    const plannedAvg = stages.length
-      ? stages.reduce((s, x) => s + x.planned_pct, 0) / stages.length
+    // Weighted by each stage's duration, so a 2-day task does not count like a 60-day one.
+    const w = stages.reduce((s, x) => s + Math.max(1, num(x.duration_days) || 1), 0);
+    const plannedAvg = w
+      ? stages.reduce((s, x) => s + Math.max(1, num(x.duration_days) || 1) * x.planned_pct, 0) / w
       : 0;
-    const actualAvg = stages.length
-      ? stages.reduce((s, x) => s + x.actual_pct, 0) / stages.length
+    const actualAvg = w
+      ? stages.reduce((s, x) => s + Math.max(1, num(x.duration_days) || 1) * x.actual_pct, 0) / w
       : 0;
     const manDays = (labour.data ?? []).reduce(
       (s, l) => s + num(l.headcount) * (num(l.hours) / 8),
@@ -422,17 +399,23 @@ function Page() {
           </section>
         ) : null}
 
+        {project.id ? (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-lg font-bold">Programme and flow</h2>
+            <ProgrammeFlow projectId={project.id} />
+          </section>
+        ) : null}
+
         <section className="rounded-2xl border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border p-4">
-            <h2 className="text-lg font-bold">Stage-wise progress</h2>
+            <h2 className="text-lg font-bold">Update progress, stage by stage</h2>
             {stages.length === 0 && project.id ? (
-              <button
-                onClick={() => seed.mutate()}
-                disabled={seed.isPending}
+              <Link
+                to="/project-import"
                 className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
               >
-                {seed.isPending ? "Adding…" : "Add standard stages"}
-              </button>
+                Import the programme
+              </Link>
             ) : null}
           </div>
           <div className="divide-y divide-border">
@@ -441,7 +424,7 @@ function Page() {
             ) : null}
             {!stagesQuery.isPending && stages.length === 0 ? (
               <p className="p-6 text-center text-sm text-muted-foreground">
-                No stages set up yet. Use “Add standard stages” for the usual construction sequence.
+                No stages yet. Import the Construction Control workbook to load the project's programme.
               </p>
             ) : null}
             {stages.map((s) => (

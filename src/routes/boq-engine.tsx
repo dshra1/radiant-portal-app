@@ -22,6 +22,9 @@ import {
   type BrandSuggestion,
 } from "@/lib/boq.functions";
 import { brandLogoUrl } from "@/lib/brand-images";
+import { boqTotals, crore } from "@/lib/boq-totals";
+import { BoqPackageSummary } from "@/components/saha/BoqPackageSummary";
+import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 import { inr, inrCompact, num } from "@/data/saha";
 import {
   Download,
@@ -99,6 +102,10 @@ type BoqRow = {
   image_url?: string | null;
   image_source?: string | null;
   work_scope?: string | null;
+  package?: string | null;
+  package_no?: number | null;
+  line_group?: string | null;
+  gst_pct?: number | string | null;
 };
 
 /** "common" = shared building-wide work, "individual" = per flat / unit work. */
@@ -381,7 +388,9 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
-        .select("id,name,location,type,target_budget,total_built_up_sft")
+        .select(
+          "id,name,location,type,target_budget,total_built_up_sft,saleable_sft,contingency_pct,estimate_amount",
+        )
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -389,7 +398,9 @@ function Page() {
   });
 
   const projects = projectsQuery.data ?? [];
-  const activeId = projectId || projects[0]?.id || "";
+  const globalProject = useActiveProject();
+  const setGlobalProject = useActiveProjectSetter();
+  const activeId = projectId || globalProject.id || projects[0]?.id || "";
   const activeProject = projects.find((p) => p.id === activeId);
   const pendingRequests = useChangeRequests(activeId, "pending");
   const pendingCount = (pendingRequests.data ?? []).length;
@@ -820,8 +831,16 @@ function Page() {
   const commonTotal = commonItems.reduce((s, it) => s + lineTotal(it), 0);
   const individualTotal = individualItems.reduce((s, it) => s + lineTotal(it), 0);
   const budget = toNum(activeProject?.target_budget);
-  const sellableSft = toNum(activeProject?.total_built_up_sft);
-  const perSft = sellableSft > 0 ? grandTotal / sellableSft : 0;
+  const sellableSft =
+    toNum(activeProject?.saleable_sft) || toNum(activeProject?.total_built_up_sft);
+  const contingencyPct =
+    activeProject?.contingency_pct === null || activeProject?.contingency_pct === undefined
+      ? 5
+      : toNum(activeProject.contingency_pct);
+  const totals = boqTotals(items, contingencyPct);
+  const projectCost = totals.project.incl;
+  const perSft = sellableSft > 0 ? projectCost / sellableSft : 0;
+  const fromReport = items.some((it) => it.source === "pmc-workbook");
 
   const exportCsv = (scope: "view" | "all") => {
     const rows = scope === "view" ? visible : items;
@@ -898,6 +917,7 @@ function Page() {
               value={activeId}
               onChange={(e) => {
                 setProjectId(e.target.value);
+                setGlobalProject(e.target.value);
                 setStage("ALL");
               }}
               className="h-9 rounded border border-input bg-background px-2 text-sm"
@@ -911,7 +931,12 @@ function Page() {
             </select>
 
             <button
-              disabled={!activeId || generateMutation.isPending}
+              disabled={!activeId || generateMutation.isPending || fromReport}
+              title={
+                fromReport
+                  ? "This project's BOQ comes from the PMC report workbooks. Re-import the workbooks to change it."
+                  : undefined
+              }
               onClick={() => {
                 setStatus("Generating full stage-wise estimate with Saha AI…");
                 generateMutation.mutate();
@@ -919,7 +944,11 @@ function Page() {
               className="inline-flex h-9 items-center gap-2 rounded bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
             >
               <Sparkles className="size-4" />
-              {generateMutation.isPending ? "Generating…" : "Generate AI estimate"}
+              {generateMutation.isPending
+                ? "Generating…"
+                : fromReport
+                  ? "Report BOQ loaded"
+                  : "Generate AI estimate"}
             </button>
 
             <button
@@ -1045,26 +1074,40 @@ function Page() {
             <div className="metric-figure mt-1">{num(items.length)}</div>
           </div>
           <div className={tile}>
-            <span className="label-caps text-muted-foreground">Estimated project cost</span>
-            <div className="metric-figure mt-1 text-primary">{inrCompact(grandTotal)}</div>
+            <span className="label-caps text-muted-foreground">
+              Project cost (incl. GST + {contingencyPct}%)
+            </span>
+            <div className="metric-figure mt-1 text-primary">{crore(projectCost)}</div>
+            <span className="text-[11px] text-muted-foreground">
+              {crore(totals.subtotal.excl)} excl. GST · {crore(totals.subtotal.incl)} incl.
+            </span>
           </div>
           <div className={tile}>
             <span className="label-caps text-muted-foreground">Target budget</span>
-            <div className="metric-figure mt-1">{inrCompact(budget)}</div>
+            <div className="metric-figure mt-1">{budget > 0 ? crore(budget) : "—"}</div>
           </div>
           <div className={tile}>
             <span className="label-caps text-muted-foreground">Variance vs budget</span>
             <div
-              className={`metric-figure mt-1 ${grandTotal > budget && budget > 0 ? "text-destructive" : "text-primary"}`}
+              className={`metric-figure mt-1 ${projectCost > budget && budget > 0 ? "text-destructive" : "text-primary"}`}
             >
-              {budget > 0 ? `${(((grandTotal - budget) / budget) * 100).toFixed(1)}%` : "—"}
+              {budget > 0 ? `${(((projectCost - budget) / budget) * 100).toFixed(1)}%` : "—"}
             </div>
           </div>
           <div className={tile}>
-            <span className="label-caps text-muted-foreground">Cost per sft</span>
+            <span className="label-caps text-muted-foreground">Cost per saleable sft</span>
             <div className="metric-figure mt-1">{perSft > 0 ? inr(Math.round(perSft)) : "—"}</div>
           </div>
         </div>
+
+        {items.length > 0 && (
+          <BoqPackageSummary
+            lines={items}
+            contingencyPct={contingencyPct}
+            saleableSft={sellableSft}
+            budget={budget}
+          />
+        )}
 
         <div className="rounded-xl border border-border bg-card p-3">
           <div className="flex flex-wrap items-center gap-2">

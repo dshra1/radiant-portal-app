@@ -129,6 +129,17 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!project) throw new Error("Project not found");
 
+    // A project whose BOQ came from the PMC report must not get a second, AI-made BOQ on top.
+    const { count: reportLines } = await supabase
+      .from("boq_items")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", data.projectId)
+      .eq("source", "pmc-workbook");
+    if ((reportLines ?? 0) > 0)
+      throw new Error(
+        "This project's BOQ comes from the PMC report workbooks. Re-import the workbooks to change it.",
+      );
+
     const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
 

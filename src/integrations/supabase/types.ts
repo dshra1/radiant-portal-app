@@ -309,6 +309,10 @@ export type Database = {
       }
       boq_items: {
         Row: {
+          package: string
+          package_no: number
+          line_group: string
+          gst_pct: number
           brand: string
           category: string
           created_at: string
@@ -330,6 +334,10 @@ export type Database = {
           work_scope: string
         }
         Insert: {
+          package?: string
+          package_no?: number
+          line_group?: string
+          gst_pct?: number
           brand?: string
           category?: string
           created_at?: string
@@ -351,6 +359,10 @@ export type Database = {
           work_scope?: string
         }
         Update: {
+          package?: string
+          package_no?: number
+          line_group?: string
+          gst_pct?: number
           brand?: string
           category?: string
           created_at?: string
@@ -1406,6 +1418,10 @@ export type Database = {
       }
       site_projects: {
         Row: {
+          saleable_sft: number
+          contingency_pct: number
+          control_notes: Json
+          estimate_amount: number
           bank_account_last4: string
           bank_account_name: string
           bank_ifsc: string
@@ -1467,6 +1483,10 @@ export type Database = {
           working_days_per_week: number
         }
         Insert: {
+          saleable_sft?: number
+          contingency_pct?: number
+          control_notes?: Json
+          estimate_amount?: number
           bank_account_last4?: string
           bank_account_name?: string
           bank_ifsc?: string
@@ -1528,6 +1548,10 @@ export type Database = {
           working_days_per_week?: number
         }
         Update: {
+          saleable_sft?: number
+          contingency_pct?: number
+          control_notes?: Json
+          estimate_amount?: number
           bank_account_last4?: string
           bank_account_name?: string
           bank_ifsc?: string
@@ -1592,6 +1616,16 @@ export type Database = {
       }
       site_stages: {
         Row: {
+          code: string
+          stage_group: string
+          floor: string
+          duration_days: number
+          preds: string[]
+          checks: Json
+          hold_point: boolean
+          materials: Json
+          steel: Json | null
+          directions: Json
           actual_end: string | null
           actual_pct: number
           actual_start: string | null
@@ -1609,6 +1643,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          code?: string
+          stage_group?: string
+          floor?: string
+          duration_days?: number
+          preds?: string[]
+          checks?: Json
+          hold_point?: boolean
+          materials?: Json
+          steel?: Json | null
+          directions?: Json
           actual_end?: string | null
           actual_pct?: number
           actual_start?: string | null
@@ -1626,6 +1670,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          code?: string
+          stage_group?: string
+          floor?: string
+          duration_days?: number
+          preds?: string[]
+          checks?: Json
+          hold_point?: boolean
+          materials?: Json
+          steel?: Json | null
+          directions?: Json
           actual_end?: string | null
           actual_pct?: number
           actual_start?: string | null

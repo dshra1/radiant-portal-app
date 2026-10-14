@@ -18,6 +18,8 @@ export type WorkbookKind =
 
 export type BoqLine = {
   pkg: string;
+  /** Package number as in the report's Summary sheet (1 = Structure …). */
+  pkgNo: number;
   group: string;
   code: string;
   item: string;
@@ -26,8 +28,22 @@ export type BoqLine = {
   unit: string;
   qty: number;
   rate: number;
+  /** GST as a fraction, e.g. 0.18 (0 for approvals and labour contracts). */
   gstPct: number;
   basis: string;
+};
+
+export type BoqPackage = { no: number; sheet: string; title: string };
+
+export type MasterBoq = {
+  lines: BoqLine[];
+  packages: BoqPackage[];
+  /** Contingency as % of the sub-total (5 in the report). */
+  contingencyPct: number;
+  /** Budget incl. GST and the rate and saleable area behind it, from the Summary sheet. */
+  budget: number;
+  budgetRatePerSft: number;
+  saleableSft: number;
 };
 
 export type SplitLine = {
@@ -53,6 +69,44 @@ export type ProgrammeStage = {
   start: string | null;
   finish: string | null;
   preds: string[];
+  /** Inspection checks from the control workbook's checklist log + ITP (H = hold point). */
+  checks: StageCheck[];
+  /** Material needed for this stage (stage ledger), with the order-by date where it is first used. */
+  materials: StageMaterial[];
+  /** Steel order for this stage (bar sizes, order weight, order-by), when it has reinforcement. */
+  steel: StageSteel | null;
+  /** Directions: the "Flow of events" sections that apply to this stage. */
+  directions: { title: string; steps: string[] }[];
+};
+
+export type StageCheck = {
+  id: string;
+  check: string;
+  point: string;
+  criterion?: string;
+  method?: string;
+  by?: string;
+  record?: string;
+  reference?: string;
+};
+
+export type StageMaterial = { material: string; unit: string; qty: number; orderBy: string | null };
+
+export type StageSteel = {
+  orderBy: string | null;
+  totalKg: number;
+  bindingWireKg: number;
+  coverBlocks: number;
+  bars: { dia: number; netKg: number; bars: number; orderKg: number }[];
+};
+
+export type FlowSection = { title: string; range: string; steps: string[] };
+
+/** Project-level notes from the control workbook: flow of events, pre-start list, principles. */
+export type ControlNotes = {
+  flow: FlowSection[];
+  beforeStart: { item: string; neededBy: string | null; owner: string; why: string }[];
+  principles: string[];
 };
 
 export type MaterialLine = {
@@ -93,6 +147,7 @@ export type ControlData = {
   completion: string | null;
   stages: ProgrammeStage[];
   materials: MaterialLine[];
+  notes: ControlNotes;
 };
 
 // ---------- small helpers ----------
@@ -180,13 +235,35 @@ export function detectKind(wb: XLSX.WorkBook, fileName: string): WorkbookKind {
 
 const NON_PACKAGE_SHEETS = new Set(["Summary", "Specifications", "Inputs"]);
 
-export function parseMasterBoq(wb: XLSX.WorkBook): { lines: BoqLine[]; contingency: number } {
+export function parseMasterBoq(wb: XLSX.WorkBook): MasterBoq {
+  // Package titles and numbers from the Summary sheet, in the report's order.
+  const summary = rows(wb.Sheets["Summary"]);
+  const titles: string[] = [];
+  let subtotal = 0;
+  let contingency = 0;
+  let budget = 0;
+  let budgetRatePerSft = 0;
+  for (const r of summary) {
+    if (typeof at(r, 0) === "number" && str(at(r, 1))) titles[num(at(r, 0))] = str(at(r, 1));
+    if (/^sub-total/i.test(str(at(r, 1)))) subtotal = num(at(r, 2));
+    if (/^contingency/i.test(str(at(r, 1)))) contingency = num(at(r, 2));
+    const label = str(at(r, 1));
+    if (/^budget at/i.test(label)) {
+      // "Budget at ₹2,500/sft on saleable area, with GST" | … | total with GST | per sft
+      budget = r.map((v) => (typeof v === "number" ? v : 0)).reduce((m, v) => Math.max(m, v), 0);
+      budgetRatePerSft = num(/₹\s*([\d,]+)\s*\/\s*sft/i.exec(label)?.[1] ?? "0");
+    }
+  }
+
   const lines: BoqLine[] = [];
+  const packages: BoqPackage[] = [];
   for (const sheet of wb.SheetNames) {
     if (NON_PACKAGE_SHEETS.has(sheet)) continue;
     const data = rows(wb.Sheets[sheet]);
     const h = findHeader(data, ["code", "item", "unit", "qty", "rate"]);
     if (h < 0) continue;
+    const no = packages.length + 1;
+    packages.push({ no, sheet, title: titles[no] ?? sheet });
     const col = columns(data[h] ?? []);
     const c = {
       code: col("code"),
@@ -212,8 +289,10 @@ export function parseMasterBoq(wb: XLSX.WorkBook): { lines: BoqLine[]; contingen
         continue;
       }
       if (code === "Code" || !CODE_RE.test(code) || !item) continue;
+      const gstCell = at(r, c.gst);
       lines.push({
         pkg: sheet,
+        pkgNo: no,
         group,
         code,
         item,
@@ -222,21 +301,14 @@ export function parseMasterBoq(wb: XLSX.WorkBook): { lines: BoqLine[]; contingen
         unit: str(at(r, c.unit)),
         qty: num(at(r, c.qty)),
         rate: num(at(r, c.rate)),
-        gstPct: c.gst >= 0 ? num(at(r, c.gst)) : 0.18,
+        gstPct: c.gst >= 0 && gstCell !== null && gstCell !== "" ? num(gstCell) : 0.18,
         basis: str(at(r, c.basis)),
       });
     }
   }
-
-  // Contingency (excl. GST) from the summary sheet, carried as one line.
-  let contingency = 0;
-  for (const r of rows(wb.Sheets["Summary"])) {
-    if (/^contingency/i.test(str(at(r, 1)))) {
-      contingency = num(at(r, 2));
-      break;
-    }
-  }
-  return { lines, contingency };
+  const contingencyPct = subtotal > 0 ? Math.round((contingency / subtotal) * 10000) / 100 : 0;
+  const saleableSft = budgetRatePerSft > 0 ? Math.round((budget / budgetRatePerSft) * 10) / 10 : 0;
+  return { lines, packages, contingencyPct, budget, budgetRatePerSft, saleableSft };
 }
 
 // ---------- common vs individual split ----------
@@ -363,6 +435,11 @@ export type AppBoqRow = {
   notes: string;
   work_scope: "common" | "individual";
   sort_order: number;
+  package: string;
+  package_no: number;
+  line_group: string;
+  /** GST in percent, e.g. 18. */
+  gst_pct: number;
 };
 
 function round(n: number, dp = 2) {
@@ -382,7 +459,7 @@ function round(n: number, dp = 2) {
  * - Lines the split does not cover stay common.
  */
 export function buildBoqRows(
-  master: { lines: BoqLine[]; contingency: number },
+  master: MasterBoq,
   split: SplitLine[] | null,
 ): { rows: AppBoqRow[]; stale: string[]; splitUsed: number } {
   const norm = (t: string) => t.toLowerCase().replace(/\s+/g, " ").trim();
@@ -432,6 +509,10 @@ export function buildBoqRows(
       notes: [l.basis, extraNote].filter(Boolean).join(" · "),
       work_scope: scope,
       sort_order: ++sort,
+      package: l.pkg,
+      package_no: l.pkgNo,
+      line_group: l.group.replace(/^[A-Z]\.\s*/, "").replace(/\s*\(.*$/, ""),
+      gst_pct: round(l.gstPct * 100, 2),
     });
   };
   const childLine = (parent: BoqLine, p: SplitLine): BoqLine => ({
@@ -478,21 +559,6 @@ export function buildBoqRows(
     stale.push(`${p.pkg} ${p.code} (only in the split, not imported)`);
   }
 
-  if (master.contingency > 0) {
-    out.push({
-      item_code: "CONT",
-      stage: "Miscellaneous",
-      category: "Contingency",
-      description: "Contingency on the master BOQ (excl. GST)",
-      unit: "LS",
-      quantity: 1,
-      rate: round(master.contingency, 2),
-      brand: "",
-      notes: "Master BOQ summary",
-      work_scope: "common",
-      sort_order: ++sort,
-    });
-  }
   return { rows: out, stale, splitUsed };
 }
 
@@ -543,9 +609,154 @@ export function parseControl(wb: XLSX.WorkBook): ControlData {
         start: isoDate(at(r, c.start)),
         finish: isoDate(at(r, c.finish)),
         preds: [at(r, c.p1), at(r, c.p2), at(r, c.p3)].map(str).filter(Boolean),
+        checks: [],
+        materials: [],
+        steel: null,
+        directions: [],
       });
     }
   }
+  // Inspection checks per stage (checklist log: stage, ITP id, check, point H/W/R).
+  const log = rows(wb.Sheets["Checklist log"]);
+  const lh = findHeader(log, ["stage", "itp", "check", "point"]);
+  if (lh >= 0) {
+    const col = columns(log[lh] ?? []);
+    const c = { stage: col("stage"), itp: col("itp"), check: col("check"), point: col("point") };
+    const byCode = new Map(stages.map((st) => [st.code, st]));
+    for (let i = lh + 1; i < log.length; i++) {
+      const r = log[i] ?? [];
+      const st = byCode.get(str(at(r, c.stage)));
+      const id = str(at(r, c.itp));
+      if (!st || !id || st.checks.some((x) => x.id === id)) continue;
+      st.checks.push({ id, check: str(at(r, c.check)), point: str(at(r, c.point)).toUpperCase() });
+    }
+  }
+
+  const byCode = new Map(stages.map((st) => [st.code, st]));
+
+  // ITP: criterion, method, who signs and the record, per check id.
+  const itp = rows(wb.Sheets["ITP"]);
+  const ih = findHeader(itp, ["id", "stage group", "check", "acceptance"]);
+  if (ih >= 0) {
+    const col = columns(itp[ih] ?? []);
+    const c = {
+      id: col("id"),
+      criterion: col("acceptance"),
+      method: col("method"),
+      reference: col("reference"),
+      by: col("by"),
+      record: col("record"),
+    };
+    const info = new Map<string, Partial<StageCheck>>();
+    for (let i = ih + 1; i < itp.length; i++) {
+      const r = itp[i] ?? [];
+      const id = str(at(r, c.id));
+      if (!/^Q\d+/.test(id)) continue;
+      info.set(id, {
+        criterion: str(at(r, c.criterion)),
+        method: str(at(r, c.method)),
+        reference: str(at(r, c.reference)),
+        by: str(at(r, c.by)),
+        record: str(at(r, c.record)),
+      });
+    }
+    for (const st of stages)
+      st.checks = st.checks.map((k) => ({ ...k, ...(info.get(k.id) ?? {}) }));
+  }
+
+  // Stage ledger: material quantities per stage.
+  const led = rows(wb.Sheets["Ledger link"]);
+  const lgh = findHeader(led, ["stage", "material", "unit", "qty"]);
+  if (lgh >= 0) {
+    const col = columns(led[lgh] ?? []);
+    const c = {
+      stage: col("stage"),
+      material: col("material"),
+      unit: col("unit"),
+      qty: col("qty"),
+    };
+    for (let i = lgh + 1; i < led.length; i++) {
+      const r = led[i] ?? [];
+      const st = byCode.get(str(at(r, c.stage)));
+      const material = str(at(r, c.material));
+      if (!st || !material) continue;
+      st.materials.push({
+        material,
+        unit: str(at(r, c.unit)),
+        qty: num(at(r, c.qty)),
+        orderBy: null,
+      });
+    }
+  }
+
+  // Steel order schedule per stage.
+  const stl = rows(wb.Sheets["Steel orders"]);
+  const sth = findHeader(stl, ["stage", "description", "stage start", "order by"]);
+  if (sth >= 0) {
+    const head = (stl[sth] ?? []).map((x) => str(x).toLowerCase());
+    const col = columns(stl[sth] ?? []);
+    const dias = [...new Set(head.map((x) => /^(\d+) mm net kg/.exec(x)?.[1]).filter(Boolean))].map(
+      Number,
+    );
+    for (let i = sth + 1; i < stl.length; i++) {
+      const r = stl[i] ?? [];
+      const st = byCode.get(str(at(r, col("stage"))));
+      if (!st) continue;
+      const bars = dias
+        .map((d) => ({
+          dia: d,
+          netKg: num(at(r, col(`${d} mm net kg`))),
+          bars: num(at(r, col(`${d} mm 12 m bars`))),
+          orderKg: num(at(r, col(`${d} mm order kg`))),
+        }))
+        .filter((b) => b.orderKg > 0 || b.netKg > 0);
+      st.steel = {
+        orderBy: isoDate(at(r, col("order by"))),
+        totalKg: num(at(r, col("total order kg"))),
+        bindingWireKg: num(at(r, col("binding wire"))),
+        coverBlocks: num(at(r, col("cover blocks"))),
+        bars,
+      };
+    }
+  }
+
+  // Flow of events (directions), the pre-start list and the construction principles.
+  const notes: ControlNotes = { flow: [], beforeStart: [], principles: [] };
+  for (const r of rows(wb.Sheets["Flow of events"])) {
+    const a = str(at(r, 0));
+    if (/^\d+\s*·/.test(a)) notes.flow.push({ title: a, range: str(at(r, 1)), steps: [] });
+    else if (/^\d+\.\s/.test(a) && notes.flow.length)
+      notes.flow[notes.flow.length - 1]!.steps.push(a);
+  }
+  const bs = rows(wb.Sheets["Before the start"]);
+  const bh = findHeader(bs, ["item", "needed by", "owner"]);
+  if (bh >= 0) {
+    const col = columns(bs[bh] ?? []);
+    for (let i = bh + 1; i < bs.length; i++) {
+      const r = bs[i] ?? [];
+      const item = str(at(r, col("item")));
+      if (!item) continue;
+      notes.beforeStart.push({
+        item,
+        neededBy: isoDate(at(r, col("needed by"))),
+        owner: str(at(r, col("owner"))),
+        why: str(at(r, col("why"))),
+      });
+    }
+  }
+  for (const r of rows(wb.Sheets["Read me"])) {
+    const a = str(at(r, 0));
+    if (/^construction principles/i.test(a)) notes.principles.push(a);
+  }
+  for (const st of stages) {
+    st.directions = flowSectionsFor(st.code)
+      .map((n) =>
+        notes.flow.find((f) => f.title.startsWith(`${n} `) || f.title.startsWith(`${n}·`)),
+      )
+      .filter((f): f is FlowSection => Boolean(f))
+      .map((f) => ({ title: f.title, steps: f.steps }));
+  }
+
   if (!completion)
     completion = stages.reduce<string | null>(
       (m, s) => (s.finish && (!m || s.finish > m) ? s.finish : m),
@@ -588,7 +799,45 @@ export function parseControl(wb: XLSX.WorkBook): ControlData {
       });
     }
   }
-  return { startDate, completion, stages, materials };
+  // Order-by dates on the stage where each material is first used.
+  for (const m of materials) {
+    const st = byCode.get(m.firstStage);
+    const line = st?.materials.find((x) => x.material === m.material && x.unit === m.unit);
+    if (line) line.orderBy = m.orderBy;
+  }
+  return { startDate, completion, stages, materials, notes };
+}
+
+/** Which "Flow of events" sections (1–7) give the directions for a stage code. */
+export function flowSectionsFor(code: string): number[] {
+  const p = code.replace(/\d+$/, "");
+  if (/^F\d/.test(code) || code === "G01") return [1];
+  if (p === "C" || p === "S") return [2];
+  if (p === "M") return [3];
+  if (["EA", "PA", "WP"].includes(p)) return [4, 5];
+  if (
+    [
+      "DF",
+      "PL",
+      "EW",
+      "FC",
+      "PU",
+      "WN",
+      "PR",
+      "TL",
+      "DS",
+      "ES",
+      "PS",
+      "FP",
+      "EF",
+      "PC",
+      "SN",
+    ].includes(p)
+  )
+    return [5];
+  if (/^T\d/.test(code) || ["TR", "FA", "WS", "CO"].includes(p)) return [6];
+  if (["EX", "SW", "LF", "HO"].includes(p)) return [7];
+  return [];
 }
 
 // ---------- BOQ for quotation ----------

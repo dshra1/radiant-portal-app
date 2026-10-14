@@ -14,6 +14,7 @@ import { Shell } from "@/components/saha/Shell";
 import { Section, StatusBadge } from "@/components/saha/ui";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess } from "@/lib/access";
+import { boqTotals } from "@/lib/boq-totals";
 import {
   readWorkbook,
   detectKind,
@@ -22,7 +23,7 @@ import {
   parseControl,
   parseQuotation,
   buildBoqRows,
-  boqTotal,
+  type MasterBoq,
   type WorkbookKind,
   type AppBoqRow,
   type ControlData,
@@ -32,6 +33,7 @@ import {
   importBoq,
   importProgramme,
   importProjectDates,
+  importProjectFigures,
   importMaterials,
   importTenders,
   importDrawings,
@@ -65,7 +67,13 @@ type Loaded = {
 };
 
 type Parsed = {
-  boq: { rows: AppBoqRow[]; stale: string[]; splitUsed: number; hasSplit: boolean } | null;
+  boq: {
+    rows: AppBoqRow[];
+    stale: string[];
+    splitUsed: number;
+    hasSplit: boolean;
+    master: MasterBoq;
+  } | null;
   control: ControlData | null;
   tenders: QuotePackage[] | null;
   pdfs: File[];
@@ -162,22 +170,18 @@ function Page() {
 
     // Two copies of the same PDF (Downloads adds _1): keep one per clean name.
     const uniquePdfs = [...new Map(pdfs.map((p) => [drawingFileName(p.name), p])).values()];
-    const boq = master ? { ...buildBoqRows(master, split), hasSplit: Boolean(split) } : null;
+    const boq = master
+      ? { ...buildBoqRows(master, split), hasSplit: Boolean(split), master }
+      : null;
     setLoaded(found);
     setParsed({ boq, control, tenders, pdfs: uniquePdfs });
     setReading(false);
   }
 
-  const boqSums = useMemo(() => {
-    const rows = parsed.boq?.rows ?? [];
-    const lines = rows.filter((r) => r.item_code !== "CONT");
-    return {
-      all: boqTotal(rows),
-      common: boqTotal(lines.filter((r) => r.work_scope === "common")),
-      individual: boqTotal(lines.filter((r) => r.work_scope === "individual")),
-      contingency: boqTotal(rows.filter((r) => r.item_code === "CONT")),
-    };
-  }, [parsed.boq]);
+  const boqSums = useMemo(
+    () => boqTotals(parsed.boq?.rows ?? [], parsed.boq?.master.contingencyPct || 5),
+    [parsed.boq],
+  );
 
   const tenderSums = useMemo(() => {
     const t = parsed.tenders ?? [];
@@ -214,8 +218,12 @@ function Page() {
         say(`${label} stopped: ${(e as Error).message}`, "err");
       }
     };
-    if (pick.boq && parsed.boq)
+    if (pick.boq && parsed.boq) {
       await step("BOQ", () => importBoq(project.id, parsed.boq!.rows, say));
+      await step("Project figures", () =>
+        importProjectFigures(project.id, parsed.boq!.master, parsed.boq!.rows, say),
+      );
+    }
     if (pick.programme && parsed.control)
       await step("Programme", () => importProgramme(project.id, parsed.control!, say));
     if (pick.dates && pick.programme && parsed.control)
@@ -356,10 +364,21 @@ function Page() {
                 {parsed.boq && (
                   <>
                     <Fact label="Lines" value={parsed.boq.rows.length.toLocaleString("en-IN")} />
-                    <Fact label="Total excl. GST (incl. contingency)" value={inr(boqSums.all)} />
-                    <Fact label="Common works" value={inr(boqSums.common)} />
-                    <Fact label="Individual (all flats)" value={inr(boqSums.individual)} />
-                    <Fact label="Contingency" value={inr(boqSums.contingency)} />
+                    <Fact label="Packages" value={String(parsed.boq.master.packages.length)} />
+                    <Fact label="Sub-total excl. GST" value={inr(boqSums.subtotal.excl)} />
+                    <Fact label="Sub-total incl. GST" value={inr(boqSums.subtotal.incl)} />
+                    <Fact
+                      label={`Project cost incl. GST + ${boqSums.contingencyPct}% contingency`}
+                      value={inr(boqSums.project.incl)}
+                    />
+                    <Fact label="Common works incl. GST" value={inr(boqSums.common.incl)} />
+                    <Fact label="Individual (all flats) incl. GST" value={inr(boqSums.individual.incl)} />
+                    {parsed.boq.master.budget > 0 && (
+                      <Fact
+                        label={`Budget (₹${parsed.boq.master.budgetRatePerSft.toLocaleString("en-IN")}/sft × ${parsed.boq.master.saleableSft.toLocaleString("en-IN")} sft)`}
+                        value={inr(parsed.boq.master.budget)}
+                      />
+                    )}
                     <p className="pt-1 text-xs text-muted-foreground">
                       {parsed.boq.hasSplit
                         ? `${parsed.boq.splitUsed} lines split into common and individual rows.`

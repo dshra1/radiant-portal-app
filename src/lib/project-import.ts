@@ -15,7 +15,9 @@
  *   name, replacing an older upload of the same name.
  */
 import { supabase } from "@/integrations/supabase/client";
-import type { AppBoqRow, ControlData, QuotePackage } from "@/lib/project-workbooks";
+import type { Json } from "@/integrations/supabase/types";
+import type { AppBoqRow, ControlData, MasterBoq, QuotePackage } from "@/lib/project-workbooks";
+import { boqTotals } from "@/lib/boq-totals";
 import { IMPORT_SOURCE, materialCodes } from "@/lib/project-workbooks";
 
 type Log = (line: string) => void;
@@ -70,6 +72,10 @@ export async function importBoq(projectId: string, rows: AppBoqRow[], log: Log) 
         work_scope: r.work_scope,
         sort_order: r.sort_order,
         source: IMPORT_SOURCE,
+        package: r.package,
+        package_no: r.package_no,
+        line_group: r.line_group,
+        gst_pct: r.gst_pct,
       })),
     );
     if (ins.error) throw new Error(`BOQ: ${ins.error.message} (after ${n} rows)`);
@@ -81,11 +87,14 @@ export async function importBoq(projectId: string, rows: AppBoqRow[], log: Log) 
 // ---------- programme ----------
 
 export async function importProgramme(projectId: string, control: ControlData, log: Log) {
-  const existing = await supabase.from("site_stages").select("id,name").eq("project_id", projectId);
+  const existing = await supabase
+    .from("site_stages")
+    .select("id,name,code")
+    .eq("project_id", projectId);
   if (existing.error) throw new Error(`Programme: ${existing.error.message}`);
   const byCode = new Map<string, string>();
   for (const s of existing.data ?? []) {
-    const code = /^([A-Z]{1,3}\d{1,3}) · /.exec(s.name ?? "")?.[1];
+    const code = s.code || /^([A-Z]{1,3}\d{1,3}) · /.exec(s.name ?? "")?.[1];
     if (code) byCode.set(code, s.id);
   }
 
@@ -106,6 +115,16 @@ export async function importProgramme(projectId: string, control: ControlData, l
       planned_start: s.start,
       planned_end: s.finish,
       notes,
+      code: s.code,
+      stage_group: s.group,
+      floor: s.floor,
+      duration_days: s.durationDays,
+      preds: s.preds,
+      checks: s.checks as unknown as Json,
+      hold_point: s.checks.some((c) => c.point === "H"),
+      materials: s.materials as unknown as Json,
+      steel: s.steel as unknown as Json,
+      directions: s.directions as unknown as Json,
     };
     const id = byCode.get(s.code);
     if (id) {
@@ -131,14 +150,44 @@ export async function importProgramme(projectId: string, control: ControlData, l
 }
 
 export async function importProjectDates(projectId: string, control: ControlData, log: Log) {
-  const patch: { start_date?: string; target_handover_date?: string } = {};
+  const patch: { start_date?: string; target_handover_date?: string; control_notes: Json } = {
+    control_notes: control.notes as unknown as Json,
+  };
   if (control.startDate) patch.start_date = control.startDate;
   if (control.completion) patch.target_handover_date = control.completion;
-  if (!Object.keys(patch).length) return;
   const up = await supabase.from("site_projects").update(patch).eq("id", projectId);
   if (up.error) throw new Error(`Project dates: ${up.error.message}`);
   log(
     `Project dates: start ${fmtDate(control.startDate)}, handover ${fmtDate(control.completion)}.`,
+  );
+}
+
+/**
+ * The report's own figures on the project: budget (₹/sft × saleable area), the
+ * saleable area, the contingency % and the estimate (BOQ incl. GST + contingency).
+ */
+export async function importProjectFigures(
+  projectId: string,
+  master: MasterBoq,
+  rows: AppBoqRow[],
+  log: Log,
+) {
+  const totals = boqTotals(rows, master.contingencyPct || 5);
+  const patch: {
+    contingency_pct: number;
+    estimate_amount: number;
+    target_budget?: number;
+    saleable_sft?: number;
+  } = {
+    contingency_pct: master.contingencyPct || 5,
+    estimate_amount: Math.round(totals.project.incl),
+  };
+  if (master.budget > 0) patch.target_budget = Math.round(master.budget);
+  if (master.saleableSft > 0) patch.saleable_sft = master.saleableSft;
+  const up = await supabase.from("site_projects").update(patch).eq("id", projectId);
+  if (up.error) throw new Error(`Project figures: ${up.error.message}`);
+  log(
+    `Project figures: budget ₹${((patch.target_budget ?? 0) / 1e7).toFixed(2)} Cr on ${(patch.saleable_sft ?? 0).toLocaleString("en-IN")} sft saleable, estimate ₹${(patch.estimate_amount / 1e7).toFixed(2)} Cr incl. GST + ${patch.contingency_pct}% contingency.`,
   );
 }
 
