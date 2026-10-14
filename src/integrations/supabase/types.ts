@@ -1718,6 +1718,69 @@ export type Database = {
           },
         ]
       }
+      stage_finance: {
+        Row: {
+          id: string
+          project_id: string
+          stage_code: string
+          budget: Json
+          call_total: number
+          called_at: string | null
+          called_by: string | null
+          actual: Json
+          actual_total: number
+          actual_status: string
+          approved_by: string | null
+          approved_by_name: string
+          approved_at: string | null
+          sent_at: string | null
+          credit_carried: number
+          notes: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          stage_code: string
+          budget?: Json
+          call_total?: number
+          called_at?: string | null
+          called_by?: string | null
+          actual?: Json
+          actual_total?: number
+          actual_status?: string
+          approved_by?: string | null
+          approved_by_name?: string
+          approved_at?: string | null
+          sent_at?: string | null
+          credit_carried?: number
+          notes?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          stage_code?: string
+          budget?: Json
+          call_total?: number
+          called_at?: string | null
+          called_by?: string | null
+          actual?: Json
+          actual_total?: number
+          actual_status?: string
+          approved_by?: string | null
+          approved_by_name?: string
+          approved_at?: string | null
+          sent_at?: string | null
+          credit_carried?: number
+          notes?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stock_items: {
         Row: {
           category: string

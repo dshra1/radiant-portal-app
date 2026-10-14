@@ -60,6 +60,7 @@ import { Route as ScopeBriefRouteImport } from './routes/scope-brief'
 import { Route as SiteExecutionRouteImport } from './routes/site-execution'
 import { Route as SiteMaterialGuideRouteImport } from './routes/site-material-guide'
 import { Route as SiteMediaRouteImport } from './routes/site-media'
+import { Route as StageBudgetRouteImport } from './routes/stage-budget'
 import { Route as StageDrawingsRouteImport } from './routes/stage-drawings'
 import { Route as SystemDirectoryRouteImport } from './routes/system-directory'
 import { Route as TasksRouteImport } from './routes/tasks'
@@ -325,6 +326,11 @@ const SiteMediaRoute = SiteMediaRouteImport.update({
   path: '/site-media',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StageBudgetRoute = StageBudgetRouteImport.update({
+  id: '/stage-budget',
+  path: '/stage-budget',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StageDrawingsRoute = StageDrawingsRouteImport.update({
   id: '/stage-drawings',
   path: '/stage-drawings',
@@ -423,6 +429,7 @@ export interface FileRoutesByFullPath {
   '/site-execution': typeof SiteExecutionRoute
   '/site-material-guide': typeof SiteMaterialGuideRoute
   '/site-media': typeof SiteMediaRoute
+  '/stage-budget': typeof StageBudgetRoute
   '/stage-drawings': typeof StageDrawingsRoute
   '/system-directory': typeof SystemDirectoryRoute
   '/tasks': typeof TasksRoute
@@ -485,6 +492,7 @@ export interface FileRoutesByTo {
   '/site-execution': typeof SiteExecutionRoute
   '/site-material-guide': typeof SiteMaterialGuideRoute
   '/site-media': typeof SiteMediaRoute
+  '/stage-budget': typeof StageBudgetRoute
   '/stage-drawings': typeof StageDrawingsRoute
   '/system-directory': typeof SystemDirectoryRoute
   '/tasks': typeof TasksRoute
@@ -548,6 +556,7 @@ export interface FileRoutesById {
   '/site-execution': typeof SiteExecutionRoute
   '/site-material-guide': typeof SiteMaterialGuideRoute
   '/site-media': typeof SiteMediaRoute
+  '/stage-budget': typeof StageBudgetRoute
   '/stage-drawings': typeof StageDrawingsRoute
   '/system-directory': typeof SystemDirectoryRoute
   '/tasks': typeof TasksRoute
@@ -612,6 +621,7 @@ export interface FileRouteTypes {
     | '/site-execution'
     | '/site-material-guide'
     | '/site-media'
+    | '/stage-budget'
     | '/stage-drawings'
     | '/system-directory'
     | '/tasks'
@@ -674,6 +684,7 @@ export interface FileRouteTypes {
     | '/site-execution'
     | '/site-material-guide'
     | '/site-media'
+    | '/stage-budget'
     | '/stage-drawings'
     | '/system-directory'
     | '/tasks'
@@ -736,6 +747,7 @@ export interface FileRouteTypes {
     | '/site-execution'
     | '/site-material-guide'
     | '/site-media'
+    | '/stage-budget'
     | '/stage-drawings'
     | '/system-directory'
     | '/tasks'
@@ -799,6 +811,7 @@ export interface RootRouteChildren {
   SiteExecutionRoute: typeof SiteExecutionRoute
   SiteMaterialGuideRoute: typeof SiteMaterialGuideRoute
   SiteMediaRoute: typeof SiteMediaRoute
+  StageBudgetRoute: typeof StageBudgetRoute
   StageDrawingsRoute: typeof StageDrawingsRoute
   SystemDirectoryRoute: typeof SystemDirectoryRoute
   TasksRoute: typeof TasksRoute
@@ -1169,6 +1182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SiteMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stage-budget': {
+      id: '/stage-budget'
+      path: '/stage-budget'
+      fullPath: '/stage-budget'
+      preLoaderRoute: typeof StageBudgetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stage-drawings': {
       id: '/stage-drawings'
       path: '/stage-drawings'
@@ -1287,6 +1307,7 @@ const rootRouteChildren: RootRouteChildren = {
   SiteExecutionRoute: SiteExecutionRoute,
   SiteMaterialGuideRoute: SiteMaterialGuideRoute,
   SiteMediaRoute: SiteMediaRoute,
+  StageBudgetRoute: StageBudgetRoute,
   StageDrawingsRoute: StageDrawingsRoute,
   SystemDirectoryRoute: SystemDirectoryRoute,
   TasksRoute: TasksRoute,

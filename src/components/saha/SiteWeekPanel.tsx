@@ -394,6 +394,13 @@ function StageCard({
           {open ? "Hide" : "How to do it"}
         </button>
         <DrawingsLink code={s.code} />
+        <Link
+          to="/stage-budget"
+          search={{ stage: s.code }}
+          className="text-xs font-semibold text-primary underline"
+        >
+          Budget
+        </Link>
         <span className="text-muted-foreground">
           {s.materials.length} materials
           {s.steel ? ` · steel ${(s.steel.totalKg / 1000).toFixed(1)} t` : ""}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, CheckCircle2, FileCheck2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -275,6 +276,24 @@ export function StageCloseout({
 
         <section className="mt-4 rounded-lg border border-border p-3">
           <h3 className="text-sm font-bold">4 · Close and release the next stage</h3>
+          <p className="text-[12px] text-muted-foreground">
+            Then enter the stage's actual cost for approval:{" "}
+            <Link
+              to="/stage-budget"
+              search={{ stage: stage.code }}
+              className="text-primary underline"
+            >
+              Stage Budget
+            </Link>{" "}
+            · drawings:{" "}
+            <Link
+              to="/stage-drawings"
+              search={{ stage: stage.code }}
+              className="text-primary underline"
+            >
+              {stage.code} sheets
+            </Link>
+          </p>
           {gaps.length > 0 ? (
             <ul className="mt-1 list-disc pl-5 text-[13px] text-destructive">
               {gaps.map((g) => (
