@@ -104,7 +104,8 @@ export function sheetsForStage(code: string, floor: string): SheetGroup[] {
   const named = SHEETS.filter(
     (s) => s.file === STRUCT && (codesIn(s.sub).has(k) || storeListFor(s, prefix, bhk)),
   );
-  add("Structure and material (stage sheets)", named);
+  const structural = ["F", "C", "S", "T", "G", "M"].includes(prefix);
+  if (structural) add("Structure and material (stage sheets)", named);
 
   if (["EA", "EW", "ES", "EF"].includes(prefix)) {
     const f = ELEC(bhk);
@@ -146,6 +147,7 @@ export function sheetsForStage(code: string, floor: string): SheetGroup[] {
     add("External plumbing", titled(PLUMB(4), /EXTERNAL PLUMBING/));
   }
   if (["SN", "HO"].includes(prefix)) add("Owners' handover pack", inFile(HANDOVER));
+  if (!structural) add("Store list (material for this floor type)", named);
   return groups;
 }
 
