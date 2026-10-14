@@ -134,7 +134,7 @@ export const roles = [
 export type Role = (typeof roles)[number];
 
 /** Groups each role may see. Admin sees everything. */
-const roleGroups: Record<Role, string[] | "all"> = {
+export const roleGroups: Record<Role, string[] | "all"> = {
   "Admin / Owner": "all",
   "Project Manager (PM)": ["planning", "site", "stock", "accounts", "money", "qa"],
   "Site Engineer": ["site", "qa", "stock"],
@@ -152,7 +152,7 @@ export function isReadOnlyRole(role: string): boolean {
 }
 
 /** Extra always-visible items per role (home + dashboard entry points). */
-const alwaysVisible = ["/", "/manual", "/dashboard", "/messages", "/notifications", "/ai"];
+export const alwaysVisible = ["/", "/manual", "/dashboard", "/messages", "/notifications", "/ai"];
 
 export function navForRole(role: string, isAdmin = false): NavGroup[] {
   const allowed = roleGroups[role as Role] ?? "all";

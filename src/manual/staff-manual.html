@@ -171,7 +171,7 @@ details p{margin-top:8px;color:var(--muted)}
     <div>
       <p class="eyebrow">SAHA Developers · PMC · Staff briefing</p>
       <h1>Saha OS Staff Manual</h1>
-      <p class="lede">How the team runs 77:76 Cyber Enclave in Saha OS. Pick your role below: the briefing, the guided tour, the weekly cycle and the page map all change to show your part of the work. The app is at <span class="mono">radiant-portal-app.dshra1.workers.dev</span>; this manual is also inside it under <b>How to use Saha OS</b>.</p>
+      <p class="lede">How the team runs 77:76 Cyber Enclave in Saha OS. Pick your role below: the briefing, the guided tour, the weekly cycle and the page map all change to show your part of the work. The app is at <span class="mono">radiant-portal-app.dshra1.workers.dev</span>; this manual is also inside it under <b>How to use Saha OS</b>.<span id="syncNote"></span></p>
     </div>
     <div class="facts tnum" aria-label="Project at a glance">
       <div class="fact"><b>Stilt + 5 · 10 flats</b><span>4 × 4BHK (floors 1–2), 6 × 3BHK (3–5)</span></div>
@@ -286,7 +286,7 @@ const GROUPS = [
   ["/drawing-decipher","Drawings & Documents","","Drawing register: upload revisions, open and export.",["Upload a new revision with its sheet number; the old one stays in history."]],
   ["/stage-drawings","Stage Drawings & Photo Check","daily","The sheets for each stage, room by room, and the AI photo check: upload a site photo and it compares it with the drawing.",["Open from a stage's Drawings link.","Take the photo from the same view as the drawing (one wall, square on).","The result is saved as an inspection on that stage (Quality, Inspections tab)."]],
   ["/execution-manual","Execution Manual","","The 14-stage field SOP: hold gates, guardrails, curing.",["Read the section for your stage before starting it."]],
-  ["/access-control","Access & Permissions","admin","Approve new sign-ins and give each person a role.",["New staff sign up, then the admin approves and assigns the role."]],
+  ["/access-control","Access & Permissions","admin","Approve new sign-ins and give each person a role. For a landowner login, choose which landowner it is, so their Owner's Portal shows their share and flats.",["New staff sign up, then the admin approves and assigns the role.","Landowners sign in with their Gmail; approve, tick Landowner / Investor, then pick their name under This login is landowner."]],
   ["/database-backup","Database Backup","admin","Download a full backup of data and files; restore into a new database.",["Take a backup every week."]],
  ]},
  {id:"site", label:"Site supervision", pages:[
@@ -301,7 +301,7 @@ const GROUPS = [
   ["/procurement","Procurement","daily","The buying hub: POs raised, value committed and awaiting approval, drafts, registered vendors, stock items, vendor bills still to pay, value per vendor and links to every buying tool.",["Tap a tile to filter the PO list (approved, awaiting approval, drafts).","Use Raise PO, or the PO link on an order row, so the stage and material are tagged.","Pending vendor payments opens the vendor-wise spend in the Vendor Directory."]],
   ["/purchase-orders","Purchase Orders","daily","PO register: draft, PM approval, approved; printable GST POs.",["Admin or PM approves a PO before it is sent to the vendor."]],
   ["/po-create","Create PO","","Raise a GST PO from the BOQ. Opened from a stage, it fills that stage's materials and steel.",["Use the PO link on an order row so the stage and material are tagged."]],
-  ["/tender-comparison","Tender Comparison","","Vendor quotes line by line, L1/L2/L3, award. 29 RFQ packages from the quotation workbook.",["Get at least three vendor quotes before approval.","Award by item; the award becomes the PO."]],
+  ["/tender-comparison","Tender Comparison","","Department tenders CE-D01 to CE-D25 (one per dealer type, every material down to fixings), vendor quotes line by line, L1/L2/L3, award. Dealers' returned tender files import as quotes, matched by S.No.",["Load / Refresh department tenders once; the Excel tender files go to the dealers.","Import each dealer's filled file in Import PMC Workbooks; it becomes their quote.","Get at least three vendor quotes before approval.","Award by item; the award becomes the PO."]],
   ["/price-intelligence","Price Intelligence & Brands","","Two tabs. Rates vs BOQ: rates from scanned quotes against BOQ rates. Brands: the makes chosen in Brand Preferences against quoted and BOQ rates, brand by brand. Both compare on the same basis (excl. GST, after discount).",["Upload quotes in Price OCR first; they show up here.","Use the Brands tab before you buy a make, to see if you are paying the right price."]],
   ["/vendor-directory","Vendor Directory","","Two tabs. Vendors: by trade with ratings, Excel template and bulk import. Vendor-wise spend: approved PO value, billed and still to pay for each vendor.",["Add a vendor before raising their first PO.","Check Vendor-wise spend before releasing a new order to a vendor with unpaid balance."]],
  ]},
@@ -312,6 +312,7 @@ const GROUPS = [
   ["/financial-forecast","Financial Forecast","","Cash forecast: funds in hand, monthly burn, cost to complete and funding gap, on the report's BOQ.",["Review monthly with the stage budget's cash by month."]],
  ]},
  {id:"money", label:"Money & owners", pages:[
+  ["/owner","Owner's Portal (my flat & costs)","daily","Each landowner's own page. Overview & progress: the building's % done, this week's and next week's stages, stage groups, and their money (common share, own flats, received, balance). Common works: their share of each package. My flat(s): every individual-works item of their flats with a drop-down of options (our specification or an alternative), the cost difference and the choose-by date. Requests: change requests on common works or their flat, with the PMC's reply. Options (admin / PM): the alternatives owners can pick.",["Owners: pick an option for each item, Save choices, then Approve my flat's selections before the choose-by date.","Admin / PM: open My flat(s), View as the owner, then Accept into the plan or Send back with a note. Accepted extras go to that flat's owner's extras and its purchase.","Once accepted, an owner cannot change a choice; they raise a change request instead.","Admin / PM add options in the Options tab (item, flat type, make, rate excl. GST, GST).","A landowner login sees this page only after the admin links it to a landowner in Access & Permissions."]],
   ["/capital-ledger","Capital Ledger","daily","Capital calls and money received per owner, with the liability break-up.",["Record each receipt against the owner and stage reference.","Open an owner in the break-up to see every call and receipt."]],
   ["/landowners-investment","Landowners & Investment","","The four landowners (30/10/10/50%) with liability break-up: common works by share, own flats, unallotted flats, received and balance.",["Shares must total 100%."]],
   ["/flats","Flats & Individual Works","","Flat types and the 10 flats. Each flat's owner and owner's extras. Individual works go to the flat owner; common works to landowners by share.",["Set each flat's owner when allotted.","Add a new flat type when sizes change; copy lines from a similar type."]],
@@ -324,19 +325,32 @@ const GROUPS = [
   ["/quality","Quality & Inspections","daily","Checklist log (166 ITP checks), inspections (severity, IS code, defects, closure; photo checks and close-out checks are saved here too), cube register (43 pours), NCR log and the inspection and test plan.",["Record a site inspection in the Inspections tab and close it once rectified.","Enter the actual pour date for each pour; 7- and 28-day dates follow.","Enter cube results; pass or fail is worked out to IS 456.","Raise an NCR for anything Not OK; close it with the correction done."]],
  ]},
 ];
+// Inside the app, the menu itself decides the page map: pages added, renamed or
+// merged in the app appear here as they are, with the descriptions above where
+// the manual has one.
+let SYNCED=false;
+if(window.SAHA_NAV&&Array.isArray(window.SAHA_NAV.groups)){
+  const DESC={}; GROUPS.forEach(g=>g.pages.forEach(p=>DESC[p[0]]=p));
+  GROUPS.length=0;
+  window.SAHA_NAV.groups.forEach(g=>GROUPS.push({id:g.id,label:g.label,pages:g.pages.map(i=>{const d=DESC[i.to];
+    return [i.to,i.label,i.adminOnly?"admin":(d&&d[2]!=="admin"?d[2]:""),d?d[3]:"Open the page to see what it does; its briefing is being written.",d?d[4]:[]]})}));
+  if(window.SAHA_NAV.sees) Object.keys(window.SAHA_NAV.sees).forEach(k=>SEES[k]=window.SAHA_NAV.sees[k]);
+  if(Array.isArray(window.SAHA_NAV.always)){ALWAYS.length=0;window.SAHA_NAV.always.forEach(x=>ALWAYS.push(x))}
+  SYNCED=true;
+}
 const PAGES = {}; GROUPS.forEach(g=>g.pages.forEach(p=>PAGES[p[0]]={to:p[0],label:p[1],tag:p[2],what:p[3],how:p[4],group:g.id,glabel:g.label}));
-const canSee=(r,to)=>ALWAYS.includes(to)||SEES[r].includes(PAGES[to].group)&&(PAGES[to].tag!=="admin"||r==="admin");
+const canSee=(r,to)=>!!PAGES[to]&&(ALWAYS.includes(to)||SEES[r].includes(PAGES[to].group)&&(PAGES[to].tag!=="admin"||r==="admin"));
 
 const BRIEF = {
  admin:{mission:"You own the project's money and permissions. You approve every bill and BOQ change, approve new staff, and release payment requests and cost statements to the landowners.",
-  pages:["/","/notifications","/bills-payments","/approvals","/stage-budget","/access-control","/capital-ledger","/database-backup"],
-  day:["Action Centre: clear High alerts.","Bills & Payments: approve or reject bills waiting (only you can).","Approvals (BOQ changes): decide pending rate or brand changes.","Access & Permissions: approve anyone who signed up and give them a role."],
+  pages:["/","/notifications","/bills-payments","/approvals","/stage-budget","/owner","/access-control","/capital-ledger","/database-backup"],
+  day:["Action Centre: clear High alerts.","Bills & Payments: approve or reject bills waiting (only you can).","Approvals (BOQ changes): decide pending rate or brand changes.","Access & Permissions: approve anyone who signed up, give them a role, and link a landowner login to its landowner.","Owner's Portal: accept or send back owners' flat choices; reply to their change requests."],
   week:["Stage Budget: check next stages and send payment requests to owners.","Approve finished stages' actual cost and send the cost statement.","Landowners & Investment: check each owner's balance to fund.","Database Backup: download the weekly backup."],
   cannot:[]},
  pm:{mission:"You run the programme. Each week you push the stage tasks, keep orders ahead of their order-by dates, approve POs and pour cards, and make sure every stage closes with photos, checks and approvals.",
-  pages:["/","/site-execution","/tasks","/purchase-orders","/stage-budget","/quality","/project-import","/flats"],
+  pages:["/","/site-execution","/tasks","/purchase-orders","/stage-budget","/quality","/project-import","/flats","/owner"],
   day:["Hub: read the Site Week panel (now, next, late).","Action Centre: orders due, hold points, behind-plan stages.","Purchase Orders: approve POs; Pour Cards: approve pours.","Site Execution: review close-outs waiting."],
-  week:["Push stage tasks for next week (Site plan channel and Task Tracker).","Stage Budget: request money a week before each stage.","Enter actual cost for finished stages and approve it.","Quality: review open NCRs and cube results.","Import PMC Workbooks when the report is revised."],
+  week:["Push stage tasks for next week (Site plan channel and Task Tracker).","Stage Budget: request money a week before each stage.","Enter actual cost for finished stages and approve it.","Quality: review open NCRs and cube results.","Import PMC Workbooks when the report is revised.","Owner's Portal: keep the options list current; accept owners' approved choices before their choose-by dates."],
   cannot:["Approve bills or change an approved bill (admin only).","Decide BOQ rate changes (admin only).","Delete a project."]},
  eng:{mission:"You build the stage to the drawings and prove it. You follow How to do it, check against the drawings, record every check, approve pour cards, keep the cube register and close out stages.",
   pages:["/site-today","/stage-drawings","/pour-cards","/quality","/site-execution","/contractors-labour"],
@@ -358,11 +372,11 @@ const BRIEF = {
   day:["Enter bills with stage code and cost type.","Mark approved bills paid with payment details.","Record owners' receipts in the Capital Ledger."],
   week:["Upload bank statements (Cash Ledger).","Review the forecast and each owner's balance to fund.","Check stage actuals: bills and labour against each stage."],
   cannot:["Approve a bill (admin only).","Change a bill after approval (admin only)."]},
- own:{mission:"You fund your share and see where it goes. Common works are shared by your %; individual works of your own flats are yours. You are asked before each stage and shown the actual cost after it.",
-  pages:["/approvals","/capital-ledger","/landowners-investment","/flats","/cost-dashboard","/quality"],
-  day:["Approvals (Owner decisions): read new payment requests and cost statements.","Approve or reject with a comment."],
-  week:["Capital Ledger: your calls, receipts and balance.","Landowners & Investment: your liability break-up.","Quality: inspections and cube results on your building."],
-  cannot:["Edit anything (view and reply only)."]},
+ own:{mission:"You fund your share and see where it goes. Common works are shared by your %; individual works of your own flats are yours, and you choose their options. You are asked before each stage, shown the actual cost after it, and can follow progress and the stage of work.",
+  pages:["/owner","/approvals","/capital-ledger","/landowners-investment","/cost-dashboard","/quality"],
+  day:["Owner's Portal: progress, this week's stages and anything waiting for you.","Approvals (Owner decisions): read new payment requests and cost statements; approve or reject with a comment."],
+  week:["Owner's Portal, My flat(s): choose options before their choose-by dates and approve your flat's selections.","Owner's Portal, Requests: raise a change on common works or your flat; read the PMC's reply.","Capital Ledger: your calls, receipts and balance.","Quality: inspections and cube results on your building."],
+  cannot:["Edit anything except your own flat choices, approvals and change requests.","Change a choice once the PMC has put it in the plan (raise a change request)."]},
 };
 
 // Tour scenes. frame: desk|phone. side highlight = group label.
@@ -414,6 +428,9 @@ const TOURS = {
   S("Forecast","Funds in hand, burn and funding gap on the report's BOQ.","/financial-forecast","desk",[["stats",[["Cost to complete","₹7.45 Cr"],["Gap","—"]]]],0),
  ],
  own:[
+  S("Your portal","Owner's Portal opens on your building: % done against plan, this week's and next week's stages, and your money: common share, your flats, received and balance.","/owner","desk",[["stats",[["Done","18%"],["Plan","21%"],["Balance","₹3.9 Cr"]]],["list",[["This week: F03 Footings","62%",""],["Next: F06 Sump","starts Thu","w"]]]],0),
+  S("Choose for your flat","My flat(s) lists every individual item of your flat. Pick our specification or an option from the drop-down; the difference and the choose-by date show beside it.","/owner","desk",[["list",[["Floor tiles 800×1600","our spec · —",""],["Main door","Teak option · +₹38,400","w"],["Choose by","12 Mar",""]]],["btns",["Save choices","Approve my flat's selections"]]],1),
+  S("Accepted into the plan","The PMC accepts your approved choices into the plan; extras are added to your flat and bought for it. After that, ask for a change in Requests.","/owner","desk",[["list",[["Main door · Teak","In the plan",""],["Wardrobe shutters","Not possible · see note","r"]]],["btns",["Request a change"]]],1),
   S("Payment requests","Before each stage you get a request with the break-up: your share of common works plus your own flats.","/approvals","desk",[["list",[["Payment request F03, F06","₹18.6 L by 8 Jan","w"],["Your part","₹9.30 L",""]]],["btns",["Approve","Reject"]]],1),
   S("Cost statement","After the stage you get the actual cost, approved by the admin. A shortfall is a top-up; a saving is credit.","/approvals","desk",[["stats",[["Budget","₹18.6 L"],["Actual","₹18.1 L"],["Credit","₹0.5 L"]]]],1),
   S("Your liability","Common works by your share, your flats' individual works, received so far and balance to fund.","/landowners-investment","desk",[["list",[["Common works 50%","₹2.66 Cr",""],["Own flats","set when allotted","w"],["Balance to fund","₹3.91 Cr",""]]]],2),
@@ -447,6 +464,11 @@ const RULES = [
  ["Approve a stage's actual cost and send it",["Y","Y","","","","",""]],
  ["Set flat owners and flat types",["Y","Y","","","","",""]],
  ["Reply to owner requests (approve / reject)",["","","","","","","Y"]],
+ ["Link a landowner login to its landowner",["Y","","","","","",""]],
+ ["Add flat options for owners",["Y","Y","","","","",""]],
+ ["Choose and approve options for own flat",["","","","","","","Y"]],
+ ["Accept owner choices into the plan",["Y","Y","","","","",""]],
+ ["Raise a change request (common or own flat)",["","","","","","","Y"]],
  ["View money and owner pages",["Y","Y","","","","Y","Y"]],
 ];
 
@@ -456,6 +478,7 @@ const FAQ = [
  ["Steel quantities look different from 4 kg/sft.","They come from the drawings and the bar bending schedule in the report (Fe550D, about 93 t net), not from a thumb rule."],
  ["Who pays for a flat's tiles, doors, paint?","Individual works go to that flat's owner. Common works (structure, external walls, windows, lift, common areas, services to the handover point) are the landowners' by share. Flats not yet allotted are carried by the landowners by share."],
  ["The photo check says AI is not configured.","The AI key is set in the app's hosting settings by the admin. Until then, take the photo and record the check by hand."],
+ ["How do owners choose fittings for their flat?","In the Owner's Portal, My flat(s): each individual item has a drop-down with our specification and the options the PMC added. Choose, save, then approve before the choose-by date (3 weeks before the item is needed on site). The PMC accepts it into the plan; the cost difference is added to that flat's owner."],
  ["78:93","78:93 will be built later on the same principles. First the structure of 77:76 is finished."],
  ["Is there a mock-up or demo page?","No. Every page works on live project data. Old demo pages now redirect to the real page."],
 ];
@@ -472,7 +495,7 @@ function renderRoles(){
   const box=$("roles"); box.querySelectorAll(".chip").forEach(c=>c.remove());
   ROLES.forEach(r=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=r.label;b.setAttribute("aria-pressed",r.id===role);b.onclick=()=>{role=r.id;try{localStorage.setItem("saha-manual-role",role)}catch(e){};renderAll()};box.appendChild(b)});
 }
-function pageBtn(to){const p=PAGES[to];return `<button type="button" data-to="${to}">${p.label}</button>`}
+function pageBtn(to){const p=PAGES[to];if(!p)return "";return `<button type="button" data-to="${to}">${p.label}</button>`}
 function renderBrief(){
   const b=BRIEF[role], r=ROLES.find(x=>x.id===role);
   $("who").innerHTML=`<p class="eyebrow">${r.label}</p><h3>Your job in Saha OS</h3><p class="mission">${b.mission}</p>
@@ -493,6 +516,7 @@ function renderMap(){
   document.querySelectorAll("#mapGrid .pg").forEach(b=>b.onclick=()=>openPage(b.dataset.to));
 }
 function openPage(to){
+  if(!PAGES[to]) return;
   const p=PAGES[to], see=canSee(role,to), d=$("detail");
   d.innerHTML=`<button type="button" class="close" id="dclose">Close</button><p class="eyebrow">${p.glabel}</p><h2>${p.label}</h2><p class="mono">${to}</p>
    <p>${see?`<span class="pill">In your menu</span>`:`<span class="pill no">Not in your menu as ${ROLES.find(r=>r.id===role).label}</span>`}</p><p>${p.what}</p>
@@ -570,5 +594,6 @@ window.addEventListener("resize",()=>moveCursor(scenes[cur]));
 $("q").oninput=renderMap; $("onlyMine").onchange=renderMap;
 
 function renderAll(){ renderRoles(); renderBrief(); renderTour(); renderCycle(); renderMap(); renderRules(); }
+if(SYNCED) $("syncNote").innerHTML=" <b>Page map follows the app's live menu</b>, so pages added or changed appear here straight away.";
 renderFaq(); renderAll();
 </script>

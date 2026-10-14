@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Shell } from "@/components/saha/Shell";
+import { alwaysVisible, navGroups, roleGroups } from "@/components/saha/nav";
 import manualHtml from "../manual/staff-manual.html?raw";
 
 export const Route = createFileRoute("/manual")({
@@ -16,6 +17,29 @@ export const Route = createFileRoute("/manual")({
   }),
   component: Page,
 });
+
+/**
+ * The live menu, passed to the manual so its page map, "in your menu" marks and
+ * role briefings always follow the app: a page added, renamed or merged in
+ * nav.ts shows up in the manual without editing the manual.
+ */
+function liveMenu() {
+  const groupIds = navGroups.map((g) => g.id);
+  const sees: Record<string, string[]> = {};
+  for (const [label, id] of Object.entries(ROLE_ID)) {
+    const g = roleGroups[label as keyof typeof roleGroups];
+    sees[id] = g === "all" ? groupIds : [...g];
+  }
+  return {
+    groups: navGroups.map((g) => ({
+      id: g.id,
+      label: g.label.replace(/^Main · /, ""),
+      pages: g.items.map((i) => ({ to: i.to, label: i.label, adminOnly: Boolean(i.adminOnly) })),
+    })),
+    sees,
+    always: alwaysVisible,
+  };
+}
 
 /** App role labels (Shell's "Active role") to the manual's role ids. */
 const ROLE_ID: Record<string, string> = {
@@ -37,7 +61,7 @@ function Page() {
     } catch {
       /* storage blocked: fall back to PM */
     }
-    const boot = `<script>window.SAHA_APP=${JSON.stringify(window.location.origin)};window.SAHA_ROLE=${JSON.stringify(role)};</script>`;
+    const boot = `<script>window.SAHA_APP=${JSON.stringify(window.location.origin)};window.SAHA_ROLE=${JSON.stringify(role)};window.SAHA_NAV=${JSON.stringify(liveMenu()).replace(/</g, "\\u003c")};</script>`;
     setDoc(
       `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${boot}</head><body style="margin:0">${manualHtml}</body></html>`,
     );
