@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Landmark, Plus, Save, Trash2, Upload, Users } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Shell } from "@/components/saha/Shell";
+import { LandownerBreakup } from "@/components/saha/LandownerBreakup";
+import { useOwnerLiability } from "@/lib/owner-liability";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
@@ -126,6 +128,7 @@ function Page() {
       return data ?? [];
     },
   });
+  const liability = useOwnerLiability(activeId);
   const charges = chargesQuery.data ?? [];
   const statutoryTotal = charges.reduce((s, c) => s + num(c.amount), 0);
 
@@ -377,6 +380,8 @@ function Page() {
           </p>
         )}
 
+        <LandownerBreakup projectId={activeId} />
+
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-200 p-4">
             <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
@@ -399,8 +404,13 @@ function Page() {
             <div className="divide-y divide-slate-200">
               {rows.map((o, i) => {
                 const share = num(o.share_pct);
-                const suggested = (budget * share) / 100;
-                const due = Math.max(suggested - num(o.paid), 0);
+                const li = liability.data?.list.find(
+                  (l) =>
+                    l.name.toLowerCase() ===
+                    String(o.name ?? "")
+                      .trim()
+                      .toLowerCase(),
+                );
                 return (
                   <div key={i} className="p-4 space-y-3">
                     <div className="flex items-center gap-3">
@@ -478,12 +488,12 @@ function Page() {
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-2 rounded-lg bg-emerald-50/60 p-3 text-sm">
-                      <Metric label="Suggested share of budget" value={cr(suggested)} />
                       <Metric
-                        label="Common charges share"
-                        value={cr((statutoryTotal * share) / 100)}
+                        label="Liability (common + own flats)"
+                        value={li ? cr(li.total) : "—"}
                       />
-                      <Metric label="Balance due" value={cr(due)} />
+                      <Metric label="Received (ledger)" value={li ? cr(li.received) : "—"} />
+                      <Metric label="Balance to fund" value={li ? cr(li.balance) : "—"} />
                     </div>
                   </div>
                 );

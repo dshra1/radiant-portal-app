@@ -16,7 +16,13 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-import type { AppBoqRow, ControlData, MasterBoq, QuotePackage } from "@/lib/project-workbooks";
+import type {
+  AppBoqRow,
+  ControlData,
+  FlatType,
+  MasterBoq,
+  QuotePackage,
+} from "@/lib/project-workbooks";
 import { boqTotals } from "@/lib/boq-totals";
 import { IMPORT_SOURCE, materialCodes } from "@/lib/project-workbooks";
 
@@ -404,4 +410,53 @@ export async function importQuality(projectId: string, control: ControlData, log
     if (up.error) throw new Error(`Cube register: ${up.error.message}`);
   }
   log(`Quality: ${checks.length} checklist lines and ${cubes.length} pours in the cube register.`);
+}
+
+/**
+ * Flat types and flats from the split workbook. Types are replaced from the
+ * workbook (costs and lines); flats are added if missing, and an existing
+ * flat's owner, extras and notes are never overwritten.
+ */
+export async function importFlats(projectId: string, types: FlatType[], log: Log) {
+  if (!types.length) return;
+  const pr = await supabase
+    .from("site_projects")
+    .select("saleable_sft")
+    .eq("id", projectId)
+    .maybeSingle();
+  const count = types.reduce((t, x) => t + x.flats.length, 0);
+  const perFlat = count && pr.data?.saleable_sft ? Number(pr.data.saleable_sft) / count : 0;
+  const up = await supabase.from("flat_types").upsert(
+    types.map((t, i) => ({
+      project_id: projectId,
+      code: t.code,
+      label: t.label,
+      bhk: t.bhk,
+      floors: t.floors,
+      saleable_sft: Math.round(perFlat * 10) / 10,
+      indiv_excl: t.indivExcl,
+      indiv_incl: t.indivIncl,
+      indiv_total: t.indivTotal,
+      lines: t.lines as unknown as Json,
+      sort: i,
+    })),
+    { onConflict: "project_id,code" },
+  );
+  if (up.error) throw new Error(`Flat types: ${up.error.message}`);
+  const flats = types.flatMap((t) =>
+    t.flats.map((no) => ({
+      project_id: projectId,
+      flat_no: no,
+      floor: Math.floor(Number(no) / 100) || 0,
+      type_code: t.code,
+      saleable_sft: Math.round(perFlat * 10) / 10,
+    })),
+  );
+  const ins = await supabase
+    .from("flats")
+    .upsert(flats, { onConflict: "project_id,flat_no", ignoreDuplicates: true });
+  if (ins.error) throw new Error(`Flats: ${ins.error.message}`);
+  log(
+    `Flats: ${types.length} flat types (${types.map((t) => t.label).join(", ")}) and ${flats.length} flats; owners already set are kept.`,
+  );
 }

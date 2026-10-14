@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgeIndianRupee, Download, Landmark, Plus, Trash2, Users, Wallet } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Shell } from "@/components/saha/Shell";
+import { LandownerBreakup } from "@/components/saha/LandownerBreakup";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
@@ -429,6 +430,8 @@ function Page() {
             </div>
           ))}
         </div>
+
+        <LandownerBreakup projectId={activeId} />
 
         {showForm && (
           <div

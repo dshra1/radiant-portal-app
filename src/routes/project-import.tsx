@@ -20,6 +20,7 @@ import {
   detectKind,
   parseMasterBoq,
   parseSplit,
+  parseFlatTypes,
   parseControl,
   parseQuotation,
   buildBoqRows,
@@ -28,6 +29,7 @@ import {
   type AppBoqRow,
   type ControlData,
   type QuotePackage,
+  type FlatType,
 } from "@/lib/project-workbooks";
 import {
   importBoq,
@@ -39,6 +41,7 @@ import {
   importDrawings,
   drawingFileName,
   importQuality,
+  importFlats,
 } from "@/lib/project-import";
 
 export const Route = createFileRoute("/project-import")({
@@ -77,6 +80,7 @@ type Parsed = {
   } | null;
   control: ControlData | null;
   tenders: QuotePackage[] | null;
+  flatTypes: FlatType[] | null;
   pdfs: File[];
 };
 
@@ -116,6 +120,7 @@ function Page() {
     boq: null,
     control: null,
     tenders: null,
+    flatTypes: null,
     pdfs: [],
   });
   const [reading, setReading] = useState(false);
@@ -125,6 +130,7 @@ function Page() {
     dates: true,
     materials: true,
     tenders: true,
+    flats: true,
     drawings: true,
   });
   const [running, setRunning] = useState(false);
@@ -140,6 +146,7 @@ function Page() {
     let split: ReturnType<typeof parseSplit> | null = null;
     let control: ControlData | null = null;
     let tenders: QuotePackage[] | null = null;
+    let flatTypes: FlatType[] | null = null;
     const pdfs: File[] = [];
 
     for (const f of Array.from(list)) {
@@ -161,7 +168,10 @@ function Page() {
         const kind = detectKind(wb, f.name);
         found.push({ name: f.name, kind });
         if (kind === "master") master = parseMasterBoq(wb);
-        if (kind === "split") split = parseSplit(wb);
+        if (kind === "split") {
+          split = parseSplit(wb);
+          flatTypes = parseFlatTypes(wb);
+        }
         if (kind === "control") control = parseControl(wb);
         if (kind === "quotation") tenders = parseQuotation(wb);
       } catch (e) {
@@ -175,7 +185,7 @@ function Page() {
       ? { ...buildBoqRows(master, split), hasSplit: Boolean(split), master }
       : null;
     setLoaded(found);
-    setParsed({ boq, control, tenders, pdfs: uniquePdfs });
+    setParsed({ boq, control, tenders, flatTypes, pdfs: uniquePdfs });
     setReading(false);
   }
 
@@ -201,6 +211,7 @@ function Page() {
     (pick.programme && parsed.control) ||
     (pick.materials && parsed.control) ||
     (pick.tenders && parsed.tenders) ||
+    (pick.flats && parsed.flatTypes?.length) ||
     (pick.drawings && parsed.pdfs.length > 0);
 
   async function run() {
@@ -233,6 +244,8 @@ function Page() {
       await step("Quality", () => importQuality(project.id, parsed.control!, say));
     if (pick.materials && parsed.control)
       await step("Materials", () => importMaterials(project.id, parsed.control!, say));
+    if (pick.flats && parsed.flatTypes?.length)
+      await step("Flats", () => importFlats(project.id, parsed.flatTypes!, say));
     if (pick.tenders && parsed.tenders)
       await step("Tenders", () =>
         importTenders(project.id, parsed.tenders!, access?.userId ?? undefined, say),
@@ -435,6 +448,29 @@ function Page() {
                     <p className="pt-1 text-xs text-muted-foreground">
                       Each with its reorder level, first-need date and order-by date. Opening stock
                       and movements are not changed.
+                    </p>
+                  </>
+                )}
+              </Card>
+
+              <Card
+                title="Flats (individual works)"
+                ok={Boolean(parsed.flatTypes?.length)}
+                missing="Comes from the common vs individual workbook."
+                check={<Check k="flats" label="Import" />}
+              >
+                {parsed.flatTypes && (
+                  <>
+                    {parsed.flatTypes.map((t) => (
+                      <Fact
+                        key={t.code}
+                        label={`${t.label} · flats ${t.flats.join(", ")}`}
+                        value={`${inr(t.indivIncl)} per flat`}
+                      />
+                    ))}
+                    <p className="pt-1 text-xs text-muted-foreground">
+                      Each flat type with its individual-works lines. Flat owners and extras already
+                      set are kept.
                     </p>
                   </>
                 )}

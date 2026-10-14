@@ -17,10 +17,12 @@ import {
   rupees,
   saveActual,
   sendActual,
+  payersFor,
   useStageFinance,
   type FinanceRow,
   type Money4,
 } from "@/lib/stage-finance";
+import type { Payer } from "@/lib/flats";
 
 type Search = { stage?: string };
 
@@ -95,6 +97,7 @@ function Page() {
         data.owners,
         data.credit,
         who,
+        data.flatInfo,
       );
       toast.success(
         `Requested ${lakhs(total)} from the landowners (Capital Ledger and Owner Approvals)`,
@@ -253,6 +256,12 @@ function Page() {
                                     b={b}
                                     f={f}
                                     recorded={data.recorded.get(b.code)}
+                                    payers={payersFor(
+                                      b.total,
+                                      b.individual,
+                                      data.owners,
+                                      data.flatInfo,
+                                    )}
                                     due={due(b)}
                                     canApprove={canApprove}
                                     busy={busy}
@@ -292,6 +301,7 @@ function Page() {
                                           b.total,
                                           data.owners,
                                           who,
+                                          data.flatInfo,
                                         );
                                         toast.success("Cost statement sent to the landowners");
                                         await refresh();
@@ -350,6 +360,7 @@ function StageDetail({
   b,
   f,
   recorded,
+  payers,
   due,
   canApprove,
   busy,
@@ -361,6 +372,7 @@ function StageDetail({
   b: StageBudget;
   f: FinanceRow | undefined;
   recorded: (Money4 & { bills: number; labourDays: number }) | undefined;
+  payers: Payer[];
   due: string;
   canApprove: boolean;
   busy: string;
@@ -409,6 +421,44 @@ function StageDetail({
           concrete, steel or working days. Money needed by <b>{fmtDay(due)}</b> (a week before the
           start or the first order-by date).
         </p>
+        {payers.length > 0 && (
+          <div className="mt-3">
+            <h3 className="text-sm font-bold">Who pays this stage</h3>
+            <p className="text-[12px] text-muted-foreground">
+              Common works {rupees(b.total - (b.individual ?? 0))} by share %; individual works{" "}
+              {rupees(b.individual ?? 0)} to each flat's owner (unallotted flats by share).
+            </p>
+            <table className="mt-1 w-full text-[12px]">
+              <thead className="text-left text-muted-foreground">
+                <tr>
+                  <th className="pr-2 font-medium">Payer</th>
+                  <th className="pr-2 text-right font-medium">Common</th>
+                  <th className="pr-2 text-right font-medium">Own flats</th>
+                  <th className="pr-2 text-right font-medium">Unallotted</th>
+                  <th className="text-right font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payers.map((p) => (
+                  <tr key={p.name} className="border-t border-border/50">
+                    <td className="pr-2">
+                      {p.name}
+                      {p.flats.length > 0 && (
+                        <span className="block text-[11px] text-muted-foreground">
+                          flats {p.flats.join(", ")}
+                        </span>
+                      )}
+                    </td>
+                    <td className="pr-2 text-right tnum">{rupees(p.common)}</td>
+                    <td className="pr-2 text-right tnum">{rupees(p.individual)}</td>
+                    <td className="pr-2 text-right tnum">{rupees(p.unallotted)}</td>
+                    <td className="text-right font-semibold tnum">{rupees(p.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         {canApprove && !f?.called_at && (
           <button
             type="button"

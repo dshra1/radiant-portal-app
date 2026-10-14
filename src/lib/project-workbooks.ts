@@ -375,6 +375,110 @@ export function parseSplit(wb: XLSX.WorkBook): SplitLine[] {
   return out;
 }
 
+// ---------- flat types (individual works per flat) ----------
+
+export type FlatLine = {
+  pkg: string;
+  code: string;
+  item: string;
+  make: string;
+  unit: string;
+  qty: number;
+  rate: number;
+  gst: number;
+  excl: number;
+  incl: number;
+};
+
+export type FlatType = {
+  code: string;
+  label: string;
+  bhk: number;
+  floors: string;
+  flats: string[];
+  indivExcl: number;
+  indivIncl: number;
+  indivTotal: number;
+  lines: FlatLine[];
+};
+
+/**
+ * Flat types from the split workbook: the Summary rows
+ * ("Flat-01, 4BHK (floors 1–2: flats 101, 201)") with each type's cost for one
+ * flat, and the line detail from its sheet ("Flat-01 4BHK").
+ */
+export function parseFlatTypes(wb: XLSX.WorkBook): FlatType[] {
+  const out: FlatType[] = [];
+  const data = rows(wb.Sheets["Summary"]);
+  const h = findHeader(data, ["part", "flats"]);
+  if (h < 0) return out;
+  const col = columns(data[h] ?? []);
+  const cExcl = col("excl"),
+    cIncl = col("with gst"),
+    cTotal = col("with gst +");
+  for (let i = h + 1; i < data.length; i++) {
+    const r = data[i] ?? [];
+    const label = str(r[0]);
+    const m = /^(Flat-\d+),\s*(\d)\s*BHK\s*\(floors\s*([^:]+):\s*flats\s*([\d,\s]+)\)/i.exec(label);
+    if (!m) continue;
+    const [, flat, bhk, floors, list] = m;
+    const sheet = wb.SheetNames.find(
+      (n) => n.replace(/\s+/g, " ").toLowerCase() === `${flat} ${bhk}BHK`.toLowerCase(),
+    );
+    const lines: FlatLine[] = [];
+    const sd = rows(sheet ? wb.Sheets[sheet] : undefined);
+    const sh = findHeader(sd, ["package", "code", "item", "unit"]);
+    if (sh >= 0) {
+      const c = columns(sd[sh] ?? []);
+      const ix = {
+        pkg: c("package"),
+        code: c("code"),
+        item: c("item"),
+        make: c("our make"),
+        unit: c("unit"),
+        qty: c("qty"),
+        rate: c("our rate"),
+        excl: c("our amount"),
+        gst: c("gst"),
+        incl: c("our total"),
+      };
+      for (let j = sh + 1; j < sd.length; j++) {
+        const row = sd[j] ?? [];
+        const code = str(at(row, ix.code));
+        if (!code || !CODE_RE.test(code)) continue;
+        const g = num(at(row, ix.gst));
+        lines.push({
+          pkg: str(at(row, ix.pkg)),
+          code,
+          item: str(at(row, ix.item)),
+          make: str(at(row, ix.make)),
+          unit: str(at(row, ix.unit)),
+          qty: num(at(row, ix.qty)),
+          rate: num(at(row, ix.rate)),
+          gst: g > 0 && g < 1 ? Math.round(g * 1000) / 10 : g,
+          excl: round(num(at(row, ix.excl))),
+          incl: round(num(at(row, ix.incl))),
+        });
+      }
+    }
+    out.push({
+      code: `${flat}-${bhk}BHK`,
+      label: `${flat} · ${bhk}BHK`,
+      bhk: Number(bhk),
+      floors: floors!.trim(),
+      flats: list!
+        .split(/[,\s]+/)
+        .map((x) => x.trim())
+        .filter(Boolean),
+      indivExcl: round(num(at(r, cExcl))),
+      indivIncl: round(num(at(r, cIncl))),
+      indivTotal: round(num(at(r, cTotal))),
+      lines,
+    });
+  }
+  return out;
+}
+
 // ---------- BOQ rows for the app ----------
 
 /** The app's BOQ Engine sections (BOQ_TRADES + Labour Contracts). */

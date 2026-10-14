@@ -110,6 +110,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: "/capital-ledger", label: "Capital Ledger", icon: Wallet },
       { to: "/landowners-investment", label: "Landowners & Investment", icon: Landmark },
+      { to: "/flats", label: "Flats  Individual Works", icon: Building2 },
       { to: "/common-expenses", label: "Common & Statutory Expenses", icon: Landmark },
       { to: "/pmc-scope", label: "PMC Scope & Commercials", icon: BadgeIndianRupee },
       { to: "/cost-dashboard", label: "Cost Dashboard", icon: BadgeIndianRupee },

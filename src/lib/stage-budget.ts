@@ -23,6 +23,8 @@ export type BudgetLine = {
   quantity: number;
   rate: number;
   gst_pct: number;
+  /** "individual" lines belong to the flat owners; everything else is common. */
+  work_scope?: string;
 };
 
 export type BudgetStage = {
@@ -43,6 +45,8 @@ export type StageBudget = {
   labour: number;
   misc: number;
   total: number;
+  /** Part of the total that is individual (flat owners') works, incl. GST. */
+  individual: number;
   lines: {
     code: string;
     description: string;
@@ -228,6 +232,7 @@ export function stageBudgets(lines: BudgetLine[], stages: BudgetStage[]) {
         labour: 0,
         misc: 0,
         total: 0,
+        individual: 0,
         lines: [],
       };
       out.set(code, b);
@@ -271,6 +276,7 @@ export function stageBudgets(lines: BudgetLine[], stages: BudgetStage[]) {
       if (!st && code !== PRE) unplaced += amount;
       b[cat] += amount;
       b.total += amount;
+      if (l.work_scope === "individual") b.individual += amount;
       b.lines.push({
         code: l.item_code,
         description: l.description,
@@ -286,6 +292,7 @@ export function stageBudgets(lines: BudgetLine[], stages: BudgetStage[]) {
       const b = bucket(s.code, s.name, s.plannedStart);
       b[cat] += share;
       b.total += share;
+      if (l.work_scope === "individual") b.individual += share;
       b.lines.push({
         code: l.item_code,
         description: l.description,

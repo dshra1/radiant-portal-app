@@ -1919,6 +1919,99 @@ export type Database = {
         }
         Relationships: []
       }
+      flat_types: {
+        Row: {
+          id: string
+          project_id: string
+          code: string
+          label: string
+          bhk: number
+          floors: string
+          saleable_sft: number
+          indiv_excl: number
+          indiv_incl: number
+          indiv_total: number
+          lines: Json
+          sort: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          code: string
+          label?: string
+          bhk?: number
+          floors?: string
+          saleable_sft?: number
+          indiv_excl?: number
+          indiv_incl?: number
+          indiv_total?: number
+          lines?: Json
+          sort?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          code?: string
+          label?: string
+          bhk?: number
+          floors?: string
+          saleable_sft?: number
+          indiv_excl?: number
+          indiv_incl?: number
+          indiv_total?: number
+          lines?: Json
+          sort?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      flats: {
+        Row: {
+          id: string
+          project_id: string
+          flat_no: string
+          floor: number
+          type_code: string
+          owner_name: string
+          saleable_sft: number
+          owner_extra: number
+          notes: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          flat_no: string
+          floor?: number
+          type_code?: string
+          owner_name?: string
+          saleable_sft?: number
+          owner_extra?: number
+          notes?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          flat_no?: string
+          floor?: number
+          type_code?: string
+          owner_name?: string
+          saleable_sft?: number
+          owner_extra?: number
+          notes?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ncrs: {
         Row: {
           id: string

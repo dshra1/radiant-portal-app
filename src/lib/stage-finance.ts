@@ -11,13 +11,14 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { arr, fmtDay, n } from "@/lib/programme-progress";
 import { stageBudgets, type BudgetCategory, type StageBudget } from "@/lib/stage-budget";
+import { splitToPayers, type FlatRow, type FlatTypeRow, type Payer } from "@/lib/flats";
 
 export type Owner = { name: string; role: string; share: number };
 export type Money4 = Record<BudgetCategory, number>;
 export type FinanceRow = {
   id: string;
   stage_code: string;
-  budget: { total?: number; creditApplied?: number } & Partial<Money4>;
+  budget: { total?: number; creditApplied?: number; individual?: number } & Partial<Money4>;
   call_total: number;
   called_at: string | null;
   actual: Partial<Money4>;
@@ -87,7 +88,7 @@ export function useStageFinance(projectId: string) {
       const [boq, st, pr, fin] = await Promise.all([
         supabase
           .from("boq_items")
-          .select("item_code,description,package_no,line_group,quantity,rate,gst_pct")
+          .select("item_code,description,package_no,line_group,quantity,rate,gst_pct,work_scope")
           .eq("project_id", projectId),
         supabase
           .from("site_stages")
@@ -99,6 +100,12 @@ export function useStageFinance(projectId: string) {
         supabase.from("stage_finance").select("*").eq("project_id", projectId),
       ]);
       for (const r of [boq, st, pr, fin]) if (r.error) throw r.error;
+      const [ft, fl] = await Promise.all([
+        supabase.from("flat_types").select("code,label,indiv_incl").eq("project_id", projectId),
+        supabase.from("flats").select("flat_no,type_code,owner_name").eq("project_id", projectId),
+      ]);
+      // Flats are optional (older projects have none): everything then goes by share.
+      const flatInfo: FlatInfo = { types: ft.data ?? [], flats: fl.data ?? [] };
       const stages = (st.data ?? []).map((s) => ({
         code: s.code,
         name: (s.name ?? "").replace(/^[A-Z]{1,3}\d{0,3} · /, ""),
@@ -119,6 +126,7 @@ export function useStageFinance(projectId: string) {
           quantity: n(l.quantity),
           rate: n(l.rate),
           gst_pct: l.gst_pct === null || l.gst_pct === undefined ? 18 : n(l.gst_pct),
+          work_scope: l.work_scope ?? "common",
         })),
         stages,
       );
@@ -144,6 +152,7 @@ export function useStageFinance(projectId: string) {
         finance,
         credit,
         recorded,
+        flatInfo,
         projectName: pr.data?.name ?? "",
       };
     },
@@ -170,6 +179,29 @@ export function dueDateFor(stage: {
   return d < today ? today : d;
 }
 
+export type FlatInfo = {
+  types: Pick<FlatTypeRow, "code" | "label" | "indiv_incl">[];
+  flats: Pick<FlatRow, "flat_no" | "type_code" | "owner_name">[];
+};
+
+/** Who pays an amount whose individual (flat owners') part is `individual`. */
+export function payersFor(amount: number, individual: number, owners: Owner[], info: FlatInfo) {
+  if (!info.flats.length) individual = 0;
+  const indiv = Math.max(0, Math.min(amount, individual));
+  return splitToPayers(amount - indiv, indiv, owners, info.flats, info.types);
+}
+
+function payerNote(p: Payer) {
+  const parts = [];
+  if (p.common) parts.push(`common ${rupees(p.common)}`);
+  if (p.individual)
+    parts.push(
+      `flat${p.flats.length > 1 ? "s" : ""} ${p.flats.join(", ")} ${rupees(p.individual)}`,
+    );
+  if (p.unallotted) parts.push(`unallotted flats ${rupees(p.unallotted)}`);
+  return parts.join(" + ");
+}
+
 function shares(owners: Owner[]) {
   const total = owners.reduce((t, o) => t + o.share, 0);
   if (total <= 0) throw new Error("Set each landowner's share % on Landowners & Investment first");
@@ -185,8 +217,10 @@ export async function requestStagePayment(
   owners: Owner[],
   creditAvailable: number,
   who: Who,
+  flatInfo: FlatInfo = { types: [], flats: [] },
 ) {
-  const sh = shares(owners);
+  shares(owners);
+  const owed = new Map<string, Payer>();
   let credit = Math.max(0, creditAvailable);
   const due = items.map((i) => i.due).sort()[0]!;
   const lines: string[] = [];
@@ -199,21 +233,40 @@ export async function requestStagePayment(
     lines.push(
       `${b.code} ${b.name}: ${lakhs(b.total)} (material ${lakhs(b.material)}, machinery ${lakhs(b.machinery)}, labour ${lakhs(b.labour)}, misc ${lakhs(b.misc)})${applied ? `, less credit ${lakhs(applied)}` : ""}, needed by ${fmtDay(stageDue)}`,
     );
-    const calls = sh
-      .map((o) => ({ o, amt: Math.round(call * o.frac) }))
+    // Credit reduces the common and individual parts in proportion.
+    const indivPart = b.total > 0 ? (call * (b.individual ?? 0)) / b.total : 0;
+    const payers = payersFor(call, indivPart, owners, flatInfo);
+    for (const p of payers) {
+      const t = owed.get(p.name) ?? {
+        ...p,
+        common: 0,
+        individual: 0,
+        unallotted: 0,
+        total: 0,
+        flats: [],
+      };
+      t.common += p.common;
+      t.individual += p.individual;
+      t.unallotted += p.unallotted;
+      t.total += p.total;
+      t.flats = [...new Set([...t.flats, ...p.flats])];
+      owed.set(p.name, t);
+    }
+    const calls = payers
+      .map((p) => ({ p, amt: Math.round(p.total) }))
       .filter((x) => x.amt > 0)
-      .map(({ o, amt }) => ({
+      .map(({ p, amt }) => ({
         project_id: projectId,
         entry_type: "call",
         status: "pending",
-        owner_name: o.name,
-        owner_role: o.role,
+        owner_name: p.name,
+        owner_role: p.role,
         amount: amt,
         milestone: `${b.code} · ${b.name}`.slice(0, 120),
         entry_date: stageDue,
         reference: `STAGE-${b.code}`,
         mode: "",
-        notes: `Stage budget ${lakhs(b.total)} incl. GST; ${o.name} ${(o.frac * 100).toFixed(2)}%`,
+        notes: `Stage budget ${lakhs(b.total)} incl. GST; ${payerNote(p)}`.slice(0, 500),
         created_by: who.id,
       }));
     if (calls.length) {
@@ -230,6 +283,7 @@ export async function requestStagePayment(
           machinery: Math.round(b.machinery),
           labour: Math.round(b.labour),
           misc: Math.round(b.misc),
+          individual: Math.round(b.individual ?? 0),
           creditApplied: Math.round(applied),
         } as unknown as Json,
         call_total: call,
@@ -240,14 +294,12 @@ export async function requestStagePayment(
     );
     if (up.error) throw up.error;
   }
-  const perOwner = sh.map(
-    (o) => `${o.name} (${(o.frac * 100).toFixed(2)}%): ${rupees(grand * o.frac)}`,
-  );
+  const perOwner = [...owed.values()].map((p) => `${p.name}: ${rupees(p.total)} (${payerNote(p)})`);
   const body = [
     `Payment needed by ${fmtDay(due)} for the next stage${items.length > 1 ? "s" : ""}:`,
     ...lines.map((l) => `• ${l}`),
     "",
-    `Total ${rupees(grand)} incl. GST. Your share:`,
+    `Total ${rupees(grand)} incl. GST. Common works are shared by your share %; individual works go to each flat's owner. Your part:`,
     ...perOwner.map((l) => `• ${l}`),
     "",
     "After each stage the actual cost is sent to you once the PMC has approved it; any difference is adjusted in the next request.",
@@ -315,13 +367,18 @@ export async function sendActual(
   budgetTotal: number,
   owners: Owner[],
   who: Who,
+  flatInfo: FlatInfo = { types: [], flats: [] },
 ) {
   if (row.actual_status !== "approved") throw new Error("Approve the actual cost first");
-  const sh = shares(owners);
+  shares(owners);
   const diff = Math.round(n(row.actual_total) - n(row.call_total));
+  const bud = row.budget ?? {};
+  const indivFrac =
+    n(bud.total) > 0 ? n((bud as { individual?: number }).individual) / n(bud.total) : 0;
+  const topUp = diff > 0 ? payersFor(diff, diff * indivFrac, owners, flatInfo) : [];
   if (diff > 0) {
-    const calls = sh
-      .map((o) => ({ o, amt: Math.round(diff * o.frac) }))
+    const calls = topUp
+      .map((p) => ({ o: p, amt: Math.round(p.total) }))
       .filter((x) => x.amt > 0)
       .map(({ o, amt }) => ({
         project_id: projectId,
@@ -349,7 +406,7 @@ export async function sendActual(
     `• Total actual: ${rupees(row.actual_total)} (budget ${rupees(budgetTotal)}, requested ${rupees(row.call_total)})`,
     "",
     diff > 0
-      ? `Shortfall ${rupees(diff)}: requested by share — ${sh.map((o) => `${o.name} ${rupees(diff * o.frac)}`).join(", ")}.`
+      ? `Shortfall ${rupees(diff)}: requested — ${topUp.map((p) => `${p.name} ${rupees(p.total)}`).join(", ")}.`
       : diff < 0
         ? `Saving ${rupees(-diff)}: carried as a credit against the next payment request.`
         : "Actual equals the amount requested.",

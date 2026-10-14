@@ -34,6 +34,7 @@ import { Route as ExecutionManualRouteImport } from './routes/execution-manual'
 import { Route as FieldConsoleRouteImport } from './routes/field-console'
 import { Route as FinancialForecastRouteImport } from './routes/financial-forecast'
 import { Route as FinancialIngestionRouteImport } from './routes/financial-ingestion'
+import { Route as FlatsRouteImport } from './routes/flats'
 import { Route as InventoryControlRouteImport } from './routes/inventory-control'
 import { Route as LandownersInvestmentRouteImport } from './routes/landowners-investment'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
@@ -196,6 +197,11 @@ const FinancialForecastRoute = FinancialForecastRouteImport.update({
 const FinancialIngestionRoute = FinancialIngestionRouteImport.update({
   id: '/financial-ingestion',
   path: '/financial-ingestion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FlatsRoute = FlatsRouteImport.update({
+  id: '/flats',
+  path: '/flats',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InventoryControlRoute = InventoryControlRouteImport.update({
@@ -415,6 +421,7 @@ export interface FileRoutesByFullPath {
   '/field-console': typeof FieldConsoleRoute
   '/financial-forecast': typeof FinancialForecastRoute
   '/financial-ingestion': typeof FinancialIngestionRoute
+  '/flats': typeof FlatsRoute
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
@@ -480,6 +487,7 @@ export interface FileRoutesByTo {
   '/field-console': typeof FieldConsoleRoute
   '/financial-forecast': typeof FinancialForecastRoute
   '/financial-ingestion': typeof FinancialIngestionRoute
+  '/flats': typeof FlatsRoute
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
@@ -546,6 +554,7 @@ export interface FileRoutesById {
   '/field-console': typeof FieldConsoleRoute
   '/financial-forecast': typeof FinancialForecastRoute
   '/financial-ingestion': typeof FinancialIngestionRoute
+  '/flats': typeof FlatsRoute
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
@@ -613,6 +622,7 @@ export interface FileRouteTypes {
     | '/field-console'
     | '/financial-forecast'
     | '/financial-ingestion'
+    | '/flats'
     | '/inventory-control'
     | '/landowners-investment'
     | '/media-upload-studio'
@@ -678,6 +688,7 @@ export interface FileRouteTypes {
     | '/field-console'
     | '/financial-forecast'
     | '/financial-ingestion'
+    | '/flats'
     | '/inventory-control'
     | '/landowners-investment'
     | '/media-upload-studio'
@@ -743,6 +754,7 @@ export interface FileRouteTypes {
     | '/field-console'
     | '/financial-forecast'
     | '/financial-ingestion'
+    | '/flats'
     | '/inventory-control'
     | '/landowners-investment'
     | '/media-upload-studio'
@@ -809,6 +821,7 @@ export interface RootRouteChildren {
   FieldConsoleRoute: typeof FieldConsoleRoute
   FinancialForecastRoute: typeof FinancialForecastRoute
   FinancialIngestionRoute: typeof FinancialIngestionRoute
+  FlatsRoute: typeof FlatsRoute
   InventoryControlRoute: typeof InventoryControlRoute
   LandownersInvestmentRoute: typeof LandownersInvestmentRoute
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
@@ -1024,6 +1037,13 @@ declare module '@tanstack/react-router' {
       path: '/financial-ingestion'
       fullPath: '/financial-ingestion'
       preLoaderRoute: typeof FinancialIngestionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/flats': {
+      id: '/flats'
+      path: '/flats'
+      fullPath: '/flats'
+      preLoaderRoute: typeof FlatsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inventory-control': {
@@ -1321,6 +1341,7 @@ const rootRouteChildren: RootRouteChildren = {
   FieldConsoleRoute: FieldConsoleRoute,
   FinancialForecastRoute: FinancialForecastRoute,
   FinancialIngestionRoute: FinancialIngestionRoute,
+  FlatsRoute: FlatsRoute,
   InventoryControlRoute: InventoryControlRoute,
   LandownersInvestmentRoute: LandownersInvestmentRoute,
   MediaUploadStudioRoute: MediaUploadStudioRoute,
