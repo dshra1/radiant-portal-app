@@ -310,15 +310,8 @@ export function Shell({
         <div className="space-y-2 border-t border-sidebar-border p-2">
           {expanded && (
             <>
-              <div className="flex items-center gap-2 rounded bg-sidebar-accent/40 px-2.5 py-1.5">
-                <span className="size-1.5 animate-pulse rounded-full bg-sidebar-primary" />
-                <span className="label-caps truncate text-sidebar-accent-foreground">
-                  99.8% Biometric &amp; IoT sync · online
-                </span>
-              </div>
               <div className="flex items-center justify-between px-2.5 label-caps text-sidebar-foreground/60">
-                <span>Civil Platform Engine</span>
-                <span>v3.2.0</span>
+                <span>SAHA Developers · PMC</span>
               </div>
             </>
           )}

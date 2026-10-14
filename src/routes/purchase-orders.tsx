@@ -17,6 +17,7 @@ import {
 } from "@/lib/po";
 import { CheckCircle2, Plus, Printer, Send, Trash2, XCircle } from "lucide-react";
 import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
+import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/purchase-orders")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -55,12 +56,15 @@ function Page() {
   const canApprove = !!access && (access.isAdmin || access.roles.includes("pm"));
   const search = Route.useSearch();
 
+  const activeProject = useActiveProject();
   const { data: orders, isPending } = useQuery({
-    queryKey: ["purchase_orders", "list"],
+    queryKey: ["purchase_orders", "list", activeProject.id],
+    enabled: Boolean(activeProject.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("purchase_orders")
         .select("*")
+        .eq("project_id", activeProject.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as PoRecord[];

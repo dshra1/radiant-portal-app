@@ -215,6 +215,8 @@ export async function importMaterials(projectId: string, control: ControlData, l
       unit: m.unit,
       category: m.workPackage,
       reorder_level: Math.ceil(m.reorderLevel),
+      first_needed: m.firstNeeded,
+      order_by: m.orderBy,
       notes: [
         `Project total ${m.total.toLocaleString("en-IN")} ${m.unit}`,
         `first needed ${fmtDate(m.firstNeeded)} (stage ${m.firstStage})`,

@@ -107,7 +107,7 @@ function Page() {
         "saha-generated-boq-input",
         JSON.stringify({ ...geometry, projectId: project?.id, generatedAt: new Date().toISOString() }),
       );
-      toast.success("Stage-wise BOQ blueprint generated");
+      toast.success("Geometry saved");
       await navigate({ to: "/boq-engine" });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "BOQ blueprint could not be generated");
@@ -131,23 +131,10 @@ function Page() {
 </div>
 <div className="flex items-center gap-space-sm">
 <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">Project Setup &amp; Structural Geometry Wizard</h1>
-<span className="px-space-xs py-space-2xs rounded bg-surface-container-high text-tertiary font-label-sm text-label-sm uppercase font-bold tracking-wider">Civil Matrix Engine v3.4</span>
+
 </div>
 </div>
 
-<div className="flex items-center gap-space-sm self-start md:self-auto">
-<div className="flex items-center gap-space-xs bg-surface-container-lowest px-space-md py-space-xs rounded shadow-sm">
-<span className="relative flex h-2 w-2">
-<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-<span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-</span>
-<span className="font-label-md text-label-md text-on-surface">Auto-Derivation: <span className="text-primary font-bold">Synchronized</span></span>
-</div>
-<button className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-colors font-title-md text-title-md shadow-sm">
-<span className="material-symbols-outlined text-space-base leading-none text-on-surface-variant">history</span>
-<span>Version 1.02</span>
-</button>
-</div>
 </div>
 
 <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm mb-space-xl">
@@ -561,14 +548,12 @@ function Page() {
 </div>
 </div>
 
-<div className="sticky bottom-4 z-30 bg-surface-container-lowest p-space-base rounded-xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-space-base">
+<div className="bg-surface-container-lowest p-space-base rounded-xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-space-base">
 <div className="flex items-center gap-space-sm">
 <div className="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md">
 <span className="material-symbols-outlined text-primary text-space-base leading-none">check_circle</span>
-<span>Validation: SFT &amp; Floor Geometry Constraints Verified</span>
+<span>Floor geometry for {project?.name ?? "the project"}</span>
 </div>
-<span className="hidden md:inline-block text-outline-variant">•</span>
-<span className="hidden md:inline-block font-label-sm text-label-sm text-on-surface-variant">Last autosaved 12s ago</span>
 </div>
 <div className="flex items-center gap-space-sm w-full sm:w-auto justify-end">
 <Button type="button" variant="secondary" onClick={saveDraft} className="h-auto px-space-md py-space-xs font-title-md text-title-md">
@@ -580,7 +565,7 @@ function Page() {
 </Button>
 <Button type="button" onClick={generateBoq} disabled={isGenerating} className="h-auto px-space-lg py-space-xs font-title-md text-title-md shadow-sm" id="btnGenerateBOQ">
 <span className="material-symbols-outlined text-space-base leading-none">rocket_launch</span>
-<span>{isGenerating ? "Generating…" : "Generate Stage-Wise BOQ & Execution Blueprint"}</span>
+<span>{isGenerating ? "Saving…" : "Save geometry & open the BOQ"}</span>
 </Button>
 </div>
 </div>

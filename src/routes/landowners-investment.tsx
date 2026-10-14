@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
+import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/landowners-investment")({
   head: () => ({
@@ -92,7 +93,10 @@ function Page() {
     },
   });
   const projects = projectsQuery.data ?? [];
-  const activeId = projectId || projects[0]?.id || "";
+  const globalProject = useActiveProject();
+  const setGlobalProject = useActiveProjectSetter();
+  const activeId =
+    projectId || projects.find((p) => p.id === globalProject.id)?.id || projects[0]?.id || "";
   const project = projects.find((p) => p.id === activeId);
 
   useEffect(() => {
@@ -321,7 +325,7 @@ function Page() {
             </p>
             <select
               value={activeId}
-              onChange={(e) => setProjectId(e.target.value)}
+              onChange={(e) => (setProjectId(e.target.value), setGlobalProject(e.target.value))}
               className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm"
             >
               {projects.length === 0 && <option value="">No projects yet</option>}

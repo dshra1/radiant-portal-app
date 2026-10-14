@@ -1801,6 +1801,8 @@ export type Database = {
       }
       stock_items: {
         Row: {
+          first_needed: string | null
+          order_by: string | null
           category: string
           created_at: string
           created_by: string | null
@@ -1817,6 +1819,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          first_needed?: string | null
+          order_by?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
@@ -1833,6 +1837,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          first_needed?: string | null
+          order_by?: string | null
           category?: string
           created_at?: string
           created_by?: string | null

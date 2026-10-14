@@ -81,7 +81,7 @@ function Page() {
     queryKey: ["vendors", "purchasing-center"],
     enabled: Boolean(user?.id),
     queryFn: async () => {
-      const { data, error } = await supabase.from("vendors").select("id, name, category");
+      const { data, error } = await supabase.from("vendors").select("id, vendor_name, trade_category");
       if (error) throw error;
       return data ?? [];
     },

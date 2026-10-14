@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { suggestBudgetFit, type BudgetSwap } from "@/lib/budget.functions";
 import { raiseChangeRequest, useApprovalGate } from "@/lib/approvals";
 import { useSessionUser } from "@/lib/access";
+import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/budget-fit")({
   head: () => ({
@@ -63,7 +64,10 @@ function Page() {
     },
   });
   const projects = projectsQuery.data ?? [];
-  const activeId = projectId || projects[0]?.id || "";
+  const globalProject = useActiveProject();
+  const setGlobalProject = useActiveProjectSetter();
+  const activeId =
+    projectId || projects.find((p) => p.id === globalProject.id)?.id || projects[0]?.id || "";
   const project = projects.find((p) => p.id === activeId);
 
   const boqQuery = useQuery({
@@ -192,7 +196,7 @@ function Page() {
           <select
             value={activeId}
             onChange={(e) => {
-              setProjectId(e.target.value);
+              (setProjectId(e.target.value), setGlobalProject(e.target.value));
               setSwaps([]);
               setPicked([]);
               setStatus("");

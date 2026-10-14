@@ -14,6 +14,7 @@ import * as XLSX from "xlsx";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
+import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/capital-ledger")({
   head: () => ({
@@ -133,7 +134,10 @@ function Page() {
     },
   });
   const projects = projectsQuery.data ?? [];
-  const activeId = projectId || projects[0]?.id || "";
+  const globalProject = useActiveProject();
+  const setGlobalProject = useActiveProjectSetter();
+  const activeId =
+    projectId || projects.find((p) => p.id === globalProject.id)?.id || projects[0]?.id || "";
   const project = projects.find((p) => p.id === activeId);
 
   const owners: Owner[] = useMemo(() => {
@@ -329,7 +333,7 @@ function Page() {
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={activeId}
-              onChange={(e) => setProjectId(e.target.value)}
+              onChange={(e) => (setProjectId(e.target.value), setGlobalProject(e.target.value))}
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
             >
               {projects.length === 0 && <option value="">No projects yet</option>}

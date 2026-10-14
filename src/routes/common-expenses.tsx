@@ -5,6 +5,7 @@ import { Landmark, Plus, Trash2, IndianRupee, Users } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
+import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/common-expenses")({
   head: () => ({
@@ -96,7 +97,10 @@ function Page() {
     },
   });
   const projects = projectsQuery.data ?? [];
-  const activeId = projectId || projects[0]?.id || "";
+  const globalProject = useActiveProject();
+  const setGlobalProject = useActiveProjectSetter();
+  const activeId =
+    projectId || projects.find((p) => p.id === globalProject.id)?.id || projects[0]?.id || "";
   const project = projects.find((p) => p.id === activeId);
   const owners: Owner[] = Array.isArray(project?.landowners)
     ? (project?.landowners as Owner[])
@@ -228,7 +232,7 @@ function Page() {
           </span>
           <select
             value={activeId}
-            onChange={(e) => setProjectId(e.target.value)}
+            onChange={(e) => (setProjectId(e.target.value), setGlobalProject(e.target.value))}
             className="min-w-[220px] rounded-xl border border-border bg-background px-3 py-2 text-sm"
           >
             {projects.map((p) => (

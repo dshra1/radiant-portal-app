@@ -14,6 +14,7 @@ import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSessionUser } from "@/lib/access";
+import { boqTotals } from "@/lib/boq-totals";
 
 export const Route = createFileRoute("/financial-forecast")({
   head: () => ({
@@ -89,7 +90,7 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("boq_items")
-        .select("quantity,rate")
+        .select("quantity,rate,gst_pct,item_code,work_scope,package,package_no")
         .eq("project_id", project.id);
       if (error) throw error;
       return data ?? [];
@@ -159,10 +160,8 @@ function Page() {
     charges.isLoading;
 
   const m = useMemo(() => {
-    const boqTotal = (boq.data ?? []).reduce(
-      (s, r) => s + num(r.quantity) * num(r.rate),
-      0,
-    );
+    // BOQ incl. GST at each line's rate (the report's sub-total); an imported contingency line is skipped.
+    const boqTotal = boqTotals(boq.data ?? [], 0).subtotal.incl;
     const paidByBill = new Map<string, number>();
     for (const p of payments.data ?? []) {
       paidByBill.set(p.bill_id, (paidByBill.get(p.bill_id) ?? 0) + num(p.amount));
@@ -188,7 +187,7 @@ function Page() {
     const chargesPending = Math.max(chargesTotal - chargesPaid, 0);
 
     const inflow = (capital.data ?? [])
-      .filter((c) => String(c.entry_type).toLowerCase() === "deposit")
+      .filter((c) => ["deposit", "receipt"].includes(String(c.entry_type).toLowerCase()))
       .reduce((s, c) => s + num(c.amount), 0);
     const outflowOwners = (capital.data ?? [])
       .filter((c) => ["withdrawal", "refund"].includes(String(c.entry_type).toLowerCase()))
@@ -198,7 +197,8 @@ function Page() {
     const fundsInHand = inflow - outflowOwners - spentToDate;
 
     const contingency = (boqTotal * contingencyPct) / 100;
-    const forecastCost = boqTotal + chargesTotal + contingency;
+    // Statutory charges are part of the BOQ's approvals package: counted in spend, not added again.
+    const forecastCost = boqTotal + contingency;
     const costToComplete = Math.max(forecastCost - spentToDate, 0);
     const committedNow = vendorOutstanding + chargesPending;
     const fundingGap = Math.max(costToComplete - fundsInHand, 0);
@@ -215,8 +215,8 @@ function Page() {
       if (!k) continue;
       keys.add(k);
       const t = String(c.entry_type).toLowerCase();
-      if (t === "deposit") inMap.set(k, (inMap.get(k) ?? 0) + num(c.amount));
-      else outMap.set(k, (outMap.get(k) ?? 0) + num(c.amount));
+      if (t === "deposit" || t === "receipt") inMap.set(k, (inMap.get(k) ?? 0) + num(c.amount));
+      else if (t === "withdrawal" || t === "refund") outMap.set(k, (outMap.get(k) ?? 0) + num(c.amount));
     }
     for (const p of payments.data ?? []) {
       const k = monthKey(String(p.payment_date ?? ""));
@@ -372,7 +372,7 @@ function Page() {
                 icon={<Landmark className="h-4 w-4" />}
                 label="Forecast total cost"
                 value={inr(m.forecastCost)}
-                note={`BOQ ${inr(m.boqTotal)} + charges ${inr(m.chargesTotal)} + contingency ${inr(m.contingency)}`}
+                note={`BOQ incl. GST ${inr(m.boqTotal)} + contingency ${inr(m.contingency)}`}
                 to="/boq-engine"
               />
               <Kpi

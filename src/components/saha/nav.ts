@@ -53,7 +53,6 @@ export const navGroups: NavGroup[] = [
       { to: "/ai", label: "Saha AI Assistant", icon: Bot },
       { to: "/notifications", label: "Action Centre", icon: BellRing },
       { to: "/tasks", label: "Task Tracker", icon: ListChecks },
-      { to: "/command-operations", label: "Command Operations", icon: Radio },
       { to: "/projects", label: "Projects", icon: Building2 },
       { to: "/projects-setup", label: "Projects & Setup", icon: Settings2 },
       { to: "/brand-preferences", label: "Brand Preferences", icon: Tags },
@@ -61,17 +60,9 @@ export const navGroups: NavGroup[] = [
       { to: "/project-import", label: "Import PMC Workbooks", icon: FileSpreadsheet },
       { to: "/stage-budget", label: "Stage Budget & Owner Payments", icon: IndianRupee },
       { to: "/budget-fit", label: "Budget Fit", icon: IndianRupee },
-      { to: "/approvals", label: "Change Approvals", icon: ShieldCheck },
-      { to: "/cost-dashboard", label: "Cost Dashboard", icon: BadgeIndianRupee },
-
-      { to: "/scope-brief", label: "Scope Brief", icon: BookOpen },
-      { to: "/pmc-scope", label: "PMC Scope", icon: Ruler },
       { to: "/drawing-decipher", label: "Drawings & Documents", icon: FileText },
       { to: "/stage-drawings", label: "Stage Drawings & Photo Check", icon: FileText },
       { to: "/execution-manual", label: "Execution Manual", icon: BookOpen },
-      { to: "/ai-programme", label: "AI Programme", icon: Sparkles },
-      { to: "/project-controls", label: "Project Controls", icon: BarChart3 },
-      { to: "/system-directory", label: "System Directory", icon: Settings2 },
       { to: "/access-control", label: "Access & Permissions", icon: ShieldCheck, adminOnly: true },
       { to: "/database-backup", label: "Database Backup", icon: Boxes, adminOnly: true },
     ],
@@ -81,11 +72,9 @@ export const navGroups: NavGroup[] = [
     label: "Site Supervision",
     items: [
       { to: "/site-execution", label: "Site Execution", icon: HardHat },
-      { to: "/site-material-guide", label: "Site Material Guide", icon: FileText },
       { to: "/pour-cards", label: "Pour Cards", icon: ClipboardCheck },
       { to: "/field-console", label: "Field Console", icon: Radio },
       { to: "/site-media", label: "Site Media", icon: Video },
-      { to: "/media-upload-studio", label: "Media Upload Studio", icon: Upload },
       { to: "/contractors-labour", label: "Contractors & Labour", icon: Users },
     ],
   },
@@ -114,7 +103,6 @@ export const navGroups: NavGroup[] = [
       { to: "/billing-expenditure", label: "Billing & Expenditure", icon: Receipt },
       { to: "/financial-ingestion", label: "Financial Ingestion", icon: Upload },
       { to: "/financial-forecast", label: "Financial Forecast", icon: BarChart3 },
-      { to: "/roles-access", label: "Roles & Access", icon: ShieldCheck },
     ],
   },
   {
@@ -124,20 +112,16 @@ export const navGroups: NavGroup[] = [
       { to: "/capital-ledger", label: "Capital Ledger", icon: Wallet },
       { to: "/landowners-investment", label: "Landowners & Investment", icon: Landmark },
       { to: "/common-expenses", label: "Common & Statutory Expenses", icon: Landmark },
-      { to: "/pmc-scope", label: "PMC Commercials", icon: BadgeIndianRupee },
+      { to: "/pmc-scope", label: "PMC Scope & Commercials", icon: BadgeIndianRupee },
       { to: "/cost-dashboard", label: "Cost Dashboard", icon: BadgeIndianRupee },
       { to: "/owner-approvals", label: "Owner Approvals & Suggestions", icon: ShieldCheck },
-      { to: "/approvals", label: "Change Approvals", icon: ShieldCheck },
-
+      { to: "/approvals", label: "BOQ Change Approvals", icon: ShieldCheck },
     ],
   },
   {
     id: "qa",
     label: "QA & Inspect",
-    items: [
-      { to: "/qa", label: "AI Visual QA", icon: ScanEye },
-      { to: "/qa-inspection", label: "QA Inspection", icon: ClipboardCheck },
-    ],
+    items: [{ to: "/qa-inspection", label: "QA Inspection", icon: ClipboardCheck }],
   },
 ];
 
@@ -200,4 +184,3 @@ export function navForRole(role: string, isAdmin = false): NavGroup[] {
 export function canAccess(role: string, path: string, isAdmin = false): boolean {
   return navForRole(role, isAdmin).some((g) => g.items.some((i) => i.to === path));
 }
-

@@ -7,6 +7,7 @@ import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { generateProgramme, type ProgrammeTask } from "@/lib/programme.functions";
 import { useSessionUser } from "@/lib/access";
+import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/ai-programme")({
   head: () => ({
@@ -102,7 +103,10 @@ function Page() {
   });
 
   const projects = projectsQuery.data ?? [];
-  const activeId = projectId || projects[0]?.id || "";
+  const globalProject = useActiveProject();
+  const setGlobalProject = useActiveProjectSetter();
+  const activeId =
+    projectId || projects.find((p) => p.id === globalProject.id)?.id || projects[0]?.id || "";
   const project = projects.find((p) => p.id === activeId);
 
   useEffect(() => {
@@ -197,7 +201,7 @@ function Page() {
             <select
               value={activeId}
               onChange={(e) => {
-                setProjectId(e.target.value);
+                (setProjectId(e.target.value), setGlobalProject(e.target.value));
                 setLoadedFor("");
                 setStatus("");
               }}

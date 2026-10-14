@@ -32,6 +32,7 @@ type Item = {
   unit: string;
   opening_qty: number;
   reorder_level: number;
+  order_by?: string | null;
   rate: number;
   store_location: string;
   notes: string;
@@ -116,6 +117,14 @@ function emptyMove(type: string): MoveDraft {
   };
 }
 
+/** Below reorder level, counted only once the material is due (order-by within 2 weeks or past). */
+function isLow(b: { reorder_level: number; balance: number; order_by?: string | null }) {
+  if (!(b.reorder_level > 0 && b.balance <= b.reorder_level)) return false;
+  if (!b.order_by) return true;
+  const soon = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
+  return b.order_by <= soon;
+}
+
 function Page() {
   const project = useActiveProject();
   const user = useSessionUser();
@@ -137,7 +146,7 @@ function Page() {
     queryFn: async (): Promise<Item[]> => {
       const { data, error } = await supabase
         .from("stock_items")
-        .select("id,project_id,item_code,description,category,unit,opening_qty,reorder_level,rate,store_location,notes")
+        .select("id,project_id,item_code,description,category,unit,opening_qty,reorder_level,rate,store_location,notes,order_by")
         .eq("project_id", project.id)
         .order("item_code", { ascending: true });
       if (error) throw error;
@@ -272,7 +281,7 @@ function Page() {
 
   const totals = useMemo(() => {
     const value = balances.reduce((s, b) => s + b.value, 0);
-    const low = balances.filter((b) => b.reorder_level > 0 && b.balance <= b.reorder_level).length;
+    const low = balances.filter(isLow).length;
     const receipts = movements.filter((m) => m.movement_type === "receipt").length;
     const issues = movements.filter((m) => m.movement_type === "issue").length;
     return { value, low, receipts, issues };
@@ -430,7 +439,7 @@ function Page() {
                 {isPending && <tr><td className="p-4 text-muted-foreground" colSpan={9}>Loading stock…</td></tr>}
                 {!isPending && !filtered.length && <tr><td className="p-4 text-muted-foreground" colSpan={9}>No stock items yet. Add an item or upload an Excel sheet.</td></tr>}
                 {filtered.map((b) => {
-                  const low = b.reorder_level > 0 && b.balance <= b.reorder_level;
+                  const low = isLow(b);
                   return (
                     <tr key={b.id} className="border-t border-border">
                       <td className="p-3">

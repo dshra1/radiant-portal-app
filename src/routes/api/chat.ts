@@ -66,6 +66,19 @@ export const Route = createFileRoute("/api/chat")({
           },
         });
         if (!authCheck.ok) return new Response("Unauthorized", { status: 401 });
+        const authUser = (await authCheck.json()) as { id?: string };
+        const profileRes = await fetch(
+          `${process.env["SUPABASE_URL"]}/rest/v1/profiles?id=eq.${encodeURIComponent(authUser.id ?? "")}&select=status`,
+          {
+            headers: {
+              apikey: process.env["SUPABASE_PUBLISHABLE_KEY"]!,
+              Authorization: `Bearer ${accessToken}`,
+            },
+          },
+        );
+        const profileRows = profileRes.ok ? ((await profileRes.json()) as { status?: string }[]) : [];
+        if (profileRows[0]?.status !== "approved")
+          return new Response("Your account is waiting for approval by an admin", { status: 403 });
 
         const body = (await request.json()) as ChatRequestBody;
         const messages = body.messages;

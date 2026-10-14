@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ruler, Save, Calculator, CheckSquare, Square } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/pmc-scope")({
   head: () => ({
@@ -69,7 +70,10 @@ function Page() {
   });
 
   const projects = projectsQuery.data ?? [];
-  const activeId = projectId || projects[0]?.id || "";
+  const globalProject = useActiveProject();
+  const setGlobalProject = useActiveProjectSetter();
+  const activeId =
+    projectId || projects.find((p) => p.id === globalProject.id)?.id || projects[0]?.id || "";
   const project = projects.find((p) => p.id === activeId);
 
   const boqQuery = useQuery({
@@ -203,7 +207,7 @@ function Page() {
           <select
             value={activeId}
             onChange={(e) => {
-              setProjectId(e.target.value);
+              (setProjectId(e.target.value), setGlobalProject(e.target.value));
               setLoadedFor("");
               setIncluded([]);
               setStatus("");
