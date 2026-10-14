@@ -11,14 +11,17 @@ import { Plus, Save, Send, Trash2, PackageSearch } from "lucide-react";
 import { StageSelect } from "@/components/saha/StageSelect";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSiteWeek } from "@/lib/site-week";
+import { extraKey, useOwnerExtras } from "@/lib/owner-extras";
 
 /** `edit` = id or number of an existing draft / pending / rejected PO to edit. */
-type Search = { stage?: string; edit?: string };
+/** `extra` = an owner's accepted flat choice (flat_selections id) to order. */
+type Search = { stage?: string; edit?: string; extra?: string };
 
 export const Route = createFileRoute("/po-create")({
   validateSearch: (s: Record<string, unknown>): Search => ({
     ...(typeof s["stage"] === "string" ? { stage: s["stage"] } : {}),
     ...(typeof s["edit"] === "string" && s["edit"] ? { edit: s["edit"] } : {}),
+    ...(typeof s["extra"] === "string" && s["extra"] ? { extra: s["extra"] } : {}),
   }),
   head: () => ({
     meta: [
@@ -255,6 +258,32 @@ function Page() {
     }
     setPrefilled(poStage);
   }, [poStage, week.data, prefilled]);
+  // Opened from Procurement → Owners' extras: one flat's accepted choice.
+  const extras = useOwnerExtras(search.extra ? projectId : "");
+  const [prefilledExtra, setPrefilledExtra] = useState("");
+  useEffect(() => {
+    if (!search.extra || !extras.data || prefilledExtra === search.extra) return;
+    const x = extras.data.find((e) => e.selectionId === search.extra);
+    if (!x) return;
+    setItems([
+      {
+        ...emptyItem(0),
+        description: `Flat ${x.flatNo} · ${x.item} — ${x.choice}${x.make ? ` (${x.make})` : ""}`,
+        unit: x.unit,
+        quantity: x.qty,
+        rate: x.rate,
+        gst_pct: x.gst,
+        material_key: extraKey(x.flatNo, x.code),
+        stage_code: "",
+      },
+    ]);
+    setMeta((m) => ({
+      ...m,
+      notes: `Owner's choice for flat ${x.flatNo} (${x.owner}), accepted into the plan; replaces our specification${x.specMake ? ` (${x.specMake})` : ""} for this flat only. Item ${x.code}.`,
+    }));
+    setPrefilledExtra(search.extra);
+  }, [search.extra, extras.data, prefilledExtra]);
+
   const totals = useMemo(
     () =>
       poTotals(items, {

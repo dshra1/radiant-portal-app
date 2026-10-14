@@ -1073,6 +1073,48 @@ export type Database = {
           },
         ]
       }
+      programme_replans: {
+        Row: {
+          applied_by: string | null
+          applied_by_name: string
+          created_at: string
+          handover_after: string | null
+          handover_before: string | null
+          id: string
+          monsoon: boolean
+          project_id: string
+          reason: string
+          stages_moved: number
+          summary: Json
+        }
+        Insert: {
+          applied_by?: string | null
+          applied_by_name?: string
+          created_at?: string
+          handover_after?: string | null
+          handover_before?: string | null
+          id?: string
+          monsoon?: boolean
+          project_id: string
+          reason?: string
+          stages_moved?: number
+          summary?: Json
+        }
+        Update: {
+          applied_by?: string | null
+          applied_by_name?: string
+          created_at?: string
+          handover_after?: string | null
+          handover_before?: string | null
+          id?: string
+          monsoon?: boolean
+          project_id?: string
+          reason?: string
+          stages_moved?: number
+          summary?: Json
+        }
+        Relationships: []
+      }
       purchase_order_items: {
         Row: {
           stage_code: string
@@ -1687,6 +1729,8 @@ export type Database = {
       }
       site_stages: {
         Row: {
+          baseline_end: string | null
+          baseline_start: string | null
           code: string
           stage_group: string
           floor: string
@@ -1718,6 +1762,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          baseline_end?: string | null
+          baseline_start?: string | null
           code?: string
           stage_group?: string
           floor?: string
@@ -1749,6 +1795,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          baseline_end?: string | null
+          baseline_start?: string | null
           code?: string
           stage_group?: string
           floor?: string

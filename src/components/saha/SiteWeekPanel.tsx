@@ -1,3 +1,4 @@
+import { HandoverForecast } from "@/components/saha/HandoverForecast";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -117,6 +118,7 @@ export function SiteWeekPanel({
               ? `Site starts ${fmtDay(w.startDate)} · first week ${windowLabel}`
               : `${windowLabel} · handover ${fmtDay(w.handover)}`}
           </p>
+          {focus === "all" && <HandoverForecast projectId={projectId} className="mt-1.5" />}
         </div>
         <div className="ml-auto flex flex-wrap gap-2">
           {(focus === "all" || focus === "tasks") && (

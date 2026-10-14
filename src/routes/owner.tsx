@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Shell } from "@/components/saha/Shell";
+import { HandoverForecast } from "@/components/saha/HandoverForecast";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess } from "@/lib/access";
@@ -233,6 +234,7 @@ function Overview({ projectId, ownerName }: { projectId: string; ownerName: stri
         <h2 className="flex items-center gap-2 font-semibold">
           <HardHat className="size-4 text-primary" /> Progress on site
         </h2>
+        <HandoverForecast projectId={projectId} linked={false} className="mt-2" />
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Tile label="Work done (weighted)" value={`${prog.actual.toFixed(1)}%`} />
           <Tile label="Planned by today" value={`${prog.planned.toFixed(1)}%`} />
@@ -634,6 +636,18 @@ function FlatChoices({
         sender_id: access?.userId ?? null,
         recipient_id: link?.user_id ?? null,
       });
+      const toBuy = waiting.filter((s) => s.option_id).length;
+      if (accept && toBuy)
+        await supabase.from("notifications").insert({
+          title: `Flat ${flatNo}: ${toBuy} owner's choice${toBuy > 1 ? "s" : ""} to buy`,
+          body: "Accepted into the plan. Add to the department tender or raise a PO for this flat (Procurement → Owners' extras to buy).",
+          category: "Procurement",
+          priority: "Normal",
+          link: "/procurement",
+          project_id: projectId,
+          sender_id: access?.userId ?? null,
+        });
+      await qc.invalidateQueries({ queryKey: ["owner_extras", projectId] });
       toast.success(
         accept ? `Accepted: flat ${flatNo} extras ${signed(total)}` : "Sent back to the owner",
       );

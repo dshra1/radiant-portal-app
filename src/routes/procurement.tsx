@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Shell } from "@/components/saha/Shell";
 import { MetricTile, Section, StatusBadge } from "@/components/saha/ui";
 import { supabase } from "@/integrations/supabase/client";
-import { useSessionUser } from "@/lib/access";
+import { useAccess, useSessionUser } from "@/lib/access";
+import { OwnerExtrasSection } from "@/components/saha/procurement/OwnerExtras";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { inr, inrCompact } from "@/data/saha";
 import { STATUS_LABEL, lineTotals, type PoItem, type PoRecord, type PoStatus } from "@/lib/po";
@@ -61,6 +62,8 @@ type Filter = "all" | PoStatus;
 function Procurement() {
   const user = useSessionUser();
   const project = useActiveProject();
+  const { access } = useAccess();
+  const canBuy = Boolean(access?.roles.some((r) => ["admin", "pm", "purchase_stores"].includes(r)));
   const { status } = Route.useSearch();
   const [filter, setFilter] = useState<Filter>(status ?? "all");
   const [q, setQ] = useState("");
@@ -341,6 +344,8 @@ function Procurement() {
           </table>
         </div>
       </Section>
+
+      <OwnerExtrasSection projectId={project.id} canWrite={canBuy} />
 
       <Section
         title="Value committed per vendor"

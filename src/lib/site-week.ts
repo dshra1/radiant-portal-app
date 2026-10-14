@@ -241,26 +241,7 @@ export function useSiteWeek(projectId: string) {
         }));
       const notes = (pr.data?.control_notes ?? {}) as { beforeStart?: PreStartItem[] };
       // Material already on a purchase order for its stage.
-      const ordered = new Map<string, string>();
-      const pos = await supabase
-        .from("purchase_orders")
-        .select("id,po_number,status")
-        .eq("project_id", projectId)
-        .neq("stage_code", "");
-      const live = (pos.data ?? []).filter((p) => !/reject|cancel/i.test(p.status ?? ""));
-      if (live.length) {
-        const items = await supabase
-          .from("purchase_order_items")
-          .select("po_id,stage_code,material_key")
-          .in(
-            "po_id",
-            live.map((p) => p.id),
-          )
-          .neq("material_key", "");
-        const num = new Map(live.map((p) => [p.id, p.po_number]));
-        for (const it of items.data ?? [])
-          ordered.set(`${it.stage_code}|${it.material_key}`, num.get(it.po_id) ?? "PO");
-      }
+      const ordered = await loadOrderedMaterial(projectId);
       return buildWeek(
         stages,
         notes,
@@ -271,6 +252,31 @@ export function useSiteWeek(projectId: string) {
       );
     },
   });
+}
+
+/** `${stage code}|${material key}` → PO number, for material already on a live PO. */
+export async function loadOrderedMaterial(projectId: string) {
+  const ordered = new Map<string, string>();
+  const pos = await supabase
+    .from("purchase_orders")
+    .select("id,po_number,status")
+    .eq("project_id", projectId)
+    .neq("stage_code", "");
+  const live = (pos.data ?? []).filter((p) => !/reject|cancel/i.test(p.status ?? ""));
+  if (live.length) {
+    const items = await supabase
+      .from("purchase_order_items")
+      .select("po_id,stage_code,material_key")
+      .in(
+        "po_id",
+        live.map((p) => p.id),
+      )
+      .neq("material_key", "");
+    const num = new Map(live.map((p) => [p.id, p.po_number]));
+    for (const it of items.data ?? [])
+      ordered.set(`${it.stage_code}|${it.material_key}`, num.get(it.po_id) ?? "PO");
+  }
+  return ordered;
 }
 
 /** Stages that follow a given stage (it is one of their predecessors). */

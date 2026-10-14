@@ -32,6 +32,7 @@ import {
   BellRing,
   Bot,
   ListChecks,
+  CalendarClock,
 } from "lucide-react";
 
 export type NavItem = {
@@ -72,6 +73,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: "/site-today", label: "Site Today (phone)", icon: HardHat },
       { to: "/site-execution", label: "Site Execution", icon: HardHat },
+      { to: "/replan", label: "Programme Re-plan (forecast)", icon: CalendarClock },
       { to: "/pour-cards", label: "Pour Cards", icon: ClipboardCheck },
       { to: "/site-media", label: "Site Media", icon: Video },
       { to: "/contractors-labour", label: "Contractors & Labour", icon: Users },

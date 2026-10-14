@@ -120,6 +120,9 @@ export async function importProgramme(projectId: string, control: ControlData, l
       sort: s.seq,
       planned_start: s.start,
       planned_end: s.finish,
+      // A new report is a new baseline: re-plans start again from it.
+      baseline_start: s.start,
+      baseline_end: s.finish,
       notes,
       code: s.code,
       stage_group: s.group,
