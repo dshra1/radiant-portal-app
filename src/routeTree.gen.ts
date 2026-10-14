@@ -28,6 +28,7 @@ import { Route as CommonExpensesRouteImport } from './routes/common-expenses'
 import { Route as ContractorsLabourRouteImport } from './routes/contractors-labour'
 import { Route as CostDashboardRouteImport } from './routes/cost-dashboard'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DatabaseBackupRouteImport } from './routes/database-backup'
 import { Route as DrawingDecipherRouteImport } from './routes/drawing-decipher'
 import { Route as ExecutionManualRouteImport } from './routes/execution-manual'
 import { Route as FieldConsoleRouteImport } from './routes/field-console'
@@ -160,6 +161,11 @@ const CostDashboardRoute = CostDashboardRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DatabaseBackupRoute = DatabaseBackupRouteImport.update({
+  id: '/database-backup',
+  path: '/database-backup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DrawingDecipherRoute = DrawingDecipherRouteImport.update({
@@ -373,6 +379,7 @@ export interface FileRoutesByFullPath {
   '/contractors-labour': typeof ContractorsLabourRoute
   '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
+  '/database-backup': typeof DatabaseBackupRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
@@ -432,6 +439,7 @@ export interface FileRoutesByTo {
   '/contractors-labour': typeof ContractorsLabourRoute
   '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
+  '/database-backup': typeof DatabaseBackupRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
@@ -492,6 +500,7 @@ export interface FileRoutesById {
   '/contractors-labour': typeof ContractorsLabourRoute
   '/cost-dashboard': typeof CostDashboardRoute
   '/dashboard': typeof DashboardRoute
+  '/database-backup': typeof DatabaseBackupRoute
   '/drawing-decipher': typeof DrawingDecipherRoute
   '/execution-manual': typeof ExecutionManualRoute
   '/field-console': typeof FieldConsoleRoute
@@ -553,6 +562,7 @@ export interface FileRouteTypes {
     | '/contractors-labour'
     | '/cost-dashboard'
     | '/dashboard'
+    | '/database-backup'
     | '/drawing-decipher'
     | '/execution-manual'
     | '/field-console'
@@ -612,6 +622,7 @@ export interface FileRouteTypes {
     | '/contractors-labour'
     | '/cost-dashboard'
     | '/dashboard'
+    | '/database-backup'
     | '/drawing-decipher'
     | '/execution-manual'
     | '/field-console'
@@ -671,6 +682,7 @@ export interface FileRouteTypes {
     | '/contractors-labour'
     | '/cost-dashboard'
     | '/dashboard'
+    | '/database-backup'
     | '/drawing-decipher'
     | '/execution-manual'
     | '/field-console'
@@ -731,6 +743,7 @@ export interface RootRouteChildren {
   ContractorsLabourRoute: typeof ContractorsLabourRoute
   CostDashboardRoute: typeof CostDashboardRoute
   DashboardRoute: typeof DashboardRoute
+  DatabaseBackupRoute: typeof DatabaseBackupRoute
   DrawingDecipherRoute: typeof DrawingDecipherRoute
   ExecutionManualRoute: typeof ExecutionManualRoute
   FieldConsoleRoute: typeof FieldConsoleRoute
@@ -904,6 +917,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/database-backup': {
+      id: '/database-backup'
+      path: '/database-backup'
+      fullPath: '/database-backup'
+      preLoaderRoute: typeof DatabaseBackupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/drawing-decipher': {
@@ -1195,6 +1215,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContractorsLabourRoute: ContractorsLabourRoute,
   CostDashboardRoute: CostDashboardRoute,
   DashboardRoute: DashboardRoute,
+  DatabaseBackupRoute: DatabaseBackupRoute,
   DrawingDecipherRoute: DrawingDecipherRoute,
   ExecutionManualRoute: ExecutionManualRoute,
   FieldConsoleRoute: FieldConsoleRoute,

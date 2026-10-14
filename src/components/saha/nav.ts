@@ -71,6 +71,7 @@ export const navGroups: NavGroup[] = [
       { to: "/project-controls", label: "Project Controls", icon: BarChart3 },
       { to: "/system-directory", label: "System Directory", icon: Settings2 },
       { to: "/access-control", label: "Access & Permissions", icon: ShieldCheck, adminOnly: true },
+      { to: "/database-backup", label: "Database Backup", icon: Boxes, adminOnly: true },
     ],
   },
   {
