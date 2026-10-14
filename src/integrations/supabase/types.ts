@@ -1626,6 +1626,10 @@ export type Database = {
           materials: Json
           steel: Json | null
           directions: Json
+          evidence: Json
+          closed_at: string | null
+          closed_by: string | null
+          closed_by_name: string
           actual_end: string | null
           actual_pct: number
           actual_start: string | null
@@ -1653,6 +1657,10 @@ export type Database = {
           materials?: Json
           steel?: Json | null
           directions?: Json
+          evidence?: Json
+          closed_at?: string | null
+          closed_by?: string | null
+          closed_by_name?: string
           actual_end?: string | null
           actual_pct?: number
           actual_start?: string | null
@@ -1680,6 +1688,10 @@ export type Database = {
           materials?: Json
           steel?: Json | null
           directions?: Json
+          evidence?: Json
+          closed_at?: string | null
+          closed_by?: string | null
+          closed_by_name?: string
           actual_end?: string | null
           actual_pct?: number
           actual_start?: string | null

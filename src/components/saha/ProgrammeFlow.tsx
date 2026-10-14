@@ -1,6 +1,15 @@
 import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, ShieldAlert, Package, Hammer, ListChecks } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  ShieldAlert,
+  Package,
+  Hammer,
+  ListChecks,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DAY,
@@ -525,6 +534,15 @@ function StageDetail({ s, byCode }: { s: FlowStage; byCode: Map<string, FlowStag
             {s.stage_group}
             {s.floor && ` · ${s.floor}`} · {fmt(s.planned_start)} → {fmt(s.planned_end)} ·{" "}
             {s.duration_days} working days · planned today {plan}% · actual {s.actual_pct}%
+          </p>
+          <p className="mt-1">
+            <Link
+              to="/stage-drawings"
+              search={{ stage: s.code }}
+              className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground"
+            >
+              <FileText className="size-3.5" /> Drawings for {s.code} · check a site photo
+            </Link>
           </p>
           {s.preds.length > 0 && (
             <p className="mt-1 text-[12px]">

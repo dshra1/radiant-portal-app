@@ -9,6 +9,7 @@ import { useActiveProject } from "@/hooks/useActiveProject";
 import { inr, inrCompact } from "@/data/saha";
 import { STATUS_LABEL, lineTotals, type PoItem, type PoRecord, type PoStatus } from "@/lib/po";
 import { Download, Plus, Users } from "lucide-react";
+import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/procurement")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -176,6 +177,7 @@ function Procurement() {
         </div>
       }
     >
+      <ActiveSiteWeek focus="materials" />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <button type="button" onClick={() => setFilter("all")} className="text-left transition-transform hover:-translate-y-0.5">
           <MetricTile label="Total PO value raised" value={inrCompact(total)} delta={`${(orders ?? []).length} orders — tap to view`} />

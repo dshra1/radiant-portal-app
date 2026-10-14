@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
+import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/inventory-control")({
   head: () => ({
@@ -360,6 +361,7 @@ function Page() {
 
   return (
     <Shell title="Stock & Inventory Control">
+      <ActiveSiteWeek focus="materials" />
       <div className="w-full px-4 md:px-8 py-6 flex flex-col gap-6">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>

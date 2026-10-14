@@ -60,6 +60,7 @@ import { Route as ScopeBriefRouteImport } from './routes/scope-brief'
 import { Route as SiteExecutionRouteImport } from './routes/site-execution'
 import { Route as SiteMaterialGuideRouteImport } from './routes/site-material-guide'
 import { Route as SiteMediaRouteImport } from './routes/site-media'
+import { Route as StageDrawingsRouteImport } from './routes/stage-drawings'
 import { Route as SystemDirectoryRouteImport } from './routes/system-directory'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as TenderComparisonRouteImport } from './routes/tender-comparison'
@@ -324,6 +325,11 @@ const SiteMediaRoute = SiteMediaRouteImport.update({
   path: '/site-media',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StageDrawingsRoute = StageDrawingsRouteImport.update({
+  id: '/stage-drawings',
+  path: '/stage-drawings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SystemDirectoryRoute = SystemDirectoryRouteImport.update({
   id: '/system-directory',
   path: '/system-directory',
@@ -417,6 +423,7 @@ export interface FileRoutesByFullPath {
   '/site-execution': typeof SiteExecutionRoute
   '/site-material-guide': typeof SiteMaterialGuideRoute
   '/site-media': typeof SiteMediaRoute
+  '/stage-drawings': typeof StageDrawingsRoute
   '/system-directory': typeof SystemDirectoryRoute
   '/tasks': typeof TasksRoute
   '/tender-comparison': typeof TenderComparisonRoute
@@ -478,6 +485,7 @@ export interface FileRoutesByTo {
   '/site-execution': typeof SiteExecutionRoute
   '/site-material-guide': typeof SiteMaterialGuideRoute
   '/site-media': typeof SiteMediaRoute
+  '/stage-drawings': typeof StageDrawingsRoute
   '/system-directory': typeof SystemDirectoryRoute
   '/tasks': typeof TasksRoute
   '/tender-comparison': typeof TenderComparisonRoute
@@ -540,6 +548,7 @@ export interface FileRoutesById {
   '/site-execution': typeof SiteExecutionRoute
   '/site-material-guide': typeof SiteMaterialGuideRoute
   '/site-media': typeof SiteMediaRoute
+  '/stage-drawings': typeof StageDrawingsRoute
   '/system-directory': typeof SystemDirectoryRoute
   '/tasks': typeof TasksRoute
   '/tender-comparison': typeof TenderComparisonRoute
@@ -603,6 +612,7 @@ export interface FileRouteTypes {
     | '/site-execution'
     | '/site-material-guide'
     | '/site-media'
+    | '/stage-drawings'
     | '/system-directory'
     | '/tasks'
     | '/tender-comparison'
@@ -664,6 +674,7 @@ export interface FileRouteTypes {
     | '/site-execution'
     | '/site-material-guide'
     | '/site-media'
+    | '/stage-drawings'
     | '/system-directory'
     | '/tasks'
     | '/tender-comparison'
@@ -725,6 +736,7 @@ export interface FileRouteTypes {
     | '/site-execution'
     | '/site-material-guide'
     | '/site-media'
+    | '/stage-drawings'
     | '/system-directory'
     | '/tasks'
     | '/tender-comparison'
@@ -787,6 +799,7 @@ export interface RootRouteChildren {
   SiteExecutionRoute: typeof SiteExecutionRoute
   SiteMaterialGuideRoute: typeof SiteMaterialGuideRoute
   SiteMediaRoute: typeof SiteMediaRoute
+  StageDrawingsRoute: typeof StageDrawingsRoute
   SystemDirectoryRoute: typeof SystemDirectoryRoute
   TasksRoute: typeof TasksRoute
   TenderComparisonRoute: typeof TenderComparisonRoute
@@ -1156,6 +1169,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SiteMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stage-drawings': {
+      id: '/stage-drawings'
+      path: '/stage-drawings'
+      fullPath: '/stage-drawings'
+      preLoaderRoute: typeof StageDrawingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/system-directory': {
       id: '/system-directory'
       path: '/system-directory'
@@ -1267,6 +1287,7 @@ const rootRouteChildren: RootRouteChildren = {
   SiteExecutionRoute: SiteExecutionRoute,
   SiteMaterialGuideRoute: SiteMaterialGuideRoute,
   SiteMediaRoute: SiteMediaRoute,
+  StageDrawingsRoute: StageDrawingsRoute,
   SystemDirectoryRoute: SystemDirectoryRoute,
   TasksRoute: TasksRoute,
   TenderComparisonRoute: TenderComparisonRoute,

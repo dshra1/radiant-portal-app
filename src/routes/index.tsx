@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { NotificationBell } from "@/components/saha/NotificationBell";
+import { SiteWeekPanel } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -296,6 +297,7 @@ function Index() {
       </header>
 
       <main className="mx-auto flex w-full max-w-none flex-col gap-6 px-5 py-6 lg:px-8">
+        {activeProject.id ? <SiteWeekPanel projectId={activeProject.id} /> : null}
         {/* Projects — tap a card to open its dashboard */}
         <section>
           <div className="mb-3 flex items-end justify-between gap-3">

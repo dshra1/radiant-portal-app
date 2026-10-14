@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/saha/ui";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSessionUser } from "@/lib/access";
+import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/field-console")({
   head: () => ({
@@ -117,6 +118,7 @@ function Page() {
 
   return (
     <Shell title="Field Console">
+      <ActiveSiteWeek focus="tasks" />
       <div className="flex flex-col gap-6 pb-16">
         <header className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">

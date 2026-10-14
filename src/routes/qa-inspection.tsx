@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/saha/ui";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
+import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/qa-inspection")({
   head: () => ({
@@ -197,6 +198,7 @@ function Page() {
 
   return (
     <Shell title="QA Inspections">
+      <ActiveSiteWeek focus="qa" />
       <div className="flex flex-col gap-6 pb-16">
         <header className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm md:flex-row md:items-end md:justify-between">
           <div>

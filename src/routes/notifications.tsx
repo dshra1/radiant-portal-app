@@ -5,6 +5,7 @@ import { BellRing, Check, CheckCheck, Plus, Trash2, X, User } from "lucide-react
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
+import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({
@@ -265,6 +266,7 @@ function Notifications() {
         </form>
       )}
 
+      <ActiveSiteWeek focus="all" />
       <div className="mb-3 flex items-center gap-2">
         {(["all", "unread"] as const).map((f) => (
           <button

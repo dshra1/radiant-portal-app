@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { cn } from "@/lib/utils";
+import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/tasks")({
   head: () => ({
@@ -256,6 +257,7 @@ function TaskTracker() {
         </form>
       )}
 
+      <ActiveSiteWeek focus="tasks" />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {(
           [

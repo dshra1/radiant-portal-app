@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Shell } from "@/components/saha/Shell";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { supabase } from "@/integrations/supabase/client";
+import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/execution-manual")({
   head: () => ({
@@ -118,6 +119,7 @@ function Page() {
   };
   return (
     <Shell title={"Stage-Wise Field Execution Manual & QA/QC Protocols | Saha OS"}>
+      <ActiveSiteWeek focus="tasks" />
       <div className="m3">
         <main className="relative pt-16 w-full px-space-xl pb-space-3xl  bg-surface"><div className="flex flex-col w-full">
 

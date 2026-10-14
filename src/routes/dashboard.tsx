@@ -14,6 +14,7 @@ import {
 import { inrCompact, materialRates } from "@/data/saha";
 import { QuickAccess } from "@/components/saha/QuickAccess";
 import { useSessionUser } from "@/lib/access";
+import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -106,6 +107,7 @@ function Dashboard() {
         </div>
       )}
 
+      <ActiveSiteWeek focus="all" />
       <QuickAccess />
 
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -29,7 +29,7 @@ export const Route = createFileRoute("/site-media")({
   component: Page,
 });
 
-export const MEDIA_CATEGORIES = ["progress", "quality", "safety", "material", "handover"] as const;
+export const MEDIA_CATEGORIES = ["progress", "quality", "safety", "material", "handover", "approval"] as const;
 
 type Media = {
   id: string;

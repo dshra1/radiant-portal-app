@@ -16,6 +16,7 @@ import {
   type PoStatus,
 } from "@/lib/po";
 import { CheckCircle2, Plus, Printer, Send, Trash2, XCircle } from "lucide-react";
+import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/purchase-orders")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -141,6 +142,7 @@ function Page() {
 
   return (
     <Shell title="Purchase Orders" subtitle="Register, PM approvals and printable GST-format POs">
+      <ActiveSiteWeek focus="materials" />
       <div className="mx-auto flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6 no-print">
         <header className="panel flex flex-wrap items-end justify-between gap-3 p-4">
           <div>
