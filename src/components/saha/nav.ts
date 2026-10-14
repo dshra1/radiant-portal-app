@@ -18,7 +18,6 @@ import {
   Boxes,
   Users,
   ShieldCheck,
-  Settings2,
   Upload,
   Scale,
   Radio,
@@ -55,7 +54,6 @@ export const navGroups: NavGroup[] = [
       { to: "/notifications", label: "Action Centre", icon: BellRing },
       { to: "/tasks", label: "Task Tracker", icon: ListChecks },
       { to: "/projects", label: "Projects", icon: Building2 },
-      { to: "/projects-setup", label: "Projects & Setup", icon: Settings2 },
       { to: "/brand-preferences", label: "Brand Preferences", icon: Tags },
       { to: "/boq-engine", label: "BOQ Engine", icon: Calculator },
       { to: "/project-import", label: "Import PMC Workbooks", icon: FileSpreadsheet },
@@ -85,14 +83,11 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: "/inventory-control", label: "Inventory Control", icon: Boxes },
       { to: "/procurement", label: "Procurement", icon: ShoppingCart },
-      { to: "/purchasing-center", label: "Purchasing Center", icon: ShoppingCart },
       { to: "/purchase-orders", label: "Purchase Orders", icon: FileSpreadsheet },
       { to: "/po-create", label: "Create PO", icon: FileSpreadsheet },
       { to: "/tender-comparison", label: "Tender Comparison", icon: Scale },
-      { to: "/price-intelligence", label: "Price Intelligence", icon: Tags },
+      { to: "/price-intelligence", label: "Price Intelligence & Brands", icon: Tags },
       { to: "/vendor-directory", label: "Vendor Directory", icon: Store },
-      { to: "/vendor-lifecycle", label: "Vendor Lifecycle", icon: Store },
-      { to: "/brand-benchmark", label: "Brand Benchmark", icon: Tags },
     ],
   },
   {
@@ -101,7 +96,6 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: "/price-ocr", label: "Price OCR (Proformas)", icon: ScanEye },
       { to: "/bills-payments", label: "Bills & Payments", icon: Receipt },
-      { to: "/billing-expenditure", label: "Billing & Expenditure", icon: Receipt },
       { to: "/financial-ingestion", label: "Cash Ledger", icon: Upload },
       { to: "/financial-forecast", label: "Financial Forecast", icon: BarChart3 },
     ],
@@ -116,17 +110,13 @@ export const navGroups: NavGroup[] = [
       { to: "/common-expenses", label: "Common & Statutory Expenses", icon: Landmark },
       { to: "/pmc-scope", label: "PMC Scope & Commercials", icon: BadgeIndianRupee },
       { to: "/cost-dashboard", label: "Cost Dashboard", icon: BadgeIndianRupee },
-      { to: "/owner-approvals", label: "Owner Approvals & Suggestions", icon: ShieldCheck },
-      { to: "/approvals", label: "BOQ Change Approvals", icon: ShieldCheck },
+      { to: "/approvals", label: "Approvals", icon: ShieldCheck },
     ],
   },
   {
     id: "qa",
     label: "QA & Inspect",
-    items: [
-      { to: "/qa-inspection", label: "QA Inspection", icon: ClipboardCheck },
-      { to: "/quality", label: "Quality Control", icon: ClipboardCheck },
-    ],
+    items: [{ to: "/quality", label: "Quality & Inspections", icon: ClipboardCheck }],
   },
 ];
 

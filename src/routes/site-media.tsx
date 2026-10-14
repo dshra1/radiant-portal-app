@@ -107,7 +107,7 @@ function Page() {
     mutationFn: async () => {
       if (files.length === 0) throw new Error("Choose at least one photo or video");
       for (const file of files) {
-        const safe = file.name.replace(/[^\w.\-]+/g, "_");
+        const safe = file.name.replace(/[^\w.-]+/g, "_");
         const path = `${project.id}/${Date.now()}-${safe}`;
         const { error: upErr } = await supabase.storage.from("site-media").upload(path, file, {
           upsert: false,
@@ -361,7 +361,8 @@ function Page() {
             Stage drawings &amp; photo check
           </Link>
           <Link
-            to="/qa-inspection"
+            to="/quality"
+            search={{ tab: "inspections" }}
             className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
           >
             QA inspections

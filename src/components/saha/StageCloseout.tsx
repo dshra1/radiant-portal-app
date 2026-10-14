@@ -81,7 +81,7 @@ export function StageCloseout({
           },
         },
       });
-      toast.success(`${id} recorded ${result} (also in QA Inspection)`);
+      toast.success(`${id} recorded ${result} (also in Quality → Inspections)`);
       await refresh();
     } catch (e) {
       toast.error((e as Error).message);

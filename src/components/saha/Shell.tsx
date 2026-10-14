@@ -77,7 +77,7 @@ const mobileNav: NavItem[] = [
   { to: "/projects", label: "Projects", icon: Building2 },
   { to: "/boq-engine", label: "BOQ", icon: Calculator },
   { to: "/pour-cards", label: "Pours", icon: ClipboardCheck },
-  { to: "/qa-inspection", label: "QA", icon: ScanEye },
+  { to: "/quality", label: "QA", icon: ScanEye },
 ];
 
 const groupTones: Record<string, string> = {

@@ -148,3 +148,38 @@ export function ActionButton({
     </button>
   );
 }
+
+/** Tab strip for pages that combine several registers; the active tab lives in the URL (?tab=). */
+export function PageTabs<T extends string>({
+  tabs,
+  active,
+  onChange,
+  className,
+}: {
+  tabs: { key: T; label: string; icon?: ReactNode }[];
+  active: T;
+  onChange: (key: T) => void;
+  className?: string;
+}) {
+  return (
+    <div role="tablist" className={cn("flex flex-wrap gap-2", className)}>
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          role="tab"
+          aria-selected={active === t.key}
+          onClick={() => onChange(t.key)}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors",
+            active === t.key
+              ? "bg-primary text-primary-foreground"
+              : "border border-border bg-card text-foreground hover:bg-secondary",
+          )}
+        >
+          {t.icon} {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}

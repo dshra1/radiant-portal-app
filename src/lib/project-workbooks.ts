@@ -14,7 +14,7 @@ type Cell = string | number | boolean | Date | null;
 type Row = Cell[];
 
 export type WorkbookKind =
-  "master" | "value-engineered" | "split" | "quotation" | "control" | "unknown";
+  "master" | "value-engineered" | "split" | "quotation" | "control" | "vendor-quote" | "unknown";
 
 export type BoqLine = {
   pkg: string;
@@ -246,6 +246,7 @@ export function readWorkbook(buf: ArrayBuffer): XLSX.WorkBook {
 
 export function detectKind(wb: XLSX.WorkBook, fileName: string): WorkbookKind {
   const names = new Set(wb.SheetNames);
+  if (names.has("Tender request") && names.has("Price schedule")) return "vendor-quote";
   if (names.has("Common BOQ") && names.has("Individual BOQ")) return "split";
   if (names.has("Programme") && names.has("Material plan")) return "control";
   if (wb.SheetNames.some((n) => /^PMC reference/i.test(n))) return "quotation";

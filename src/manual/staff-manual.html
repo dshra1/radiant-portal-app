@@ -224,7 +224,7 @@ details p{margin-top:8px;color:var(--muted)}
 
   <section class="sec" id="map" aria-labelledby="map-h">
     <h2 id="map-h">Page map</h2>
-    <p class="intro">Every page in the menu, grouped as in the app. Pages you can see are bold; click any page for what it does and how to use it. <span class="tag daily pill">daily</span> marks the pages to live in; <span class="tag merge pill">overlaps</span> marks pages being merged into one.</p>
+    <p class="intro">Every page in the menu, grouped as in the app. Pages you can see are bold; click any page for what it does and how to use it. <span class="tag daily pill">daily</span> marks the pages to live in. Pages with tabs (Projects, Price Intelligence, Vendor Directory, Bills &amp; Payments, Approvals, Quality) replace the older separate pages; old links still open the right tab.</p>
     <div class="mapbar">
       <input id="q" type="search" placeholder="Search pages: e.g. pour, bill, drawing, cube" aria-label="Search pages">
       <label><input type="checkbox" id="onlyMine"> Only pages I can see</label>
@@ -277,15 +277,14 @@ const GROUPS = [
   ["/ai","Saha AI Assistant","","Ask questions about the project in plain words. It reads the live BOQ by package, the programme (now and next), stock order-by dates and tenders.",["Ask things like \"what steel do I need for C2 columns\" or \"which orders are due this week\".","Check figures it gives against the page it names before acting."]],
   ["/notifications","Action Centre","daily","All alerts in one place: orders to place, stages starting, hold points, behind-plan stages, cubes due, NCRs overdue, payment requests.",["Work the High items first.","Each alert links to the page where you act on it."]],
   ["/tasks","Task Tracker","daily","Every site task with owner, due date, progress and status. Stage tasks are created when the PM pushes a stage.",["Update your progress % at the end of the day.","Mark done only after the check is recorded."]],
-  ["/projects","Projects","","Project record: geometry, timeline drivers, specifications, staffing, landowners and banking. Settings for 77:76 match the report.",["Change project figures here only when the report changes.","Only an admin can delete a project."]],
-  ["/projects-setup","Projects & Setup","merge","Project identity, floor geometry and the programme flow with material and steel for each stage. Being merged into Projects.",["Use the programme flow to read each stage's directions and material."]],
-  ["/brand-preferences","Brand Preferences","","The 30 makes chosen in the report (Nuvoco RMC, Jairaj Fe550D, Kohler, Legrand, Polycab, Ashirvad…).",["Buy only these makes unless a change is approved.","A change goes through BOQ Change Approvals."]],
+  ["/projects","Projects","","Two tabs. Projects: the project record (geometry, timeline drivers, specifications, staffing, landowners and banking); settings for 77:76 match the report. Setup & programme: floor geometry and the civil quantities it gives, RMC and steel from the stages, the stage summary and the construction flow with each stage's material and directions.",["Change project figures here only when the report changes.","Floor geometry has one editor: Edit geometry on the Setup & programme tab opens the project form.","Use the construction flow (Setup & programme tab) to read each stage's directions and material.","Only an admin can delete a project."]],
+  ["/brand-preferences","Brand Preferences","","The 30 makes chosen in the report (Nuvoco RMC, Jairaj Fe550D, Kohler, Legrand, Polycab, Ashirvad…).",["Buy only these makes unless a change is approved.","A change goes through Approvals (BOQ changes tab)."]],
   ["/boq-engine","BOQ Engine","","The report's master BOQ: 351 lines in report packages, common and individual split. ₹6.47 Cr excl. GST, ₹7.45 Cr incl. GST.",["Filter by package to see a trade.","Rate changes need an admin-approved change request; rates are locked otherwise."]],
   ["/project-import","Import PMC Workbooks","","Loads the PMC workbooks into the app: master BOQ, common vs individual split, construction control (programme, materials, checklist, cubes), quotation packages, drawing PDFs.",["Select all revised workbooks together and press Import.","Site progress, stock movements, flat owners and vendor bids are kept on re-import."]],
   ["/stage-budget","Stage Budget & Owner Payments","","What each stage needs (material, machinery, labour, misc), the payment request to owners before the stage, and the actual cost after it.",["Open a stage, check \"Who pays this stage\", then Request.","After the stage, use the recorded bills and labour, approve, then Send cost statement."]],
-  ["/budget-fit","Budget Fit","","Cheaper Hyderabad rates and brands against the ₹6.20 Cr budget. Disabled except for value-engineered options.",["Suggest an option; it goes to BOQ Change Approvals for the admin."]],
+  ["/budget-fit","Budget Fit","","Cheaper Hyderabad rates and brands against the ₹6.20 Cr budget. Disabled except for value-engineered options.",["Suggest an option; it goes to Approvals (BOQ changes tab) for the admin."]],
   ["/drawing-decipher","Drawings & Documents","","Drawing register: upload revisions, open and export.",["Upload a new revision with its sheet number; the old one stays in history."]],
-  ["/stage-drawings","Stage Drawings & Photo Check","daily","The sheets for each stage, room by room, and the AI photo check: upload a site photo and it compares it with the drawing.",["Open from a stage's Drawings link.","Take the photo from the same view as the drawing (one wall, square on).","The result is saved as a QA inspection on that stage."]],
+  ["/stage-drawings","Stage Drawings & Photo Check","daily","The sheets for each stage, room by room, and the AI photo check: upload a site photo and it compares it with the drawing.",["Open from a stage's Drawings link.","Take the photo from the same view as the drawing (one wall, square on).","The result is saved as an inspection on that stage (Quality, Inspections tab)."]],
   ["/execution-manual","Execution Manual","","The 14-stage field SOP: hold gates, guardrails, curing.",["Read the section for your stage before starting it."]],
   ["/access-control","Access & Permissions","admin","Approve new sign-ins and give each person a role.",["New staff sign up, then the admin approves and assigns the role."]],
   ["/database-backup","Database Backup","admin","Download a full backup of data and files; restore into a new database.",["Take a backup every week."]],
@@ -299,21 +298,17 @@ const GROUPS = [
  ]},
  {id:"stock", label:"Stock & inventory", pages:[
   ["/inventory-control","Inventory Control","daily","Site stock: receipts, issues, balances. Low-stock warnings only when a material's order-by date is within 14 days.",["Enter every receipt against its PO.","Enter issues with the stage they went to."]],
-  ["/procurement","Procurement","merge","Orders due by stage, POs raised, value committed, deliveries. Being merged with Purchasing Center and Vendor Lifecycle.",["Use the Orders list: each row shows the PO or a PO link to raise one."]],
-  ["/purchasing-center","Purchasing Center","merge","PO pipeline, committed spend and vendor tools. Overlaps Procurement.",[]],
+  ["/procurement","Procurement","daily","The buying hub: POs raised, value committed and awaiting approval, drafts, registered vendors, stock items, vendor bills still to pay, value per vendor and links to every buying tool.",["Tap a tile to filter the PO list (approved, awaiting approval, drafts).","Use Raise PO, or the PO link on an order row, so the stage and material are tagged.","Pending vendor payments opens the vendor-wise spend in the Vendor Directory."]],
   ["/purchase-orders","Purchase Orders","daily","PO register: draft, PM approval, approved; printable GST POs.",["Admin or PM approves a PO before it is sent to the vendor."]],
   ["/po-create","Create PO","","Raise a GST PO from the BOQ. Opened from a stage, it fills that stage's materials and steel.",["Use the PO link on an order row so the stage and material are tagged."]],
   ["/tender-comparison","Tender Comparison","","Vendor quotes line by line, L1/L2/L3, award. 29 RFQ packages from the quotation workbook.",["Get at least three vendor quotes before approval.","Award by item; the award becomes the PO."]],
-  ["/price-intelligence","Price Intelligence","merge","Rates from scanned quotes against BOQ rates. Being merged with Brand Benchmark.",[]],
-  ["/vendor-directory","Vendor Directory","","Vendors by trade with ratings.",["Add a vendor before raising their first PO."]],
-  ["/vendor-lifecycle","Vendor Lifecycle","merge","Vendor from registration to POs, deliveries and payments. Overlaps Procurement.",[]],
-  ["/brand-benchmark","Brand Benchmark","merge","Chosen brands against quoted and BOQ rates.",[]],
+  ["/price-intelligence","Price Intelligence & Brands","","Two tabs. Rates vs BOQ: rates from scanned quotes against BOQ rates. Brands: the makes chosen in Brand Preferences against quoted and BOQ rates, brand by brand. Both compare on the same basis (excl. GST, after discount).",["Upload quotes in Price OCR first; they show up here.","Use the Brands tab before you buy a make, to see if you are paying the right price."]],
+  ["/vendor-directory","Vendor Directory","","Two tabs. Vendors: by trade with ratings, Excel template and bulk import. Vendor-wise spend: approved PO value, billed and still to pay for each vendor.",["Add a vendor before raising their first PO.","Check Vendor-wise spend before releasing a new order to a vendor with unpaid balance."]],
  ]},
  {id:"accounts", label:"Accounts & audit", pages:[
   ["/price-ocr","Price OCR (Proformas)","","Upload vendor proformas; item, brand, unit and rate are read out into the price database.",["Upload every quote you receive; it builds the most-used price list."]],
-  ["/bills-payments","Bills & Payments","daily","Vendor bills with stage code and cost type (material, machinery, labour, misc), approval and payments.",["Enter the bill with its stage and cost type.","Only the admin approves. After approval only the admin can change it.","Admin, accounts or PM marks it paid with the payment details."]],
-  ["/billing-expenditure","Billing & Expenditure","merge","One register of bills, payments and statutory charges. Being merged with Financial Ingestion into one ledger.",[]],
-  ["/financial-ingestion","Financial Ingestion","merge","Upload bank statements, expense sheets and vouchers into the cash ledger.",[]],
+  ["/bills-payments","Bills & Payments","daily","Vendor bills with stage code and cost type (material, machinery, labour, misc), approval and payments. The All outflows tab lists every bill, payment and statutory charge in one register.",["Enter the bill with its stage and cost type.","Only the admin approves. After approval only the admin can change it.","Admin, accounts or PM marks it paid with the payment details.","All outflows tab: bills, payments and statutory charges in one register; View bill opens that bill."]],
+  ["/financial-ingestion","Cash Ledger","","Upload bank statements, expense sheets and vouchers into the cash ledger.",["Upload the bank statement every week."]],
   ["/financial-forecast","Financial Forecast","","Cash forecast: funds in hand, monthly burn, cost to complete and funding gap, on the report's BOQ.",["Review monthly with the stage budget's cash by month."]],
  ]},
  {id:"money", label:"Money & owners", pages:[
@@ -323,12 +318,10 @@ const GROUPS = [
   ["/common-expenses","Common & Statutory Expenses","","Permission charges, LRS, electrical connection, HMWSSB and architect fees.",[]],
   ["/pmc-scope","PMC Scope & Commercials","","Packages the PMC handles, fee and cost against the BOQ.",[]],
   ["/cost-dashboard","Cost Dashboard","","Cost picture on the report: material, machinery, labour, misc, contingency, committed POs, balance.",[]],
-  ["/owner-approvals","Owner Approvals & Suggestions","","Payment requests, cost statements, drawings and decisions sent to owners, with their approve or reject reply.",["Owners: reply Approve or Reject with a comment."]],
-  ["/approvals","BOQ Change Approvals","","Every cost-affecting BOQ change or brand change waits here for the admin.",["Raise a change with the reason; the admin decides."]],
+  ["/approvals","Approvals","","Two tabs. BOQ changes: every cost-affecting BOQ or brand change waits here; only the admin decides. Owner decisions: payment requests, cost statements, drawings and decisions sent to the owners, with their approve or reject reply; only the owner (or the admin) records a decision.",["Raise a BOQ change with the reason; the admin decides.","Owners: open Owner decisions and reply Approve or Reject with a comment."]],
  ]},
  {id:"qa", label:"QA & inspect", pages:[
-  ["/qa-inspection","QA Inspection","","Site inspections with severity, IS code, defects and closure. Photo checks and close-out checks are saved here too.",[]],
-  ["/quality","Quality Control","daily","Checklist log (166 ITP checks), cube register (43 pours), NCR log and the inspection and test plan.",["Enter the actual pour date for each pour; 7- and 28-day dates follow.","Enter cube results; pass or fail is worked out to IS 456.","Raise an NCR for anything Not OK; close it with the correction done."]],
+  ["/quality","Quality & Inspections","daily","Checklist log (166 ITP checks), inspections (severity, IS code, defects, closure; photo checks and close-out checks are saved here too), cube register (43 pours), NCR log and the inspection and test plan.",["Record a site inspection in the Inspections tab and close it once rectified.","Enter the actual pour date for each pour; 7- and 28-day dates follow.","Enter cube results; pass or fail is worked out to IS 456.","Raise an NCR for anything Not OK; close it with the correction done."]],
  ]},
 ];
 const PAGES = {}; GROUPS.forEach(g=>g.pages.forEach(p=>PAGES[p[0]]={to:p[0],label:p[1],tag:p[2],what:p[3],how:p[4],group:g.id,glabel:g.label}));
@@ -337,7 +330,7 @@ const canSee=(r,to)=>ALWAYS.includes(to)||SEES[r].includes(PAGES[to].group)&&(PA
 const BRIEF = {
  admin:{mission:"You own the project's money and permissions. You approve every bill and BOQ change, approve new staff, and release payment requests and cost statements to the landowners.",
   pages:["/","/notifications","/bills-payments","/approvals","/stage-budget","/access-control","/capital-ledger","/database-backup"],
-  day:["Action Centre: clear High alerts.","Bills & Payments: approve or reject bills waiting (only you can).","BOQ Change Approvals: decide pending rate or brand changes.","Access & Permissions: approve anyone who signed up and give them a role."],
+  day:["Action Centre: clear High alerts.","Bills & Payments: approve or reject bills waiting (only you can).","Approvals (BOQ changes): decide pending rate or brand changes.","Access & Permissions: approve anyone who signed up and give them a role."],
   week:["Stage Budget: check next stages and send payment requests to owners.","Approve finished stages' actual cost and send the cost statement.","Landowners & Investment: check each owner's balance to fund.","Database Backup: download the weekly backup."],
   cannot:[]},
  pm:{mission:"You run the programme. Each week you push the stage tasks, keep orders ahead of their order-by dates, approve POs and pour cards, and make sure every stage closes with photos, checks and approvals.",
@@ -346,7 +339,7 @@ const BRIEF = {
   week:["Push stage tasks for next week (Site plan channel and Task Tracker).","Stage Budget: request money a week before each stage.","Enter actual cost for finished stages and approve it.","Quality: review open NCRs and cube results.","Import PMC Workbooks when the report is revised."],
   cannot:["Approve bills or change an approved bill (admin only).","Decide BOQ rate changes (admin only).","Delete a project."]},
  eng:{mission:"You build the stage to the drawings and prove it. You follow How to do it, check against the drawings, record every check, approve pour cards, keep the cube register and close out stages.",
-  pages:["/site-today","/stage-drawings","/pour-cards","/quality","/site-execution","/contractors-labour","/qa-inspection"],
+  pages:["/site-today","/stage-drawings","/pour-cards","/quality","/site-execution","/contractors-labour"],
   day:["Site Today on your phone: today's stages and How to do it.","Open Drawings for the room or wall you are on.","Record each check OK or Not OK; photo check against the drawing.","Pour Cards: approve before any concrete.","Send the daily report: labour by trade, issues."],
   week:["Cube register: actual pour dates and 7/28-day results.","Raise or close NCRs.","Close out finished stages: photos, checks, approvals."],
   cannot:["Approve bills or POs.","Change BOQ rates.","See money and owner pages."]},
@@ -363,11 +356,11 @@ const BRIEF = {
  acc:{mission:"You keep the money true. Bills go in with their stage and cost type, payments go out after the admin approves, and every rupee from the owners is recorded.",
   pages:["/bills-payments","/capital-ledger","/financial-forecast","/financial-ingestion","/common-expenses","/cost-dashboard"],
   day:["Enter bills with stage code and cost type.","Mark approved bills paid with payment details.","Record owners' receipts in the Capital Ledger."],
-  week:["Upload bank statements (Financial Ingestion).","Review the forecast and each owner's balance to fund.","Check stage actuals: bills and labour against each stage."],
+  week:["Upload bank statements (Cash Ledger).","Review the forecast and each owner's balance to fund.","Check stage actuals: bills and labour against each stage."],
   cannot:["Approve a bill (admin only).","Change a bill after approval (admin only)."]},
  own:{mission:"You fund your share and see where it goes. Common works are shared by your %; individual works of your own flats are yours. You are asked before each stage and shown the actual cost after it.",
-  pages:["/owner-approvals","/capital-ledger","/landowners-investment","/flats","/cost-dashboard","/quality"],
-  day:["Owner Approvals: read new payment requests and cost statements.","Approve or reject with a comment."],
+  pages:["/approvals","/capital-ledger","/landowners-investment","/flats","/cost-dashboard","/quality"],
+  day:["Approvals (Owner decisions): read new payment requests and cost statements.","Approve or reject with a comment."],
   week:["Capital Ledger: your calls, receipts and balance.","Landowners & Investment: your liability break-up.","Quality: inspections and cube results on your building."],
   cannot:["Edit anything (view and reply only)."]},
 };
@@ -421,8 +414,8 @@ const TOURS = {
   S("Forecast","Funds in hand, burn and funding gap on the report's BOQ.","/financial-forecast","desk",[["stats",[["Cost to complete","₹7.45 Cr"],["Gap","—"]]]],0),
  ],
  own:[
-  S("Payment requests","Before each stage you get a request with the break-up: your share of common works plus your own flats.","/owner-approvals","desk",[["list",[["Payment request F03, F06","₹18.6 L by 8 Jan","w"],["Your part","₹9.30 L",""]]],["btns",["Approve","Reject"]]],1),
-  S("Cost statement","After the stage you get the actual cost, approved by the admin. A shortfall is a top-up; a saving is credit.","/owner-approvals","desk",[["stats",[["Budget","₹18.6 L"],["Actual","₹18.1 L"],["Credit","₹0.5 L"]]]],1),
+  S("Payment requests","Before each stage you get a request with the break-up: your share of common works plus your own flats.","/approvals","desk",[["list",[["Payment request F03, F06","₹18.6 L by 8 Jan","w"],["Your part","₹9.30 L",""]]],["btns",["Approve","Reject"]]],1),
+  S("Cost statement","After the stage you get the actual cost, approved by the admin. A shortfall is a top-up; a saving is credit.","/approvals","desk",[["stats",[["Budget","₹18.6 L"],["Actual","₹18.1 L"],["Credit","₹0.5 L"]]]],1),
   S("Your liability","Common works by your share, your flats' individual works, received so far and balance to fund.","/landowners-investment","desk",[["list",[["Common works 50%","₹2.66 Cr",""],["Own flats","set when allotted","w"],["Balance to fund","₹3.91 Cr",""]]]],2),
   S("Quality on your building","Inspections, cube results and NCRs are open to you.","/quality","desk",[["list",[["F03 footing 28-day","pass",""]]]],0),
  ],
@@ -430,10 +423,10 @@ const TOURS = {
 
 const CYCLE = [
  ["Plan","Stages now and next, with directions, material and checks. PM pushes the week's tasks.","Hub · Task Tracker · Team Chat",["pm","admin"]],
- ["Fund","A week before a stage, the owners are asked for its money: common by share, flats to their owners.","Stage Budget · Owner Approvals",["admin","pm","own"]],
+ ["Fund","A week before a stage, the owners are asked for its money: common by share, flats to their owners.","Stage Budget · Approvals",["admin","pm","own"]],
  ["Order","Order-by dates from the programme. PO raised from the stage; three quotes; PM approves.","Procurement · Create PO · Tender Comparison",["buy","pm"]],
  ["Build","Follow How to do it and the drawings. Pour card before concrete. Daily report every day.","Site Today · Stage Drawings · Pour Cards",["eng","sup"]],
- ["Check","Every check OK or Not OK, photo check against the drawing, cubes, NCRs.","Site Today · Quality Control",["eng","pm"]],
+ ["Check","Every check OK or Not OK, photo check against the drawing, cubes, NCRs.","Site Today · Quality & Inspections",["eng","pm"]],
  ["Close out","Photos, checks and approvals. Closing pushes the next stage's tasks.","Site Execution",["eng","pm"]],
  ["Settle","Bills and labour tagged to the stage give the actual. Approved, then sent to owners.","Bills & Payments · Stage Budget · Capital Ledger",["acc","admin","own"]],
 ];

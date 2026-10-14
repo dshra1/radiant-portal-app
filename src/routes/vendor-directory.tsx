@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
@@ -6,8 +6,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
+import { PageTabs } from "@/components/saha/ui";
+import { VendorSpendTable } from "@/components/saha/procurement/VendorSpend";
+
+type Tab = "directory" | "spend";
+type Search = { tab?: Tab };
 
 export const Route = createFileRoute("/vendor-directory")({
+  validateSearch: (s: Record<string, unknown>): Search =>
+    s["tab"] === "spend" ? { tab: "spend" } : {},
   head: () => ({
     meta: [
       { title: "Vendor Directory — Categorized Vendor Database | Saha OS" },
@@ -28,6 +35,27 @@ export const Route = createFileRoute("/vendor-directory")({
   }),
   component: Page,
 });
+
+function Page() {
+  const { tab = "directory" } = Route.useSearch();
+  const navigate = useNavigate({ from: "/vendor-directory" });
+  return (
+    <Shell title="Vendor Directory">
+      <PageTabs
+        className="mb-3"
+        tabs={[
+          { key: "directory", label: "Vendors" },
+          { key: "spend", label: "Vendor-wise spend" },
+        ]}
+        active={tab}
+        onChange={(t) =>
+          void navigate({ search: { tab: t === "directory" ? undefined : t }, replace: true })
+        }
+      />
+      {tab === "spend" ? <VendorSpendTable /> : <DirectoryTab />}
+    </Shell>
+  );
+}
 
 type Vendor = {
   id: string;
@@ -86,7 +114,7 @@ function emptyDraft(): VendorDraft {
 }
 
 function num(value: unknown): number {
-  const n = Number(String(value ?? "").replace(/[^0-9.\-]/g, ""));
+  const n = Number(String(value ?? "").replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -94,7 +122,7 @@ function str(value: unknown): string {
   return String(value ?? "").trim();
 }
 
-function Page() {
+function DirectoryTab() {
   const user = useSessionUser();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -277,9 +305,9 @@ function Page() {
   const editing = draft;
 
   return (
-    <Shell title={"Vendor Directory"}>
+    <>
       <div className="m3">
-        <main className="relative pt-16 w-full px-space-xl pb-space-3xl bg-surface">
+        <main className="relative pt-4 w-full px-space-xl pb-space-3xl bg-surface">
           <div className="flex flex-col w-full">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-base mb-space-xl">
               <div>
@@ -660,6 +688,6 @@ function Page() {
           </div>
         </main>
       </div>
-    </Shell>
+    </>
   );
 }

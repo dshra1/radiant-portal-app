@@ -1,7 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClipboardCheck, FlaskConical, ShieldAlert, ListChecks, Plus } from "lucide-react";
+import {
+  ClipboardCheck,
+  ClipboardList,
+  FlaskConical,
+  ShieldAlert,
+  ListChecks,
+  Plus,
+} from "lucide-react";
+import { QaInspections } from "@/components/saha/quality/QaInspections";
 import { toast } from "sonner";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,12 +20,14 @@ import { fmtDay } from "@/lib/programme-progress";
 import { useSiteWeek, type StageCheck } from "@/lib/site-week";
 import { groupResults, sampleResult } from "@/lib/cube-acceptance";
 
-type Tab = "checks" | "cubes" | "ncr" | "itp";
+type Tab = "checks" | "inspections" | "cubes" | "ncr" | "itp";
 type Search = { tab?: Tab };
 
 export const Route = createFileRoute("/quality")({
   validateSearch: (s: Record<string, unknown>): Search =>
-    ["checks", "cubes", "ncr", "itp"].includes(String(s["tab"])) ? { tab: s["tab"] as Tab } : {},
+    ["checks", "inspections", "cubes", "ncr", "itp"].includes(String(s["tab"]))
+      ? { tab: s["tab"] as Tab }
+      : {},
   head: () => ({
     meta: [
       { title: "Quality Control | Saha OS" },
@@ -38,11 +48,14 @@ const addDays = (iso: string | null, d: number) =>
 const cubeResult = sampleResult;
 
 function Page() {
-  const search = Route.useSearch();
-  const [tab, setTab] = useState<Tab>(search.tab ?? "checks");
+  const { tab = "checks" } = Route.useSearch();
+  const navigate = useNavigate({ from: "/quality" });
+  const setTab = (t: Tab) =>
+    void navigate({ search: { tab: t === "checks" ? undefined : t }, replace: true });
   const project = useActiveProject();
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "checks", label: "Checklist log", icon: <ListChecks className="size-4" /> },
+    { key: "inspections", label: "Inspections", icon: <ClipboardList className="size-4" /> },
     { key: "cubes", label: "Cube register", icon: <FlaskConical className="size-4" /> },
     { key: "ncr", label: "NCR log", icon: <ShieldAlert className="size-4" /> },
     { key: "itp", label: "Inspection & test plan", icon: <ClipboardCheck className="size-4" /> },
@@ -54,8 +67,9 @@ function Page() {
           <p className="text-xs uppercase tracking-wide text-muted-foreground">{project.name}</p>
           <h1 className="text-xl font-bold">Quality control</h1>
           <p className="text-sm text-muted-foreground">
-            From the PMC control workbook: every ITP check per stage, every pour's cubes (IS 456),
-            and non-conformances. Results recorded at a stage close-out appear here too.
+            From the PMC control workbook: every ITP check per stage, site inspections (severity, IS
+            code, defects, closure), every pour's cubes (IS 456) and non-conformances. Results
+            recorded at a stage close-out or a photo check appear here too.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {tabs.map((t) => (
@@ -71,6 +85,7 @@ function Page() {
           </div>
         </header>
         {project.id && tab === "checks" && <Checks projectId={project.id} />}
+        {tab === "inspections" && <QaInspections />}
         {project.id && tab === "cubes" && <Cubes projectId={project.id} />}
         {project.id && tab === "ncr" && <Ncrs projectId={project.id} />}
         {project.id && tab === "itp" && <Itp projectId={project.id} />}

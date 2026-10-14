@@ -567,7 +567,8 @@ function Page() {
 
         <div className="flex flex-wrap gap-2 text-sm">
           <Link
-            to="/qa-inspection"
+            to="/quality"
+            search={{ tab: "inspections" }}
             className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
           >
             QA inspections

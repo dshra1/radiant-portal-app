@@ -9,6 +9,7 @@ import { useActiveProject } from "@/hooks/useActiveProject";
 import { inr, inrCompact } from "@/data/saha";
 import { Download, Plus, Trophy, Trash2, FilePlus2, Gavel } from "lucide-react";
 import { toast } from "sonner";
+import { DEPARTMENTS, loadDepartmentTenders } from "@/lib/tender-departments";
 import {
   MIN_QUOTES,
   awardSummary,
@@ -113,6 +114,7 @@ function Page() {
   const canAward = Boolean(access.access?.isAdmin || access.access?.roles?.includes("pm"));
   const isAdmin = Boolean(access.access?.isAdmin);
   const [selectedRfq, setSelectedRfq] = useState<string>("");
+  const [loadingDepts, setLoadingDepts] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showBid, setShowBid] = useState(false);
   const enabled = Boolean(user?.id) && Boolean(project.id);
@@ -288,6 +290,33 @@ function Page() {
           >
             <Download className="h-4 w-4" /> Export comparative
           </button>
+          {canAward && (
+            <button
+              onClick={async () => {
+                setLoadingDepts(true);
+                try {
+                  await loadDepartmentTenders(project.id, user?.id ?? null, (t) =>
+                    toast.success(t),
+                  );
+                  await qc.invalidateQueries({ queryKey: ["rfqs", project.id] });
+                  await qc.invalidateQueries({ queryKey: ["rfq-overview"] });
+                } catch (e) {
+                  toast.error((e as Error).message);
+                }
+                setLoadingDepts(false);
+              }}
+              disabled={loadingDepts}
+              title="Create or refresh the 25 department tenders (every material incl. fixings) issued to dealers as Excel files"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground disabled:opacity-50"
+            >
+              <FilePlus2 className="h-4 w-4" />
+              {loadingDepts
+                ? "Loading…"
+                : rfqs.some((r) => r.rfq_number.startsWith("CE-D"))
+                  ? "Refresh department tenders"
+                  : `Load ${DEPARTMENTS.length} department tenders`}
+            </button>
+          )}
           <button
             onClick={() => setShowNew((v) => !v)}
             className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"

@@ -1,8 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shell } from "@/components/saha/Shell";
-import { MetricTile, Section, StatusBadge } from "@/components/saha/ui";
+import { MetricTile, PageTabs, Section, StatusBadge } from "@/components/saha/ui";
+import { BrandBenchmark } from "@/components/saha/procurement/BrandBenchmark";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject } from "@/hooks/useActiveProject";
@@ -10,7 +11,12 @@ import { inr, inrCompact } from "@/data/saha";
 import { RATE_BASIS_NOTE, cheapestQuote, compareRate, quoteRateExclGst } from "@/lib/rate-compare";
 import { ScanLine, Scale, Sparkles, Download, ArrowRight } from "lucide-react";
 
+type Tab = "rates" | "brands";
+type Search = { tab?: Tab };
+
 export const Route = createFileRoute("/price-intelligence")({
+  validateSearch: (s: Record<string, unknown>): Search =>
+    s["tab"] === "brands" ? { tab: "brands" } : {},
   head: () => ({
     meta: [
       { title: "Price Intelligence — Scanned Quotes vs BOQ Rates | Saha OS" },
@@ -32,6 +38,27 @@ export const Route = createFileRoute("/price-intelligence")({
   }),
   component: Page,
 });
+
+function Page() {
+  const { tab = "rates" } = Route.useSearch();
+  const navigate = useNavigate({ from: "/price-intelligence" });
+  return (
+    <Shell title="Price Intelligence">
+      <PageTabs
+        className="mb-3"
+        tabs={[
+          { key: "rates", label: "Rates vs BOQ" },
+          { key: "brands", label: "Brands" },
+        ]}
+        active={tab}
+        onChange={(t) =>
+          void navigate({ search: { tab: t === "rates" ? undefined : t }, replace: true })
+        }
+      />
+      {tab === "brands" ? <BrandBenchmark /> : <RatesVsBoq />}
+    </Shell>
+  );
+}
 
 type Quote = {
   id: string;
@@ -85,7 +112,7 @@ function similar(a: string, b: string) {
   return hit / tb.length;
 }
 
-function Page() {
+function RatesVsBoq() {
   const project = useActiveProject();
   const user = useSessionUser();
   const enabled = Boolean(user?.id) && Boolean(project.id);
@@ -241,7 +268,7 @@ function Page() {
   }
 
   return (
-    <Shell title="Price Intelligence">
+    <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">Price Intelligence</h1>
@@ -459,6 +486,6 @@ function Page() {
           </div>
         )}
       </Section>
-    </Shell>
+    </>
   );
 }

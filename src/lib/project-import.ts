@@ -261,6 +261,18 @@ export async function importTenders(
   userId: string | undefined,
   log: Log,
 ) {
+  // The department tenders (CE-D01 … CE-D25) replace the package tenders.
+  const dept = await supabase
+    .from("rfqs")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId)
+    .like("rfq_number", "CE-D%");
+  if ((dept.count ?? 0) > 0) {
+    log(
+      "Tenders: skipped. The department tenders (CE-D01 … CE-D25) are loaded; dealers' quotes come in from their returned tender files.",
+    );
+    return;
+  }
   const existing = await supabase
     .from("rfqs")
     .select("id,rfq_number,status")

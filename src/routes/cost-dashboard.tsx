@@ -279,6 +279,7 @@ function Page() {
           <div className="ml-auto flex flex-wrap gap-2">
             <Link
               to="/approvals"
+              search={{ tab: "boq" }}
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
             >
               <ShieldCheck className="h-4 w-4" />
@@ -362,6 +363,7 @@ function Page() {
             </p>
             <Link
               to="/approvals"
+              search={{ tab: "boq" }}
               className="mt-3 inline-block text-xs font-semibold text-primary underline"
             >
               Review and decide

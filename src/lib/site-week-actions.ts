@@ -121,7 +121,7 @@ export function alertsFor(week: SiteWeek): Alert[] {
       title: `Hold point this week: ${h.stage.code} ${h.check.id} ${h.check.check}`,
       body: `${h.check.criterion ?? ""}${h.check.by ? ` · signs: ${h.check.by}` : ""}. Work stops until it is signed.`,
       priority: "High",
-      link: "/qa-inspection",
+      link: "/quality?tab=inspections",
     });
   for (const s of week.behind)
     out.push({
@@ -321,7 +321,7 @@ export async function recordCheck(
       body: `${inspector}: ${notes || "not accepted"}. Raise an NCR and fix before the next step.`,
       category: "Site plan",
       priority: "High",
-      link: "/qa-inspection",
+      link: "/quality?tab=inspections",
       project_id: projectId,
       sender_id: who.id,
     });

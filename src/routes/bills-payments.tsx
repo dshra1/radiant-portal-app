@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
@@ -8,8 +8,17 @@ import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { StageSelect } from "@/components/saha/StageSelect";
+import { PageTabs } from "@/components/saha/ui";
+import { AllOutflows } from "@/components/saha/finance/AllOutflows";
+
+type Tab = "bills" | "outflows";
+type Search = { tab?: Tab; bill?: string };
 
 export const Route = createFileRoute("/bills-payments")({
+  validateSearch: (s: Record<string, unknown>): Search => ({
+    ...(s["tab"] === "outflows" ? { tab: "outflows" as const } : {}),
+    ...(typeof s["bill"] === "string" && s["bill"] ? { bill: s["bill"] } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Bills & Payments | Saha OS" },
@@ -30,6 +39,35 @@ export const Route = createFileRoute("/bills-payments")({
   }),
   component: Page,
 });
+
+function Page() {
+  const { tab = "bills", bill } = Route.useSearch();
+  const navigate = useNavigate({ from: "/bills-payments" });
+  return (
+    <Shell title="Bills & Payments">
+      <div className="px-4 pt-4 md:px-8">
+        <PageTabs
+          tabs={[
+            { key: "bills", label: "Vendor bills & payments" },
+            { key: "outflows", label: "All outflows" },
+          ]}
+          active={tab}
+          onChange={(t) =>
+            void navigate({ search: { tab: t === "bills" ? undefined : t }, replace: true })
+          }
+        />
+      </div>
+      {tab === "outflows" ? (
+        <AllOutflows onViewBill={(id) => void navigate({ search: { bill: id } })} />
+      ) : (
+        <BillsRegister
+          focusBillId={bill}
+          onClearFocus={() => void navigate({ search: {}, replace: true })}
+        />
+      )}
+    </Shell>
+  );
+}
 
 export type Bill = {
   id: string;
@@ -103,7 +141,13 @@ function emptyBill(): BillDraft {
   };
 }
 
-function Page() {
+function BillsRegister({
+  focusBillId,
+  onClearFocus,
+}: {
+  focusBillId?: string;
+  onClearFocus: () => void;
+}) {
   const project = useActiveProject();
   const user = useSessionUser();
   const access = useAccess();
@@ -268,6 +312,7 @@ function Page() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    if (focusBillId) return bills.filter((b) => b.id === focusBillId);
     return bills.filter((b) => {
       const paid = paidByBill.get(b.id) ?? 0;
       if (status === "outstanding") {
@@ -281,7 +326,7 @@ function Page() {
         .toLowerCase()
         .includes(q);
     });
-  }, [bills, search, status, paidByBill]);
+  }, [bills, search, status, paidByBill, focusBillId]);
 
   const totals = useMemo(() => {
     const payable = bills.reduce((s, b) => s + billPayable(b), 0);
@@ -361,7 +406,7 @@ function Page() {
   ];
 
   return (
-    <Shell title="Bills & Payments">
+    <>
       <div className="w-full px-4 md:px-8 py-6 flex flex-col gap-6">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
@@ -453,6 +498,21 @@ function Page() {
 
         {!project.id && (
           <p className="text-sm text-muted-foreground">Add a project first to log bills.</p>
+        )}
+
+        {focusBillId && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm">
+            <span>
+              {filtered.length
+                ? "Showing the bill you opened from All outflows."
+                : isPending
+                  ? "Loading the bill…"
+                  : "That bill is not in this project (it may have been deleted or the project changed)."}
+            </span>
+            <button type="button" onClick={onClearFocus} className="font-semibold text-primary">
+              Show all bills
+            </button>
+          </div>
         )}
 
         <div className="rounded-xl border border-border bg-card overflow-x-auto">
@@ -815,6 +875,6 @@ function Page() {
           </div>
         </div>
       )}
-    </Shell>
+    </>
   );
 }

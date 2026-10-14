@@ -100,7 +100,7 @@ function Page() {
         data.flatInfo,
       );
       toast.success(
-        `Requested ${lakhs(total)} from the landowners (Capital Ledger and Owner Approvals)`,
+        `Requested ${lakhs(total)} from the landowners (Capital Ledger and Approvals → Owner decisions)`,
       );
       await refresh();
     } catch (e) {
@@ -161,7 +161,7 @@ function Page() {
                 capital ledger
               </Link>{" "}
               ·{" "}
-              <Link to="/owner-approvals" className="text-primary underline">
+              <Link to="/approvals" search={{ tab: "owner" }} className="text-primary underline">
                 owner approvals
               </Link>
             </div>

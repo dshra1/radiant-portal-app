@@ -312,7 +312,7 @@ function Page() {
             value={String(totals.openQa)}
             note="Open inspections"
             icon={<Activity className="h-4 w-4 text-primary" />}
-            to="/qa-inspection"
+            to="/quality"
           />
         </div>
 
@@ -564,7 +564,8 @@ function Page() {
             Pour cards
           </Link>
           <Link
-            to="/qa-inspection"
+            to="/quality"
+            search={{ tab: "inspections" }}
             className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
           >
             QA inspections
@@ -592,19 +593,28 @@ function Kpi({
   value: string;
   note: string;
   icon: React.ReactNode;
-  to: "/cost-dashboard" | "/contractors-labour" | "/pour-cards" | "/qa-inspection";
+  to: "/cost-dashboard" | "/contractors-labour" | "/pour-cards" | "/quality";
 }) {
-  return (
-    <Link
-      to={to}
-      className="rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary hover:bg-muted/50"
-    >
+  const cls =
+    "rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary hover:bg-muted/50";
+  const body = (
+    <>
       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <span>{label}</span>
         {icon}
       </div>
       <p className="mt-3 text-2xl font-bold">{value}</p>
       <p className="mt-1 text-[11px] text-muted-foreground">{note}</p>
+    </>
+  );
+  // QA tile opens the Inspections tab of Quality (QA Inspection was merged into it).
+  return to === "/quality" ? (
+    <Link to="/quality" search={{ tab: "inspections" }} className={cls}>
+      {body}
+    </Link>
+  ) : (
+    <Link to={to} className={cls}>
+      {body}
     </Link>
   );
 }

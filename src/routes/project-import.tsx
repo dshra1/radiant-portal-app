@@ -31,6 +31,7 @@ import {
   type QuotePackage,
   type FlatType,
 } from "@/lib/project-workbooks";
+import { importVendorQuote, parseVendorQuote, type VendorQuote } from "@/lib/tender-departments";
 import {
   importBoq,
   importProgramme,
@@ -81,6 +82,7 @@ type Parsed = {
   control: ControlData | null;
   tenders: QuotePackage[] | null;
   flatTypes: FlatType[] | null;
+  quotes: { file: string; quote: VendorQuote }[];
   pdfs: File[];
 };
 
@@ -89,6 +91,7 @@ const KIND_LABEL: Record<Loaded["kind"], string> = {
   "value-engineered": "Value-engineered BOQ",
   split: "Common vs individual split",
   quotation: "BOQ for quotation (vendor packages)",
+  "vendor-quote": "Dealer's filled tender (department quote)",
   control: "Construction control (programme, materials, QA)",
   pdf: "Drawing set (PDF)",
   unknown: "Not recognised",
@@ -121,6 +124,7 @@ function Page() {
     control: null,
     tenders: null,
     flatTypes: null,
+    quotes: [],
     pdfs: [],
   });
   const [reading, setReading] = useState(false);
@@ -148,6 +152,7 @@ function Page() {
     let tenders: QuotePackage[] | null = null;
     let flatTypes: FlatType[] | null = null;
     const pdfs: File[] = [];
+    const quotes: { file: string; quote: VendorQuote }[] = [];
 
     for (const f of Array.from(list)) {
       if (/\.pdf$/i.test(f.name)) {
@@ -174,6 +179,10 @@ function Page() {
         }
         if (kind === "control") control = parseControl(wb);
         if (kind === "quotation") tenders = parseQuotation(wb);
+        if (kind === "vendor-quote") {
+          const q = parseVendorQuote(wb);
+          if (q) quotes.push({ file: f.name, quote: q });
+        }
       } catch (e) {
         found.push({ name: f.name, kind: "unknown", error: (e as Error).message });
       }
@@ -185,7 +194,7 @@ function Page() {
       ? { ...buildBoqRows(master, split), hasSplit: Boolean(split), master }
       : null;
     setLoaded(found);
-    setParsed({ boq, control, tenders, flatTypes, pdfs: uniquePdfs });
+    setParsed({ boq, control, tenders, flatTypes, quotes, pdfs: uniquePdfs });
     setReading(false);
   }
 
@@ -212,6 +221,7 @@ function Page() {
     (pick.materials && parsed.control) ||
     (pick.tenders && parsed.tenders) ||
     (pick.flats && parsed.flatTypes?.length) ||
+    parsed.quotes.length > 0 ||
     (pick.drawings && parsed.pdfs.length > 0);
 
   async function run() {
@@ -246,6 +256,10 @@ function Page() {
       await step("Materials", () => importMaterials(project.id, parsed.control!, say));
     if (pick.flats && parsed.flatTypes?.length)
       await step("Flats", () => importFlats(project.id, parsed.flatTypes!, say));
+    for (const q of parsed.quotes)
+      await step(`Quote ${q.file}`, () =>
+        importVendorQuote(project.id, q.quote, q.file, access?.userId ?? null, say),
+      );
     if (pick.tenders && parsed.tenders)
       await step("Tenders", () =>
         importTenders(project.id, parsed.tenders!, access?.userId ?? undefined, say),
@@ -475,6 +489,23 @@ function Page() {
                   </>
                 )}
               </Card>
+
+              {parsed.quotes.length > 0 && (
+                <Card title="Dealers' quotes" ok missing="" check={null}>
+                  {parsed.quotes.map((q) => (
+                    <Fact
+                      key={q.file}
+                      label={`${q.quote.vendor || "(vendor name missing)"} · ${q.quote.dept}`}
+                      value={`${q.quote.lines.length} rates`}
+                    />
+                  ))}
+                  <p className="pt-1 text-xs text-muted-foreground">
+                    Each returned tender file becomes that dealer&apos;s quote on its department
+                    tender in Tender Comparison. A revised file from the same dealer replaces the
+                    earlier one.
+                  </p>
+                </Card>
+              )}
 
               <Card
                 title="Tenders (RFQs)"

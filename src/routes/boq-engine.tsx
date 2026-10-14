@@ -1000,6 +1000,7 @@ function Page() {
             )}
             <Link
               to="/approvals"
+              search={{ tab: "boq" }}
               className="ml-auto inline-flex h-8 items-center gap-1.5 rounded bg-primary px-3 text-[12px] font-semibold text-primary-foreground"
             >
               Approvals ({pendingCount})

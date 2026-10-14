@@ -8,7 +8,18 @@ import { useSessionUser } from "@/lib/access";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { inr, inrCompact } from "@/data/saha";
 import { STATUS_LABEL, lineTotals, type PoItem, type PoRecord, type PoStatus } from "@/lib/po";
-import { Download, Plus, Users } from "lucide-react";
+import {
+  BarChart3,
+  Download,
+  HardHat,
+  Plus,
+  Receipt,
+  Scale,
+  ScanSearch,
+  Store,
+  Users,
+} from "lucide-react";
+import { VendorKpiTiles } from "@/components/saha/procurement/VendorSpend";
 import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/procurement")({
@@ -170,7 +181,7 @@ function Procurement() {
   return (
     <Shell
       title="Procurement"
-      subtitle={`Purchase orders and vendor commitments — ${project.name}`}
+      subtitle={`Purchase orders, vendor commitments, unpaid bills and buying tools — ${project.name}`}
       actions={
         <div className="flex items-center gap-2">
           <button
@@ -238,6 +249,8 @@ function Procurement() {
           />
         </button>
       </div>
+
+      <VendorKpiTiles />
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {(["all", "draft", "pending", "approved", "rejected"] as Filter[]).map((f) => (
@@ -335,9 +348,10 @@ function Procurement() {
         action={
           <Link
             to="/vendor-directory"
+            search={{ tab: "spend" }}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
           >
-            <Users className="size-3.5" /> Vendor directory
+            <Users className="size-3.5" /> Vendor-wise spend
           </Link>
         }
       >
@@ -363,6 +377,62 @@ function Procurement() {
             ))}
           </div>
         )}
+      </Section>
+      <Section title="Procurement tools" className="mt-3">
+        <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
+          {(
+            [
+              {
+                to: "/price-ocr",
+                icon: ScanSearch,
+                label: "Price OCR",
+                desc: "Scan proforma invoices into the price database",
+              },
+              {
+                to: "/price-intelligence",
+                icon: BarChart3,
+                label: "Price intelligence",
+                desc: "Quoted rates vs BOQ, and your chosen brands",
+              },
+              {
+                to: "/tender-comparison",
+                icon: Scale,
+                label: "Tender comparison",
+                desc: "RFQs, L1/L2/L3 ranking, award",
+              },
+              {
+                to: "/vendor-directory",
+                icon: Store,
+                label: "Vendor directory",
+                desc: "Add, import and rate vendors; vendor-wise spend",
+              },
+              {
+                to: "/bills-payments",
+                icon: Receipt,
+                label: "Bills & payments",
+                desc: "Verify, approve and pay vendor bills",
+              },
+              {
+                to: "/contractors-labour",
+                icon: HardHat,
+                label: "Contractors & labour",
+                desc: "Labour contracts and trade-wise market rates",
+              },
+            ] as const
+          ).map((t) => (
+            <Link
+              key={t.to}
+              to={t.to}
+              className="flex items-start gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40"
+            >
+              <t.icon className="mt-0.5 size-5 text-primary" />
+              <div>
+                <p className="text-sm font-semibold">{t.label}</p>
+                <p className="text-xs text-muted-foreground">{t.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
       </Section>
     </Shell>
   );

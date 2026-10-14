@@ -1,15 +1,21 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MapPin, Layers, Ruler, Trash2, Plus, X, ExternalLink, Pencil } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
-import { ActionButton, PhaseBar, StatusBadge } from "@/components/saha/ui";
+import { ActionButton, PageTabs, PhaseBar, StatusBadge } from "@/components/saha/ui";
+import { ProjectSetupPanel } from "@/components/saha/projects/ProjectSetupPanel";
 import { inrCompact, num } from "@/data/saha";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
 import { DRAWINGS_BUCKET, drawingFileName } from "@/lib/project-import";
 
+type Tab = "list" | "setup";
+type Search = { tab?: Tab };
+
 export const Route = createFileRoute("/projects")({
+  validateSearch: (s: Record<string, unknown>): Search =>
+    s["tab"] === "setup" ? { tab: "setup" } : {},
   head: () => ({
     meta: [
       { title: "Projects — Saha OS Next" },
@@ -134,6 +140,10 @@ const emptyForm = {
 const QUALITY = ["Standard", "Premium", "Luxury"];
 
 function Projects() {
+  const { tab = "list" } = Route.useSearch();
+  const navigate = useNavigate({ from: "/projects" });
+  const setTab = (t: Tab) =>
+    void navigate({ search: { tab: t === "list" ? undefined : t }, replace: true });
   const user = useSessionUser();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -536,6 +546,16 @@ function Projects() {
           {error}
         </div>
       )}
+
+      <PageTabs
+        className="mb-3"
+        tabs={[
+          { key: "list", label: "Projects" },
+          { key: "setup", label: "Setup & programme" },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
 
       {open && (
         <form
@@ -1065,7 +1085,19 @@ function Projects() {
         </form>
       )}
 
-      {isLoading ? (
+      {tab === "setup" ? (
+        isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading projects…</p>
+        ) : (
+          <ProjectSetupPanel
+            projects={rows}
+            onEditGeometry={(id) => {
+              const p = rows.find((r) => r.id === id);
+              if (p) startEdit(p);
+            }}
+          />
+        )
+      ) : isLoading ? (
         <p className="text-sm text-muted-foreground">Loading projects…</p>
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
