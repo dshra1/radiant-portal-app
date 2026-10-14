@@ -1,0 +1,579 @@
+<title>Saha OS Staff Manual</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a site-office briefing binder. Role picker on top drives every section below. */
+:root{
+  --bg:#f3f5f2; --panel:#ffffff; --ink:#14201a; --muted:#5b6b62; --line:#d9e0da;
+  --forest:#0f3b2a; --leaf:#1f7a52; --leaf-soft:#e3f1e8; --ochre:#c98a12; --ochre-soft:#fbf0d6;
+  --red:#b4382c; --red-soft:#f8e3e0; --screen:#0d1f17; --screen-ink:#e6efe9; --screen-dim:#8fa69a;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0c1511; --panel:#13201a; --ink:#e4ece6; --muted:#97a99f; --line:#24352c;
+  --forest:#9fd8b8; --leaf:#4fbf88; --leaf-soft:#173126; --ochre:#e6ad3f; --ochre-soft:#33280f;
+  --red:#ef8a7c; --red-soft:#3a1d19; --screen:#07110c; --screen-ink:#e6efe9; --screen-dim:#7f978a; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0c1511; --panel:#13201a; --ink:#e4ece6; --muted:#97a99f; --line:#24352c;
+  --forest:#9fd8b8; --leaf:#4fbf88; --leaf-soft:#173126; --ochre:#e6ad3f; --ochre-soft:#33280f;
+  --red:#ef8a7c; --red-soft:#3a1d19; --screen:#07110c; --screen-ink:#e6efe9; --screen-dim:#7f978a; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 64px;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;color:var(--forest)}
+h1{font-size:clamp(30px,5vw,48px);font-weight:800;letter-spacing:-.02em;line-height:1.05}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700;letter-spacing:-.01em}
+h3{font-size:17px;font-weight:700}
+p{margin:0}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+a{color:var(--leaf)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ochre);outline-offset:2px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* header */
+.top{display:grid;gap:16px;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:end}
+.top p.lede{max-width:62ch;color:var(--muted);margin-top:10px}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.fact{background:var(--panel);padding:10px 12px}
+.fact b{display:block;font-family:var(--f-display);font-size:19px;color:var(--ink)}
+.fact span{font-size:12px;color:var(--muted)}
+@media (max-width:820px){.top{grid-template-columns:1fr}}
+
+/* role picker */
+.picker{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line)}
+.picker .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.picker .label{font-size:13px;font-weight:600;margin-right:4px}
+.chip{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px;font:500 13px var(--f-body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--forest);border-color:var(--forest);color:var(--bg)}
+nav.toc{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:13px}
+nav.toc a{text-decoration:none;color:var(--muted)} nav.toc a:hover{color:var(--leaf)}
+
+/* role brief */
+.brief{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:860px){.brief{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.who{display:flex;flex-direction:column;gap:10px}
+.who .mission{font-size:16px}
+.pill{display:inline-block;font:500 12px var(--f-mono);padding:2px 8px;border-radius:999px;background:var(--leaf-soft);color:var(--leaf)}
+.pill.warn{background:var(--ochre-soft);color:var(--ochre)}
+.pill.no{background:var(--red-soft);color:var(--red)}
+.pages{display:flex;flex-wrap:wrap;gap:6px}
+.pages button{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:4px 8px;font:500 12.5px var(--f-body);color:var(--ink);cursor:pointer}
+.pages button:hover{border-color:var(--leaf)}
+.routine{display:flex;flex-direction:column;gap:14px}
+.routine h3{display:flex;align-items:center;gap:8px}
+.routine ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.routine li::marker{color:var(--ochre);font-weight:700}
+.limits ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+
+/* player */
+.player{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px}
+@media (max-width:900px){.player{grid-template-columns:1fr}}
+.stage{background:var(--screen);border-radius:14px;padding:14px;color:var(--screen-ink);display:flex;flex-direction:column;gap:12px;min-width:0}
+.bar{display:flex;gap:4px}
+.bar i{flex:1;height:4px;border-radius:2px;background:#ffffff22;overflow:hidden;position:relative;cursor:pointer}
+.bar i b{position:absolute;inset:0;width:0;background:var(--ochre)}
+.screen{position:relative;aspect-ratio:16/10;max-width:100%;border-radius:10px;background:#f4f7f5;color:#14201a;overflow:hidden;display:grid;grid-template-columns:22% 1fr}
+.screen .side{background:#0f3b2a;color:#cfe3d7;padding:10px 8px;display:flex;flex-direction:column;gap:5px;font-size:10.5px}
+.screen .side .logo{font:700 12px var(--f-display);color:#fff;margin-bottom:6px}
+.screen .side span{padding:3px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.screen .side span.on{background:#1f7a52;color:#fff}
+.screen .main{padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.screen .crumb{font:500 9.5px var(--f-mono);color:#5b6b62;letter-spacing:.06em;text-transform:uppercase}
+.screen .ttl{font:800 17px var(--f-display);color:#0f3b2a;line-height:1.1}
+.blk{border:1px solid #d9e0da;background:#fff;border-radius:7px;padding:7px 9px;font-size:10.5px;transition:box-shadow .3s, transform .3s}
+.blk.hl{box-shadow:0 0 0 2px #c98a12, 0 6px 18px #c98a1240;transform:translateY(-1px)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:6px}
+.stats .blk b{display:block;font:700 13px var(--f-display);color:#0f3b2a}
+.lst div{display:flex;justify-content:space-between;gap:6px;padding:2px 0;border-top:1px dashed #e4e9e5}
+.lst div:first-child{border-top:0}
+.lst em{font-style:normal;color:#1f7a52;font-weight:600}
+.lst em.w{color:#a46f0b} .lst em.r{color:#b4382c}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btns span{background:#1f7a52;color:#fff;border-radius:5px;padding:3px 8px;font-size:10px;font-weight:600}
+.btns span.alt{background:#fff;color:#0f3b2a;border:1px solid #c7d3cb}
+.phone .screen{grid-template-columns:1fr;aspect-ratio:auto;max-width:300px;margin:0 auto;border:6px solid #000;border-radius:24px;min-height:340px}
+.phone .screen .side{display:none}
+.cursor{position:absolute;width:18px;height:18px;border-radius:50%;background:#c98a12aa;border:2px solid #fff;box-shadow:0 0 0 3px #c98a1255;transition:left .9s cubic-bezier(.4,.1,.2,1), top .9s cubic-bezier(.4,.1,.2,1);pointer-events:none;left:50%;top:50%}
+.cap{min-height:5.2em}
+.cap .t{font:700 18px var(--f-display);color:#fff}
+.cap .n{color:var(--screen-dim);margin-top:4px;font-size:14.5px}
+.ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ctrl button{background:#ffffff14;border:1px solid #ffffff2a;color:var(--screen-ink);border-radius:8px;padding:6px 12px;font:600 13px var(--f-body);cursor:pointer}
+.ctrl button.primary{background:var(--ochre);border-color:var(--ochre);color:#1a1205}
+.ctrl label{font-size:12.5px;color:var(--screen-dim);display:flex;gap:6px;align-items:center}
+.ctrl .count{margin-left:auto;font:500 12px var(--f-mono);color:var(--screen-dim)}
+.chapters{display:flex;flex-direction:column;gap:6px}
+.chapters button{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 10px;cursor:pointer;color:var(--ink);font:inherit}
+.chapters button .k{font:600 12px var(--f-mono);color:var(--muted);padding-top:2px}
+.chapters button b{display:block;font-size:14px}
+.chapters button small{color:var(--muted);font-size:12.5px}
+.chapters button[aria-current="true"]{border-color:var(--ochre);background:var(--ochre-soft)}
+
+/* cycle */
+.cycle{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;counter-reset:s}
+@media (max-width:1000px){.cycle{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.cycle{grid-template-columns:1fr}}
+.step{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--leaf);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.step.mine{border-top-color:var(--ochre);background:var(--ochre-soft)}
+.step .no{font:600 12px var(--f-mono);color:var(--muted)}
+.step h3{font-size:16px}
+.step p{font-size:13.5px}
+.step .where{font-size:12.5px;color:var(--muted)}
+.step .who{font-size:12px}
+
+/* map */
+.mapbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.mapbar input{flex:1;min-width:200px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit}
+.mapbar label{font-size:13px;display:flex;gap:6px;align-items:center}
+.map{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.map{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.map{grid-template-columns:1fr}}
+.grp{display:flex;flex-direction:column;gap:6px}
+.grp h3{font-size:14px;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500}
+.pg{display:flex;justify-content:space-between;gap:8px;align-items:center;text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;color:var(--ink);font:inherit}
+.pg:hover{border-color:var(--leaf)}
+.pg.dim{opacity:.38}
+.pg .tag{font:500 11px var(--f-mono);padding:1px 6px;border-radius:999px;white-space:nowrap}
+.tag.daily{background:var(--leaf-soft);color:var(--leaf)}
+.tag.merge{background:var(--ochre-soft);color:var(--ochre)}
+.tag.admin{background:var(--red-soft);color:var(--red)}
+.detail{position:fixed;right:0;top:0;bottom:0;width:min(440px,100%);background:var(--panel);border-left:1px solid var(--line);box-shadow:-12px 0 30px #0003;z-index:20;padding:calc(18px + env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) 18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.detail .close{align-self:flex-end;background:none;border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--ink);font:inherit}
+.detail ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.detail .open{display:inline-block;background:var(--forest);color:var(--bg);text-decoration:none;border-radius:8px;padding:8px 12px;font-weight:600;align-self:flex-start}
+
+/* rules */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:13.5px}
+th,td{padding:8px 10px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+thead th{border-top:0;font:500 11.5px var(--f-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+td.c{text-align:center;font-weight:700}
+td.y{color:var(--leaf)} td.n{color:var(--muted);font-weight:400} td.a{color:var(--ochre)}
+th.me,td.me{background:var(--ochre-soft)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+details summary{cursor:pointer;font-weight:600}
+details p{margin-top:8px;color:var(--muted)}
+.faq{display:flex;flex-direction:column;gap:8px}
+.sec{display:flex;flex-direction:column;gap:14px;scroll-margin-top:110px}
+.sec > p.intro{color:var(--muted);max-width:70ch}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">SAHA Developers · PMC · Staff briefing</p>
+      <h1>Saha OS Staff Manual</h1>
+      <p class="lede">How the team runs 77:76 Cyber Enclave in Saha OS. Pick your role below: the briefing, the guided tour, the weekly cycle and the page map all change to show your part of the work. The app is at <span class="mono">radiant-portal-app.dshra1.workers.dev</span>.</p>
+    </div>
+    <div class="facts tnum" aria-label="Project at a glance">
+      <div class="fact"><b>Stilt + 5 · 10 flats</b><span>4 × 4BHK (floors 1–2), 6 × 3BHK (3–5)</span></div>
+      <div class="fact"><b>24,804 sft</b><span>Saleable · budget ₹6.20 Cr</span></div>
+      <div class="fact"><b>₹7.45 Cr</b><span>BOQ incl. GST · ₹7.82 Cr with 5% contingency</span></div>
+      <div class="fact"><b>128 stages</b><span>15 Jan 2027 → 9 May 2028 handover</span></div>
+    </div>
+  </header>
+
+  <div class="picker" role="region" aria-label="Choose your role">
+    <div class="row" id="roles"><span class="label">I am:</span></div>
+    <nav class="toc" aria-label="Sections">
+      <a href="#brief">My briefing</a><a href="#tour">Guided tour</a><a href="#cycle">Weekly cycle</a><a href="#map">Page map</a><a href="#rules">Who can do what</a><a href="#faq">Questions</a>
+    </nav>
+  </div>
+
+  <section class="sec" id="brief" aria-labelledby="brief-h">
+    <h2 id="brief-h">My briefing</h2>
+    <div class="brief">
+      <div class="card who" id="who"></div>
+      <div class="card routine" id="routine"></div>
+    </div>
+  </section>
+
+  <section class="sec" id="tour" aria-labelledby="tour-h">
+    <h2 id="tour-h">Guided tour</h2>
+    <p class="intro">A short walk-through for your role. Press Play to run it like a video, or click a chapter. Turn on Voice to hear each step read aloud. The screens are simplified drawings of the real pages, with example figures.</p>
+    <div class="player">
+      <div class="stage" id="stage">
+        <div class="bar" id="bar"></div>
+        <div id="frame"></div>
+        <div class="cap" aria-live="polite"><div class="t" id="capT"></div><div class="n" id="capN"></div></div>
+        <div class="ctrl">
+          <button type="button" id="prev" aria-label="Previous step">◀ Back</button>
+          <button type="button" class="primary" id="play">▶ Play</button>
+          <button type="button" id="next" aria-label="Next step">Next ▶</button>
+          <label><input type="checkbox" id="voice"> Voice</label>
+          <span class="count" id="count"></span>
+        </div>
+      </div>
+      <div class="chapters" id="chapters"></div>
+    </div>
+  </section>
+
+  <section class="sec" id="cycle" aria-labelledby="cycle-h">
+    <h2 id="cycle-h">The weekly cycle</h2>
+    <p class="intro">Every module follows the programme. Whatever stage is on this week (foundations, a slab, conduits), the app gives that stage's instructions, materials and checks, alerts for what comes next, and asks for photos, checks and approvals before the next stage opens. Your steps are highlighted.</p>
+    <div class="cycle" id="cycleSteps"></div>
+  </section>
+
+  <section class="sec" id="map" aria-labelledby="map-h">
+    <h2 id="map-h">Page map</h2>
+    <p class="intro">Every page in the menu, grouped as in the app. Pages you can see are bold; click any page for what it does and how to use it. <span class="tag daily pill">daily</span> marks the pages to live in; <span class="tag merge pill">overlaps</span> marks pages being merged into one.</p>
+    <div class="mapbar">
+      <input id="q" type="search" placeholder="Search pages: e.g. pour, bill, drawing, cube" aria-label="Search pages">
+      <label><input type="checkbox" id="onlyMine"> Only pages I can see</label>
+    </div>
+    <div class="map" id="mapGrid"></div>
+  </section>
+
+  <section class="sec" id="rules" aria-labelledby="rules-h">
+    <h2 id="rules-h">Who can do what</h2>
+    <p class="intro">These rules are enforced by the database, not just hidden buttons. If a button refuses, this table is why. Your column is highlighted.</p>
+    <div class="tbl"><table id="rulesTbl"></table></div>
+  </section>
+
+  <section class="sec" id="faq" aria-labelledby="faq-h">
+    <h2 id="faq-h">Questions</h2>
+    <div class="faq" id="faqList"></div>
+  </section>
+</div>
+
+<aside class="detail" id="detail" hidden aria-label="Page details"></aside>
+
+<script>
+const APP = window.SAHA_APP || "https://radiant-portal-app.dshra1.workers.dev";
+// Inside the app the manual opens pages in the same tab; as a file or shared link, in a new tab.
+const LINK_TARGET = window.SAHA_APP ? "_top" : "_blank";
+const ROLES = [
+  {id:"admin", label:"Admin / Owner"},
+  {id:"pm", label:"Project Manager"},
+  {id:"eng", label:"Site Engineer"},
+  {id:"sup", label:"Site Supervisor"},
+  {id:"buy", label:"Purchase / Stores"},
+  {id:"acc", label:"Accounts"},
+  {id:"own", label:"Landowner / Investor"},
+];
+// Menu groups each role sees (same as the app's nav rules).
+const SEES = {
+  admin:["planning","site","stock","accounts","money","qa"],
+  pm:["planning","site","stock","accounts","money","qa"],
+  eng:["site","qa","stock"], sup:["site","qa","stock"],
+  buy:["stock","accounts"], acc:["stock","accounts","money"],
+  own:["money","accounts","stock","qa"],
+};
+const ALWAYS = ["/","/messages","/notifications","/ai"];
+
+const GROUPS = [
+ {id:"planning", label:"Planning & master database", pages:[
+  ["/","Saha OS Hub","daily","Start of every day. This week's stages and the next ones, orders due, hold points and close-outs waiting, with live project figures.",["Read the Site Week panel at the top: stages now, next, and what is late.","Click a stage card for its material, directions and checks.","Use the Drawings and Budget links on a stage card to jump to that stage."]],
+  ["/messages","Team Chat","daily","Crew chat: direct messages, groups and files. Stage tasks pushed by the PM arrive in the \"Site plan\" channel and the daily report posts here.",["Open the Site plan channel each morning.","Reply in the thread for the stage you are working on."]],
+  ["/ai","Saha AI Assistant","","Ask questions about the project in plain words. It reads the live BOQ by package, the programme (now and next), stock order-by dates and tenders.",["Ask things like \"what steel do I need for C2 columns\" or \"which orders are due this week\".","Check figures it gives against the page it names before acting."]],
+  ["/notifications","Action Centre","daily","All alerts in one place: orders to place, stages starting, hold points, behind-plan stages, cubes due, NCRs overdue, payment requests.",["Work the High items first.","Each alert links to the page where you act on it."]],
+  ["/tasks","Task Tracker","daily","Every site task with owner, due date, progress and status. Stage tasks are created when the PM pushes a stage.",["Update your progress % at the end of the day.","Mark done only after the check is recorded."]],
+  ["/projects","Projects","","Project record: geometry, timeline drivers, specifications, staffing, landowners and banking. Settings for 77:76 match the report.",["Change project figures here only when the report changes.","Only an admin can delete a project."]],
+  ["/projects-setup","Projects & Setup","merge","Project identity, floor geometry and the programme flow with material and steel for each stage. Being merged into Projects.",["Use the programme flow to read each stage's directions and material."]],
+  ["/brand-preferences","Brand Preferences","","The 30 makes chosen in the report (Nuvoco RMC, Jairaj Fe550D, Kohler, Legrand, Polycab, Ashirvad…).",["Buy only these makes unless a change is approved.","A change goes through BOQ Change Approvals."]],
+  ["/boq-engine","BOQ Engine","","The report's master BOQ: 351 lines in report packages, common and individual split. ₹6.47 Cr excl. GST, ₹7.45 Cr incl. GST.",["Filter by package to see a trade.","Rate changes need an admin-approved change request; rates are locked otherwise."]],
+  ["/project-import","Import PMC Workbooks","","Loads the PMC workbooks into the app: master BOQ, common vs individual split, construction control (programme, materials, checklist, cubes), quotation packages, drawing PDFs.",["Select all revised workbooks together and press Import.","Site progress, stock movements, flat owners and vendor bids are kept on re-import."]],
+  ["/stage-budget","Stage Budget & Owner Payments","","What each stage needs (material, machinery, labour, misc), the payment request to owners before the stage, and the actual cost after it.",["Open a stage, check \"Who pays this stage\", then Request.","After the stage, use the recorded bills and labour, approve, then Send cost statement."]],
+  ["/budget-fit","Budget Fit","","Cheaper Hyderabad rates and brands against the ₹6.20 Cr budget. Disabled except for value-engineered options.",["Suggest an option; it goes to BOQ Change Approvals for the admin."]],
+  ["/drawing-decipher","Drawings & Documents","","Drawing register: upload revisions, open and export.",["Upload a new revision with its sheet number; the old one stays in history."]],
+  ["/stage-drawings","Stage Drawings & Photo Check","daily","The sheets for each stage, room by room, and the AI photo check: upload a site photo and it compares it with the drawing.",["Open from a stage's Drawings link.","Take the photo from the same view as the drawing (one wall, square on).","The result is saved as a QA inspection on that stage."]],
+  ["/execution-manual","Execution Manual","","The 14-stage field SOP: hold gates, guardrails, curing.",["Read the section for your stage before starting it."]],
+  ["/access-control","Access & Permissions","admin","Approve new sign-ins and give each person a role.",["New staff sign up, then the admin approves and assigns the role."]],
+  ["/database-backup","Database Backup","admin","Download a full backup of data and files; restore into a new database.",["Take a backup every week."]],
+ ]},
+ {id:"site", label:"Site supervision", pages:[
+  ["/site-today","Site Today (phone)","daily","The phone page for site. Today's stages with How to do it, Drawings, Photo, Checks, and the daily report.",["Open on your phone each morning.","Tap How to do it before starting a stage.","Record each check OK or Not OK as you go.","Send the daily report before you leave: labour by trade and any issues."]],
+  ["/site-execution","Site Execution","daily","The programme: 128 stages with planned and actual %, labour, concrete and open issues. Stage close-out is done here.",["Update the actual % of running stages.","At 100%, open Close out: photos, checks, approvals, then Close."]],
+  ["/pour-cards","Pour Cards","daily","Pre-pour checklist for every concrete pour: grade, volume, cube details. Approved by the site engineer or PM before pouring.",["Raise the card the day before the pour.","No pour until the card is approved."]],
+  ["/site-media","Site Media","","Dated photo and video record of progress, quality and safety.",["Caption every upload with stage code and location."]],
+  ["/contractors-labour","Contractors & Labour","daily","Daily labour log per contractor and trade, with the stage it was spent on.",["Log headcount and day rate per trade, with the stage code.","Labour logged to a stage feeds that stage's actual cost."]],
+ ]},
+ {id:"stock", label:"Stock & inventory", pages:[
+  ["/inventory-control","Inventory Control","daily","Site stock: receipts, issues, balances. Low-stock warnings only when a material's order-by date is within 14 days.",["Enter every receipt against its PO.","Enter issues with the stage they went to."]],
+  ["/procurement","Procurement","merge","Orders due by stage, POs raised, value committed, deliveries. Being merged with Purchasing Center and Vendor Lifecycle.",["Use the Orders list: each row shows the PO or a PO link to raise one."]],
+  ["/purchasing-center","Purchasing Center","merge","PO pipeline, committed spend and vendor tools. Overlaps Procurement.",[]],
+  ["/purchase-orders","Purchase Orders","daily","PO register: draft, PM approval, approved; printable GST POs.",["Admin or PM approves a PO before it is sent to the vendor."]],
+  ["/po-create","Create PO","","Raise a GST PO from the BOQ. Opened from a stage, it fills that stage's materials and steel.",["Use the PO link on an order row so the stage and material are tagged."]],
+  ["/tender-comparison","Tender Comparison","","Vendor quotes line by line, L1/L2/L3, award. 29 RFQ packages from the quotation workbook.",["Get at least three vendor quotes before approval.","Award by item; the award becomes the PO."]],
+  ["/price-intelligence","Price Intelligence","merge","Rates from scanned quotes against BOQ rates. Being merged with Brand Benchmark.",[]],
+  ["/vendor-directory","Vendor Directory","","Vendors by trade with ratings.",["Add a vendor before raising their first PO."]],
+  ["/vendor-lifecycle","Vendor Lifecycle","merge","Vendor from registration to POs, deliveries and payments. Overlaps Procurement.",[]],
+  ["/brand-benchmark","Brand Benchmark","merge","Chosen brands against quoted and BOQ rates.",[]],
+ ]},
+ {id:"accounts", label:"Accounts & audit", pages:[
+  ["/price-ocr","Price OCR (Proformas)","","Upload vendor proformas; item, brand, unit and rate are read out into the price database.",["Upload every quote you receive; it builds the most-used price list."]],
+  ["/bills-payments","Bills & Payments","daily","Vendor bills with stage code and cost type (material, machinery, labour, misc), approval and payments.",["Enter the bill with its stage and cost type.","Only the admin approves. After approval only the admin can change it.","Admin, accounts or PM marks it paid with the payment details."]],
+  ["/billing-expenditure","Billing & Expenditure","merge","One register of bills, payments and statutory charges. Being merged with Financial Ingestion into one ledger.",[]],
+  ["/financial-ingestion","Financial Ingestion","merge","Upload bank statements, expense sheets and vouchers into the cash ledger.",[]],
+  ["/financial-forecast","Financial Forecast","","Cash forecast: funds in hand, monthly burn, cost to complete and funding gap, on the report's BOQ.",["Review monthly with the stage budget's cash by month."]],
+ ]},
+ {id:"money", label:"Money & owners", pages:[
+  ["/capital-ledger","Capital Ledger","daily","Capital calls and money received per owner, with the liability break-up.",["Record each receipt against the owner and stage reference.","Open an owner in the break-up to see every call and receipt."]],
+  ["/landowners-investment","Landowners & Investment","","The four landowners (30/10/10/50%) with liability break-up: common works by share, own flats, unallotted flats, received and balance.",["Shares must total 100%."]],
+  ["/flats","Flats & Individual Works","","Flat types and the 10 flats. Each flat's owner and owner's extras. Individual works go to the flat owner; common works to landowners by share.",["Set each flat's owner when allotted.","Add a new flat type when sizes change; copy lines from a similar type."]],
+  ["/common-expenses","Common & Statutory Expenses","","Permission charges, LRS, electrical connection, HMWSSB and architect fees.",[]],
+  ["/pmc-scope","PMC Scope & Commercials","","Packages the PMC handles, fee and cost against the BOQ.",[]],
+  ["/cost-dashboard","Cost Dashboard","","Cost picture on the report: material, machinery, labour, misc, contingency, committed POs, balance.",[]],
+  ["/owner-approvals","Owner Approvals & Suggestions","","Payment requests, cost statements, drawings and decisions sent to owners, with their approve or reject reply.",["Owners: reply Approve or Reject with a comment."]],
+  ["/approvals","BOQ Change Approvals","","Every cost-affecting BOQ change or brand change waits here for the admin.",["Raise a change with the reason; the admin decides."]],
+ ]},
+ {id:"qa", label:"QA & inspect", pages:[
+  ["/qa-inspection","QA Inspection","","Site inspections with severity, IS code, defects and closure. Photo checks and close-out checks are saved here too.",[]],
+  ["/quality","Quality Control","daily","Checklist log (166 ITP checks), cube register (43 pours), NCR log and the inspection and test plan.",["Enter the actual pour date for each pour; 7- and 28-day dates follow.","Enter cube results; pass or fail is worked out to IS 456.","Raise an NCR for anything Not OK; close it with the correction done."]],
+ ]},
+];
+const PAGES = {}; GROUPS.forEach(g=>g.pages.forEach(p=>PAGES[p[0]]={to:p[0],label:p[1],tag:p[2],what:p[3],how:p[4],group:g.id,glabel:g.label}));
+const canSee=(r,to)=>ALWAYS.includes(to)||SEES[r].includes(PAGES[to].group)&&(PAGES[to].tag!=="admin"||r==="admin");
+
+const BRIEF = {
+ admin:{mission:"You own the project's money and permissions. You approve every bill and BOQ change, approve new staff, and release payment requests and cost statements to the landowners.",
+  pages:["/","/notifications","/bills-payments","/approvals","/stage-budget","/access-control","/capital-ledger","/database-backup"],
+  day:["Action Centre: clear High alerts.","Bills & Payments: approve or reject bills waiting (only you can).","BOQ Change Approvals: decide pending rate or brand changes.","Access & Permissions: approve anyone who signed up and give them a role."],
+  week:["Stage Budget: check next stages and send payment requests to owners.","Approve finished stages' actual cost and send the cost statement.","Landowners & Investment: check each owner's balance to fund.","Database Backup: download the weekly backup."],
+  cannot:[]},
+ pm:{mission:"You run the programme. Each week you push the stage tasks, keep orders ahead of their order-by dates, approve POs and pour cards, and make sure every stage closes with photos, checks and approvals.",
+  pages:["/","/site-execution","/tasks","/purchase-orders","/stage-budget","/quality","/project-import","/flats"],
+  day:["Hub: read the Site Week panel (now, next, late).","Action Centre: orders due, hold points, behind-plan stages.","Purchase Orders: approve POs; Pour Cards: approve pours.","Site Execution: review close-outs waiting."],
+  week:["Push stage tasks for next week (Site plan channel and Task Tracker).","Stage Budget: request money a week before each stage.","Enter actual cost for finished stages and approve it.","Quality: review open NCRs and cube results.","Import PMC Workbooks when the report is revised."],
+  cannot:["Approve bills or change an approved bill (admin only).","Decide BOQ rate changes (admin only).","Delete a project."]},
+ eng:{mission:"You build the stage to the drawings and prove it. You follow How to do it, check against the drawings, record every check, approve pour cards, keep the cube register and close out stages.",
+  pages:["/site-today","/stage-drawings","/pour-cards","/quality","/site-execution","/contractors-labour","/qa-inspection"],
+  day:["Site Today on your phone: today's stages and How to do it.","Open Drawings for the room or wall you are on.","Record each check OK or Not OK; photo check against the drawing.","Pour Cards: approve before any concrete.","Send the daily report: labour by trade, issues."],
+  week:["Cube register: actual pour dates and 7/28-day results.","Raise or close NCRs.","Close out finished stages: photos, checks, approvals."],
+  cannot:["Approve bills or POs.","Change BOQ rates.","See money and owner pages."]},
+ sup:{mission:"You run the gang on the ground. You keep the stage moving as instructed, log labour and material, take the photos and send the daily report.",
+  pages:["/site-today","/contractors-labour","/inventory-control","/site-media","/pour-cards"],
+  day:["Site Today: today's stages and How to do it.","Log labour by contractor and trade with the stage code.","Enter material received and issued in Inventory.","Photos from the drawing's view; send the daily report."],
+  week:["Raise pour cards a day ahead.","Flag anything Not OK so the engineer raises an NCR."],
+  cannot:["Approve pour cards, bills or POs.","Edit bills or BOQ rates unless the admin has approved the change."]},
+ buy:{mission:"You get material to site before it is needed. Every material has an order-by date from the programme; you raise the PO from the stage, get three quotes and receive the delivery.",
+  pages:["/procurement","/po-create","/purchase-orders","/tender-comparison","/inventory-control","/price-ocr","/vendor-directory"],
+  day:["Procurement Orders list: anything due in the next 3 days.","Raise POs from the order row (stage and material are tagged).","Enter receipts in Inventory against the PO."],
+  week:["Tender Comparison: three quotes per package before approval.","Upload every quote to Price OCR.","Check low-stock items (order-by within 14 days)."],
+  cannot:["Approve POs (admin or PM).","Buy a make not in Brand Preferences without an approved change."]},
+ acc:{mission:"You keep the money true. Bills go in with their stage and cost type, payments go out after the admin approves, and every rupee from the owners is recorded.",
+  pages:["/bills-payments","/capital-ledger","/financial-forecast","/financial-ingestion","/common-expenses","/cost-dashboard"],
+  day:["Enter bills with stage code and cost type.","Mark approved bills paid with payment details.","Record owners' receipts in the Capital Ledger."],
+  week:["Upload bank statements (Financial Ingestion).","Review the forecast and each owner's balance to fund.","Check stage actuals: bills and labour against each stage."],
+  cannot:["Approve a bill (admin only).","Change a bill after approval (admin only)."]},
+ own:{mission:"You fund your share and see where it goes. Common works are shared by your %; individual works of your own flats are yours. You are asked before each stage and shown the actual cost after it.",
+  pages:["/owner-approvals","/capital-ledger","/landowners-investment","/flats","/cost-dashboard","/quality"],
+  day:["Owner Approvals: read new payment requests and cost statements.","Approve or reject with a comment."],
+  week:["Capital Ledger: your calls, receipts and balance.","Landowners & Investment: your liability break-up.","Quality: inspections and cube results on your building."],
+  cannot:["Edit anything (view and reply only)."]},
+};
+
+// Tour scenes. frame: desk|phone. side highlight = group label.
+const S = (t,n,route,frame,blocks,hl)=>({t,n,route,frame,blocks,hl});
+const TOURS = {
+ common:[
+  S("Sign in","Sign up with your email. The admin approves you and gives you a role. Until then you see nothing.","/access-control","desk",[["stats",[["Waiting","1"],["Approved","6"]]],["list",[["new.engineer@…","Approve ▸ Site Engineer","w"],["accounts@…","Accounts",""]]]],1),
+  S("Start at the Hub","The Hub shows this week's stages, the next ones and anything late. Every stage card links to its drawings and budget.","/","desk",[["stats",[["Now","3 stages"],["Next","4"],["Late","1"]]],["list",[["F03 Footings","62% · on plan",""],["F06 Sump","Starts Thu","w"],["Order RMC M30","by Mon","r"]]],["btns",["Drawings","Budget","Close out"]]],1),
+  S("Act on alerts","The Action Centre lists what needs you: orders to place, stages starting, hold points, cubes due, payment requests.","/notifications","desk",[["list",[["Order now: 6 items by 12 Jan","High","r"],["Hold point: F03 ITP-04 rebar","High","r"],["Starts 15 Jan: F01 Excavation","Normal",""]]]],0),
+ ],
+ admin:[
+  S("Approve bills","Only you approve a bill. After you approve it, nobody else can change it. Accounts then marks it paid.","/bills-payments","desk",[["list",[["Jairaj TMT · F03 · material","₹4.82 L","w"],["RMC Nuvoco · F03","₹3.10 L","w"]]],["btns",["Approve","Reject"]]],1),
+  S("Decide BOQ changes","Rate and brand changes wait here. Value-engineered options only; everything else stays as the report.","/approvals","desk",[["list",[["Tiles 800×1600: ₹52 → ₹48/sft","saves ₹1.9 L","w"]]],["btns",["Approve","Reject"]]],1),
+  S("Release stage money","Before a stage, send the payment request. Common works go by share; individual works go to each flat's owner.","/stage-budget","desk",[["stats",[["Stage","F03"],["Needs","₹18.6 L"]]],["list",[["VIJAY KUMAR & OTHERS 30%","₹5.58 L",""],["geeta 50%","₹9.30 L",""]]],["btns",["Request from owners"]]],2),
+  S("Send the cost statement","After the stage, approve the actual cost and send it. A shortfall becomes a top-up request; a saving a credit.","/stage-budget","desk",[["stats",[["Budget","₹18.6 L"],["Actual","₹19.1 L"],["Top-up","₹0.5 L"]]],["btns",["Approve actual","Send cost statement"]]],1),
+  S("Weekly backup","Download the full backup every week and keep it off the laptop.","/database-backup","desk",[["btns",["Download backup"]]],0),
+ ],
+ pm:[
+  S("Push the week","Push next week's stage tasks: they appear in Task Tracker and the Site plan chat with directions and checks.","/","desk",[["list",[["F06 Sump · 6 days","tasks pushed",""],["F04 Neck columns","push ▸","w"]]],["btns",["Push stage tasks","Raise alerts"]]],1),
+  S("Keep orders ahead","Each material has an order-by date. Rows show the PO number or a PO link to raise one for that stage.","/procurement","desk",[["list",[["F03 · RMC M30 102 m³","PO-0012",""],["F04 · Fe550D 2.1 t","PO ▸","r"]]]],0),
+  S("Approve POs and pours","Approve POs before they go to the vendor, and pour cards before any concrete.","/purchase-orders","desk",[["list",[["PO-0013 Jairaj","pending","w"],["Pour card F03 footing","pending","w"]]],["btns",["Approve"]]],1),
+  S("Close out stages","A stage closes only with photos, checks and approvals. Closing pushes the next stage's tasks.","/site-execution","desk",[["stats",[["Photos","6"],["Checks","5/5"],["Approvals","2/2"]]],["btns",["Close stage"]]],1),
+  S("Quality review","Open NCRs and cube results for the week. Cubes due and NCRs past date raise alerts.","/quality","desk",[["list",[["NCR-003 honeycomb C1","open","r"],["F03 footing 28-day","due 19 Mar","w"]]]],0),
+ ],
+ eng:[
+  S("Today on your phone","Site Today lists today's stages. Each has How to do it, Drawings, Photo and Checks.","/site-today","phone",[["list",[["F03 Footings","62%",""],["F06 Sump","starts","w"]]],["btns",["How to do it","Drawings","Photo","Checks"]]],1),
+  S("Check against the drawing","Open the sheets for the room or wall. Take a photo from the same view; the photo check compares it with the drawing.","/stage-drawings","phone",[["list",[["E-12 Bedroom-01 walls","sheet",""],["Photo check","in sync ✓",""]]],["btns",["Upload photo"]]],1),
+  S("Record each check","Tick each check OK or Not OK. Not OK becomes an NCR.","/site-today","phone",[["list",[["ITP-04 cover blocks 50 mm","OK",""],["ITP-05 lap length 50d","Not OK","r"]]]],0),
+  S("Pour card before concrete","Approve the pour card: pre-pour checklist, grade, volume, cube samples.","/pour-cards","phone",[["stats",[["Grade","M30"],["Volume","102 m³"],["Cubes","36"]]],["btns",["Approve pour"]]],2),
+  S("Cube register","Enter the actual pour date, then 7- and 28-day results. Pass is mean ≥ fck + 4 and each ≥ fck − 4.","/quality","phone",[["list",[["F03 footing 7-day","24.1 N/mm²",""],["28-day","pending","w"]]]],0),
+  S("Daily report","Before you leave: labour by trade and issues. It posts to the team and logs labour to the stage.","/site-today","phone",[["list",[["Bar benders","8",""],["Masons","6",""],["Issue: pump late","notify","w"]]],["btns",["Send daily report"]]],1),
+ ],
+ sup:[
+  S("Today on your phone","Site Today lists today's stages with How to do it.","/site-today","phone",[["list",[["F03 Footings","62%",""]]],["btns",["How to do it","Photo"]]],0),
+  S("Log labour","Headcount and day rate per contractor and trade, with the stage code.","/contractors-labour","phone",[["list",[["Ravi · bar benders","8 × ₹900",""],["Stage","F03",""]]],["btns",["Save"]]],0),
+  S("Receive and issue material","Every delivery against its PO; every issue to its stage.","/inventory-control","phone",[["list",[["Cement OPC 53","+200 bags",""],["Issued to F03","−40","w"]]]],0),
+  S("Photos and daily report","Photos from the drawing's view, captioned. Send the daily report before leaving.","/site-today","phone",[["btns",["Photo","Send daily report"]]],0),
+ ],
+ buy:[
+  S("Orders due","Each order row has an order-by date from the programme. Red means today or late.","/procurement","desk",[["list",[["F04 · Fe550D 12 mm 1.4 t","by 20 Jan","r"],["F06 · waterproofing","by 2 Feb","w"]]]],0),
+  S("Raise the PO from the stage","The PO link fills that stage's materials and steel, tagged so the stage cost adds up.","/po-create","desk",[["list",[["Fe550D 12 mm","1,400 kg",""],["Fe550D 16 mm","700 kg",""]]],["btns",["Send for approval"]]],1),
+  S("Three quotes","Compare at least three vendor quotes line by line before approval. Award by item.","/tender-comparison","desk",[["list",[["Vendor A","L1 ₹62.4/kg",""],["Vendor B","L2",""],["Vendor C","L3",""]]],["btns",["Award L1"]]],1),
+  S("Receive at site","Enter the delivery in Inventory against the PO.","/inventory-control","desk",[["list",[["PO-0013 Jairaj","2.1 t received",""]]]],0),
+ ],
+ acc:[
+  S("Enter the bill","Every bill with its stage code and cost type: material, machinery, labour or misc.","/bills-payments","desk",[["list",[["Stage","F03",""],["Cost type","material",""],["Basic + GST","₹4.82 L",""]]],["btns",["Save bill"]]],0),
+  S("Pay after approval","Once the admin approves, mark it paid with the payment details. You cannot change an approved bill.","/bills-payments","desk",[["list",[["Jairaj TMT","approved",""]]],["btns",["Mark paid"]]],1),
+  S("Record owners' money","Record each receipt against the owner and stage reference. The break-up shows balance to fund.","/capital-ledger","desk",[["stats",[["Called","₹18.6 L"],["Received","₹14.0 L"]]],["list",[["geeta · STAGE-F03","₹9.30 L received",""]]]],1),
+  S("Forecast","Funds in hand, burn and funding gap on the report's BOQ.","/financial-forecast","desk",[["stats",[["Cost to complete","₹7.45 Cr"],["Gap","—"]]]],0),
+ ],
+ own:[
+  S("Payment requests","Before each stage you get a request with the break-up: your share of common works plus your own flats.","/owner-approvals","desk",[["list",[["Payment request F03, F06","₹18.6 L by 8 Jan","w"],["Your part","₹9.30 L",""]]],["btns",["Approve","Reject"]]],1),
+  S("Cost statement","After the stage you get the actual cost, approved by the admin. A shortfall is a top-up; a saving is credit.","/owner-approvals","desk",[["stats",[["Budget","₹18.6 L"],["Actual","₹18.1 L"],["Credit","₹0.5 L"]]]],1),
+  S("Your liability","Common works by your share, your flats' individual works, received so far and balance to fund.","/landowners-investment","desk",[["list",[["Common works 50%","₹2.66 Cr",""],["Own flats","set when allotted","w"],["Balance to fund","₹3.91 Cr",""]]]],2),
+  S("Quality on your building","Inspections, cube results and NCRs are open to you.","/quality","desk",[["list",[["F03 footing 28-day","pass",""]]]],0),
+ ],
+};
+
+const CYCLE = [
+ ["Plan","Stages now and next, with directions, material and checks. PM pushes the week's tasks.","Hub · Task Tracker · Team Chat",["pm","admin"]],
+ ["Fund","A week before a stage, the owners are asked for its money: common by share, flats to their owners.","Stage Budget · Owner Approvals",["admin","pm","own"]],
+ ["Order","Order-by dates from the programme. PO raised from the stage; three quotes; PM approves.","Procurement · Create PO · Tender Comparison",["buy","pm"]],
+ ["Build","Follow How to do it and the drawings. Pour card before concrete. Daily report every day.","Site Today · Stage Drawings · Pour Cards",["eng","sup"]],
+ ["Check","Every check OK or Not OK, photo check against the drawing, cubes, NCRs.","Site Today · Quality Control",["eng","pm"]],
+ ["Close out","Photos, checks and approvals. Closing pushes the next stage's tasks.","Site Execution",["eng","pm"]],
+ ["Settle","Bills and labour tagged to the stage give the actual. Approved, then sent to owners.","Bills & Payments · Stage Budget · Capital Ledger",["acc","admin","own"]],
+];
+
+const RULES = [
+ ["Approve a new user and set their role",["Y","","","","","",""]],
+ ["Delete a project",["Y","","","","","",""]],
+ ["Approve a bill",["Y","","","","","",""]],
+ ["Change a bill after approval",["Y","","","","","",""]],
+ ["Mark an approved bill paid",["Y","Y","","","","Y",""]],
+ ["Enter a bill or labour entry",["Y","Y","Y","Y","Y","Y",""]],
+ ["Decide a BOQ rate or brand change",["Y","","","","","",""]],
+ ["Raise a BOQ change request",["Y","Y","Y","Y","Y","Y",""]],
+ ["Approve a purchase order",["Y","Y","","","","",""]],
+ ["Approve a pour card",["Y","Y","Y","","","",""]],
+ ["Record checks, photos, cubes, NCRs",["Y","Y","Y","Y","Y","Y",""]],
+ ["Send stage payment requests to owners",["Y","Y","","","","",""]],
+ ["Approve a stage's actual cost and send it",["Y","Y","","","","",""]],
+ ["Set flat owners and flat types",["Y","Y","","","","",""]],
+ ["Reply to owner requests (approve / reject)",["","","","","","","Y"]],
+ ["View money and owner pages",["Y","Y","","","","Y","Y"]],
+];
+
+const FAQ = [
+ ["Which figures are right if two pages differ?","The project report is final. BOQ, budget, saleable area, slab and concrete in the app were synced to it. If a page shows something else, report it in Team Chat with the page name."],
+ ["Why can't I edit an approved bill?","Once the admin approves a bill it is locked for everyone except the admin. Ask the admin to change it."],
+ ["Steel quantities look different from 4 kg/sft.","They come from the drawings and the bar bending schedule in the report (Fe550D, about 93 t net), not from a thumb rule."],
+ ["Who pays for a flat's tiles, doors, paint?","Individual works go to that flat's owner. Common works (structure, external walls, windows, lift, common areas, services to the handover point) are the landowners' by share. Flats not yet allotted are carried by the landowners by share."],
+ ["The photo check says AI is not configured.","The AI key is set in the app's hosting settings by the admin. Until then, take the photo and record the check by hand."],
+ ["78:93","78:93 will be built later on the same principles. First the structure of 77:76 is finished."],
+ ["Is there a mock-up or demo page?","No. Every page works on live project data. Old demo pages now redirect to the real page."],
+];
+
+// ---------- state ----------
+let role = "pm";
+try{ role = localStorage.getItem("saha-manual-role") || role }catch(e){}
+try{ const m=/[?&#]role=([a-z]+)/.exec(location.search+location.hash); if(m) role=m[1] }catch(e){}
+if(window.SAHA_ROLE) role=window.SAHA_ROLE;
+if(!SEES[role]) role="pm";
+const $=id=>document.getElementById(id);
+
+function renderRoles(){
+  const box=$("roles"); box.querySelectorAll(".chip").forEach(c=>c.remove());
+  ROLES.forEach(r=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=r.label;b.setAttribute("aria-pressed",r.id===role);b.onclick=()=>{role=r.id;try{localStorage.setItem("saha-manual-role",role)}catch(e){};renderAll()};box.appendChild(b)});
+}
+function pageBtn(to){const p=PAGES[to];return `<button type="button" data-to="${to}">${p.label}</button>`}
+function renderBrief(){
+  const b=BRIEF[role], r=ROLES.find(x=>x.id===role);
+  $("who").innerHTML=`<p class="eyebrow">${r.label}</p><h3>Your job in Saha OS</h3><p class="mission">${b.mission}</p>
+   <div><p class="eyebrow" style="margin-bottom:6px">Your main pages</p><div class="pages">${b.pages.map(pageBtn).join("")}</div></div>
+   <div class="limits">${b.cannot.length?`<span class="pill no">You cannot</span><ul>${b.cannot.map(x=>`<li>${x}</li>`).join("")}</ul>`:`<span class="pill">Full access to every page</span>`}</div>`;
+  $("routine").innerHTML=`<h3><span class="pill">Every day</span></h3><ol>${b.day.map(x=>`<li>${x}</li>`).join("")}</ol><h3><span class="pill warn">Every week</span></h3><ol>${b.week.map(x=>`<li>${x}</li>`).join("")}</ol>`;
+  document.querySelectorAll("#who .pages button").forEach(x=>x.onclick=()=>openPage(x.dataset.to));
+}
+function renderCycle(){
+  $("cycleSteps").innerHTML=CYCLE.map((c,i)=>{const mine=c[3].includes(role);const who=c[3].map(id=>ROLES.find(r=>r.id===id).label).join(", ");return `<div class="step${mine?" mine":""}"><span class="no">Step ${i+1}</span><h3>${c[0]}</h3><p>${c[1]}</p><span class="where">${c[2]}</span><span class="who">${mine?"<b>You act here.</b> ":""}${who}</span></div>`}).join("");
+}
+function renderMap(){
+  const q=$("q").value.trim().toLowerCase(), only=$("onlyMine").checked;
+  $("mapGrid").innerHTML=GROUPS.map(g=>{
+    const items=g.pages.map(p=>PAGES[p[0]]).filter(p=>(!q||(p.label+" "+p.what).toLowerCase().includes(q))&&(!only||canSee(role,p.to)));
+    if(!items.length) return "";
+    return `<div class="grp"><h3>${g.label}</h3>${items.map(p=>{const see=canSee(role,p.to);const tag=p.tag==="daily"?`<span class="tag daily">daily</span>`:p.tag==="merge"?`<span class="tag merge">overlaps</span>`:p.tag==="admin"?`<span class="tag admin">admin</span>`:"";return `<button type="button" class="pg${see?"":" dim"}" data-to="${p.to}"><span style="font-weight:${see?600:400}">${p.label}</span>${tag}</button>`}).join("")}</div>`}).join("")||`<p>No page matches "${q}".</p>`;
+  document.querySelectorAll("#mapGrid .pg").forEach(b=>b.onclick=()=>openPage(b.dataset.to));
+}
+function openPage(to){
+  const p=PAGES[to], see=canSee(role,to), d=$("detail");
+  d.innerHTML=`<button type="button" class="close" id="dclose">Close</button><p class="eyebrow">${p.glabel}</p><h2>${p.label}</h2><p class="mono">${to}</p>
+   <p>${see?`<span class="pill">In your menu</span>`:`<span class="pill no">Not in your menu as ${ROLES.find(r=>r.id===role).label}</span>`}</p><p>${p.what}</p>
+   ${p.how.length?`<h3>How to use it</h3><ol>${p.how.map(x=>`<li>${x}</li>`).join("")}</ol>`:""}
+   <a class="open" href="${APP}${to}" target="${LINK_TARGET}" rel="noopener">Open in Saha OS</a>`;
+  d.hidden=false; $("dclose").onclick=()=>{d.hidden=true}; $("dclose").focus();
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("detail").hidden=true});
+function renderRules(){
+  const idx=ROLES.findIndex(r=>r.id===role);
+  $("rulesTbl").innerHTML=`<thead><tr><th>Action</th>${ROLES.map((r,i)=>`<th class="${i===idx?"me":""}">${r.label}</th>`).join("")}</tr></thead><tbody>${RULES.map(r=>`<tr><td>${r[0]}</td>${r[1].map((v,i)=>`<td class="c ${v?"y":"n"} ${i===idx?"me":""}">${v?"✓":"·"}</td>`).join("")}</tr>`).join("")}</tbody>`;
+}
+function renderFaq(){ $("faqList").innerHTML=FAQ.map(f=>`<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("") }
+
+// ---------- tour player ----------
+let scenes=[], cur=0, playing=false, timer=null, t0=0;
+const DUR=7000;
+function sceneFor(){ return [...TOURS.common, ...TOURS[role]] }
+function frameHTML(s){
+  const sideGroups=["Hub","Site","Stock","Accounts","Money","QA"];
+  const grp=PAGES[s.route]?.group;
+  const map={planning:"Hub",site:"Site",stock:"Stock",accounts:"Accounts",money:"Money",qa:"QA"};
+  const blocks=s.blocks.map((b,i)=>{
+    const hl=i===s.hl?" hl":"";
+    if(b[0]==="stats") return `<div class="stats" data-i="${i}">${b[1].map(x=>`<div class="blk${hl}"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("")}</div>`;
+    if(b[0]==="list") return `<div class="blk lst${hl}" data-i="${i}">${b[1].map(x=>`<div><span>${x[0]}</span><em class="${x[2]}">${x[1]}</em></div>`).join("")}</div>`;
+    if(b[0]==="btns") return `<div class="btns${hl}" data-i="${i}">${b[1].map((x,j)=>`<span class="${j?"alt":""}">${x}</span>`).join("")}</div>`;
+    return "";
+  }).join("");
+  return `<div class="${s.frame==="phone"?"phone":""}"><div class="screen" id="scr">
+    <div class="side"><span class="logo">Saha OS</span>${sideGroups.map(g=>`<span class="${map[grp]===g?"on":""}">${g}</span>`).join("")}</div>
+    <div class="main"><span class="crumb">77:76 Cyber Enclave · ${PAGES[s.route]?.glabel||""}</span><span class="ttl">${PAGES[s.route]?.label||""}</span>${blocks}</div>
+    <span class="cursor" id="cur"></span></div></div>`;
+}
+function moveCursor(s){
+  const scr=$("scr"), c=$("cur"); if(!scr||!c) return;
+  const tgt=scr.querySelector(`[data-i="${s.hl}"]`); if(!tgt) return;
+  requestAnimationFrame(()=>{const a=scr.getBoundingClientRect(), r=tgt.getBoundingClientRect();
+    c.style.left=(r.left-a.left+r.width*0.7)+"px"; c.style.top=(r.top-a.top+r.height*0.55)+"px";});
+}
+function speak(s){
+  try{ speechSynthesis.cancel(); if(!$("voice").checked) return;
+    const u=new SpeechSynthesisUtterance(s.t+". "+s.n); const v=speechSynthesis.getVoices().find(v=>/en-IN/i.test(v.lang))||speechSynthesis.getVoices().find(v=>/^en/i.test(v.lang)); if(v)u.voice=v; u.rate=1;
+    speechSynthesis.speak(u);}catch(e){}
+}
+function show(i){
+  cur=(i+scenes.length)%scenes.length; const s=scenes[cur];
+  $("frame").innerHTML=frameHTML(s); $("capT").textContent=s.t; $("capN").textContent=s.n;
+  $("count").textContent=`${cur+1} / ${scenes.length}`;
+  document.querySelectorAll("#bar i b").forEach((b,j)=>{b.style.transition="none";b.style.width=j<cur?"100%":"0"});
+  document.querySelectorAll("#chapters button").forEach((b,j)=>b.setAttribute("aria-current",j===cur));
+  setTimeout(()=>moveCursor(s),60);
+  speak(s);
+  if(playing) runBar();
+}
+function runBar(){
+  clearTimeout(timer); const b=document.querySelectorAll("#bar i b")[cur];
+  if(b){b.style.transition="none";b.style.width="0";void b.offsetWidth;b.style.transition=`width ${DUR}ms linear`;b.style.width="100%"}
+  timer=setTimeout(()=>{ if(cur<scenes.length-1) show(cur+1); else {setPlay(false)} },DUR);
+}
+function setPlay(v){ playing=v; $("play").textContent=v?"❚❚ Pause":"▶ Play"; clearTimeout(timer);
+  if(v) runBar(); else { const b=document.querySelectorAll("#bar i b")[cur]; if(b){const w=getComputedStyle(b).width;b.style.transition="none";b.style.width=w} try{speechSynthesis.cancel()}catch(e){} } }
+function renderTour(){
+  scenes=sceneFor(); setPlay(false);
+  $("bar").innerHTML=scenes.map((_,i)=>`<i data-i="${i}" title="Step ${i+1}"><b></b></i>`).join("");
+  $("bar").querySelectorAll("i").forEach(x=>x.onclick=()=>show(+x.dataset.i));
+  $("chapters").innerHTML=scenes.map((s,i)=>`<button type="button"><span class="k">${String(i+1).padStart(2,"0")}</span><span><b>${s.t}</b><small>${PAGES[s.route]?.label||""}</small></span></button>`).join("");
+  $("chapters").querySelectorAll("button").forEach((b,i)=>b.onclick=()=>show(i));
+  show(0);
+}
+$("play").onclick=()=>{ if(!playing && cur===scenes.length-1) show(0); setPlay(!playing); if(playing) speak(scenes[cur]) };
+$("next").onclick=()=>show(cur+1); $("prev").onclick=()=>show(cur-1);
+$("voice").onchange=()=>speak(scenes[cur]);
+window.addEventListener("resize",()=>moveCursor(scenes[cur]));
+$("q").oninput=renderMap; $("onlyMine").onchange=renderMap;
+
+function renderAll(){ renderRoles(); renderBrief(); renderTour(); renderCycle(); renderMap(); renderRules(); }
+renderFaq(); renderAll();
+</script>

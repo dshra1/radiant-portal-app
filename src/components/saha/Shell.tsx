@@ -31,6 +31,7 @@ import {
   Bot,
   LogOut,
   Info,
+  LifeBuoy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -308,6 +309,13 @@ export function Shell({
         <div className="space-y-2 border-t border-sidebar-border p-2">
           {expanded && (
             <>
+              <Link
+                to="/manual"
+                className="mb-1 flex items-center gap-3 rounded px-3 py-2 text-[13px] font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+              >
+                <LifeBuoy className="size-4" />
+                <span>How to use Saha OS</span>
+              </Link>
               <div className="flex items-center justify-between px-2.5 label-caps text-sidebar-foreground/60">
                 <span>SAHA Developers · PMC</span>
               </div>

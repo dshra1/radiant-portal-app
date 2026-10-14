@@ -23,6 +23,7 @@ import {
   Scale,
   Radio,
   BookOpen,
+  LifeBuoy,
   Sparkles,
   Tags,
   Ruler,
@@ -48,6 +49,7 @@ export const navGroups: NavGroup[] = [
     label: "Main · Planning & Master Database",
     items: [
       { to: "/", label: "Saha OS Hub", icon: Home },
+      { to: "/manual", label: "Staff Manual (how to use)", icon: LifeBuoy },
       { to: "/messages", label: "Team Chat", icon: MessagesSquare },
       { to: "/ai", label: "Saha AI Assistant", icon: Bot },
       { to: "/notifications", label: "Action Centre", icon: BellRing },
@@ -159,7 +161,7 @@ export function isReadOnlyRole(role: string): boolean {
 }
 
 /** Extra always-visible items per role (home + dashboard entry points). */
-const alwaysVisible = ["/", "/dashboard", "/messages", "/notifications", "/ai"];
+const alwaysVisible = ["/", "/manual", "/dashboard", "/messages", "/notifications", "/ai"];
 
 export function navForRole(role: string, isAdmin = false): NavGroup[] {
   const allowed = roleGroups[role as Role] ?? "all";

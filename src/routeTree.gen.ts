@@ -37,6 +37,7 @@ import { Route as FinancialIngestionRouteImport } from './routes/financial-inges
 import { Route as FlatsRouteImport } from './routes/flats'
 import { Route as InventoryControlRouteImport } from './routes/inventory-control'
 import { Route as LandownersInvestmentRouteImport } from './routes/landowners-investment'
+import { Route as ManualRouteImport } from './routes/manual'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -212,6 +213,11 @@ const InventoryControlRoute = InventoryControlRouteImport.update({
 const LandownersInvestmentRoute = LandownersInvestmentRouteImport.update({
   id: '/landowners-investment',
   path: '/landowners-investment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManualRoute = ManualRouteImport.update({
+  id: '/manual',
+  path: '/manual',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MediaUploadStudioRoute = MediaUploadStudioRouteImport.update({
@@ -424,6 +430,7 @@ export interface FileRoutesByFullPath {
   '/flats': typeof FlatsRoute
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
+  '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
@@ -490,6 +497,7 @@ export interface FileRoutesByTo {
   '/flats': typeof FlatsRoute
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
+  '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
@@ -557,6 +565,7 @@ export interface FileRoutesById {
   '/flats': typeof FlatsRoute
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
+  '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
@@ -625,6 +634,7 @@ export interface FileRouteTypes {
     | '/flats'
     | '/inventory-control'
     | '/landowners-investment'
+    | '/manual'
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
@@ -691,6 +701,7 @@ export interface FileRouteTypes {
     | '/flats'
     | '/inventory-control'
     | '/landowners-investment'
+    | '/manual'
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
@@ -757,6 +768,7 @@ export interface FileRouteTypes {
     | '/flats'
     | '/inventory-control'
     | '/landowners-investment'
+    | '/manual'
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
@@ -824,6 +836,7 @@ export interface RootRouteChildren {
   FlatsRoute: typeof FlatsRoute
   InventoryControlRoute: typeof InventoryControlRoute
   LandownersInvestmentRoute: typeof LandownersInvestmentRoute
+  ManualRoute: typeof ManualRoute
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
   MessagesRoute: typeof MessagesRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -1058,6 +1071,13 @@ declare module '@tanstack/react-router' {
       path: '/landowners-investment'
       fullPath: '/landowners-investment'
       preLoaderRoute: typeof LandownersInvestmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manual': {
+      id: '/manual'
+      path: '/manual'
+      fullPath: '/manual'
+      preLoaderRoute: typeof ManualRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/media-upload-studio': {
@@ -1344,6 +1364,7 @@ const rootRouteChildren: RootRouteChildren = {
   FlatsRoute: FlatsRoute,
   InventoryControlRoute: InventoryControlRoute,
   LandownersInvestmentRoute: LandownersInvestmentRoute,
+  ManualRoute: ManualRoute,
   MediaUploadStudioRoute: MediaUploadStudioRoute,
   MessagesRoute: MessagesRoute,
   NotificationsRoute: NotificationsRoute,
