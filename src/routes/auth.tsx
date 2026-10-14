@@ -79,6 +79,21 @@ function AuthPage() {
     }
   };
 
+  // Show "Continue with Google" only when Google sign-in is switched on in Supabase
+  // (Authentication → Sign In / Providers → Google). Until then the button only led
+  // to "Unsupported provider: provider is not enabled".
+  const [googleOn, setGoogleOn] = useState(false);
+  useEffect(() => {
+    const key = import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] as string | undefined;
+    if (!key) return;
+    fetch(`${window.location.origin}/sb/auth/v1/settings`, { headers: { apikey: key } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s: { external?: { google?: boolean } } | null) =>
+        setGoogleOn(Boolean(s?.external?.google)),
+      )
+      .catch(() => setGoogleOn(false));
+  }, []);
+
   const google = async () => {
     setError(null);
     try {
@@ -128,18 +143,24 @@ function AuthPage() {
           Project, BOQ, chat and financial data is available to signed-in users only.
         </p>
 
-        <button
-          type="button"
-          onClick={google}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#0C1F17] transition hover:bg-white/90"
-        >
-          Continue with Google
-        </button>
+        {googleOn ? (
+          <>
+            <button
+              type="button"
+              onClick={google}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#0C1F17] transition hover:bg-white/90"
+            >
+              Continue with Google
+            </button>
 
-        <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wider text-white/40">
-          <span className="h-px flex-1 bg-white/15" /> or email{" "}
-          <span className="h-px flex-1 bg-white/15" />
-        </div>
+            <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wider text-white/40">
+              <span className="h-px flex-1 bg-white/15" /> or email{" "}
+              <span className="h-px flex-1 bg-white/15" />
+            </div>
+          </>
+        ) : (
+          <div className="mt-6" />
+        )}
 
         <form onSubmit={submit} className="space-y-3">
           <label className="block text-sm font-medium text-white/80">
