@@ -18,9 +18,9 @@ const cloudflareWorker = process.env["WORKERS_CI"]
             compatibility_date: "2026-09-01",
             observability: { enabled: true },
             vars: {
-              SUPABASE_URL: "https://hnwxfslyyxjhblqzretu.supabase.co",
-              SUPABASE_PUBLISHABLE_KEY: "sb_publishable_HOYWPO-Wo39xak3_mG4fTQ_1qNmR_C1",
-              SUPABASE_PROJECT_ID: "hnwxfslyyxjhblqzretu",
+              SUPABASE_URL: "https://kimwplrodbviijzaoypl.supabase.co",
+              SUPABASE_PUBLISHABLE_KEY: "sb_publishable_PNSCAjWJSk5pqRaY7D0imQ_dYwhuG27",
+              SUPABASE_PROJECT_ID: "kimwplrodbviijzaoypl",
             },
           },
         },
