@@ -52,7 +52,7 @@ export function InstallAppButton() {
   // Desktop bottom-right already holds "All screens" (bottom-4) and the Saha AI
   // button (bottom-[4.5rem]); this sits above both so nothing overlaps.
   return (
-    <div className="fixed bottom-20 left-4 z-[200] flex flex-col items-start gap-2 md:bottom-32 md:left-auto md:right-4 md:items-end">
+    <div className="fixed bottom-20 left-4 z-[200] flex flex-col items-start gap-2 md:hidden">
       <button
         type="button"
         onClick={handleClick}
