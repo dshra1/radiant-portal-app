@@ -88,7 +88,8 @@ export function packedName(f: { bucket: string; path: string }) {
   return [f.bucket, ...f.path.split("/")].join(SEP);
 }
 export function unpackName(name: string): { bucket: string; path: string } | null {
-  const parts = name.split(SEP);
+  // "@@" is accepted too: some tools refuse "~" in file names.
+  const parts = name.replaceAll("@@", SEP).split(SEP);
   if (parts.length < 2) return null;
   const [bucket, ...rest] = parts;
   if (!(BACKUP_BUCKETS as readonly string[]).includes(bucket!)) return null;
