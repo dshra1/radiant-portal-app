@@ -473,8 +473,7 @@
   [class*="flex-row"] { flex-wrap: wrap !important; }
   [class*="overflow-x-auto"] { -webkit-overflow-scrolling: touch; }
 
-  /* iPhone zooms in on any field under 16px and stays zoomed: keep fields at 16px */
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px !important; }
+  main select { max-width: 100%; }
 
   /* Type scale trim so headlines fit 360px */
   [class*="text-display"], [class*="text-headline-lg"] { font-size: 1.6rem !important; line-height: 1.2 !important; }
@@ -544,4 +543,10 @@
   .po-print .panel { border: none; box-shadow: none; }
   body { background: #fff; }
   @page { size: A4; margin: 12mm; }
+}
+
+/* iPhone / iPad zoom in on any field under 16px and stay zoomed: on touch
+   screens every typing field is 16px. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px !important; }
 }
