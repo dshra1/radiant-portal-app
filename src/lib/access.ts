@@ -41,23 +41,55 @@ export type Access = {
   labels: Role[];
 };
 
-export function useSessionUser() {
-  const [user, setUser] = useState<{ id: string; email: string } | null | undefined>(undefined);
+type SessionUser = { id: string; email: string } | null | undefined;
+
+/**
+ * One shared copy of the signed-in user for the whole app. Previously every
+ * component (40+) started as "unknown", asked Supabase for the session and
+ * subscribed separately, so each page waited a round before its data queries
+ * could even start. Now the first check is shared and later pages get the user
+ * immediately.
+ */
+let sessionUser: SessionUser = undefined;
+let sessionStarted = false;
+const sessionListeners = new Set<() => void>();
+
+function setSessionUser(next: SessionUser) {
+  // Token refreshes fire auth events for the same person: keep the same object so
+  // nothing re-renders or refetches.
+  const same =
+    next === sessionUser ||
+    (next != null && sessionUser != null && next.id === sessionUser.id && next.email === sessionUser.email);
+  if (same) return;
+  sessionUser = next;
+  sessionListeners.forEach((l) => l());
+}
+
+function startSessionWatch() {
+  if (sessionStarted || typeof window === "undefined") return;
+  sessionStarted = true;
+  supabase.auth.getSession().then(({ data }) => {
+    const u = data.session?.user;
+    setSessionUser(u ? { id: u.id, email: u.email ?? "" } : null);
+  });
+  supabase.auth.onAuthStateChange((_e, session) => {
+    const u = session?.user;
+    setSessionUser(u ? { id: u.id, email: u.email ?? "" } : null);
+  });
+}
+
+export function useSessionUser(): SessionUser {
+  const [user, setUser] = useState<SessionUser>(() => sessionUser);
   useEffect(() => {
-    let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      const u = data.session?.user;
-      setUser(u ? { id: u.id, email: u.email ?? "" } : null);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      const u = session?.user;
-      setUser(u ? { id: u.id, email: u.email ?? "" } : null);
-    });
+    startSessionWatch();
+    const listener = () => setUser(sessionUser);
+    sessionListeners.add(listener);
+    // Catch anything that changed between render and subscribe.
+    if (user !== sessionUser) setUser(sessionUser);
     return () => {
-      active = false;
-      sub.subscription.unsubscribe();
+      sessionListeners.delete(listener);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return user;
 }

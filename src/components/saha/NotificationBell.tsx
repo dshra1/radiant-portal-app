@@ -72,7 +72,7 @@ export function NotificationBell({
       if (error) throw error;
       return (data ?? []) as Note[];
     },
-    refetchInterval: 6000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });
 

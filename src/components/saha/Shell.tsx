@@ -208,7 +208,7 @@ export function Shell({
       if (error) throw error;
       return count ?? 0;
     },
-    refetchInterval: 6000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });
   const current = projects.find((p) => p.id === active.id);

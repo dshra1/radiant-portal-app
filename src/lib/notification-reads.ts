@@ -149,7 +149,7 @@ export function useNotificationReadIds(userId: string | null | undefined) {
     queryKey: ["notifications", "reads", userId],
     enabled: Boolean(userId),
     queryFn: () => fetchReadIds(userId!),
-    refetchInterval: 15000,
+    refetchInterval: 60_000,
   });
 }
 
@@ -171,7 +171,7 @@ export function useUnreadNotificationCount(
     ],
     enabled: Boolean(userId),
     queryFn: () => countUnreadNotifications(userId!, opts),
-    refetchInterval: 6000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });
 }

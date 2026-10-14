@@ -11,5 +11,7 @@ export function createAiProvider(apiKey: string) {
   });
 }
 
-// Same model the app was already using via the gateway — no behavior change.
-export const SAHA_MODEL = "gemini-3.7-flash";
+// "gemini-3.7-flash" is not a model the Gemini API offers, so every AI call failed.
+// gemini-3.8-flash is Google's current stable Flash model. Override with GEMINI_MODEL
+// in the hosting environment if Google retires it.
+export const SAHA_MODEL = process.env["GEMINI_MODEL"] || "gemini-3.8-flash";
