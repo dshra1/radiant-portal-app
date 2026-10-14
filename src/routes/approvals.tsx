@@ -27,7 +27,8 @@ export const Route = createFileRoute("/approvals")({
       { property: "og:title", content: "Change Approvals — Partner Sign-off on BOQ Changes" },
       {
         property: "og:description",
-        content: "Approve or reject proposed BOQ rate, brand and quantity changes before they commit.",
+        content:
+          "Approve or reject proposed BOQ rate, brand and quantity changes before they commit.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -212,7 +213,9 @@ function Page() {
               <History className="h-4 w-4 text-primary" />
             )}
             <h2 className="text-sm font-bold uppercase tracking-wider text-primary">
-              {tab === "pending" ? `Awaiting approval (${rows.length})` : `History (${rows.length})`}
+              {tab === "pending"
+                ? `Awaiting approval (${rows.length})`
+                : `History (${rows.length})`}
             </h2>
           </div>
 
@@ -269,7 +272,9 @@ function Page() {
                       </p>
                     </div>
                     <div className="rounded-xl border border-sky-500/40 bg-sky-500/5 p-3">
-                      <p className="font-semibold uppercase tracking-wider text-sky-700">Proposed</p>
+                      <p className="font-semibold uppercase tracking-wider text-sky-700">
+                        Proposed
+                      </p>
                       <p className="mt-1 text-foreground">
                         <Values values={r.proposed_values ?? {}} />
                       </p>
@@ -285,9 +290,7 @@ function Page() {
                       <div className="flex flex-wrap items-center gap-2">
                         <input
                           value={notes[r.id] ?? ""}
-                          onChange={(e) =>
-                            setNotes((n) => ({ ...n, [r.id]: e.target.value }))
-                          }
+                          onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value }))}
                           placeholder="Remark for the record (optional)"
                           className="min-w-[200px] flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
                         />
@@ -317,9 +320,7 @@ function Page() {
                     <p className="text-xs font-semibold text-muted-foreground">
                       {r.status === "approved" ? "Approved" : "Rejected"} by{" "}
                       {r.decided_by_name || "partner"}
-                      {r.decided_at
-                        ? ` on ${new Date(r.decided_at).toLocaleString("en-IN")}`
-                        : ""}
+                      {r.decided_at ? ` on ${new Date(r.decided_at).toLocaleString("en-IN")}` : ""}
                       {r.decision_note ? ` — ${r.decision_note}` : ""}
                     </p>
                   )}

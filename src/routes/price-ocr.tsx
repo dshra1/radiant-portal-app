@@ -8,7 +8,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
-import { extractQuoteFromFile, type ExtractedQuote, type ExtractedQuoteItem } from "@/lib/price-ocr.functions";
+import {
+  extractQuoteFromFile,
+  type ExtractedQuote,
+  type ExtractedQuoteItem,
+} from "@/lib/price-ocr.functions";
 import { Loader2, ScanText, Trash2, Upload, Download, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/price-ocr")({
@@ -23,7 +27,8 @@ export const Route = createFileRoute("/price-ocr")({
       { property: "og:title", content: "Price OCR — Proforma Scanning & Price Database | Saha OS" },
       {
         property: "og:description",
-        content: "Scan vendor quotations into a searchable rate database for BOQ and purchase decisions.",
+        content:
+          "Scan vendor quotations into a searchable rate database for BOQ and purchase decisions.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -103,7 +108,9 @@ function Page() {
     queryFn: async (): Promise<QuoteRow[]> => {
       const { data, error } = await supabase
         .from("price_quotes")
-        .select("id,vendor_name,vendor_gstin,vendor_contact,quote_ref,quote_date,trade,source_file,notes,created_at")
+        .select(
+          "id,vendor_name,vendor_gstin,vendor_contact,quote_ref,quote_date,trade,source_file,notes,created_at",
+        )
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as QuoteRow[];
@@ -116,18 +123,28 @@ function Page() {
     queryFn: async (): Promise<ItemRow[]> => {
       const { data, error } = await supabase
         .from("price_quote_items")
-        .select("id,quote_id,item_code,description,brand,trade,unit,quantity,rate,discount_pct,gst_pct,net_rate")
+        .select(
+          "id,quote_id,item_code,description,brand,trade,unit,quantity,rate,discount_pct,gst_pct,net_rate",
+        )
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      return (data ?? []).map((r) => ({ ...r, quantity: Number(r.quantity), rate: Number(r.rate), discount_pct: Number(r.discount_pct), gst_pct: Number(r.gst_pct), net_rate: Number(r.net_rate) })) as ItemRow[];
+      return (data ?? []).map((r) => ({
+        ...r,
+        quantity: Number(r.quantity),
+        rate: Number(r.rate),
+        discount_pct: Number(r.discount_pct),
+        gst_pct: Number(r.gst_pct),
+        net_rate: Number(r.net_rate),
+      })) as ItemRow[];
     },
   });
 
   const quoteById = useMemo(() => new Map(quotes.map((q) => [q.id, q])), [quotes]);
 
   const trades = useMemo(
-    () => [...new Set(items.map((i) => i.trade || "Uncategorised"))].sort((a, b) => a.localeCompare(b)),
+    () =>
+      [...new Set(items.map((i) => i.trade || "Uncategorised"))].sort((a, b) => a.localeCompare(b)),
     [items],
   );
 
@@ -137,7 +154,10 @@ function Page() {
       if (trade !== "all" && (i.trade || "Uncategorised") !== trade) return false;
       if (!q) return true;
       const vendor = quoteById.get(i.quote_id)?.vendor_name ?? "";
-      return [i.description, i.brand, i.item_code, i.unit, vendor].join(" ").toLowerCase().includes(q);
+      return [i.description, i.brand, i.item_code, i.unit, vendor]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
     });
   }, [items, search, trade, quoteById]);
 
@@ -156,7 +176,9 @@ function Page() {
 
     onSuccess: (result) => {
       setDraft(result.items.length ? result : { ...result, items: [emptyItem()] });
-      toast.success(`${result.items.length} price line${result.items.length === 1 ? "" : "s"} read from the document`);
+      toast.success(
+        `${result.items.length} price line${result.items.length === 1 ? "" : "s"} read from the document`,
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -232,7 +254,21 @@ function Page() {
 
   function exportDatabase() {
     const aoa = [
-      ["Vendor", "Quote_Ref", "Quote_Date", "Trade", "Item_Code", "Description", "Brand", "Unit", "Qty", "Rate", "Discount_%", "GST_%", "Net_Rate"],
+      [
+        "Vendor",
+        "Quote_Ref",
+        "Quote_Date",
+        "Trade",
+        "Item_Code",
+        "Description",
+        "Brand",
+        "Unit",
+        "Qty",
+        "Rate",
+        "Discount_%",
+        "GST_%",
+        "Net_Rate",
+      ],
       ...visible.map((i) => {
         const q = quoteById.get(i.quote_id);
         return [
@@ -261,10 +297,13 @@ function Page() {
     <Shell title="Price OCR & Rate Database">
       <div className="mx-auto w-full max-w-[1400px] space-y-6 p-4 sm:p-6">
         <header>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Price OCR — Proforma Scanner</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Price OCR — Proforma Scanner
+          </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Upload a vendor proforma, quotation or price list (photo or PDF). The app reads the vendor, items, units
-            and rates, you confirm them, and they are saved into the shared price database.
+            Upload a vendor proforma, quotation or price list (photo or PDF). The app reads the
+            vendor, items, units and rates, you confirm them, and they are saved into the shared
+            price database.
           </p>
         </header>
 
@@ -298,7 +337,11 @@ function Page() {
                 onClick={() => fileRef.current?.click()}
                 className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
               >
-                {scan.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {scan.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
                 {scan.isPending ? "Reading document…" : "Upload proforma"}
               </button>
               <button
@@ -318,7 +361,8 @@ function Page() {
           ) : null}
           {scan.isError ? (
             <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              Could not read this file: {(scan.error as Error).message}. Try a clearer photo or a single-page PDF.
+              Could not read this file: {(scan.error as Error).message}. Try a clearer photo or a
+              single-page PDF.
             </p>
           ) : null}
           {saveQuote.isError ? (
@@ -328,21 +372,26 @@ function Page() {
           ) : null}
         </section>
 
-
         {draft ? (
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-900">Check the extracted data</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
+              Check the extracted data
+            </h2>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {([
-                ["vendor_name", "Vendor"],
-                ["quote_ref", "Quote reference"],
-                ["quote_date", "Quote date (YYYY-MM-DD)"],
-                ["trade", "Trade"],
-                ["vendor_gstin", "GSTIN"],
-                ["vendor_contact", "Contact"],
-              ] as const).map(([key, label]) => (
+              {(
+                [
+                  ["vendor_name", "Vendor"],
+                  ["quote_ref", "Quote reference"],
+                  ["quote_date", "Quote date (YYYY-MM-DD)"],
+                  ["trade", "Trade"],
+                  ["vendor_gstin", "GSTIN"],
+                  ["vendor_contact", "Contact"],
+                ] as const
+              ).map(([key, label]) => (
                 <label key={key} className="block">
-                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</span>
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {label}
+                  </span>
                   <input
                     className={inputCls}
                     value={draft[key]}
@@ -371,19 +420,74 @@ function Page() {
                 <tbody className="divide-y divide-slate-100">
                   {draft.items.map((item, idx) => (
                     <tr key={idx}>
-                      <td className="py-1.5 pr-2"><input className={inputCls} value={item.item_code} onChange={(e) => patchItem(idx, { item_code: e.target.value })} /></td>
-                      <td className="py-1.5 pr-2 min-w-[240px]"><input className={inputCls} value={item.description} onChange={(e) => patchItem(idx, { description: e.target.value })} /></td>
-                      <td className="py-1.5 pr-2"><input className={inputCls} value={item.brand} onChange={(e) => patchItem(idx, { brand: e.target.value })} /></td>
-                      <td className="py-1.5 pr-2"><input className={inputCls} value={item.trade} onChange={(e) => patchItem(idx, { trade: e.target.value })} /></td>
-                      <td className="py-1.5 pr-2 w-24"><input className={inputCls} value={item.unit} onChange={(e) => patchItem(idx, { unit: e.target.value })} /></td>
-                      <td className="py-1.5 pr-2 w-28"><input className={inputCls} type="number" value={item.rate} onChange={(e) => patchItem(idx, { rate: Number(e.target.value) })} /></td>
-                      <td className="py-1.5 pr-2 w-20"><input className={inputCls} type="number" value={item.discount_pct} onChange={(e) => patchItem(idx, { discount_pct: Number(e.target.value) })} /></td>
-                      <td className="py-1.5 pr-2 w-20"><input className={inputCls} type="number" value={item.gst_pct} onChange={(e) => patchItem(idx, { gst_pct: Number(e.target.value) })} /></td>
-                      <td className="py-1.5 pr-2 whitespace-nowrap font-semibold text-emerald-700">{money(netRate(item))}</td>
+                      <td className="py-1.5 pr-2">
+                        <input
+                          className={inputCls}
+                          value={item.item_code}
+                          onChange={(e) => patchItem(idx, { item_code: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2 min-w-[240px]">
+                        <input
+                          className={inputCls}
+                          value={item.description}
+                          onChange={(e) => patchItem(idx, { description: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        <input
+                          className={inputCls}
+                          value={item.brand}
+                          onChange={(e) => patchItem(idx, { brand: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        <input
+                          className={inputCls}
+                          value={item.trade}
+                          onChange={(e) => patchItem(idx, { trade: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2 w-24">
+                        <input
+                          className={inputCls}
+                          value={item.unit}
+                          onChange={(e) => patchItem(idx, { unit: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2 w-28">
+                        <input
+                          className={inputCls}
+                          type="number"
+                          value={item.rate}
+                          onChange={(e) => patchItem(idx, { rate: Number(e.target.value) })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2 w-20">
+                        <input
+                          className={inputCls}
+                          type="number"
+                          value={item.discount_pct}
+                          onChange={(e) => patchItem(idx, { discount_pct: Number(e.target.value) })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2 w-20">
+                        <input
+                          className={inputCls}
+                          type="number"
+                          value={item.gst_pct}
+                          onChange={(e) => patchItem(idx, { gst_pct: Number(e.target.value) })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-2 whitespace-nowrap font-semibold text-emerald-700">
+                        {money(netRate(item))}
+                      </td>
                       <td className="py-1.5">
                         <button
                           type="button"
-                          onClick={() => setDraft({ ...draft, items: draft.items.filter((_, n) => n !== idx) })}
+                          onClick={() =>
+                            setDraft({ ...draft, items: draft.items.filter((_, n) => n !== idx) })
+                          }
                           className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600"
                           aria-label="Remove line"
                         >
@@ -427,9 +531,12 @@ function Page() {
         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-900">Price database</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
+                Price database
+              </h2>
               <p className="text-xs text-slate-500">
-                {items.length} rate line{items.length === 1 ? "" : "s"} from {quotes.length} quotation
+                {items.length} rate line{items.length === 1 ? "" : "s"} from {quotes.length}{" "}
+                quotation
                 {quotes.length === 1 ? "" : "s"}
               </p>
             </div>
@@ -447,7 +554,9 @@ function Page() {
               >
                 <option value="all">All trades</option>
                 {trades.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
               </select>
             </div>
@@ -470,7 +579,11 @@ function Page() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {isPending ? (
-                  <tr><td colSpan={9} className="px-4 py-10 text-center text-slate-400">Loading price lines…</td></tr>
+                  <tr>
+                    <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
+                      Loading price lines…
+                    </td>
+                  </tr>
                 ) : visible.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="px-4 py-12 text-center text-slate-400">
@@ -483,14 +596,20 @@ function Page() {
                     return (
                       <tr key={i.id} className="hover:bg-slate-50/60">
                         <td className="px-4 py-3">
-                          <p className="font-medium text-slate-800">{i.description || i.item_code || "—"}</p>
-                          {i.item_code && i.description ? <p className="text-xs text-slate-400">{i.item_code}</p> : null}
+                          <p className="font-medium text-slate-800">
+                            {i.description || i.item_code || "—"}
+                          </p>
+                          {i.item_code && i.description ? (
+                            <p className="text-xs text-slate-400">{i.item_code}</p>
+                          ) : null}
                         </td>
                         <td className="px-4 py-3 text-slate-600">{i.brand || "—"}</td>
                         <td className="px-4 py-3 text-slate-600">{i.trade || "—"}</td>
                         <td className="px-4 py-3 text-slate-600">{i.unit || "—"}</td>
                         <td className="px-4 py-3 text-right text-slate-700">{money(i.rate)}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-emerald-700">{money(i.net_rate)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-emerald-700">
+                          {money(i.net_rate)}
+                        </td>
                         <td className="px-4 py-3 text-slate-600">{q?.vendor_name || "—"}</td>
                         <td className="px-4 py-3 text-xs text-slate-500">
                           {q?.quote_ref || q?.source_file || "—"}

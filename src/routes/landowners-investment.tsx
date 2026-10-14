@@ -349,7 +349,11 @@ function Page() {
                 tone: shareWarning ? "text-rose-600" : "text-emerald-600",
               },
               { label: "Investment committed", value: cr(totals.invested), tone: "text-slate-900" },
-              { label: "Paid / outstanding", value: `${cr(totals.paid)} · ${cr(totals.outstanding)}`, tone: "text-slate-900" },
+              {
+                label: "Paid / outstanding",
+                value: `${cr(totals.paid)} · ${cr(totals.outstanding)}`,
+                tone: "text-slate-900",
+              },
             ].map((c) => (
               <div
                 key={c.label}
@@ -472,7 +476,10 @@ function Page() {
                     </div>
                     <div className="grid grid-cols-3 gap-2 rounded-lg bg-emerald-50/60 p-3 text-sm">
                       <Metric label="Suggested share of budget" value={cr(suggested)} />
-                      <Metric label="Common charges share" value={cr((statutoryTotal * share) / 100)} />
+                      <Metric
+                        label="Common charges share"
+                        value={cr((statutoryTotal * share) / 100)}
+                      />
                       <Metric label="Balance due" value={cr(due)} />
                     </div>
                   </div>

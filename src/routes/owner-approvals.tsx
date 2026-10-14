@@ -60,7 +60,6 @@ type Request = {
   unit_label: string;
 };
 
-
 type Decision = {
   id: string;
   request_id: string;
@@ -91,13 +90,14 @@ const emptyForm = () => ({
   unit_label: "",
 });
 
-
 function Page() {
   const qc = useQueryClient();
   const user = useSessionUser();
   const access = useAccess();
   const roles = access.access?.roles ?? [];
-  const canRaise = Boolean(access.access?.isAdmin || roles.some((r) => ["pm", "accounts"].includes(r)));
+  const canRaise = Boolean(
+    access.access?.isAdmin || roles.some((r) => ["pm", "accounts"].includes(r)),
+  );
   const canDelete = Boolean(access.access?.isAdmin || roles.includes("pm"));
 
   const [projectId, setProjectId] = useState("");
@@ -138,7 +138,9 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("owner_requests")
-        .select("id,project_id,title,body,category,priority,attachments,due_date,status,raised_by_name,created_at,audience,target_owner_name,unit_label")
+        .select(
+          "id,project_id,title,body,category,priority,attachments,due_date,status,raised_by_name,created_at,audience,target_owner_name,unit_label",
+        )
         .eq("project_id", activeId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -174,8 +176,7 @@ function Page() {
       if (!activeId) throw new Error("Choose a project first");
       if (!form.title.trim()) throw new Error("Add a short title");
       const privateOne = form.audience === "owner";
-      if (privateOne && !form.target_owner_name)
-        throw new Error("Choose which owner this is for");
+      if (privateOne && !form.target_owner_name) throw new Error("Choose which owner this is for");
       const uploaded: Attachment[] = [];
       for (const f of files) {
         const path = `${activeId}/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
@@ -294,7 +295,9 @@ function Page() {
   });
 
   async function openAttachment(path: string) {
-    const { data, error } = await supabase.storage.from("owner-approvals").createSignedUrl(path, 3600);
+    const { data, error } = await supabase.storage
+      .from("owner-approvals")
+      .createSignedUrl(path, 3600);
     if (error || !data?.signedUrl) {
       setNote(error?.message ?? "Could not open the file");
       return;
@@ -319,8 +322,8 @@ function Page() {
             Owner Approvals &amp; Suggestions
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Push a note, drawing, photo, PDF or a decision to the owners. Each owner gets an
-            approve or reject button, and every response is kept as a written record.
+            Push a note, drawing, photo, PDF or a decision to the owners. Each owner gets an approve
+            or reject button, and every response is kept as a written record.
           </p>
         </header>
 
@@ -513,10 +516,26 @@ function Page() {
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Awaiting owners", value: openCount, tone: "border-amber-500/40 bg-amber-500/5" },
-            { label: "Approved", value: approvedCount, tone: "border-emerald-600/30 bg-emerald-600/5" },
-            { label: "Rejected", value: rejectedCount, tone: "border-destructive/40 bg-destructive/5" },
-            { label: "Owner replies pending", value: pendingOwners, tone: "border-primary/40 bg-primary/5" },
+            {
+              label: "Awaiting owners",
+              value: openCount,
+              tone: "border-amber-500/40 bg-amber-500/5",
+            },
+            {
+              label: "Approved",
+              value: approvedCount,
+              tone: "border-emerald-600/30 bg-emerald-600/5",
+            },
+            {
+              label: "Rejected",
+              value: rejectedCount,
+              tone: "border-destructive/40 bg-destructive/5",
+            },
+            {
+              label: "Owner replies pending",
+              value: pendingOwners,
+              tone: "border-primary/40 bg-primary/5",
+            },
           ].map((c) => (
             <div key={c.label} className={`rounded-2xl border p-4 ${c.tone}`}>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -545,7 +564,10 @@ function Page() {
             const approved = rows.filter((d) => d.decision === "approved").length;
             const rejected = rows.filter((d) => d.decision === "rejected").length;
             return (
-              <article key={r.id} className="space-y-4 rounded-2xl border border-border bg-card p-5">
+              <article
+                key={r.id}
+                className="space-y-4 rounded-2xl border border-border bg-card p-5"
+              >
                 <div className="flex flex-wrap items-start gap-3">
                   <div className="min-w-[220px] flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -717,7 +739,6 @@ function Page() {
                               >
                                 Reject
                               </button>
-
                             </div>
                           </td>
                         </tr>

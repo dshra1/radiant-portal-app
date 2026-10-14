@@ -95,7 +95,9 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("purchase_orders")
-        .select("id,status,freight_charges,other_charges,purchase_order_items(quantity,rate,discount_pct,gst_pct)")
+        .select(
+          "id,status,freight_charges,other_charges,purchase_order_items(quantity,rate,discount_pct,gst_pct)",
+        )
         .eq("project_id", activeId);
       if (error) throw error;
       return data ?? [];
@@ -289,7 +291,10 @@ function Page() {
             {
               label: "Committed via POs",
               value: crore(committed),
-              sub: totalBoq > 0 ? `${((committed / totalBoq) * 100).toFixed(1)}% of BOQ` : "No BOQ yet",
+              sub:
+                totalBoq > 0
+                  ? `${((committed / totalBoq) * 100).toFixed(1)}% of BOQ`
+                  : "No BOQ yet",
             },
             {
               label: "Balance vs budget",
@@ -297,7 +302,10 @@ function Page() {
               sub: budget > 0 ? `Budget ${crore(budget)}` : "Set a target budget",
             },
           ].map((c) => (
-            <div key={c.label} className="rounded-2xl border border-emerald-600/30 bg-emerald-600/5 p-4">
+            <div
+              key={c.label}
+              className="rounded-2xl border border-emerald-600/30 bg-emerald-600/5 p-4"
+            >
               <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
                 {c.label}
               </p>

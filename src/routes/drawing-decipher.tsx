@@ -6,15 +6,22 @@ import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess } from "@/lib/access";
-import { ReportDrawings } from "@/components/saha/ReportDrawings";
 
 export const Route = createFileRoute("/drawing-decipher")({
   head: () => ({
     meta: [
       { title: "Drawings & Documents Register — Saha OS" },
-      { name: "description", content: "Upload drawing revisions, open and delete project documents and export the drawing register for your project." },
+      {
+        name: "description",
+        content:
+          "Upload drawing revisions, open and delete project documents and export the drawing register for your project.",
+      },
       { property: "og:title", content: "Drawings & Documents Register — Saha OS" },
-      { property: "og:description", content: "Upload drawing revisions, open and delete project documents and export the drawing register." },
+      {
+        property: "og:description",
+        content:
+          "Upload drawing revisions, open and delete project documents and export the drawing register.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -38,7 +45,9 @@ function Page() {
   const project = useActiveProject();
   const qc = useQueryClient();
   const { access } = useAccess();
-  const canEdit = Boolean(access?.isAdmin || access?.roles.some((r) => r === "pm" || r === "site_engineer"));
+  const canEdit = Boolean(
+    access?.isAdmin || access?.roles.some((r) => r === "pm" || r === "site_engineer"),
+  );
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
 
@@ -107,9 +116,9 @@ function Page() {
       ...files.map((f) =>
         [
           f.name,
-          fmtSize(Number(f.metadata?.['size'] ?? 0)),
+          fmtSize(Number(f.metadata?.["size"] ?? 0)),
           f.created_at ? new Date(f.created_at).toLocaleString("en-IN") : "—",
-          String(f.metadata?.['mimetype'] ?? "—"),
+          String(f.metadata?.["mimetype"] ?? "—"),
         ]
           .map(esc)
           .join(","),
@@ -136,8 +145,8 @@ function Page() {
             Drawings & Documents
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Upload drawing revisions, tender documents and approvals for this project. Files are stored
-            privately and can be opened, downloaded or removed here.
+            Upload drawing revisions, tender documents and approvals for this project. Files are
+            stored privately and can be opened, downloaded or removed here.
           </p>
         </header>
 
@@ -188,32 +197,38 @@ function Page() {
             {
               label: "Total size",
               value: fmtSize(
-                (filesQuery.data ?? []).reduce((s, f) => s + Number(f.metadata?.['size'] ?? 0), 0),
+                (filesQuery.data ?? []).reduce((s, f) => s + Number(f.metadata?.["size"] ?? 0), 0),
               ),
             },
             {
               label: "Latest upload",
-              value:
-                filesQuery.data?.[0]?.created_at
-                  ? new Date(filesQuery.data[0].created_at!).toLocaleDateString("en-IN")
-                  : "—",
+              value: filesQuery.data?.[0]?.created_at
+                ? new Date(filesQuery.data[0].created_at!).toLocaleDateString("en-IN")
+                : "—",
             },
           ].map((c) => (
-            <div key={c.label} className="rounded-2xl border border-emerald-600/30 bg-emerald-600/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">{c.label}</p>
+            <div
+              key={c.label}
+              className="rounded-2xl border border-emerald-600/30 bg-emerald-600/5 p-4"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                {c.label}
+              </p>
               <p className="mt-1 text-xl font-bold text-foreground">{c.value}</p>
             </div>
           ))}
         </div>
 
-        {/cyber/i.test(project.name ?? "") ? <ReportDrawings /> : null}
-
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <div className="border-b border-border bg-muted/40 px-4 py-3">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-primary">Document register</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-primary">
+              Document register
+            </h2>
           </div>
           {!project.id ? (
-            <p className="p-6 text-sm text-muted-foreground">Add a project first, then upload its drawings.</p>
+            <p className="p-6 text-sm text-muted-foreground">
+              Add a project first, then upload its drawings.
+            </p>
           ) : filesQuery.isPending ? (
             <p className="p-6 text-sm text-muted-foreground">Loading files…</p>
           ) : filesQuery.error ? (
@@ -239,7 +254,7 @@ function Page() {
                       <td className="px-4 py-2 font-medium text-foreground">
                         {f.name.replace(/^\d+-/, "")}
                       </td>
-                      <td className="px-4 py-2">{fmtSize(Number(f.metadata?.['size'] ?? 0))}</td>
+                      <td className="px-4 py-2">{fmtSize(Number(f.metadata?.["size"] ?? 0))}</td>
                       <td className="px-4 py-2">
                         {f.created_at ? new Date(f.created_at).toLocaleString("en-IN") : "—"}
                       </td>

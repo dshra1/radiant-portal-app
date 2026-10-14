@@ -79,13 +79,11 @@ function AiThread() {
         .eq("thread_id", threadId)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data ?? []).map(
-        (m): UIMessage => ({
-          id: m.id,
-          role: m.role === "assistant" ? "assistant" : "user",
-          parts: [{ type: "text", text: m.content }],
-        }),
-      );
+      return (data ?? []).map((m): UIMessage => ({
+        id: m.id,
+        role: m.role === "assistant" ? "assistant" : "user",
+        parts: [{ type: "text", text: m.content }],
+      }));
     },
   });
 
@@ -220,9 +218,7 @@ function AiThread() {
               )}
 
               {messages.map((m) => {
-                const text = m.parts
-                  .map((p) => (p.type === "text" ? p.text : ""))
-                  .join("");
+                const text = m.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
                 return (
                   <Message key={m.id} from={m.role}>
                     <MessageContent>

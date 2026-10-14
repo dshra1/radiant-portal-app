@@ -29,7 +29,14 @@ export const Route = createFileRoute("/site-media")({
   component: Page,
 });
 
-export const MEDIA_CATEGORIES = ["progress", "quality", "safety", "material", "handover", "approval"] as const;
+export const MEDIA_CATEGORIES = [
+  "progress",
+  "quality",
+  "safety",
+  "material",
+  "handover",
+  "approval",
+] as const;
 
 type Media = {
   id: string;
@@ -77,9 +84,10 @@ function Page() {
     (async () => {
       const images = media.filter((m) => /\.(png|jpe?g|webp|gif|heic)$/i.test(m.path)).slice(0, 60);
       if (images.length === 0) return;
-      const { data } = await supabase.storage
-        .from("site-media")
-        .createSignedUrls(images.map((m) => m.path), 3600);
+      const { data } = await supabase.storage.from("site-media").createSignedUrls(
+        images.map((m) => m.path),
+        3600,
+      );
       if (!active || !data) return;
       const next: Record<string, string> = {};
       images.forEach((m, i) => {
@@ -212,20 +220,36 @@ function Page() {
           <h2 className="text-lg font-bold">Upload media</h2>
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-xs font-semibold uppercase text-muted-foreground">Category</span>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
+              <span className="text-xs font-semibold uppercase text-muted-foreground">
+                Category
+              </span>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className={inputCls}
+              >
                 {MEDIA_CATEGORIES.map((c) => (
                   <option key={c}>{c}</option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-xs font-semibold uppercase text-muted-foreground">Stage / area</span>
-              <input value={stage} onChange={(e) => setStage(e.target.value)} className={inputCls} />
+              <span className="text-xs font-semibold uppercase text-muted-foreground">
+                Stage / area
+              </span>
+              <input
+                value={stage}
+                onChange={(e) => setStage(e.target.value)}
+                className={inputCls}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm md:col-span-2">
               <span className="text-xs font-semibold uppercase text-muted-foreground">Caption</span>
-              <input value={caption} onChange={(e) => setCaption(e.target.value)} className={inputCls} />
+              <input
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                className={inputCls}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm md:col-span-3">
               <span className="text-xs font-semibold uppercase text-muted-foreground">Files</span>
@@ -244,7 +268,9 @@ function Page() {
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
               >
                 <Upload className="h-4 w-4" />
-                {upload.isPending ? "Uploading…" : `Upload${files.length ? ` (${files.length})` : ""}`}
+                {upload.isPending
+                  ? "Uploading…"
+                  : `Upload${files.length ? ` (${files.length})` : ""}`}
               </button>
             </div>
           </div>
@@ -284,7 +310,11 @@ function Page() {
                   aria-label={`Open ${m.title}`}
                 >
                   {thumbs[m.id] ? (
-                    <img src={thumbs[m.id]} alt={m.caption || m.title} className="h-40 w-full object-cover" />
+                    <img
+                      src={thumbs[m.id]}
+                      alt={m.caption || m.title}
+                      className="h-40 w-full object-cover"
+                    />
                   ) : (
                     <span className="flex h-40 items-center justify-center text-xs text-muted-foreground">
                       Open file
@@ -300,7 +330,10 @@ function Page() {
                     <button onClick={() => open(m.path)} className="text-primary">
                       Open
                     </button>
-                    <button onClick={() => open(m.path, true)} className="inline-flex items-center gap-1">
+                    <button
+                      onClick={() => open(m.path, true)}
+                      className="inline-flex items-center gap-1"
+                    >
                       <Download className="h-3 w-3" /> Download
                     </button>
                     {canDelete ? (
@@ -321,13 +354,22 @@ function Page() {
         </section>
 
         <div className="flex flex-wrap gap-2 text-sm">
-          <Link to="/media-upload-studio" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
-            Upload studio
+          <Link
+            to="/stage-drawings"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
+            Stage drawings &amp; photo check
           </Link>
-          <Link to="/qa-inspection" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+          <Link
+            to="/qa-inspection"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
             QA inspections
           </Link>
-          <Link to="/drawing-decipher" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+          <Link
+            to="/drawing-decipher"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
             Drawings
           </Link>
         </div>

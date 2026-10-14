@@ -13,9 +13,17 @@ export const Route = createFileRoute("/inventory-control")({
   head: () => ({
     meta: [
       { title: "Stock & Inventory Control | Saha OS" },
-      { name: "description", content: "Site stock register with material receipts, issues, live balances, reorder alerts and Excel import or export." },
+      {
+        name: "description",
+        content:
+          "Site stock register with material receipts, issues, live balances, reorder alerts and Excel import or export.",
+      },
       { property: "og:title", content: "Stock & Inventory Control | Saha OS" },
-      { property: "og:description", content: "Site stock register with material receipts, issues, live balances, reorder alerts and Excel import or export." },
+      {
+        property: "og:description",
+        content:
+          "Site stock register with material receipts, issues, live balances, reorder alerts and Excel import or export.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -146,7 +154,9 @@ function Page() {
     queryFn: async (): Promise<Item[]> => {
       const { data, error } = await supabase
         .from("stock_items")
-        .select("id,project_id,item_code,description,category,unit,opening_qty,reorder_level,rate,store_location,notes,order_by")
+        .select(
+          "id,project_id,item_code,description,category,unit,opening_qty,reorder_level,rate,store_location,notes,order_by",
+        )
         .eq("project_id", project.id)
         .order("item_code", { ascending: true });
       if (error) throw error;
@@ -165,12 +175,18 @@ function Page() {
     queryFn: async (): Promise<Movement[]> => {
       const { data, error } = await supabase
         .from("stock_movements")
-        .select("id,project_id,item_id,item_code,description,unit,movement_type,quantity,rate,movement_date,reference,party,handled_by,remarks")
+        .select(
+          "id,project_id,item_id,item_code,description,unit,movement_type,quantity,rate,movement_date,reference,party,handled_by,remarks",
+        )
         .eq("project_id", project.id)
         .order("movement_date", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []).map((r) => ({ ...r, quantity: num(r.quantity), rate: num(r.rate) })) as Movement[];
+      return (data ?? []).map((r) => ({
+        ...r,
+        quantity: num(r.quantity),
+        rate: num(r.rate),
+      })) as Movement[];
     },
   });
 
@@ -267,7 +283,10 @@ function Page() {
     return balances.filter((b) => {
       if (category !== "all" && b.category !== category) return false;
       if (!q) return true;
-      return [b.item_code, b.description, b.category, b.store_location].join(" ").toLowerCase().includes(q);
+      return [b.item_code, b.description, b.category, b.store_location]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
     });
   }, [balances, search, category]);
 
@@ -275,7 +294,10 @@ function Page() {
     const q = search.trim().toLowerCase();
     if (!q) return movements;
     return movements.filter((m) =>
-      [m.item_code, m.description, m.reference, m.party, m.movement_type, m.remarks].join(" ").toLowerCase().includes(q),
+      [m.item_code, m.description, m.reference, m.party, m.movement_type, m.remarks]
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
     );
   }, [movements, search]);
 
@@ -304,7 +326,13 @@ function Page() {
       Notes: b.notes,
     }));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [Object.fromEntries(ITEM_COLUMNS.map((c) => [c.label, ""]))]), "Stock");
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(
+        rows.length ? rows : [Object.fromEntries(ITEM_COLUMNS.map((c) => [c.label, ""]))],
+      ),
+      "Stock",
+    );
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.json_to_sheet(
@@ -326,7 +354,10 @@ function Page() {
       ),
       "Ledger",
     );
-    XLSX.writeFile(wb, `stock-${(project.name || "project").replace(/\s+/g, "-").toLowerCase()}.xlsx`);
+    XLSX.writeFile(
+      wb,
+      `stock-${(project.name || "project").replace(/\s+/g, "-").toLowerCase()}.xlsx`,
+    );
     toast.success("Stock exported");
   };
 
@@ -365,7 +396,14 @@ function Page() {
   const pickItem = (draft: MoveDraft, id: string): MoveDraft => {
     const it = items.find((i) => i.id === id);
     if (!it) return { ...draft, item_id: null };
-    return { ...draft, item_id: it.id, item_code: it.item_code, description: it.description, unit: it.unit, rate: draft.rate || it.rate };
+    return {
+      ...draft,
+      item_id: it.id,
+      item_code: it.item_code,
+      description: it.description,
+      unit: it.unit,
+      rate: draft.rate || it.rate,
+    };
   };
 
   return (
@@ -374,18 +412,58 @@ function Page() {
       <div className="w-full px-4 md:px-8 py-6 flex flex-col gap-6">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight">Stock &amp; Inventory</h1>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight">
+              Stock &amp; Inventory
+            </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {project.name} · live balances from receipts and issues, reorder alerts, Excel import &amp; export.
+              {project.name} · live balances from receipts and issues, reorder alerts, Excel import
+              &amp; export.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void importStock(f); }} />
-            <button onClick={() => fileRef.current?.click()} className="px-3 py-2 rounded-lg border border-border text-sm font-semibold hover:bg-muted">Upload Excel</button>
-            <button onClick={exportStock} className="px-3 py-2 rounded-lg border border-border text-sm font-semibold hover:bg-muted">Export</button>
-            <button onClick={() => setMoveDraft(emptyMove("issue"))} className="px-3 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-semibold">Issue Material</button>
-            <button onClick={() => setMoveDraft(emptyMove("receipt"))} className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">Receive Material</button>
-            <button onClick={() => { setItemDraft(emptyItem()); setEditingItem(null); }} className="px-3 py-2 rounded-lg border border-primary text-primary text-sm font-semibold">Add Item</button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void importStock(f);
+              }}
+            />
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="px-3 py-2 rounded-lg border border-border text-sm font-semibold hover:bg-muted"
+            >
+              Upload Excel
+            </button>
+            <button
+              onClick={exportStock}
+              className="px-3 py-2 rounded-lg border border-border text-sm font-semibold hover:bg-muted"
+            >
+              Export
+            </button>
+            <button
+              onClick={() => setMoveDraft(emptyMove("issue"))}
+              className="px-3 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-semibold"
+            >
+              Issue Material
+            </button>
+            <button
+              onClick={() => setMoveDraft(emptyMove("receipt"))}
+              className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
+            >
+              Receive Material
+            </button>
+            <button
+              onClick={() => {
+                setItemDraft(emptyItem());
+                setEditingItem(null);
+              }}
+              className="px-3 py-2 rounded-lg border border-primary text-primary text-sm font-semibold"
+            >
+              Add Item
+            </button>
           </div>
         </header>
 
@@ -397,7 +475,9 @@ function Page() {
             { label: "Below reorder", value: String(totals.low) },
           ].map((k) => (
             <div key={k.label} className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{k.label}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                {k.label}
+              </p>
               <p className="text-2xl font-extrabold mt-1">{k.value}</p>
             </div>
           ))}
@@ -405,19 +485,46 @@ function Page() {
 
         <div className="flex flex-col md:flex-row gap-3 md:items-center">
           <div className="flex rounded-lg border border-border overflow-hidden text-sm font-semibold">
-            <button onClick={() => setTab("stock")} className={`px-4 py-2 ${tab === "stock" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>Stock register</button>
-            <button onClick={() => setTab("ledger")} className={`px-4 py-2 ${tab === "ledger" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>Movement ledger</button>
+            <button
+              onClick={() => setTab("stock")}
+              className={`px-4 py-2 ${tab === "stock" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+            >
+              Stock register
+            </button>
+            <button
+              onClick={() => setTab("ledger")}
+              className={`px-4 py-2 ${tab === "ledger" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+            >
+              Movement ledger
+            </button>
           </div>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search item, code, vendor, GRN…" className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search item, code, vendor, GRN…"
+            className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm"
+          />
           {tab === "stock" && (
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-3 py-2 rounded-lg border border-border bg-background text-sm">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-border bg-background text-sm"
+            >
               <option value="all">All categories</option>
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
           )}
         </div>
 
-        {!project.id && <p className="text-sm text-muted-foreground">Add a project first to keep stock records.</p>}
+        {!project.id && (
+          <p className="text-sm text-muted-foreground">
+            Add a project first to keep stock records.
+          </p>
+        )}
 
         {tab === "stock" ? (
           <div className="rounded-xl border border-border bg-card overflow-x-auto">
@@ -436,26 +543,68 @@ function Page() {
                 </tr>
               </thead>
               <tbody>
-                {isPending && <tr><td className="p-4 text-muted-foreground" colSpan={9}>Loading stock…</td></tr>}
-                {!isPending && !filtered.length && <tr><td className="p-4 text-muted-foreground" colSpan={9}>No stock items yet. Add an item or upload an Excel sheet.</td></tr>}
+                {isPending && (
+                  <tr>
+                    <td className="p-4 text-muted-foreground" colSpan={9}>
+                      Loading stock…
+                    </td>
+                  </tr>
+                )}
+                {!isPending && !filtered.length && (
+                  <tr>
+                    <td className="p-4 text-muted-foreground" colSpan={9}>
+                      No stock items yet. Add an item or upload an Excel sheet.
+                    </td>
+                  </tr>
+                )}
                 {filtered.map((b) => {
                   const low = isLow(b);
                   return (
                     <tr key={b.id} className="border-t border-border">
                       <td className="p-3">
                         <p className="font-semibold">{b.item_code || "—"}</p>
-                        <p className="text-xs text-muted-foreground">{b.description} {b.store_location && `· ${b.store_location}`}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {b.description} {b.store_location && `· ${b.store_location}`}
+                        </p>
                       </td>
                       <td className="p-3">{b.category || "—"}</td>
                       <td className="p-3 text-right">{qty(b.opening_qty)}</td>
                       <td className="p-3 text-right">{qty(b.received)}</td>
                       <td className="p-3 text-right">{qty(b.issued)}</td>
-                      <td className={`p-3 text-right font-bold ${low ? "text-destructive" : ""}`}>{qty(b.balance)} {b.unit}</td>
+                      <td className={`p-3 text-right font-bold ${low ? "text-destructive" : ""}`}>
+                        {qty(b.balance)} {b.unit}
+                      </td>
                       <td className="p-3 text-right">{inr(b.rate)}</td>
                       <td className="p-3 text-right">{inr(b.value)}</td>
                       <td className="p-3 text-right whitespace-nowrap">
-                        <button onClick={() => { setItemDraft({ item_code: b.item_code, description: b.description, category: b.category, unit: b.unit, opening_qty: b.opening_qty, reorder_level: b.reorder_level, rate: b.rate, store_location: b.store_location, notes: b.notes }); setEditingItem(b.id); }} className="text-primary font-semibold mr-3">Edit</button>
-                        <button onClick={() => { if (confirm(`Delete ${b.item_code || b.description}?`)) deleteItem.mutate(b.id); }} className="text-destructive font-semibold">Delete</button>
+                        <button
+                          onClick={() => {
+                            setItemDraft({
+                              item_code: b.item_code,
+                              description: b.description,
+                              category: b.category,
+                              unit: b.unit,
+                              opening_qty: b.opening_qty,
+                              reorder_level: b.reorder_level,
+                              rate: b.rate,
+                              store_location: b.store_location,
+                              notes: b.notes,
+                            });
+                            setEditingItem(b.id);
+                          }}
+                          className="text-primary font-semibold mr-3"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete ${b.item_code || b.description}?`))
+                              deleteItem.mutate(b.id);
+                          }}
+                          className="text-destructive font-semibold"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   );
@@ -478,7 +627,13 @@ function Page() {
                 </tr>
               </thead>
               <tbody>
-                {!filteredLedger.length && <tr><td className="p-4 text-muted-foreground" colSpan={7}>No receipts or issues recorded yet.</td></tr>}
+                {!filteredLedger.length && (
+                  <tr>
+                    <td className="p-4 text-muted-foreground" colSpan={7}>
+                      No receipts or issues recorded yet.
+                    </td>
+                  </tr>
+                )}
                 {filteredLedger.map((m) => (
                   <tr key={m.id} className="border-t border-border">
                     <td className="p-3">{m.movement_date}</td>
@@ -487,14 +642,25 @@ function Page() {
                       <p className="font-semibold">{m.item_code || "—"}</p>
                       <p className="text-xs text-muted-foreground">{m.description}</p>
                     </td>
-                    <td className="p-3 text-right">{qty(m.quantity)} {m.unit}</td>
+                    <td className="p-3 text-right">
+                      {qty(m.quantity)} {m.unit}
+                    </td>
                     <td className="p-3 text-right">{inr(m.rate)}</td>
                     <td className="p-3">
                       <p>{m.reference || "—"}</p>
-                      <p className="text-xs text-muted-foreground">{m.party} {m.handled_by && `· ${m.handled_by}`}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {m.party} {m.handled_by && `· ${m.handled_by}`}
+                      </p>
                     </td>
                     <td className="p-3 text-right">
-                      <button onClick={() => { if (confirm("Delete this entry?")) deleteMove.mutate(m.id); }} className="text-destructive font-semibold">Delete</button>
+                      <button
+                        onClick={() => {
+                          if (confirm("Delete this entry?")) deleteMove.mutate(m.id);
+                        }}
+                        className="text-destructive font-semibold"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -507,23 +673,44 @@ function Page() {
       {itemDraft && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-start md:items-center justify-center p-4 overflow-y-auto">
           <div className="bg-card rounded-xl border border-border w-full max-w-2xl p-5">
-            <h2 className="text-lg font-bold mb-4">{editingItem ? "Edit stock item" : "New stock item"}</h2>
+            <h2 className="text-lg font-bold mb-4">
+              {editingItem ? "Edit stock item" : "New stock item"}
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {ITEM_COLUMNS.map((c) => (
                 <label key={c.key} className="text-sm">
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{c.label.replace(/_/g, " ")}</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                    {c.label.replace(/_/g, " ")}
+                  </span>
                   <input
                     className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
                     type={c.numeric ? "number" : "text"}
                     value={String(itemDraft[c.key] ?? "")}
-                    onChange={(e) => setItemDraft({ ...itemDraft, [c.key]: c.numeric ? num(e.target.value) : e.target.value })}
+                    onChange={(e) =>
+                      setItemDraft({
+                        ...itemDraft,
+                        [c.key]: c.numeric ? num(e.target.value) : e.target.value,
+                      })
+                    }
                   />
                 </label>
               ))}
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => { setItemDraft(null); setEditingItem(null); }} className="px-4 py-2 rounded-lg border border-border text-sm font-semibold">Cancel</button>
-              <button disabled={saveItem.isPending} onClick={() => saveItem.mutate({ draft: itemDraft, id: editingItem })} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
+              <button
+                onClick={() => {
+                  setItemDraft(null);
+                  setEditingItem(null);
+                }}
+                className="px-4 py-2 rounded-lg border border-border text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={saveItem.isPending}
+                onClick={() => saveItem.mutate({ draft: itemDraft, id: editingItem })}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
+              >
                 {saveItem.isPending ? "Saving…" : "Save item"}
               </button>
             </div>
@@ -537,54 +724,130 @@ function Page() {
             <h2 className="text-lg font-bold mb-4 capitalize">{moveDraft.movement_type} entry</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Type</span>
-                <select className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background capitalize" value={moveDraft.movement_type} onChange={(e) => setMoveDraft({ ...moveDraft, movement_type: e.target.value })}>
-                  {MOVEMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Type
+                </span>
+                <select
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background capitalize"
+                  value={moveDraft.movement_type}
+                  onChange={(e) => setMoveDraft({ ...moveDraft, movement_type: e.target.value })}
+                >
+                  {MOVEMENT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Item</span>
-                <select className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={moveDraft.item_id ?? ""} onChange={(e) => setMoveDraft(pickItem(moveDraft, e.target.value))}>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Item
+                </span>
+                <select
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={moveDraft.item_id ?? ""}
+                  onChange={(e) => setMoveDraft(pickItem(moveDraft, e.target.value))}
+                >
                   <option value="">Select item…</option>
-                  {items.map((i) => <option key={i.id} value={i.id}>{i.item_code} · {i.description}</option>)}
+                  {items.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.item_code} · {i.description}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Quantity ({moveDraft.unit || "unit"})</span>
-                <input type="number" className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={moveDraft.quantity} onChange={(e) => setMoveDraft({ ...moveDraft, quantity: num(e.target.value) })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Quantity ({moveDraft.unit || "unit"})
+                </span>
+                <input
+                  type="number"
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={moveDraft.quantity}
+                  onChange={(e) => setMoveDraft({ ...moveDraft, quantity: num(e.target.value) })}
+                />
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Rate</span>
-                <input type="number" className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={moveDraft.rate} onChange={(e) => setMoveDraft({ ...moveDraft, rate: num(e.target.value) })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Rate
+                </span>
+                <input
+                  type="number"
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={moveDraft.rate}
+                  onChange={(e) => setMoveDraft({ ...moveDraft, rate: num(e.target.value) })}
+                />
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Date</span>
-                <input type="date" className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={moveDraft.movement_date} onChange={(e) => setMoveDraft({ ...moveDraft, movement_date: e.target.value })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Date
+                </span>
+                <input
+                  type="date"
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={moveDraft.movement_date}
+                  onChange={(e) => setMoveDraft({ ...moveDraft, movement_date: e.target.value })}
+                />
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">GRN / PO / Challan</span>
-                <input className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={moveDraft.reference} onChange={(e) => setMoveDraft({ ...moveDraft, reference: e.target.value })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  GRN / PO / Challan
+                </span>
+                <input
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={moveDraft.reference}
+                  onChange={(e) => setMoveDraft({ ...moveDraft, reference: e.target.value })}
+                />
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Vendor / issued to</span>
-                <input className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={moveDraft.party} onChange={(e) => setMoveDraft({ ...moveDraft, party: e.target.value })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Vendor / issued to
+                </span>
+                <input
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={moveDraft.party}
+                  onChange={(e) => setMoveDraft({ ...moveDraft, party: e.target.value })}
+                />
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Handled by</span>
-                <input className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={moveDraft.handled_by} onChange={(e) => setMoveDraft({ ...moveDraft, handled_by: e.target.value })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Handled by
+                </span>
+                <input
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={moveDraft.handled_by}
+                  onChange={(e) => setMoveDraft({ ...moveDraft, handled_by: e.target.value })}
+                />
               </label>
               <label className="md:col-span-2">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Remarks</span>
-                <input className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={moveDraft.remarks} onChange={(e) => setMoveDraft({ ...moveDraft, remarks: e.target.value })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Remarks
+                </span>
+                <input
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={moveDraft.remarks}
+                  onChange={(e) => setMoveDraft({ ...moveDraft, remarks: e.target.value })}
+                />
               </label>
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setMoveDraft(null)} className="px-4 py-2 rounded-lg border border-border text-sm font-semibold">Cancel</button>
+              <button
+                onClick={() => setMoveDraft(null)}
+                className="px-4 py-2 rounded-lg border border-border text-sm font-semibold"
+              >
+                Cancel
+              </button>
               <button
                 disabled={saveMove.isPending}
                 onClick={() => {
-                  if (!moveDraft.item_code) { toast.error("Select an item"); return; }
-                  if (moveDraft.quantity <= 0) { toast.error("Enter a quantity"); return; }
+                  if (!moveDraft.item_code) {
+                    toast.error("Select an item");
+                    return;
+                  }
+                  if (moveDraft.quantity <= 0) {
+                    toast.error("Enter a quantity");
+                    return;
+                  }
                   saveMove.mutate(moveDraft);
                 }}
                 className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"

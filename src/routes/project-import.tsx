@@ -372,7 +372,10 @@ function Page() {
                       value={inr(boqSums.project.incl)}
                     />
                     <Fact label="Common works incl. GST" value={inr(boqSums.common.incl)} />
-                    <Fact label="Individual (all flats) incl. GST" value={inr(boqSums.individual.incl)} />
+                    <Fact
+                      label="Individual (all flats) incl. GST"
+                      value={inr(boqSums.individual.incl)}
+                    />
                     {parsed.boq.master.budget > 0 && (
                       <Fact
                         label={`Budget (₹${parsed.boq.master.budgetRatePerSft.toLocaleString("en-IN")}/sft × ${parsed.boq.master.saleableSft.toLocaleString("en-IN")} sft)`}

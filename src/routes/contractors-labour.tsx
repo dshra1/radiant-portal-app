@@ -21,7 +21,8 @@ export const Route = createFileRoute("/contractors-labour")({
       { property: "og:title", content: "Contractors & Labour | Saha OS" },
       {
         property: "og:description",
-        content: "Daily contractor and labour deployment with man-days and labour cost per project.",
+        content:
+          "Daily contractor and labour deployment with man-days and labour cost per project.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -312,7 +313,9 @@ function Page() {
 
         {draft ? (
           <section className="rounded-2xl border border-primary/40 bg-card p-5 shadow-sm">
-            <h2 className="text-lg font-bold">{editingId ? "Edit labour entry" : "New labour entry"}</h2>
+            <h2 className="text-lg font-bold">
+              {editingId ? "Edit labour entry" : "New labour entry"}
+            </h2>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
               <Field label="Date">
                 <input
@@ -484,7 +487,9 @@ function Page() {
                     <td className="p-3">{e.trade}</td>
                     <td className="p-3 text-right">{e.headcount}</td>
                     <td className="p-3 text-right">{(e.headcount * (e.hours / 8)).toFixed(1)}</td>
-                    <td className="p-3 text-right font-semibold">{inr(e.headcount * e.day_rate)}</td>
+                    <td className="p-3 text-right font-semibold">
+                      {inr(e.headcount * e.day_rate)}
+                    </td>
                     <td className="p-3 text-muted-foreground">
                       {[e.area, e.work_done].filter(Boolean).join(" · ") || "—"}
                     </td>
@@ -537,13 +542,22 @@ function Page() {
             ))}
           </div>
           <div className="mt-5 flex flex-wrap gap-2 text-sm">
-            <Link to="/field-console" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
-              Field console
+            <Link
+              to="/site-today"
+              className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+            >
+              Site Today
             </Link>
-            <Link to="/site-execution" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+            <Link
+              to="/site-execution"
+              className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+            >
               Site execution
             </Link>
-            <Link to="/cost-dashboard" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+            <Link
+              to="/cost-dashboard"
+              className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+            >
               Cost dashboard
             </Link>
           </div>

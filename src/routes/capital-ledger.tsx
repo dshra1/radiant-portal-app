@@ -1,15 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  BadgeIndianRupee,
-  Download,
-  Landmark,
-  Plus,
-  Trash2,
-  Users,
-  Wallet,
-} from "lucide-react";
+import { BadgeIndianRupee, Download, Landmark, Plus, Trash2, Users, Wallet } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,7 +60,11 @@ const num = (v: unknown) => {
 };
 const inr = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
 const cr = (v: number) =>
-  v >= 10000000 ? `₹${(v / 10000000).toFixed(2)} Cr` : v >= 100000 ? `₹${(v / 100000).toFixed(2)} L` : inr(v);
+  v >= 10000000
+    ? `₹${(v / 10000000).toFixed(2)} Cr`
+    : v >= 100000
+      ? `₹${(v / 100000).toFixed(2)} L`
+      : inr(v);
 const initials = (name: string) =>
   name
     .split(" ")
@@ -109,8 +105,7 @@ function Page() {
   const user = useSessionUser();
   const access = useAccess();
   const canEdit = Boolean(
-    access.access?.isAdmin ||
-      access.access?.roles.some((r) => ["pm", "accounts"].includes(r)),
+    access.access?.isAdmin || access.access?.roles.some((r) => ["pm", "accounts"].includes(r)),
   );
   const canDelete = Boolean(access.access?.isAdmin || access.access?.roles.includes("pm"));
 
@@ -210,7 +205,11 @@ function Page() {
     mutationFn: async (row: Entry) => {
       const { error } = await supabase
         .from("capital_entries")
-        .update({ entry_type: "receipt", status: "received", entry_date: row.entry_date || today() })
+        .update({
+          entry_type: "receipt",
+          status: "received",
+          entry_date: row.entry_date || today(),
+        })
         .eq("id", row.id);
       if (error) throw error;
     },
@@ -309,10 +308,18 @@ function Page() {
   };
 
   const openFor = (owner: string, type: "receipt" | "call") => {
-    setForm({ ...emptyForm(), owner_name: owner, entry_type: type, status: type === "call" ? "pending" : "received" });
+    setForm({
+      ...emptyForm(),
+      owner_name: owner,
+      entry_type: type,
+      status: type === "call" ? "pending" : "received",
+    });
     setShowForm(true);
     setStatus("");
-    window.setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+    window.setTimeout(
+      () => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      50,
+    );
   };
 
   const set = (patch: Partial<FormState>) => setForm((p) => ({ ...p, ...patch }));
@@ -325,7 +332,9 @@ function Page() {
             <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
               Money &amp; Owners / Capital Ledger
             </p>
-            <h1 className="text-2xl font-bold text-slate-900">Capital Ledger &amp; Landowner Contributions</h1>
+            <h1 className="text-2xl font-bold text-slate-900">
+              Capital Ledger &amp; Landowner Contributions
+            </h1>
             <p className="text-sm text-slate-500">
               Record every rupee called and received from landowners and investors, share-wise.
             </p>
@@ -377,14 +386,39 @@ function Page() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           {[
-            { label: "Owners / Investors", value: `${ownerRows.length}`, sub: `${totals.share.toFixed(1)}% share mapped`, icon: Users },
-            { label: "Total liability", value: cr(totals.liability), sub: `Project budget ${cr(budget)}`, icon: BadgeIndianRupee },
-            { label: "Received to date", value: cr(totals.received), sub: `${entries.filter((e) => e.entry_type === "receipt").length} receipts`, icon: Wallet },
-            { label: "Pending dues", value: cr(totals.pending), sub: `Open calls ${cr(totals.openCalls)}`, icon: Landmark },
+            {
+              label: "Owners / Investors",
+              value: `${ownerRows.length}`,
+              sub: `${totals.share.toFixed(1)}% share mapped`,
+              icon: Users,
+            },
+            {
+              label: "Total liability",
+              value: cr(totals.liability),
+              sub: `Project budget ${cr(budget)}`,
+              icon: BadgeIndianRupee,
+            },
+            {
+              label: "Received to date",
+              value: cr(totals.received),
+              sub: `${entries.filter((e) => e.entry_type === "receipt").length} receipts`,
+              icon: Wallet,
+            },
+            {
+              label: "Pending dues",
+              value: cr(totals.pending),
+              sub: `Open calls ${cr(totals.openCalls)}`,
+              icon: Landmark,
+            },
           ].map((c) => (
-            <div key={c.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div
+              key={c.label}
+              className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{c.label}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  {c.label}
+                </span>
                 <c.icon className="h-4 w-4 text-emerald-600" />
               </div>
               <div className="mt-2 text-xl font-bold text-slate-900">{c.value}</div>
@@ -394,7 +428,10 @@ function Page() {
         </div>
 
         {showForm && (
-          <div ref={formRef} className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
+          <div
+            ref={formRef}
+            className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3"
+          >
             <h2 className="text-base font-bold text-slate-900">New capital entry</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
               <label className="flex flex-col gap-1 text-sm">
@@ -525,7 +562,8 @@ function Page() {
             <div>
               <h2 className="text-base font-bold text-slate-900">Owner &amp; investor directory</h2>
               <p className="text-xs text-slate-500">
-                Share, liability, money received and pending dues — owners come from the project record.
+                Share, liability, money received and pending dues — owners come from the project
+                record.
               </p>
             </div>
             <input
@@ -551,8 +589,8 @@ function Page() {
                 {ownerRows.length === 0 && (
                   <tr>
                     <td colSpan={6} className="p-6 text-center text-slate-500">
-                      No owners yet. Add landowners and investors on the Landowners &amp; Investment page, then
-                      record their money here.
+                      No owners yet. Add landowners and investors on the Landowners &amp; Investment
+                      page, then record their money here.
                     </td>
                   </tr>
                 )}
@@ -565,14 +603,23 @@ function Page() {
                         </div>
                         <div>
                           <div className="font-semibold text-slate-900">{r.name}</div>
-                          <div className="text-xs text-slate-500">{r.role}{r.contact ? ` • ${r.contact}` : ""}</div>
+                          <div className="text-xs text-slate-500">
+                            {r.role}
+                            {r.contact ? ` • ${r.contact}` : ""}
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="p-3 text-center font-medium text-slate-700">{r.share.toFixed(1)}%</td>
+                    <td className="p-3 text-center font-medium text-slate-700">
+                      {r.share.toFixed(1)}%
+                    </td>
                     <td className="p-3 text-right text-slate-800">{inr(r.liability)}</td>
-                    <td className="p-3 text-right font-medium text-emerald-700">{inr(r.received)}</td>
-                    <td className={`p-3 text-right font-medium ${r.pending > 0 ? "text-rose-600" : "text-slate-500"}`}>
+                    <td className="p-3 text-right font-medium text-emerald-700">
+                      {inr(r.received)}
+                    </td>
+                    <td
+                      className={`p-3 text-right font-medium ${r.pending > 0 ? "text-rose-600" : "text-slate-500"}`}
+                    >
                       {inr(r.pending)}
                     </td>
                     <td className="p-3">
@@ -606,7 +653,9 @@ function Page() {
           <div className="border-b border-slate-200 p-4">
             <h2 className="text-base font-bold text-slate-900">Capital ledger entries</h2>
             <p className="text-xs text-slate-500">
-              {entriesQuery.isLoading ? "Loading…" : `${entries.length} entries for ${project?.name ?? "this project"}`}
+              {entriesQuery.isLoading
+                ? "Loading…"
+                : `${entries.length} entries for ${project?.name ?? "this project"}`}
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -626,7 +675,8 @@ function Page() {
                 {entries.length === 0 && !entriesQuery.isLoading && (
                   <tr>
                     <td colSpan={7} className="p-6 text-center text-slate-500">
-                      No entries yet. Use “Add owner entry” to record a receipt or raise a capital call.
+                      No entries yet. Use “Add owner entry” to record a receipt or raise a capital
+                      call.
                     </td>
                   </tr>
                 )}
@@ -645,7 +695,9 @@ function Page() {
                         {e.entry_type === "receipt" ? "Received" : `Call · ${e.status}`}
                       </span>
                     </td>
-                    <td className="p-3 text-right font-medium text-slate-800">{inr(num(e.amount))}</td>
+                    <td className="p-3 text-right font-medium text-slate-800">
+                      {inr(num(e.amount))}
+                    </td>
                     <td className="p-3 text-slate-600">{e.milestone || "—"}</td>
                     <td className="p-3 text-slate-600">
                       {[e.mode, e.reference].filter(Boolean).join(" • ") || "—"}

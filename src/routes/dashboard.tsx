@@ -16,7 +16,6 @@ import { QuickAccess } from "@/components/saha/QuickAccess";
 import { useSessionUser } from "@/lib/access";
 import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 
-
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
@@ -112,7 +111,6 @@ function Dashboard() {
 
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricTile
-
           label="Committed budget"
           value={inrCompact(totalBudget)}
           delta={`${rows.length} project${rows.length === 1 ? "" : "s"}`}
@@ -219,9 +217,7 @@ function Dashboard() {
                   <p className="text-[13px] font-semibold">{a.title}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{a.body}</p>
                   <div className="mt-2">
-                    <StatusBadge tone={a.is_read ? "slate" : "amber"}>
-                      {a.category}
-                    </StatusBadge>
+                    <StatusBadge tone={a.is_read ? "slate" : "amber"}>{a.category}</StatusBadge>
                   </div>
                 </li>
               ))}

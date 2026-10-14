@@ -72,7 +72,7 @@ const DEFAULT_MATERIALS: MaterialSpec[] = [
     hint: "e.g. AAC blocks",
     brand: "AAC blocks",
     series: '6" external, 4"–6" internal',
-    notes: 'Internal walls reinforced with steel at 4\' height',
+    notes: "Internal walls reinforced with steel at 4' height",
   },
   {
     material: "Plaster & Punning",
@@ -107,14 +107,14 @@ const DEFAULT_MATERIALS: MaterialSpec[] = [
     hint: "e.g. RAK / Johnson",
     brand: "RAK / Johnson",
     series: "Glazed / matt vitrified",
-    notes: 'Dado up to 8\'-0" height',
+    notes: "Dado up to 8'-0\" height",
   },
   {
     material: "Kitchen Dado Tiles",
     hint: "e.g. RAK / Johnson",
     brand: "RAK / Johnson",
     series: "Vitrified",
-    notes: 'Dado 2\'-0" above platform',
+    notes: "Dado 2'-0\" above platform",
   },
   {
     material: "Corridor & Staircase Granite",
@@ -308,7 +308,13 @@ const DEFAULT_MATERIALS: MaterialSpec[] = [
   { material: "Fire Fighting", hint: "e.g. HD Fire / Newage" },
 ];
 
-const COLUMNS = ["Material", "Brand / Make", "Series / Grade", "Supplier / Dealer", "Notes"] as const;
+const COLUMNS = [
+  "Material",
+  "Brand / Make",
+  "Series / Grade",
+  "Supplier / Dealer",
+  "Notes",
+] as const;
 
 function emptyRow(material = ""): BrandPref {
   return { material, brand: "", series: "", supplier: "", notes: "" };
@@ -414,15 +420,17 @@ function Page() {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
 
   const hintFor = (material: string) =>
-    DEFAULT_MATERIALS.find((d) => d.material.toLowerCase() === material.trim().toLowerCase())?.hint ??
-    "Brand / make you want to use";
+    DEFAULT_MATERIALS.find((d) => d.material.toLowerCase() === material.trim().toLowerCase())
+      ?.hint ?? "Brand / make you want to use";
 
   const loadStandardSpec = () => {
     setRows((prev) => {
       const extras = prev.filter(
         (r) =>
           r.material.trim() !== "" &&
-          !DEFAULT_MATERIALS.some((d) => d.material.toLowerCase() === r.material.trim().toLowerCase()),
+          !DEFAULT_MATERIALS.some(
+            (d) => d.material.toLowerCase() === r.material.trim().toLowerCase(),
+          ),
       );
       const byMaterial = new Map(prev.map((r) => [r.material.trim().toLowerCase(), r]));
       const merged = DEFAULT_MATERIALS.map((d) => {
@@ -467,7 +475,8 @@ function Page() {
       const pick = (row: Record<string, unknown>, keys: string[]) => {
         for (const key of Object.keys(row)) {
           const k = key.trim().toLowerCase();
-          if (keys.some((cand) => k === cand || k.startsWith(cand))) return String(row[key] ?? "").trim();
+          if (keys.some((cand) => k === cand || k.startsWith(cand)))
+            return String(row[key] ?? "").trim();
         }
         return "";
       };
@@ -485,7 +494,9 @@ function Page() {
         return;
       }
       setRows(parsed);
-      setStatus(`Loaded ${parsed.length} row(s) from ${file.name}. Press Save preferences to keep them.`);
+      setStatus(
+        `Loaded ${parsed.length} row(s) from ${file.name}. Press Save preferences to keep them.`,
+      );
     } catch (e) {
       setStatus(`Upload failed: ${(e as Error).message}`);
     } finally {
@@ -495,193 +506,193 @@ function Page() {
 
   return (
     <Shell title="Brand Preferences">
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
-          Step before the BOQ
-        </p>
-        <h1 className="flex items-center gap-3 text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
-          <Tags className="h-7 w-7 text-primary" />
-          Brand Preferences
-        </h1>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          Pre-filled with your Cyber Enclave technical specification — Jairaj Fe-550 steel, Nuvoco
-          M25, AAC blocks, RAK / Johnson tiles, Kohler July series, Hindware Truflo, Polycab,
-          Legrand Myrius and more. Edit anything, leave a row blank to let the estimate suggest an
-          option, or download the Excel sheet, fill it and upload it back.
-        </p>
-      </header>
+      <div className="space-y-6">
+        <header className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+            Step before the BOQ
+          </p>
+          <h1 className="flex items-center gap-3 text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
+            <Tags className="h-7 w-7 text-primary" />
+            Brand Preferences
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Pre-filled with your Cyber Enclave technical specification — Jairaj Fe-550 steel, Nuvoco
+            M25, AAC blocks, RAK / Johnson tiles, Kohler July series, Hindware Truflo, Polycab,
+            Legrand Myrius and more. Edit anything, leave a row blank to let the estimate suggest an
+            option, or download the Excel sheet, fill it and upload it back.
+          </p>
+        </header>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Project
-        </label>
-        <select
-          value={activeId}
-          onChange={(e) => {
-            (setProjectId(e.target.value), setGlobalProject(e.target.value));
-            setLoadedFor("");
-            setStatus("");
-          }}
-          className="min-w-[220px] rounded-xl border border-border bg-background px-3 py-2 text-sm"
-        >
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} {p.location ? `· ${p.location}` : ""}
-            </option>
-          ))}
-        </select>
-        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-          {filledCount} brand{filledCount === 1 ? "" : "s"} set
-        </span>
-        <div className="ml-auto flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={loadStandardSpec}
-            className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
-          >
-            <Sparkles className="h-4 w-4" />
-            Load standard spec
-          </button>
-          <button
-            type="button"
-            onClick={downloadSheet}
-            className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
-          >
-            <Download className="h-4 w-4" />
-            Download Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
-          >
-            <Upload className="h-4 w-4" />
-            Upload Excel
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
+          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Project
+          </label>
+          <select
+            value={activeId}
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void uploadSheet(file);
+              (setProjectId(e.target.value), setGlobalProject(e.target.value));
+              setLoadedFor("");
+              setStatus("");
             }}
-          />
+            className="min-w-[220px] rounded-xl border border-border bg-background px-3 py-2 text-sm"
+          >
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} {p.location ? `· ${p.location}` : ""}
+              </option>
+            ))}
+          </select>
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            {filledCount} brand{filledCount === 1 ? "" : "s"} set
+          </span>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={loadStandardSpec}
+              className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
+            >
+              <Sparkles className="h-4 w-4" />
+              Load standard spec
+            </button>
+            <button
+              type="button"
+              onClick={downloadSheet}
+              className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
+            >
+              <Download className="h-4 w-4" />
+              Download Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Excel
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void uploadSheet(file);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => saveMutation.mutate()}
+              disabled={!activeId || saveMutation.isPending}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" />
+              {saveMutation.isPending ? "Saving…" : "Save preferences"}
+            </button>
+            <Link
+              to="/boq-engine"
+              className="inline-flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary"
+            >
+              <Calculator className="h-4 w-4" />
+              Continue to BOQ Engine
+            </Link>
+          </div>
+        </div>
+
+        {status ? (
+          <p className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+            {status}
+          </p>
+        ) : null}
+
+        {projects.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+            Add a project first, then set its brands here.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+            <table className="w-full min-w-[860px] text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3">Material</th>
+                  <th className="px-4 py-3">Brand / make</th>
+                  <th className="px-4 py-3">Series / grade</th>
+                  <th className="px-4 py-3">Supplier / dealer</th>
+                  <th className="px-4 py-3">Notes</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => (
+                  <tr key={`${row.material}-${index}`} className="border-b border-border/60">
+                    <td className="px-4 py-2 align-middle">
+                      <input
+                        value={row.material}
+                        onChange={(e) => update(index, { material: e.target.value })}
+                        placeholder="Material"
+                        className="w-full min-w-[150px] rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-semibold"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        value={row.brand}
+                        onChange={(e) => update(index, { brand: e.target.value })}
+                        placeholder={hintFor(row.material)}
+                        className="w-full min-w-[180px] rounded-lg border border-sky-500/40 bg-sky-500/5 px-2 py-1.5 text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        value={row.series}
+                        onChange={(e) => update(index, { series: e.target.value })}
+                        placeholder="Series / grade / finish"
+                        className="w-full min-w-[150px] rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        value={row.supplier}
+                        onChange={(e) => update(index, { supplier: e.target.value })}
+                        placeholder="Dealer / supplier"
+                        className="w-full min-w-[150px] rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        value={row.notes}
+                        onChange={(e) => update(index, { notes: e.target.value })}
+                        placeholder="Rate agreed, area of use…"
+                        className="w-full min-w-[160px] rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setRows((prev) => prev.filter((_, i) => i !== index))}
+                        className="rounded-lg border border-border p-1.5 text-muted-foreground hover:text-destructive"
+                        aria-label="Remove row"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {projects.length > 0 ? (
           <button
             type="button"
-            onClick={() => saveMutation.mutate()}
-            disabled={!activeId || saveMutation.isPending}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            onClick={() => setRows((prev) => [...prev, emptyRow("")])}
+            className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
           >
-            <Save className="h-4 w-4" />
-            {saveMutation.isPending ? "Saving…" : "Save preferences"}
+            <Plus className="h-4 w-4" />
+            Add another material
           </button>
-          <Link
-            to="/boq-engine"
-            className="inline-flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary"
-          >
-            <Calculator className="h-4 w-4" />
-            Continue to BOQ Engine
-          </Link>
-        </div>
+        ) : null}
       </div>
-
-      {status ? (
-        <p className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
-          {status}
-        </p>
-      ) : null}
-
-      {projects.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
-          Add a project first, then set its brands here.
-        </p>
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-          <table className="w-full min-w-[860px] text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3">Material</th>
-                <th className="px-4 py-3">Brand / make</th>
-                <th className="px-4 py-3">Series / grade</th>
-                <th className="px-4 py-3">Supplier / dealer</th>
-                <th className="px-4 py-3">Notes</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => (
-                <tr key={`${row.material}-${index}`} className="border-b border-border/60">
-                  <td className="px-4 py-2 align-middle">
-                    <input
-                      value={row.material}
-                      onChange={(e) => update(index, { material: e.target.value })}
-                      placeholder="Material"
-                      className="w-full min-w-[150px] rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-semibold"
-                    />
-                  </td>
-                  <td className="px-4 py-2">
-                    <input
-                      value={row.brand}
-                      onChange={(e) => update(index, { brand: e.target.value })}
-                      placeholder={hintFor(row.material)}
-                      className="w-full min-w-[180px] rounded-lg border border-sky-500/40 bg-sky-500/5 px-2 py-1.5 text-sm"
-                    />
-                  </td>
-                  <td className="px-4 py-2">
-                    <input
-                      value={row.series}
-                      onChange={(e) => update(index, { series: e.target.value })}
-                      placeholder="Series / grade / finish"
-                      className="w-full min-w-[150px] rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-                    />
-                  </td>
-                  <td className="px-4 py-2">
-                    <input
-                      value={row.supplier}
-                      onChange={(e) => update(index, { supplier: e.target.value })}
-                      placeholder="Dealer / supplier"
-                      className="w-full min-w-[150px] rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-                    />
-                  </td>
-                  <td className="px-4 py-2">
-                    <input
-                      value={row.notes}
-                      onChange={(e) => update(index, { notes: e.target.value })}
-                      placeholder="Rate agreed, area of use…"
-                      className="w-full min-w-[160px] rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-                    />
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setRows((prev) => prev.filter((_, i) => i !== index))}
-                      className="rounded-lg border border-border p-1.5 text-muted-foreground hover:text-destructive"
-                      aria-label="Remove row"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {projects.length > 0 ? (
-        <button
-          type="button"
-          onClick={() => setRows((prev) => [...prev, emptyRow("")])}
-          className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
-        >
-          <Plus className="h-4 w-4" />
-          Add another material
-        </button>
-      ) : null}
-    </div>
     </Shell>
   );
 }

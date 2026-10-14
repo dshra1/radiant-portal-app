@@ -13,9 +13,17 @@ export const Route = createFileRoute("/bills-payments")({
   head: () => ({
     meta: [
       { title: "Bills & Payments | Saha OS" },
-      { name: "description", content: "Log vendor bills, verify and approve them, record payments against each bill and track outstanding dues per project." },
+      {
+        name: "description",
+        content:
+          "Log vendor bills, verify and approve them, record payments against each bill and track outstanding dues per project.",
+      },
       { property: "og:title", content: "Bills & Payments | Saha OS" },
-      { property: "og:description", content: "Log vendor bills, verify and approve them, record payments against each bill and track outstanding dues per project." },
+      {
+        property: "og:description",
+        content:
+          "Log vendor bills, verify and approve them, record payments against each bill and track outstanding dues per project.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -99,13 +107,21 @@ function Page() {
   const project = useActiveProject();
   const user = useSessionUser();
   const access = useAccess();
-  const canApprove = access.access?.isAdmin || access.access?.roles.includes("pm");
+  // Approving bills is for an admin (review notes, 14 Oct); the database enforces it too.
+  const canApprove = Boolean(access.access?.isAdmin);
   const queryClient = useQueryClient();
 
   const [draft, setDraft] = useState<BillDraft | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [payFor, setPayFor] = useState<Bill | null>(null);
-  const [payDraft, setPayDraft] = useState({ payment_date: new Date().toISOString().slice(0, 10), amount: 0, mode: MODES[0]!, reference: "", paid_from: "", remarks: "" });
+  const [payDraft, setPayDraft] = useState({
+    payment_date: new Date().toISOString().slice(0, 10),
+    amount: 0,
+    mode: MODES[0]!,
+    reference: "",
+    paid_from: "",
+    remarks: "",
+  });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
 
@@ -117,7 +133,9 @@ function Page() {
     queryFn: async (): Promise<Bill[]> => {
       const { data, error } = await supabase
         .from("bills")
-        .select("id,project_id,bill_number,bill_date,due_date,vendor_name,vendor_gstin,category,description,basic_amount,gst_amount,other_charges,retention_amount,deductions,status,notes,stage_code,cost_type")
+        .select(
+          "id,project_id,bill_number,bill_date,due_date,vendor_name,vendor_gstin,category,description,basic_amount,gst_amount,other_charges,retention_amount,deductions,status,notes,stage_code,cost_type",
+        )
         .eq("project_id", project.id)
         .order("bill_date", { ascending: false });
       if (error) throw error;
@@ -188,7 +206,10 @@ function Page() {
       const { error } = await supabase.from("bills").update({ status: p.status }).eq("id", p.id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Status updated"); refresh(); },
+    onSuccess: () => {
+      toast.success("Status updated");
+      refresh();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -197,7 +218,10 @@ function Page() {
       const { error } = await supabase.from("bills").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Bill deleted"); refresh(); },
+    onSuccess: () => {
+      toast.success("Bill deleted");
+      refresh();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -218,7 +242,14 @@ function Page() {
     onSuccess: () => {
       toast.success("Payment recorded");
       setPayFor(null);
-      setPayDraft({ payment_date: new Date().toISOString().slice(0, 10), amount: 0, mode: MODES[0]!, reference: "", paid_from: "", remarks: "" });
+      setPayDraft({
+        payment_date: new Date().toISOString().slice(0, 10),
+        amount: 0,
+        mode: MODES[0]!,
+        reference: "",
+        paid_from: "",
+        remarks: "",
+      });
       refresh();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -234,16 +265,20 @@ function Page() {
         if (b.retention_amount <= 0) return false;
       } else if (status !== "all" && b.status !== status) return false;
       if (!q) return true;
-      return [b.bill_number, b.vendor_name, b.category, b.description].join(" ").toLowerCase().includes(q);
+      return [b.bill_number, b.vendor_name, b.category, b.description]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
     });
   }, [bills, search, status, paidByBill]);
-
 
   const totals = useMemo(() => {
     const payable = bills.reduce((s, b) => s + billPayable(b), 0);
     const paid = payments.reduce((s, p) => s + p.amount, 0);
     const retention = bills.reduce((s, b) => s + b.retention_amount, 0);
-    const pendingApproval = bills.filter((b) => b.status === "draft" || b.status === "verified").length;
+    const pendingApproval = bills.filter(
+      (b) => b.status === "draft" || b.status === "verified",
+    ).length;
     return { payable, paid, outstanding: payable - paid, retention, pendingApproval };
   }, [bills, payments]);
 
@@ -291,7 +326,10 @@ function Page() {
       ),
       "Payments",
     );
-    XLSX.writeFile(wb, `bills-${(project.name || "project").replace(/\s+/g, "-").toLowerCase()}.xlsx`);
+    XLSX.writeFile(
+      wb,
+      `bills-${(project.name || "project").replace(/\s+/g, "-").toLowerCase()}.xlsx`,
+    );
     toast.success("Exported");
   };
 
@@ -316,21 +354,53 @@ function Page() {
       <div className="w-full px-4 md:px-8 py-6 flex flex-col gap-6">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight">Bills &amp; Payments</h1>
-            <p className="text-sm text-muted-foreground mt-1">{project.name} · vendor bills, approvals, payments and outstanding dues.</p>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight">
+              Bills &amp; Payments
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {project.name} · vendor bills, approvals, payments and outstanding dues.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={exportAll} className="px-3 py-2 rounded-lg border border-border text-sm font-semibold hover:bg-muted">Export</button>
-            <button onClick={() => { setDraft(emptyBill()); setEditingId(null); }} className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">Add Bill</button>
+            <button
+              onClick={exportAll}
+              className="px-3 py-2 rounded-lg border border-border text-sm font-semibold hover:bg-muted"
+            >
+              Export
+            </button>
+            <button
+              onClick={() => {
+                setDraft(emptyBill());
+                setEditingId(null);
+              }}
+              className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
+            >
+              Add Bill
+            </button>
           </div>
         </header>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { label: "Total payable", value: inr(totals.payable), key: "all", note: "Show all bills" },
+            {
+              label: "Total payable",
+              value: inr(totals.payable),
+              key: "all",
+              note: "Show all bills",
+            },
             { label: "Paid", value: inr(totals.paid), key: "paid", note: "Show paid bills" },
-            { label: "Outstanding", value: inr(totals.outstanding), key: "outstanding", note: "Show bills with balance" },
-            { label: "Retention held", value: inr(totals.retention), key: "retention", note: "Show bills with retention" },
+            {
+              label: "Outstanding",
+              value: inr(totals.outstanding),
+              key: "outstanding",
+              note: "Show bills with balance",
+            },
+            {
+              label: "Retention held",
+              value: inr(totals.retention),
+              key: "retention",
+              note: "Show bills with retention",
+            },
           ].map((k) => (
             <button
               key={k.label}
@@ -338,26 +408,41 @@ function Page() {
               onClick={() => setStatus(k.key)}
               className={`text-left rounded-xl border bg-card p-4 transition hover:bg-muted ${status === k.key ? "border-primary ring-1 ring-primary" : "border-border"}`}
             >
-              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{k.label}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                {k.label}
+              </p>
               <p className="text-2xl font-extrabold mt-1">{k.value}</p>
               <p className="text-[11px] text-muted-foreground mt-1">{k.note}</p>
             </button>
           ))}
         </div>
 
-
         <div className="flex flex-col md:flex-row gap-3">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search bill no, vendor, category…" className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm" />
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-3 py-2 rounded-lg border border-border bg-background text-sm capitalize">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search bill no, vendor, category…"
+            className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm"
+          />
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-border bg-background text-sm capitalize"
+          >
             <option value="all">All statuses</option>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
             <option value="outstanding">outstanding balance</option>
             <option value="retention">retention held</option>
-
           </select>
         </div>
 
-        {!project.id && <p className="text-sm text-muted-foreground">Add a project first to log bills.</p>}
+        {!project.id && (
+          <p className="text-sm text-muted-foreground">Add a project first to log bills.</p>
+        )}
 
         <div className="rounded-xl border border-border bg-card overflow-x-auto">
           <table className="w-full text-sm min-w-[980px]">
@@ -373,8 +458,20 @@ function Page() {
               </tr>
             </thead>
             <tbody>
-              {isPending && <tr><td className="p-4 text-muted-foreground" colSpan={7}>Loading bills…</td></tr>}
-              {!isPending && !filtered.length && <tr><td className="p-4 text-muted-foreground" colSpan={7}>No bills logged yet.</td></tr>}
+              {isPending && (
+                <tr>
+                  <td className="p-4 text-muted-foreground" colSpan={7}>
+                    Loading bills…
+                  </td>
+                </tr>
+              )}
+              {!isPending && !filtered.length && (
+                <tr>
+                  <td className="p-4 text-muted-foreground" colSpan={7}>
+                    No bills logged yet.
+                  </td>
+                </tr>
+              )}
               {filtered.map((b) => {
                 const paid = paidByBill.get(b.id) ?? 0;
                 const bal = billPayable(b) - paid;
@@ -382,8 +479,15 @@ function Page() {
                   <tr key={b.id} className="border-t border-border align-top">
                     <td className="p-3">
                       <p className="font-semibold">{b.bill_number || "—"}</p>
-                      <p className="text-xs text-muted-foreground">{b.bill_date ?? "—"}{b.due_date ? ` · due ${b.due_date}` : ""}</p>
-                      <p className="text-xs text-muted-foreground">{[b.category, b.stage_code && `stage ${b.stage_code}`, b.cost_type].filter(Boolean).join(" · ")}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {b.bill_date ?? "—"}
+                        {b.due_date ? ` · due ${b.due_date}` : ""}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {[b.category, b.stage_code && `stage ${b.stage_code}`, b.cost_type]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
                     </td>
                     <td className="p-3">
                       <p className="font-semibold">{b.vendor_name || "—"}</p>
@@ -391,16 +495,78 @@ function Page() {
                     </td>
                     <td className="p-3 text-right">{inr(billPayable(b))}</td>
                     <td className="p-3 text-right">{inr(paid)}</td>
-                    <td className={`p-3 text-right font-bold ${bal > 0 ? "text-destructive" : "text-primary"}`}>{inr(bal)}</td>
+                    <td
+                      className={`p-3 text-right font-bold ${bal > 0 ? "text-destructive" : "text-primary"}`}
+                    >
+                      {inr(bal)}
+                    </td>
                     <td className="p-3">
-                      <span className="px-2 py-1 rounded-full bg-muted text-xs font-semibold capitalize">{b.status}</span>
+                      <span className="px-2 py-1 rounded-full bg-muted text-xs font-semibold capitalize">
+                        {b.status}
+                      </span>
                     </td>
                     <td className="p-3 text-right whitespace-nowrap">
-                      {b.status === "draft" && <button onClick={() => setStatusMut.mutate({ id: b.id, status: "verified" })} className="text-primary font-semibold mr-3">Verify</button>}
-                      {b.status === "verified" && canApprove && <button onClick={() => setStatusMut.mutate({ id: b.id, status: "approved" })} className="text-primary font-semibold mr-3">Approve</button>}
-                      {(b.status === "approved" || b.status === "paid") && <button onClick={() => { setPayFor(b); setPayDraft((d) => ({ ...d, amount: Math.max(bal, 0) })); }} className="text-primary font-semibold mr-3">Pay</button>}
-                      <button onClick={() => { setDraft({ bill_number: b.bill_number, bill_date: b.bill_date, due_date: b.due_date, vendor_name: b.vendor_name, vendor_gstin: b.vendor_gstin, category: b.category, description: b.description, basic_amount: b.basic_amount, gst_amount: b.gst_amount, other_charges: b.other_charges, retention_amount: b.retention_amount, deductions: b.deductions, status: b.status, notes: b.notes, stage_code: b.stage_code, cost_type: b.cost_type }); setEditingId(b.id); }} className="font-semibold mr-3">Edit</button>
-                      <button onClick={() => { if (confirm(`Delete bill ${b.bill_number}?`)) deleteBill.mutate(b.id); }} className="text-destructive font-semibold">Delete</button>
+                      {b.status === "draft" && (
+                        <button
+                          onClick={() => setStatusMut.mutate({ id: b.id, status: "verified" })}
+                          className="text-primary font-semibold mr-3"
+                        >
+                          Verify
+                        </button>
+                      )}
+                      {b.status === "verified" && canApprove && (
+                        <button
+                          onClick={() => setStatusMut.mutate({ id: b.id, status: "approved" })}
+                          className="text-primary font-semibold mr-3"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {(b.status === "approved" || b.status === "paid") && (
+                        <button
+                          onClick={() => {
+                            setPayFor(b);
+                            setPayDraft((d) => ({ ...d, amount: Math.max(bal, 0) }));
+                          }}
+                          className="text-primary font-semibold mr-3"
+                        >
+                          Pay
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setDraft({
+                            bill_number: b.bill_number,
+                            bill_date: b.bill_date,
+                            due_date: b.due_date,
+                            vendor_name: b.vendor_name,
+                            vendor_gstin: b.vendor_gstin,
+                            category: b.category,
+                            description: b.description,
+                            basic_amount: b.basic_amount,
+                            gst_amount: b.gst_amount,
+                            other_charges: b.other_charges,
+                            retention_amount: b.retention_amount,
+                            deductions: b.deductions,
+                            status: b.status,
+                            notes: b.notes,
+                            stage_code: b.stage_code,
+                            cost_type: b.cost_type,
+                          });
+                          setEditingId(b.id);
+                        }}
+                        className="font-semibold mr-3"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Delete bill ${b.bill_number}?`)) deleteBill.mutate(b.id);
+                        }}
+                        className="text-destructive font-semibold"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 );
@@ -423,13 +589,24 @@ function Page() {
                 </tr>
               </thead>
               <tbody>
-                {!payments.length && <tr><td className="p-4 text-muted-foreground" colSpan={5}>No payments recorded yet.</td></tr>}
+                {!payments.length && (
+                  <tr>
+                    <td className="p-4 text-muted-foreground" colSpan={5}>
+                      No payments recorded yet.
+                    </td>
+                  </tr>
+                )}
                 {payments.map((p) => (
                   <tr key={p.id} className="border-t border-border">
                     <td className="p-3">{p.payment_date}</td>
-                    <td className="p-3">{bills.find((b) => b.id === p.bill_id)?.bill_number ?? "—"}</td>
+                    <td className="p-3">
+                      {bills.find((b) => b.id === p.bill_id)?.bill_number ?? "—"}
+                    </td>
                     <td className="p-3 text-right font-semibold">{inr(p.amount)}</td>
-                    <td className="p-3">{p.mode}{p.reference && ` · ${p.reference}`}</td>
+                    <td className="p-3">
+                      {p.mode}
+                      {p.reference && ` · ${p.reference}`}
+                    </td>
                     <td className="p-3">{p.paid_from || "—"}</td>
                   </tr>
                 ))}
@@ -446,17 +623,26 @@ function Page() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               {FIELDS.map((f) => (
                 <label key={f.key}>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{f.label}</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                    {f.label}
+                  </span>
                   <input
                     type={f.type ?? "text"}
                     className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
                     value={String(draft[f.key] ?? "")}
-                    onChange={(e) => setDraft({ ...draft, [f.key]: f.type === "number" ? num(e.target.value) : e.target.value })}
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        [f.key]: f.type === "number" ? num(e.target.value) : e.target.value,
+                      })
+                    }
                   />
                 </label>
               ))}
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Stage (programme)</span>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Stage (programme)
+                </span>
                 <StageSelect
                   projectId={project.id}
                   value={draft.stage_code}
@@ -465,7 +651,9 @@ function Page() {
                 />
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Cost type</span>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Cost type
+                </span>
                 <select
                   value={draft.cost_type}
                   onChange={(e) => setDraft({ ...draft, cost_type: e.target.value })}
@@ -478,10 +666,37 @@ function Page() {
                 </select>
               </label>
             </div>
-            <p className="text-sm mt-3">Gross <strong>{inr(draft.basic_amount + draft.gst_amount + draft.other_charges)}</strong> · Payable <strong>{inr(draft.basic_amount + draft.gst_amount + draft.other_charges - draft.retention_amount - draft.deductions)}</strong></p>
+            <p className="text-sm mt-3">
+              Gross{" "}
+              <strong>{inr(draft.basic_amount + draft.gst_amount + draft.other_charges)}</strong> ·
+              Payable{" "}
+              <strong>
+                {inr(
+                  draft.basic_amount +
+                    draft.gst_amount +
+                    draft.other_charges -
+                    draft.retention_amount -
+                    draft.deductions,
+                )}
+              </strong>
+            </p>
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => { setDraft(null); setEditingId(null); }} className="px-4 py-2 rounded-lg border border-border text-sm font-semibold">Cancel</button>
-              <button disabled={saveBill.isPending} onClick={() => saveBill.mutate({ draft, id: editingId })} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">{saveBill.isPending ? "Saving…" : "Save bill"}</button>
+              <button
+                onClick={() => {
+                  setDraft(null);
+                  setEditingId(null);
+                }}
+                className="px-4 py-2 rounded-lg border border-border text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={saveBill.isPending}
+                onClick={() => saveBill.mutate({ draft, id: editingId })}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
+              >
+                {saveBill.isPending ? "Saving…" : "Save bill"}
+              </button>
             </div>
           </div>
         </div>
@@ -491,38 +706,100 @@ function Page() {
         <div className="fixed inset-0 z-50 bg-black/50 flex items-start md:items-center justify-center p-4 overflow-y-auto">
           <div className="bg-card rounded-xl border border-border w-full max-w-xl p-5">
             <h2 className="text-lg font-bold mb-1">Record payment</h2>
-            <p className="text-sm text-muted-foreground mb-4">{payFor.bill_number} · {payFor.vendor_name} · balance {inr(billPayable(payFor) - (paidByBill.get(payFor.id) ?? 0))}</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              {payFor.bill_number} · {payFor.vendor_name} · balance{" "}
+              {inr(billPayable(payFor) - (paidByBill.get(payFor.id) ?? 0))}
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Date</span>
-                <input type="date" className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.payment_date} onChange={(e) => setPayDraft({ ...payDraft, payment_date: e.target.value })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Date
+                </span>
+                <input
+                  type="date"
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={payDraft.payment_date}
+                  onChange={(e) => setPayDraft({ ...payDraft, payment_date: e.target.value })}
+                />
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Amount</span>
-                <input type="number" className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.amount} onChange={(e) => setPayDraft({ ...payDraft, amount: num(e.target.value) })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Amount
+                </span>
+                <input
+                  type="number"
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={payDraft.amount}
+                  onChange={(e) => setPayDraft({ ...payDraft, amount: num(e.target.value) })}
+                />
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Mode</span>
-                <select className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.mode} onChange={(e) => setPayDraft({ ...payDraft, mode: e.target.value })}>
-                  {MODES.map((m) => <option key={m} value={m}>{m}</option>)}
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Mode
+                </span>
+                <select
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={payDraft.mode}
+                  onChange={(e) => setPayDraft({ ...payDraft, mode: e.target.value })}
+                >
+                  {MODES.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Reference / UTR</span>
-                <input className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.reference} onChange={(e) => setPayDraft({ ...payDraft, reference: e.target.value })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Reference / UTR
+                </span>
+                <input
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={payDraft.reference}
+                  onChange={(e) => setPayDraft({ ...payDraft, reference: e.target.value })}
+                />
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Paid from</span>
-                <input className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.paid_from} onChange={(e) => setPayDraft({ ...payDraft, paid_from: e.target.value })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Paid from
+                </span>
+                <input
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={payDraft.paid_from}
+                  onChange={(e) => setPayDraft({ ...payDraft, paid_from: e.target.value })}
+                />
               </label>
               <label>
-                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Remarks</span>
-                <input className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background" value={payDraft.remarks} onChange={(e) => setPayDraft({ ...payDraft, remarks: e.target.value })} />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  Remarks
+                </span>
+                <input
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={payDraft.remarks}
+                  onChange={(e) => setPayDraft({ ...payDraft, remarks: e.target.value })}
+                />
               </label>
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setPayFor(null)} className="px-4 py-2 rounded-lg border border-border text-sm font-semibold">Cancel</button>
-              <button disabled={savePayment.isPending} onClick={() => { if (payDraft.amount <= 0) { toast.error("Enter an amount"); return; } savePayment.mutate(payFor); }} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold">{savePayment.isPending ? "Saving…" : "Record payment"}</button>
+              <button
+                onClick={() => setPayFor(null)}
+                className="px-4 py-2 rounded-lg border border-border text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={savePayment.isPending}
+                onClick={() => {
+                  if (payDraft.amount <= 0) {
+                    toast.error("Enter an amount");
+                    return;
+                  }
+                  savePayment.mutate(payFor);
+                }}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
+              >
+                {savePayment.isPending ? "Saving…" : "Record payment"}
+              </button>
             </div>
           </div>
         </div>

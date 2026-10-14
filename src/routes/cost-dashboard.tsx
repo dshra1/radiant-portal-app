@@ -9,7 +9,6 @@ import { useChangeRequests, num } from "@/lib/approvals";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 
-
 export const Route = createFileRoute("/cost-dashboard")({
   head: () => ({
     meta: [
@@ -22,7 +21,8 @@ export const Route = createFileRoute("/cost-dashboard")({
       { property: "og:title", content: "Cost Dashboard — BOQ, PMC Fee, Labour & Remaining Budget" },
       {
         property: "og:description",
-        content: "One page showing total project cost against target budget, updating as cheaper options are approved.",
+        content:
+          "One page showing total project cost against target budget, updating as cheaper options are approved.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -84,7 +84,9 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("purchase_orders")
-        .select("id,status,freight_charges,other_charges,purchase_order_items(quantity,rate,discount_pct,gst_pct)")
+        .select(
+          "id,status,freight_charges,other_charges,purchase_order_items(quantity,rate,discount_pct,gst_pct)",
+        )
         .eq("project_id", activeId);
       if (error) throw error;
       return data ?? [];
@@ -126,8 +128,6 @@ function Page() {
     .filter((e) => e.entry_type !== "receipt" && e.status !== "received")
     .reduce((s, e) => s + num(e.amount), 0);
 
-
-
   const pending = useChangeRequests(activeId, "pending");
 
   const rows = boqQuery.data ?? [];
@@ -162,9 +162,12 @@ function Page() {
       status: string;
       freight_charges: number | null;
       other_charges: number | null;
-      purchase_order_items:
-        | Array<{ quantity: number | null; rate: number | null; discount_pct: number | null; gst_pct: number | null }>
-        | null;
+      purchase_order_items: Array<{
+        quantity: number | null;
+        rate: number | null;
+        discount_pct: number | null;
+        gst_pct: number | null;
+      }> | null;
     }>;
     return orders
       .filter((o) => String(o.status).toLowerCase() === "approved")
@@ -186,7 +189,13 @@ function Page() {
   const remaining = budget - projectCost;
   const remainingAfterPending = budget - (projectCost - pendingSaving);
 
-  const cards: Array<{ label: string; value: string; sub: string; icon: typeof IndianRupee; tone: string }> = [
+  const cards: Array<{
+    label: string;
+    value: string;
+    sub: string;
+    icon: typeof IndianRupee;
+    tone: string;
+  }> = [
     {
       label: "Material BOQ",
       value: crore(material),
@@ -230,7 +239,6 @@ function Page() {
       tone: "border-emerald-600/40 bg-emerald-600/5",
     },
   ];
-
 
   return (
     <Shell title="Cost Dashboard">
@@ -340,13 +348,18 @@ function Page() {
               If pending approvals are cleared
             </p>
             <p className="mt-1 text-2xl font-extrabold text-foreground">
-              {budget > 0 ? inr(Math.abs(remainingAfterPending)) : crore(projectCost - pendingSaving)}
+              {budget > 0
+                ? inr(Math.abs(remainingAfterPending))
+                : crore(projectCost - pendingSaving)}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               {(pending.data ?? []).length} change{(pending.data ?? []).length === 1 ? "" : "s"}{" "}
               waiting · {pendingSaving >= 0 ? "saves" : "adds"} {inr(Math.abs(pendingSaving))}
             </p>
-            <Link to="/approvals" className="mt-3 inline-block text-xs font-semibold text-primary underline">
+            <Link
+              to="/approvals"
+              className="mt-3 inline-block text-xs font-semibold text-primary underline"
+            >
               Review and decide
             </Link>
           </div>
@@ -380,9 +393,9 @@ function Page() {
               {[
                 ["Material BOQ", material],
                 ["Labour contracts", labour],
-                 [`PMC fee @ ${feePct}%`, pmcFee],
-                 ["Permissions, LRS, HMWSSB, electricity & architect fees", statutory],
-                 ["Total project cost", projectCost],
+                [`PMC fee @ ${feePct}%`, pmcFee],
+                ["Permissions, LRS, HMWSSB, electricity & architect fees", statutory],
+                ["Total project cost", projectCost],
               ].map(([label, value]) => (
                 <tr key={String(label)}>
                   <td className="px-4 py-3 font-semibold text-foreground">{String(label)}</td>

@@ -25,7 +25,8 @@ export const Route = createFileRoute("/site-execution")({
       { property: "og:title", content: "Site Execution | Saha OS" },
       {
         property: "og:description",
-        content: "Track stage-wise site progress against plan, with labour, pours and quality in one view.",
+        content:
+          "Track stage-wise site progress against plan, with labour, pours and quality in one view.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -50,7 +51,6 @@ type Stage = {
 };
 
 type Draft = Omit<Stage, "id">;
-
 
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
@@ -97,8 +97,7 @@ function Page() {
         ...s,
         sort: num(s.sort),
         // Planned % follows the programme dates whenever the stage has them.
-        planned_pct:
-          s.planned_start && s.planned_end ? plannedPctToday(s) : num(s.planned_pct),
+        planned_pct: s.planned_start && s.planned_end ? plannedPctToday(s) : num(s.planned_pct),
         actual_pct: num(s.actual_pct),
         duration_days: num(s.duration_days),
       })) as Stage[];
@@ -171,7 +170,10 @@ function Page() {
   });
 
   const patch = useMutation({
-    mutationFn: async (p: { id: string; values: Database["public"]["Tables"]["site_stages"]["Update"] }) => {
+    mutationFn: async (p: {
+      id: string;
+      values: Database["public"]["Tables"]["site_stages"]["Update"];
+    }) => {
       const { error } = await supabase.from("site_stages").update(p.values).eq("id", p.id);
       if (error) throw error;
     },
@@ -216,9 +218,27 @@ function Page() {
   }, [stages, labour.data, pours.data, qa.data]);
 
   function exportCsv() {
-    const head = ["#", "Stage", "Planned %", "Actual %", "Status", "Planned start", "Planned end", "Notes"];
+    const head = [
+      "#",
+      "Stage",
+      "Planned %",
+      "Actual %",
+      "Status",
+      "Planned start",
+      "Planned end",
+      "Notes",
+    ];
     const rows = stages.map((s) =>
-      [s.sort, s.name, s.planned_pct, s.actual_pct, s.status, s.planned_start ?? "", s.planned_end ?? "", s.notes]
+      [
+        s.sort,
+        s.name,
+        s.planned_pct,
+        s.actual_pct,
+        s.status,
+        s.planned_start ?? "",
+        s.planned_end ?? "",
+        s.notes,
+      ]
         .map((v) => `"${String(v).replace(/"/g, '""')}"`)
         .join(","),
     );
@@ -301,7 +321,9 @@ function Page() {
             <h2 className="text-lg font-bold">{editingId ? "Edit stage" : "Add stage"}</h2>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
               <label className="flex flex-col gap-1 text-sm md:col-span-2">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Stage name</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Stage name
+                </span>
                 <input
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -309,7 +331,9 @@ function Page() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Sequence</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Sequence
+                </span>
                 <input
                   type="number"
                   value={draft.sort}
@@ -318,7 +342,9 @@ function Page() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Planned %</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Planned %
+                </span>
                 <input
                   type="number"
                   value={draft.planned_pct}
@@ -327,7 +353,9 @@ function Page() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Actual %</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Actual %
+                </span>
                 <input
                   type="number"
                   value={draft.actual_pct}
@@ -336,7 +364,9 @@ function Page() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Status</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Status
+                </span>
                 <select
                   value={draft.status}
                   onChange={(e) => setDraft({ ...draft, status: e.target.value })}
@@ -348,7 +378,9 @@ function Page() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Planned start</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Planned start
+                </span>
                 <input
                   type="date"
                   value={draft.planned_start ?? ""}
@@ -357,7 +389,9 @@ function Page() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Planned end</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Planned end
+                </span>
                 <input
                   type="date"
                   value={draft.planned_end ?? ""}
@@ -426,7 +460,8 @@ function Page() {
             ) : null}
             {!stagesQuery.isPending && stages.length === 0 ? (
               <p className="p-6 text-center text-sm text-muted-foreground">
-                No stages yet. Import the Construction Control workbook to load the project's programme.
+                No stages yet. Import the Construction Control workbook to load the project's
+                programme.
               </p>
             ) : null}
             {stages.map((s) => (
@@ -437,7 +472,8 @@ function Page() {
                       {s.sort}. {s.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {[s.planned_start, s.planned_end].filter(Boolean).join(" → ") || "Dates not set"}
+                      {[s.planned_start, s.planned_end].filter(Boolean).join(" → ") ||
+                        "Dates not set"}
                       {s.notes ? ` · ${s.notes}` : ""}
                     </p>
                   </div>
@@ -515,17 +551,29 @@ function Page() {
         </section>
 
         <div className="flex flex-wrap gap-2 text-sm">
-          <Link to="/contractors-labour" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+          <Link
+            to="/contractors-labour"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
             Contractors &amp; labour
           </Link>
-          <Link to="/pour-cards" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+          <Link
+            to="/pour-cards"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
             Pour cards
           </Link>
-          <Link to="/qa-inspection" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+          <Link
+            to="/qa-inspection"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
             QA inspections
           </Link>
-          <Link to="/field-console" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
-            Field console
+          <Link
+            to="/site-today"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
+            Site Today
           </Link>
         </div>
       </div>

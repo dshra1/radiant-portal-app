@@ -11,9 +11,17 @@ export const Route = createFileRoute("/vendor-directory")({
   head: () => ({
     meta: [
       { title: "Vendor Directory — Categorized Vendor Database | Saha OS" },
-      { name: "description", content: "Categorized vendor database and procurement directory with trade-wise filters, bulk Excel ingestion and vendor performance ratings." },
+      {
+        name: "description",
+        content:
+          "Categorized vendor database and procurement directory with trade-wise filters, bulk Excel ingestion and vendor performance ratings.",
+      },
       { property: "og:title", content: "Vendor Directory — Categorized Vendor Database | Saha OS" },
-      { property: "og:description", content: "Categorized vendor database and procurement directory with trade-wise filters, bulk Excel ingestion and vendor performance ratings." },
+      {
+        property: "og:description",
+        content:
+          "Categorized vendor database and procurement directory with trade-wise filters, bulk Excel ingestion and vendor performance ratings.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -146,7 +154,9 @@ function Page() {
         const { error } = await supabase.from("vendors").update(values).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("vendors").insert({ ...values, created_by: user?.id ?? null });
+        const { error } = await supabase
+          .from("vendors")
+          .insert({ ...values, created_by: user?.id ?? null });
         if (error) throw error;
       }
     },
@@ -221,10 +231,7 @@ function Page() {
       toast.error("Nothing to export yet");
       return;
     }
-    const aoa = [
-      COLUMNS.map((c) => c.label),
-      ...visible.map((v) => COLUMNS.map((c) => v[c.key])),
-    ];
+    const aoa = [COLUMNS.map((c) => c.label), ...visible.map((v) => COLUMNS.map((c) => v[c.key]))];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), "Vendors");
     XLSX.writeFile(wb, `vendor-directory.${format}`, { bookType: format });
@@ -244,7 +251,13 @@ function Page() {
       for (const r of raw) {
         const lookup = new Map<string, unknown>();
         for (const [k, val] of Object.entries(r)) {
-          lookup.set(k.trim().toLowerCase().replace(/[^a-z0-9]/g, ""), val);
+          lookup.set(
+            k
+              .trim()
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, ""),
+            val,
+          );
         }
         const pick = (label: string) => lookup.get(label.toLowerCase().replace(/[^a-z0-9]/g, ""));
         const next = emptyDraft();
@@ -274,7 +287,8 @@ function Page() {
                   Categorized Vendor Database &amp; Procurement Directory
                 </h1>
                 <p className="font-body-md text-body-md text-on-surface-variant mt-space-2xs">
-                  Organized by material trades with bi-directional Excel template export and bulk upload ingestion.
+                  Organized by material trades with bi-directional Excel template export and bulk
+                  upload ingestion.
                 </p>
               </div>
               <div className="flex items-center gap-space-sm flex-wrap">
@@ -283,7 +297,9 @@ function Page() {
                   onClick={() => setShowImport((s) => !s)}
                   className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors font-title-md text-title-md shadow-sm"
                 >
-                  <span className="material-symbols-outlined text-space-base leading-none">upload_file</span>
+                  <span className="material-symbols-outlined text-space-base leading-none">
+                    upload_file
+                  </span>
                   <span>Upload &amp; Import</span>
                 </button>
                 <button
@@ -291,7 +307,9 @@ function Page() {
                   onClick={downloadTemplate}
                   className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors font-title-md text-title-md shadow-sm"
                 >
-                  <span className="material-symbols-outlined text-space-base leading-none">download</span>
+                  <span className="material-symbols-outlined text-space-base leading-none">
+                    download
+                  </span>
                   <span>Download Template</span>
                 </button>
                 <button
@@ -302,7 +320,9 @@ function Page() {
                   }}
                   className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-primary text-on-primary hover:bg-primary-container transition-colors font-title-md text-title-md shadow-sm"
                 >
-                  <span className="material-symbols-outlined text-space-base leading-none">add</span>
+                  <span className="material-symbols-outlined text-space-base leading-none">
+                    add
+                  </span>
                   <span>Add Vendor</span>
                 </button>
               </div>
@@ -312,10 +332,18 @@ function Page() {
               <div className="mb-space-2xl bg-surface-container-lowest rounded-xl p-space-xl shadow-md">
                 <div className="flex items-center justify-between mb-space-base">
                   <div className="flex items-center gap-space-sm">
-                    <span className="material-symbols-outlined text-primary text-space-lg">cloud_upload</span>
-                    <h3 className="font-headline-md text-headline-md text-on-surface">Bulk Excel / CSV Ingestion Hub</h3>
+                    <span className="material-symbols-outlined text-primary text-space-lg">
+                      cloud_upload
+                    </span>
+                    <h3 className="font-headline-md text-headline-md text-on-surface">
+                      Bulk Excel / CSV Ingestion Hub
+                    </h3>
                   </div>
-                  <button type="button" onClick={() => setShowImport(false)} className="text-on-surface-variant hover:text-on-surface">
+                  <button
+                    type="button"
+                    onClick={() => setShowImport(false)}
+                    className="text-on-surface-variant hover:text-on-surface"
+                  >
                     <span className="material-symbols-outlined">close</span>
                   </button>
                 </div>
@@ -329,9 +357,15 @@ function Page() {
                     }}
                     className="border-2 border-dashed border-outline-variant rounded-xl p-space-2xl flex flex-col items-center justify-center text-center hover:border-primary transition-colors bg-surface-container-low/50"
                   >
-                    <span className="material-symbols-outlined text-4xl text-primary mb-space-sm">upload_file</span>
-                    <span className="font-title-md text-title-md text-on-surface mb-space-2xs">Drag and drop your spreadsheet here</span>
-                    <span className="font-body-sm text-body-sm text-on-surface-variant mb-space-base">Supports .xlsx, .xls, .csv</span>
+                    <span className="material-symbols-outlined text-4xl text-primary mb-space-sm">
+                      upload_file
+                    </span>
+                    <span className="font-title-md text-title-md text-on-surface mb-space-2xs">
+                      Drag and drop your spreadsheet here
+                    </span>
+                    <span className="font-body-sm text-body-sm text-on-surface-variant mb-space-base">
+                      Supports .xlsx, .xls, .csv
+                    </span>
                     <button
                       type="button"
                       onClick={() => fileRef.current?.click()}
@@ -358,13 +392,17 @@ function Page() {
                     </span>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-space-xs font-body-sm text-body-sm">
                       {COLUMNS.map((c) => (
-                        <span key={c.key} className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface truncate">
+                        <span
+                          key={c.key}
+                          className="px-space-xs py-space-2xs rounded bg-surface-container text-on-surface truncate"
+                        >
                           {c.label}
                         </span>
                       ))}
                     </div>
                     <p className="mt-space-base font-body-sm text-on-surface-variant">
-                      Download the template first, fill it in and upload it back — column names are matched automatically.
+                      Download the template first, fill it in and upload it back — column names are
+                      matched automatically.
                     </p>
                   </div>
                 </div>
@@ -399,7 +437,9 @@ function Page() {
                         value={String(editing[c.key] ?? "")}
                         onChange={(e) =>
                           setDraft((d) =>
-                            d ? { ...d, [c.key]: c.numeric ? num(e.target.value) : e.target.value } : d,
+                            d
+                              ? { ...d, [c.key]: c.numeric ? num(e.target.value) : e.target.value }
+                              : d,
                           )
                         }
                         className="px-space-sm py-space-xs rounded bg-surface-container text-on-surface font-body-md focus:outline-none focus:ring-1 focus:ring-primary"
@@ -453,7 +493,9 @@ function Page() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-base mb-space-base">
               <div className="flex items-center gap-space-sm w-full md:w-auto flex-wrap">
                 <div className="relative flex-1 md:w-80">
-                  <span className="material-symbols-outlined absolute left-space-sm top-2.5 text-on-surface-variant text-space-base">search</span>
+                  <span className="material-symbols-outlined absolute left-space-sm top-2.5 text-on-surface-variant text-space-base">
+                    search
+                  </span>
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -482,7 +524,9 @@ function Page() {
                   onClick={() => exportDirectory("xlsx")}
                   className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container font-title-md text-title-md shadow-sm transition-colors"
                 >
-                  <span className="material-symbols-outlined text-space-base leading-none">ios_share</span>
+                  <span className="material-symbols-outlined text-space-base leading-none">
+                    ios_share
+                  </span>
                   <span>Export Excel</span>
                 </button>
                 <button
@@ -490,7 +534,9 @@ function Page() {
                   onClick={() => exportDirectory("csv")}
                   className="flex items-center gap-space-xs px-space-md py-space-xs rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container font-title-md text-title-md shadow-sm transition-colors"
                 >
-                  <span className="material-symbols-outlined text-space-base leading-none">description</span>
+                  <span className="material-symbols-outlined text-space-base leading-none">
+                    description
+                  </span>
                   <span>Export CSV</span>
                 </button>
               </div>
@@ -500,26 +546,45 @@ function Page() {
               <table className="w-full min-w-[1000px] text-left">
                 <thead>
                   <tr className="border-b border-outline-variant">
-                    {["Vendor", "Trade", "Brands", "Contact", "GSTIN / PAN", "City", "Lead time", "On-time %", "Rating", "Credit terms", ""].map(
-                      (h) => (
-                        <th key={h} className="px-space-sm py-space-sm font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant whitespace-nowrap">
-                          {h}
-                        </th>
-                      ),
-                    )}
+                    {[
+                      "Vendor",
+                      "Trade",
+                      "Brands",
+                      "Contact",
+                      "GSTIN / PAN",
+                      "City",
+                      "Lead time",
+                      "On-time %",
+                      "Rating",
+                      "Credit terms",
+                      "",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-space-sm py-space-sm font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant whitespace-nowrap"
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {isPending && (
                     <tr>
-                      <td colSpan={11} className="px-space-sm py-space-xl text-center font-body-md text-on-surface-variant">
+                      <td
+                        colSpan={11}
+                        className="px-space-sm py-space-xl text-center font-body-md text-on-surface-variant"
+                      >
                         Loading vendors…
                       </td>
                     </tr>
                   )}
                   {!isPending && !visible.length && (
                     <tr>
-                      <td colSpan={11} className="px-space-sm py-space-xl text-center font-body-md text-on-surface-variant">
+                      <td
+                        colSpan={11}
+                        className="px-space-sm py-space-xl text-center font-body-md text-on-surface-variant"
+                      >
                         No vendors yet. Add one, or download the template, fill it in and upload it.
                       </td>
                     </tr>
@@ -529,11 +594,17 @@ function Page() {
                       <td className="px-space-sm py-space-sm font-title-md text-on-surface">
                         {v.vendor_name}
                         {v.vendor_code && (
-                          <span className="block font-body-sm text-on-surface-variant">{v.vendor_code}</span>
+                          <span className="block font-body-sm text-on-surface-variant">
+                            {v.vendor_code}
+                          </span>
                         )}
                       </td>
-                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">{v.trade_category || "—"}</td>
-                      <td className="px-space-sm py-space-sm font-body-md text-on-surface-variant max-w-[200px]">{v.brands_supplied || "—"}</td>
+                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">
+                        {v.trade_category || "—"}
+                      </td>
+                      <td className="px-space-sm py-space-sm font-body-md text-on-surface-variant max-w-[200px]">
+                        {v.brands_supplied || "—"}
+                      </td>
                       <td className="px-space-sm py-space-sm font-body-md text-on-surface">
                         {v.contact_person || "—"}
                         {v.phone && (
@@ -542,12 +613,24 @@ function Page() {
                           </a>
                         )}
                       </td>
-                      <td className="px-space-sm py-space-sm font-body-sm text-on-surface-variant">{v.gstin || "—"}</td>
-                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">{v.city || "—"}</td>
-                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">{v.lead_time || "—"}</td>
-                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">{v.on_time_pct ? `${v.on_time_pct}%` : "—"}</td>
-                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">{v.quality_rating ? v.quality_rating.toFixed(1) : "—"}</td>
-                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">{v.credit_terms || "—"}</td>
+                      <td className="px-space-sm py-space-sm font-body-sm text-on-surface-variant">
+                        {v.gstin || "—"}
+                      </td>
+                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">
+                        {v.city || "—"}
+                      </td>
+                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">
+                        {v.lead_time || "—"}
+                      </td>
+                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">
+                        {v.on_time_pct ? `${v.on_time_pct}%` : "—"}
+                      </td>
+                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">
+                        {v.quality_rating ? v.quality_rating.toFixed(1) : "—"}
+                      </td>
+                      <td className="px-space-sm py-space-sm font-body-md text-on-surface">
+                        {v.credit_terms || "—"}
+                      </td>
                       <td className="px-space-sm py-space-sm whitespace-nowrap">
                         <button
                           type="button"

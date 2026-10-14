@@ -28,7 +28,8 @@ export const Route = createFileRoute("/procurement")({
       { property: "og:title", content: "Procurement & Vendor Commitments | Saha OS" },
       {
         property: "og:description",
-        content: "Purchase orders, committed value per vendor and pending approvals for your project.",
+        content:
+          "Purchase orders, committed value per vendor and pending approvals for your project.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -78,7 +79,10 @@ function Procurement() {
       const { data, error } = await supabase
         .from("purchase_order_items")
         .select("*")
-        .in("po_id", (orders ?? []).map((o) => o.id));
+        .in(
+          "po_id",
+          (orders ?? []).map((o) => o.id),
+        );
       if (error) throw error;
       return (data ?? []) as (PoItem & { po_id: string })[];
     },
@@ -134,7 +138,15 @@ function Procurement() {
   }, [orders, valueByPo]);
 
   const exportCsv = () => {
-    const header = ["PO number", "Vendor", "Status", "PO date", "Required by", "Value (INR)", "Raised by"];
+    const header = [
+      "PO number",
+      "Vendor",
+      "Status",
+      "PO date",
+      "Required by",
+      "Value (INR)",
+      "Raised by",
+    ];
     const lines = rows.map((o) => [
       o.po_number,
       o.vendor_name,
@@ -179,13 +191,34 @@ function Procurement() {
     >
       <ActiveSiteWeek focus="materials" />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <button type="button" onClick={() => setFilter("all")} className="text-left transition-transform hover:-translate-y-0.5">
-          <MetricTile label="Total PO value raised" value={inrCompact(total)} delta={`${(orders ?? []).length} orders — tap to view`} />
+        <button
+          type="button"
+          onClick={() => setFilter("all")}
+          className="text-left transition-transform hover:-translate-y-0.5"
+        >
+          <MetricTile
+            label="Total PO value raised"
+            value={inrCompact(total)}
+            delta={`${(orders ?? []).length} orders — tap to view`}
+          />
         </button>
-        <button type="button" onClick={() => setFilter("approved")} className="text-left transition-transform hover:-translate-y-0.5">
-          <MetricTile label="Approved / committed" value={inrCompact(committed)} tone="good" delta="Tap to view approved POs" />
+        <button
+          type="button"
+          onClick={() => setFilter("approved")}
+          className="text-left transition-transform hover:-translate-y-0.5"
+        >
+          <MetricTile
+            label="Approved / committed"
+            value={inrCompact(committed)}
+            tone="good"
+            delta="Tap to view approved POs"
+          />
         </button>
-        <button type="button" onClick={() => setFilter("pending")} className="text-left transition-transform hover:-translate-y-0.5">
+        <button
+          type="button"
+          onClick={() => setFilter("pending")}
+          className="text-left transition-transform hover:-translate-y-0.5"
+        >
           <MetricTile
             label="Awaiting PM approval"
             value={String(pendingCount)}
@@ -193,8 +226,16 @@ function Procurement() {
             delta={`${inrCompact(pendingValue)} — tap to view`}
           />
         </button>
-        <button type="button" onClick={() => setFilter("draft")} className="text-left transition-transform hover:-translate-y-0.5">
-          <MetricTile label="Drafts to complete" value={String(draftCount)} delta="Tap to complete drafts" />
+        <button
+          type="button"
+          onClick={() => setFilter("draft")}
+          className="text-left transition-transform hover:-translate-y-0.5"
+        >
+          <MetricTile
+            label="Drafts to complete"
+            value={String(draftCount)}
+            delta="Tap to complete drafts"
+          />
         </button>
       </div>
 
@@ -205,7 +246,9 @@ function Procurement() {
             type="button"
             onClick={() => setFilter(f)}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              filter === f ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+              filter === f
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-muted-foreground"
             }`}
           >
             {f === "all" ? "All" : STATUS_LABEL[f]}
@@ -224,8 +267,20 @@ function Procurement() {
           <table className="w-full min-w-[840px] text-[13px]">
             <thead>
               <tr className="border-b border-border bg-secondary/60">
-                {["PO number", "Vendor", "Value", "Status", "PO date", "Required by", "Raised by", ""].map((h) => (
-                  <th key={h} className="label-caps px-3 py-2 text-left font-medium text-muted-foreground">
+                {[
+                  "PO number",
+                  "Vendor",
+                  "Value",
+                  "Status",
+                  "PO date",
+                  "Required by",
+                  "Raised by",
+                  "",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="label-caps px-3 py-2 text-left font-medium text-muted-foreground"
+                  >
                     {h}
                   </th>
                 ))}
@@ -242,8 +297,8 @@ function Procurement() {
               {!isPending && rows.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">
-                    No purchase orders {filter === "all" ? "yet" : `in this state`} for {project.name}. Use “Raise PO”
-                    to create one.
+                    No purchase orders {filter === "all" ? "yet" : `in this state`} for{" "}
+                    {project.name}. Use “Raise PO” to create one.
                   </td>
                 </tr>
               )}
@@ -278,7 +333,10 @@ function Procurement() {
         title="Value committed per vendor"
         className="mt-3"
         action={
-          <Link to="/vendor-directory" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
+          <Link
+            to="/vendor-directory"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
+          >
             <Users className="size-3.5" /> Vendor directory
           </Link>
         }
@@ -290,7 +348,10 @@ function Procurement() {
         ) : (
           <div className="divide-y divide-border">
             {vendorSummary.map((v) => (
-              <div key={v.name} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
+              <div
+                key={v.name}
+                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5"
+              >
                 <div>
                   <p className="font-semibold">{v.name}</p>
                   <p className="text-xs text-muted-foreground">

@@ -61,7 +61,6 @@ function BrandMark({ brand }: { brand: string }) {
   );
 }
 
-
 export const Route = createFileRoute("/boq-engine")({
   head: () => ({
     meta: [
@@ -212,7 +211,6 @@ function ProductImage({ value, alt }: { value: string | null | undefined; alt: s
     </a>
   );
 }
-
 
 const CSV_HEADERS = [
   "stage",
@@ -381,7 +379,6 @@ function Page() {
     },
   });
 
-
   const projectsQuery = useQuery({
     queryKey: ["site_projects", "boq-engine"],
     enabled: Boolean(user?.id),
@@ -466,7 +463,8 @@ function Page() {
         const commercial: Record<string, string | number | undefined> = {};
         const descriptive: Record<string, string | number | undefined> = {};
         for (const [k, v] of Object.entries(patch)) {
-          if ((["quantity", "rate", "brand", "supplier"] as string[]).includes(k)) commercial[k] = v;
+          if ((["quantity", "rate", "brand", "supplier"] as string[]).includes(k))
+            commercial[k] = v;
           else descriptive[k] = v;
         }
         if (Object.keys(descriptive).length > 0) {
@@ -697,7 +695,9 @@ function Page() {
     },
     onSuccess: async () => {
       setStage(LABOUR_SECTION);
-      setStatus("Labour vendor row added — enter the vendor name in Brand / Supplier, the scope, area and agreed rate.");
+      setStatus(
+        "Labour vendor row added — enter the vendor name in Brand / Supplier, the scope, area and agreed rate.",
+      );
       await refresh();
     },
     onError: (e: Error) => setStatus(`Add failed: ${e.message}`),
@@ -725,9 +725,10 @@ function Page() {
       const payload = rows.slice(1).map((r, i) => ({
         project_id: activeId,
         stage: (r[idx("stage")] ?? "Uploaded Items").trim() || "Uploaded Items",
-        work_scope: (r[idx("work_scope")] ?? "").trim().toLowerCase() === "individual"
-          ? "individual"
-          : "common",
+        work_scope:
+          (r[idx("work_scope")] ?? "").trim().toLowerCase() === "individual"
+            ? "individual"
+            : "common",
         category: (r[idx("category")] ?? "").trim(),
         item_code: (r[idx("item_code")] ?? `UPL-${String(i + 1).padStart(4, "0")}`).trim(),
         description: (r[idx("description")] ?? "").trim(),
@@ -762,9 +763,7 @@ function Page() {
       const i = (BOQ_SECTIONS as readonly string[]).indexOf(name);
       return i === -1 ? 999 : i;
     };
-    return [...map.entries()].sort(
-      (a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]),
-    );
+    return [...map.entries()].sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]));
   }, [items]);
 
   const visible = useMemo(() => {
@@ -967,8 +966,6 @@ function Page() {
               {suggestMutation.isPending ? "Scanning…" : "Value-engineering scan"}
             </button>
 
-
-
             <button
               disabled={!activeId}
               onClick={() => fileRef.current?.click()}
@@ -1112,7 +1109,7 @@ function Page() {
         <div className="rounded-xl border border-border bg-card p-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="label-caps text-muted-foreground">Works split</span>
-            {([
+            {[
               { key: "ALL" as const, label: "All works", count: items.length, total: grandTotal },
               {
                 key: "common" as const,
@@ -1126,7 +1123,7 @@ function Page() {
                 count: individualItems.length,
                 total: individualTotal,
               },
-            ]).map((t) => (
+            ].map((t) => (
               <button
                 key={t.key}
                 onClick={() => setWorkScope(t.key)}
@@ -1142,9 +1139,10 @@ function Page() {
             ))}
           </div>
           <p className="mt-2 text-[12px] text-muted-foreground">
-            Common works are shared, building-wide items (structure, lift, DG, external development).
-            Individual works are flat / unit specific items (flooring, fittings, painting inside
-            units). Tag each line in the Stage column and use these tabs to price them separately.
+            Common works are shared, building-wide items (structure, lift, DG, external
+            development). Individual works are flat / unit specific items (flooring, fittings,
+            painting inside units). Tag each line in the Stage column and use these tabs to price
+            them separately.
           </p>
         </div>
 
@@ -1247,240 +1245,246 @@ function Page() {
                 <tbody>
                   {visible.map((it) => (
                     <Fragment key={it.id}>
-                    <tr className="border-t border-border align-top">
-
-
-                      <td className="px-2 py-2">
-                        <div className="text-[11px] font-semibold uppercase text-primary">
-                          {it.stage}
-                        </div>
-                        <Cell
-                          value={it.category}
-                          onCommit={(v) =>
-                            updateMutation.mutate({ id: it.id, patch: { category: v } })
-                          }
-                          className="mt-1 w-32 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
-                        />
-                        <select
-                          value={scopeOf(it)}
-                          onChange={(e) =>
-                            updateMutation.mutate({
-                              id: it.id,
-                              patch: { work_scope: e.target.value },
-                            })
-                          }
-                          className={`mt-1 w-32 rounded border px-1 text-[11px] font-semibold ${
-                            scopeOf(it) === "individual"
-                              ? "border-amber-500/50 bg-amber-500/10 text-amber-700"
-                              : "border-sky-500/50 bg-sky-500/10 text-sky-700"
-                          }`}
-                        >
-                          {SCOPES.map((s) => (
-                            <option key={s.key} value={s.key}>
-                              {s.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-2 py-2">
-                        <Cell
-                          multiline
-                          rows={2}
-                          value={it.description}
-                          onCommit={(v) =>
-                            updateMutation.mutate({ id: it.id, patch: { description: v } })
-                          }
-                          className="w-72 rounded border border-transparent bg-transparent px-1 py-0.5 hover:border-input focus:border-input"
-                        />
-                        <div className="px-1 text-[11px] text-muted-foreground">{it.item_code}</div>
-                        {it.stage !== LABOUR_SECTION && (
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <ProductImage value={it.image_url} alt={`${it.brand} ${it.description}`} />
-                          <div className="flex flex-col gap-1">
-                            <button
-                              onClick={() =>
-                                findImageMutation.mutate({
-                                  id: it.id,
-                                  query: `${it.brand} ${it.description}`.trim(),
-                                })
-                              }
-                              disabled={imageBusyId === it.id}
-                              className="inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold disabled:opacity-50"
-                            >
-                              <Search className="size-3" />
-                              {imageBusyId === it.id ? "Searching…" : "Find image"}
-                            </button>
-                            <button
-                              onClick={() => {
-                                setImageTargetId(it.id);
-                                imageInputRef.current?.click();
-                              }}
-                              className="inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold"
-                            >
-                              <ImagePlus className="size-3" />
-                              Upload image
-                            </button>
-                            <a
-                              href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${it.brand} ${it.description}`.trim())}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-1.5 text-[11px] font-semibold text-primary underline"
-                            >
-                              Search online
-                            </a>
+                      <tr className="border-t border-border align-top">
+                        <td className="px-2 py-2">
+                          <div className="text-[11px] font-semibold uppercase text-primary">
+                            {it.stage}
                           </div>
-                        </div>
-                        )}
-                      </td>
-                      <td className="px-2 py-2">
-                        <Cell
-                          value={it.unit}
-                          onCommit={(v) => updateMutation.mutate({ id: it.id, patch: { unit: v } })}
-                          className="w-16 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
-                        />
-                      </td>
-                      <td className="px-2 py-2 text-right">
-                        <Cell
-                          value={String(toNum(it.quantity))}
-                          onCommit={(v) =>
-                            updateMutation.mutate({ id: it.id, patch: { quantity: toNum(v) } })
-                          }
-                          className="w-24 rounded border border-input bg-background px-1 text-right tnum"
-                        />
-                      </td>
-                      <td className="px-2 py-2 text-right">
-                        <Cell
-                          value={String(toNum(it.rate))}
-                          onCommit={(v) =>
-                            updateMutation.mutate({ id: it.id, patch: { rate: toNum(v) } })
-                          }
-                          className="w-24 rounded border border-input bg-background px-1 text-right tnum"
-                        />
-                      </td>
-                      <td className="px-2 py-2 text-right font-semibold tnum">
-                        {inr(lineTotal(it))}
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="flex items-start gap-2">
-                          <BrandMark brand={it.brand} />
-                          <div>
-                            <Cell
-                              value={it.brand}
-                              onCommit={(v) =>
-                                updateMutation.mutate({ id: it.id, patch: { brand: v } })
-                              }
-                              placeholder="Brand / make"
-                              className="w-36 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
-                            />
-                            <Cell
-                              value={it.supplier}
-                              onCommit={(v) =>
-                                updateMutation.mutate({ id: it.id, patch: { supplier: v } })
-                              }
-                              placeholder="Supplier"
-                              className="mt-1 w-36 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
-                            />
+                          <Cell
+                            value={it.category}
+                            onCommit={(v) =>
+                              updateMutation.mutate({ id: it.id, patch: { category: v } })
+                            }
+                            className="mt-1 w-32 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
+                          />
+                          <select
+                            value={scopeOf(it)}
+                            onChange={(e) =>
+                              updateMutation.mutate({
+                                id: it.id,
+                                patch: { work_scope: e.target.value },
+                              })
+                            }
+                            className={`mt-1 w-32 rounded border px-1 text-[11px] font-semibold ${
+                              scopeOf(it) === "individual"
+                                ? "border-amber-500/50 bg-amber-500/10 text-amber-700"
+                                : "border-sky-500/50 bg-sky-500/10 text-sky-700"
+                            }`}
+                          >
+                            {SCOPES.map((s) => (
+                              <option key={s.key} value={s.key}>
+                                {s.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-2 py-2">
+                          <Cell
+                            multiline
+                            rows={2}
+                            value={it.description}
+                            onCommit={(v) =>
+                              updateMutation.mutate({ id: it.id, patch: { description: v } })
+                            }
+                            className="w-72 rounded border border-transparent bg-transparent px-1 py-0.5 hover:border-input focus:border-input"
+                          />
+                          <div className="px-1 text-[11px] text-muted-foreground">
+                            {it.item_code}
                           </div>
-                        </div>
-                        <button
-                          onClick={() => suggestMutation.mutate([it.id])}
-                          disabled={suggestMutation.isPending}
-                          className="mt-1.5 inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold text-primary disabled:opacity-50"
-                        >
-                          <Lightbulb className="size-3" />
-                          {pendingIds.includes(it.id) ? "Finding…" : "Brand options"}
-                        </button>
-                      </td>
-                      <td className="px-2 py-2 text-xs text-muted-foreground">
-                        <div className="max-w-[220px]">{it.notes}</div>
-                        <span className="mt-1 inline-block rounded bg-secondary px-1.5 py-0.5 text-[10px] uppercase">
-                          {it.source}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2">
-                        <button
-                          onClick={() => deleteMutation.mutate(it.id)}
-                          className="rounded p-1.5 text-destructive hover:bg-destructive-soft"
-                          aria-label="Delete line item"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </td>
-                    </tr>
-                    {suggestions[it.id] && (
-                      <tr className="border-t border-dashed border-primary/30 bg-primary-soft/30">
-                        <td colSpan={9} className="px-3 py-3">
-                          <div className="mb-2 flex items-center justify-between gap-3">
-                            <span className="label-caps text-primary">
-                              Brand alternatives — {it.description}
-                            </span>
-                            <button
-                              onClick={() =>
-                                setSuggestions((s) => {
-                                  const next = { ...s };
-                                  delete next[it.id];
-                                  return next;
-                                })
-                              }
-                              className="text-[11px] font-semibold text-muted-foreground"
-                            >
-                              Hide
-                            </button>
-                          </div>
-                          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                            {suggestions[it.id]!.options.map((opt) => {
-                              const delta = (opt.rate - toNum(it.rate)) * toNum(it.quantity);
-                              return (
-                                <div
-                                  key={`${opt.brand}-${opt.rate}`}
-                                  className="rounded-lg border border-border bg-card p-2"
+                          {it.stage !== LABOUR_SECTION && (
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <ProductImage
+                                value={it.image_url}
+                                alt={`${it.brand} ${it.description}`}
+                              />
+                              <div className="flex flex-col gap-1">
+                                <button
+                                  onClick={() =>
+                                    findImageMutation.mutate({
+                                      id: it.id,
+                                      query: `${it.brand} ${it.description}`.trim(),
+                                    })
+                                  }
+                                  disabled={imageBusyId === it.id}
+                                  className="inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold disabled:opacity-50"
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <BrandMark brand={opt.brand} />
-                                    <div className="min-w-0">
-                                      <div className="truncate text-[13px] font-bold text-foreground">
-                                        {opt.brand}
-                                      </div>
-                                      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                                        {opt.tier}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                                    <span className="text-sm font-semibold tnum">
-                                      {inr(opt.rate)} / {it.unit}
-                                    </span>
-                                    <span
-                                      className={`text-[11px] font-bold tnum ${delta < 0 ? "text-primary" : delta > 0 ? "text-destructive" : "text-muted-foreground"}`}
-                                    >
-                                      {delta === 0
-                                        ? "same"
-                                        : `${delta < 0 ? "saves " : "adds "}${inrCompact(Math.abs(delta))}`}
-                                    </span>
-                                  </div>
-                                  {opt.why && (
-                                    <p className="mt-1 text-[11px] text-muted-foreground">{opt.why}</p>
-                                  )}
-                                  <button
-                                    type="button"
-                                    disabled={Boolean(applyingAlternativeId)}
-                                    onClick={() => void applyAlternative(it, opt)}
-                                    className="mt-2 h-9 w-full rounded bg-primary text-[12px] font-semibold text-primary-foreground disabled:cursor-wait disabled:opacity-60"
-                                  >
-                                    {applyingAlternativeId === it.id
-                                      ? `Applying ${opt.brand}…`
-                                      : "Use this brand"}
-                                  </button>
-                                </div>
-                              );
-                            })}
+                                  <Search className="size-3" />
+                                  {imageBusyId === it.id ? "Searching…" : "Find image"}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setImageTargetId(it.id);
+                                    imageInputRef.current?.click();
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold"
+                                >
+                                  <ImagePlus className="size-3" />
+                                  Upload image
+                                </button>
+                                <a
+                                  href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${it.brand} ${it.description}`.trim())}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-1.5 text-[11px] font-semibold text-primary underline"
+                                >
+                                  Search online
+                                </a>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-2 py-2">
+                          <Cell
+                            value={it.unit}
+                            onCommit={(v) =>
+                              updateMutation.mutate({ id: it.id, patch: { unit: v } })
+                            }
+                            className="w-16 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
+                          />
+                        </td>
+                        <td className="px-2 py-2 text-right">
+                          <Cell
+                            value={String(toNum(it.quantity))}
+                            onCommit={(v) =>
+                              updateMutation.mutate({ id: it.id, patch: { quantity: toNum(v) } })
+                            }
+                            className="w-24 rounded border border-input bg-background px-1 text-right tnum"
+                          />
+                        </td>
+                        <td className="px-2 py-2 text-right">
+                          <Cell
+                            value={String(toNum(it.rate))}
+                            onCommit={(v) =>
+                              updateMutation.mutate({ id: it.id, patch: { rate: toNum(v) } })
+                            }
+                            className="w-24 rounded border border-input bg-background px-1 text-right tnum"
+                          />
+                        </td>
+                        <td className="px-2 py-2 text-right font-semibold tnum">
+                          {inr(lineTotal(it))}
+                        </td>
+                        <td className="px-2 py-2">
+                          <div className="flex items-start gap-2">
+                            <BrandMark brand={it.brand} />
+                            <div>
+                              <Cell
+                                value={it.brand}
+                                onCommit={(v) =>
+                                  updateMutation.mutate({ id: it.id, patch: { brand: v } })
+                                }
+                                placeholder="Brand / make"
+                                className="w-36 rounded border border-transparent bg-transparent px-1 hover:border-input focus:border-input"
+                              />
+                              <Cell
+                                value={it.supplier}
+                                onCommit={(v) =>
+                                  updateMutation.mutate({ id: it.id, patch: { supplier: v } })
+                                }
+                                placeholder="Supplier"
+                                className="mt-1 w-36 rounded border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
+                              />
+                            </div>
                           </div>
+                          <button
+                            onClick={() => suggestMutation.mutate([it.id])}
+                            disabled={suggestMutation.isPending}
+                            className="mt-1.5 inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold text-primary disabled:opacity-50"
+                          >
+                            <Lightbulb className="size-3" />
+                            {pendingIds.includes(it.id) ? "Finding…" : "Brand options"}
+                          </button>
+                        </td>
+                        <td className="px-2 py-2 text-xs text-muted-foreground">
+                          <div className="max-w-[220px]">{it.notes}</div>
+                          <span className="mt-1 inline-block rounded bg-secondary px-1.5 py-0.5 text-[10px] uppercase">
+                            {it.source}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2">
+                          <button
+                            onClick={() => deleteMutation.mutate(it.id)}
+                            className="rounded p-1.5 text-destructive hover:bg-destructive-soft"
+                            aria-label="Delete line item"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
                         </td>
                       </tr>
-                    )}
+                      {suggestions[it.id] && (
+                        <tr className="border-t border-dashed border-primary/30 bg-primary-soft/30">
+                          <td colSpan={9} className="px-3 py-3">
+                            <div className="mb-2 flex items-center justify-between gap-3">
+                              <span className="label-caps text-primary">
+                                Brand alternatives — {it.description}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  setSuggestions((s) => {
+                                    const next = { ...s };
+                                    delete next[it.id];
+                                    return next;
+                                  })
+                                }
+                                className="text-[11px] font-semibold text-muted-foreground"
+                              >
+                                Hide
+                              </button>
+                            </div>
+                            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                              {suggestions[it.id]!.options.map((opt) => {
+                                const delta = (opt.rate - toNum(it.rate)) * toNum(it.quantity);
+                                return (
+                                  <div
+                                    key={`${opt.brand}-${opt.rate}`}
+                                    className="rounded-lg border border-border bg-card p-2"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <BrandMark brand={opt.brand} />
+                                      <div className="min-w-0">
+                                        <div className="truncate text-[13px] font-bold text-foreground">
+                                          {opt.brand}
+                                        </div>
+                                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                                          {opt.tier}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                                      <span className="text-sm font-semibold tnum">
+                                        {inr(opt.rate)} / {it.unit}
+                                      </span>
+                                      <span
+                                        className={`text-[11px] font-bold tnum ${delta < 0 ? "text-primary" : delta > 0 ? "text-destructive" : "text-muted-foreground"}`}
+                                      >
+                                        {delta === 0
+                                          ? "same"
+                                          : `${delta < 0 ? "saves " : "adds "}${inrCompact(Math.abs(delta))}`}
+                                      </span>
+                                    </div>
+                                    {opt.why && (
+                                      <p className="mt-1 text-[11px] text-muted-foreground">
+                                        {opt.why}
+                                      </p>
+                                    )}
+                                    <button
+                                      type="button"
+                                      disabled={Boolean(applyingAlternativeId)}
+                                      onClick={() => void applyAlternative(it, opt)}
+                                      className="mt-2 h-9 w-full rounded bg-primary text-[12px] font-semibold text-primary-foreground disabled:cursor-wait disabled:opacity-60"
+                                    >
+                                      {applyingAlternativeId === it.id
+                                        ? `Applying ${opt.brand}…`
+                                        : "Use this brand"}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </Fragment>
                   ))}
-
                 </tbody>
               </table>
             )}
@@ -1499,9 +1503,9 @@ function Page() {
                 Apply this choice to the whole trade?
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                <b className="text-foreground">{applyAll.brand}</b> is already saved for the item you
-                selected. Apply it to all {applyAll.count} items in {applyAll.stageName}, with rates
-                adjusted in the same proportion?
+                <b className="text-foreground">{applyAll.brand}</b> is already saved for the item
+                you selected. Apply it to all {applyAll.count} items in {applyAll.stageName}, with
+                rates adjusted in the same proportion?
               </p>
               <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
@@ -1536,7 +1540,9 @@ function Page() {
                 return (
                   <div key={name} className="rounded border border-border p-2">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-xs font-semibold uppercase text-foreground">{name}</span>
+                      <span className="text-xs font-semibold uppercase text-foreground">
+                        {name}
+                      </span>
                       <span className="text-sm font-semibold tnum text-primary">
                         {inrCompact(total)}
                       </span>

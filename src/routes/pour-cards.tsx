@@ -190,7 +190,17 @@ function Page() {
   );
 
   function exportCsv() {
-    const head = ["Ref", "Element", "Level", "Grade", "Cum", "Pour date", "Status", "Checks done", "Approved by"];
+    const head = [
+      "Ref",
+      "Element",
+      "Level",
+      "Grade",
+      "Cum",
+      "Pour date",
+      "Status",
+      "Checks done",
+      "Approved by",
+    ];
     const rows = filtered.map((c) =>
       [
         c.pour_ref,
@@ -298,11 +308,18 @@ function Page() {
                   onChange={(e) => setDraft({ ...draft, element: e.target.value })}
                   className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 >
-                  {["Footing", "Column", "Beam", "Slab", "Shear wall", "Staircase", "Raft", "Retaining wall"].map(
-                    (o) => (
-                      <option key={o}>{o}</option>
-                    ),
-                  )}
+                  {[
+                    "Footing",
+                    "Column",
+                    "Beam",
+                    "Slab",
+                    "Shear wall",
+                    "Staircase",
+                    "Raft",
+                    "Retaining wall",
+                  ].map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
                 </select>
               </Field>
               <Field label="Level / block">
@@ -369,12 +386,18 @@ function Page() {
             </p>
             <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
               {CHECKS.map((c) => (
-                <label key={c} className="flex items-center gap-2 rounded-lg border border-border p-2 text-sm">
+                <label
+                  key={c}
+                  className="flex items-center gap-2 rounded-lg border border-border p-2 text-sm"
+                >
                   <input
                     type="checkbox"
                     checked={Boolean(draft.checklist[c])}
                     onChange={(e) =>
-                      setDraft({ ...draft, checklist: { ...draft.checklist, [c]: e.target.checked } })
+                      setDraft({
+                        ...draft,
+                        checklist: { ...draft.checklist, [c]: e.target.checked },
+                      })
                     }
                   />
                   {c}
@@ -478,7 +501,9 @@ function Page() {
                       <td className="p-3 font-semibold">{c.pour_ref}</td>
                       <td className="p-3">
                         {c.element}
-                        <span className="block text-xs text-muted-foreground">{c.level || "—"}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {c.level || "—"}
+                        </span>
                       </td>
                       <td className="p-3">{c.grade}</td>
                       <td className="p-3 text-right">{c.quantity_cum}</td>
@@ -541,13 +566,22 @@ function Page() {
         </section>
 
         <div className="flex flex-wrap gap-2 text-sm">
-          <Link to="/qa-inspection" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+          <Link
+            to="/qa-inspection"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
             QA inspections
           </Link>
-          <Link to="/field-console" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
-            Field console
+          <Link
+            to="/site-today"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
+            Site Today
           </Link>
-          <Link to="/site-execution" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+          <Link
+            to="/site-execution"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
             Site execution
           </Link>
         </div>

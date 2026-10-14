@@ -33,7 +33,8 @@ export const Route = createFileRoute("/messages")({
       { property: "og:title", content: "Team Chat — Saha OS" },
       {
         property: "og:description",
-        content: "Direct messages, group channels, attachments and assigned tasks with instant alerts.",
+        content:
+          "Direct messages, group channels, attachments and assigned tasks with instant alerts.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -76,7 +77,8 @@ const groups = [
 
 const DIRECT = "direct";
 
-type Conversation = { kind: "group"; id: string; label: string } | { kind: "dm"; id: string; label: string };
+type Conversation =
+  { kind: "group"; id: string; label: string } | { kind: "dm"; id: string; label: string };
 
 function timeOf(iso: string) {
   return new Date(iso).toLocaleString("en-IN", {
@@ -133,7 +135,11 @@ function AttachmentChip({ file }: { file: Attachment }) {
 function Messages() {
   const qc = useQueryClient();
   const user = useSessionUser();
-  const [conv, setConv] = useState<Conversation>({ kind: "group", id: "general", label: "General" });
+  const [conv, setConv] = useState<Conversation>({
+    kind: "group",
+    id: "general",
+    label: "General",
+  });
   const [body, setBody] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<string>(roles[0]);
@@ -340,7 +346,9 @@ function Messages() {
               );
             })}
             {people.length === 0 && (
-              <p className="px-2 py-1 text-[12px] text-muted-foreground">No approved teammates yet.</p>
+              <p className="px-2 py-1 text-[12px] text-muted-foreground">
+                No approved teammates yet.
+              </p>
             )}
           </div>
 
@@ -385,7 +393,11 @@ function Messages() {
 
         <section className="flex min-h-[60vh] flex-col rounded-xl border border-border bg-card">
           <header className="flex items-center gap-2 border-b border-border px-4 py-3">
-            {conv.kind === "dm" ? <User className="size-4 text-primary" /> : <Hash className="size-4 text-primary" />}
+            {conv.kind === "dm" ? (
+              <User className="size-4 text-primary" />
+            ) : (
+              <Hash className="size-4 text-primary" />
+            )}
             <h2 className="text-[14px] font-bold text-foreground">{conv.label}</h2>
             <span className="text-[11px] text-muted-foreground">
               {conv.kind === "dm" ? "Direct message" : "Group"}
@@ -446,7 +458,8 @@ function Messages() {
                 )}
                 {m.due_date && (
                   <p className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Calendar className="size-3" /> Due {new Date(m.due_date).toLocaleDateString("en-IN")}
+                    <Calendar className="size-3" /> Due{" "}
+                    {new Date(m.due_date).toLocaleDateString("en-IN")}
                   </p>
                 )}
               </article>

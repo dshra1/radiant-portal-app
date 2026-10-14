@@ -2,7 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, ClipboardList, ShieldCheck, Plus, FileDown } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardList,
+  ShieldCheck,
+  Plus,
+  FileDown,
+} from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { StatusBadge } from "@/components/saha/ui";
 import { supabase } from "@/integrations/supabase/client";
@@ -180,9 +187,29 @@ function Page() {
   }, [rows, filter, search]);
 
   function exportCsv() {
-    const head = ["Date", "Location", "Category", "Code", "Severity", "Defects", "Status", "Inspector", "Findings"];
+    const head = [
+      "Date",
+      "Location",
+      "Category",
+      "Code",
+      "Severity",
+      "Defects",
+      "Status",
+      "Inspector",
+      "Findings",
+    ];
     const body = filtered.map((r) =>
-      [r.inspected_on, r.location_tag, r.category, r.code_ref, r.severity, r.defect_count, r.resolution, r.inspector_name, r.findings]
+      [
+        r.inspected_on,
+        r.location_tag,
+        r.category,
+        r.code_ref,
+        r.severity,
+        r.defect_count,
+        r.resolution,
+        r.inspector_name,
+        r.findings,
+      ]
         .map((v) => `"${String(v).replace(/"/g, '""')}"`)
         .join(","),
     );
@@ -262,7 +289,9 @@ function Page() {
 
         {draft ? (
           <section className="rounded-2xl border border-primary/40 bg-card p-5 shadow-sm">
-            <h2 className="text-lg font-bold">{editingId ? "Edit inspection" : "Record inspection"}</h2>
+            <h2 className="text-lg font-bold">
+              {editingId ? "Edit inspection" : "Record inspection"}
+            </h2>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-xs font-semibold uppercase text-muted-foreground">Date</span>
@@ -274,7 +303,9 @@ function Page() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Location</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Location
+                </span>
                 <input
                   value={draft.location_tag}
                   onChange={(e) => setDraft({ ...draft, location_tag: e.target.value })}
@@ -283,7 +314,9 @@ function Page() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Category</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Category
+                </span>
                 <select
                   value={draft.category}
                   onChange={(e) => setDraft({ ...draft, category: e.target.value })}
@@ -295,7 +328,9 @@ function Page() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Code reference</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Code reference
+                </span>
                 <input
                   value={draft.code_ref}
                   onChange={(e) => setDraft({ ...draft, code_ref: e.target.value })}
@@ -304,7 +339,9 @@ function Page() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Severity</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Severity
+                </span>
                 <select
                   value={draft.severity}
                   onChange={(e) => setDraft({ ...draft, severity: e.target.value })}
@@ -316,7 +353,9 @@ function Page() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Defects found</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Defects found
+                </span>
                 <input
                   type="number"
                   value={draft.defect_count}
@@ -325,7 +364,9 @@ function Page() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm md:col-span-2">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Findings</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Findings
+                </span>
                 <input
                   value={draft.findings}
                   onChange={(e) => setDraft({ ...draft, findings: e.target.value })}
@@ -333,7 +374,9 @@ function Page() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Inspector</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Inspector
+                </span>
                 <input
                   value={draft.inspector_name}
                   onChange={(e) => setDraft({ ...draft, inspector_name: e.target.value })}
@@ -432,7 +475,13 @@ function Page() {
                     </td>
                     <td className="p-3">
                       <StatusBadge
-                        tone={r.severity === "High" ? "red" : r.severity === "Medium" ? "amber" : "slate"}
+                        tone={
+                          r.severity === "High"
+                            ? "red"
+                            : r.severity === "Medium"
+                              ? "amber"
+                              : "slate"
+                        }
                       >
                         {r.severity}
                       </StatusBadge>
@@ -485,13 +534,22 @@ function Page() {
         </section>
 
         <div className="flex flex-wrap gap-2 text-sm">
-          <Link to="/qa" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
-            QA overview
+          <Link
+            to="/stage-drawings"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
+            Photo check against drawings
           </Link>
-          <Link to="/pour-cards" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+          <Link
+            to="/pour-cards"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
             Pour cards
           </Link>
-          <Link to="/site-media" className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted">
+          <Link
+            to="/site-media"
+            className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
+          >
             Site photos
           </Link>
         </div>

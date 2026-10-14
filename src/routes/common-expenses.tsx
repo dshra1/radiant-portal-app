@@ -220,9 +220,9 @@ function Page() {
             Common &amp; Statutory Expenses
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Permission charges, LRS (land wise, per owner), electrical connection, HMWSSB water &amp;
-            sewerage and architectural fees. These sit outside the material BOQ and are shared with
-            the landowners as common project expenses.
+            Permission charges, LRS (land wise, per owner), electrical connection, HMWSSB water
+            &amp; sewerage and architectural fees. These sit outside the material BOQ and are shared
+            with the landowners as common project expenses.
           </p>
         </header>
 
@@ -375,8 +375,16 @@ function Page() {
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Total common expenses", value: totals.total, tone: "border-primary/40 bg-primary/5" },
-            { label: "Paid so far", value: totals.paid, tone: "border-emerald-600/30 bg-emerald-600/5" },
+            {
+              label: "Total common expenses",
+              value: totals.total,
+              tone: "border-primary/40 bg-primary/5",
+            },
+            {
+              label: "Paid so far",
+              value: totals.paid,
+              tone: "border-emerald-600/30 bg-emerald-600/5",
+            },
             {
               label: "Yet to pay",
               value: totals.total - totals.paid,
@@ -427,7 +435,10 @@ function Page() {
               <tbody className="divide-y divide-border">
                 {charges.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    <td
+                      colSpan={8}
+                      className="px-4 py-10 text-center text-sm text-muted-foreground"
+                    >
                       No common charges yet. Use <strong>Add charge</strong> to record permission
                       fees, LRS, electricity connection, HMWSSB and architect fees.
                     </td>
@@ -553,7 +564,8 @@ function Page() {
                           key={`${c.id}-${s.name}`}
                           className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground"
                         >
-                          {s.name}: <strong className="text-foreground">{inr(num(s.amount))}</strong>
+                          {s.name}:{" "}
+                          <strong className="text-foreground">{inr(num(s.amount))}</strong>
                         </span>
                       ))}
                     </div>

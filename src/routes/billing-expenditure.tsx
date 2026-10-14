@@ -117,8 +117,11 @@ function Page() {
     }
     const billRows: Row[] = bills.map((b) => {
       const gross =
-        num(b.basic_amount) + num(b.gst_amount) + num(b.other_charges) -
-        num(b.retention_amount) - num(b.deductions);
+        num(b.basic_amount) +
+        num(b.gst_amount) +
+        num(b.other_charges) -
+        num(b.retention_amount) -
+        num(b.deductions);
       return {
         id: b.id,
         kind: "Vendor bill",
@@ -162,7 +165,9 @@ function Page() {
   });
 
   const totals = useMemo(() => {
-    const billTotal = rows.filter((r) => r.kind === "Vendor bill").reduce((s, r) => s + r.amount, 0);
+    const billTotal = rows
+      .filter((r) => r.kind === "Vendor bill")
+      .reduce((s, r) => s + r.amount, 0);
     const chargeTotal = rows
       .filter((r) => r.kind === "Statutory charge")
       .reduce((s, r) => s + r.amount, 0);
@@ -249,7 +254,6 @@ function Page() {
           ))}
         </div>
 
-
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b">
             <input
@@ -267,7 +271,6 @@ function Page() {
               <option value="Vendor bill">Vendor bills only</option>
               <option value="Statutory charge">Statutory charges only</option>
               <option value="paid">Paid entries only</option>
-
             </select>
           </div>
           <div className="overflow-x-auto">
@@ -284,7 +287,6 @@ function Page() {
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Open</th>
                 </tr>
-
               </thead>
               <tbody className="divide-y text-sm">
                 {filtered.map((r) => (
@@ -317,7 +319,6 @@ function Page() {
                       </Link>
                     </td>
                   </tr>
-
                 ))}
                 {!loading && filtered.length === 0 ? (
                   <tr>

@@ -21,7 +21,8 @@ export const Route = createFileRoute("/tasks")({
       { property: "og:title", content: "Task Tracker — Saha OS" },
       {
         property: "og:description",
-        content: "Assignees, due dates, progress bars and status updates for all active Saha OS tasks.",
+        content:
+          "Assignees, due dates, progress bars and status updates for all active Saha OS tasks.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -177,7 +178,10 @@ function TaskTracker() {
 
   const done = tasks.filter((t) => t.status === "Done").length;
   const overdue = tasks.filter(
-    (t) => t.status !== "Done" && t.due_date && new Date(`${t.due_date}T00:00:00`) < new Date(new Date().setHours(0, 0, 0, 0)),
+    (t) =>
+      t.status !== "Done" &&
+      t.due_date &&
+      new Date(`${t.due_date}T00:00:00`) < new Date(new Date().setHours(0, 0, 0, 0)),
   ).length;
 
   return (
@@ -318,7 +322,7 @@ function TaskTracker() {
                   <span
                     className={cn(
                       "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase",
-                      statusTone[t.status] ?? statusTone['Open'],
+                      statusTone[t.status] ?? statusTone["Open"],
                     )}
                   >
                     {t.status}

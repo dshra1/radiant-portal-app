@@ -22,7 +22,8 @@ export const Route = createFileRoute("/budget-fit")({
       { property: "og:title", content: "Budget Fit — Suggested Brands to Stay Within Budget" },
       {
         property: "og:description",
-        content: "Cheaper brand options with savings against your target budget. Nothing changes until you apply.",
+        content:
+          "Cheaper brand options with savings against your target budget. Nothing changes until you apply.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -248,7 +249,9 @@ function Page() {
           </div>
           <div
             className={`rounded-2xl border p-4 ${
-              gap > 0 ? "border-destructive/40 bg-destructive/5" : "border-emerald-600/30 bg-emerald-600/5"
+              gap > 0
+                ? "border-destructive/40 bg-destructive/5"
+                : "border-emerald-600/30 bg-emerald-600/5"
             }`}
           >
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

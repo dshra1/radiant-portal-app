@@ -21,7 +21,7 @@ import { useActiveProject } from "@/hooks/useActiveProject";
 
 export const Route = createFileRoute("/purchase-orders")({
   validateSearch: (search: Record<string, unknown>) => ({
-    po: typeof search['po'] === "string" ? (search['po'] as string) : undefined,
+    po: typeof search["po"] === "string" ? (search["po"] as string) : undefined,
   }),
   head: () => ({
     meta: [
@@ -272,9 +272,7 @@ function Page() {
         </div>
       </div>
 
-      {selected && (
-        <PoDocument po={selected} items={items ?? []} totals={totals} />
-      )}
+      {selected && <PoDocument po={selected} items={items ?? []} totals={totals} />}
     </Shell>
   );
 }
@@ -327,13 +325,23 @@ function PoDocument({
           <table className="w-full min-w-[720px] border border-border text-xs">
             <thead className="bg-secondary">
               <tr className="text-left">
-                {["#", "Item", "Description", "Brand", "Unit", "Qty", "Rate", "Disc%", "Taxable", "GST%", "Amount"].map(
-                  (h) => (
-                    <th key={h} className="border border-border px-2 py-1.5 font-semibold">
-                      {h}
-                    </th>
-                  ),
-                )}
+                {[
+                  "#",
+                  "Item",
+                  "Description",
+                  "Brand",
+                  "Unit",
+                  "Qty",
+                  "Rate",
+                  "Disc%",
+                  "Taxable",
+                  "GST%",
+                  "Amount",
+                ].map((h) => (
+                  <th key={h} className="border border-border px-2 py-1.5 font-semibold">
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>

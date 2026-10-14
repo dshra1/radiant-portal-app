@@ -82,10 +82,7 @@ function Notifications() {
   const { data = [], isLoading } = useQuery({
     queryKey: ["notifications", user?.id],
     queryFn: async () => {
-      let q = supabase
-        .from("notifications")
-        .select("*")
-        .order("created_at", { ascending: false });
+      let q = supabase.from("notifications").select("*").order("created_at", { ascending: false });
       if (user?.id) {
         q = q.or(`recipient_id.eq.${user.id},recipient_id.is.null`);
       }
@@ -143,7 +140,14 @@ function Notifications() {
       if (error) throw error;
     },
     onSuccess: () => {
-      setForm({ title: "", body: "", category: "General", priority: "Normal", link: "", recipient_id: "" });
+      setForm({
+        title: "",
+        body: "",
+        category: "General",
+        priority: "Normal",
+        link: "",
+        recipient_id: "",
+      });
       setShowForm(false);
       invalidate();
     },
@@ -308,7 +312,7 @@ function Notifications() {
                   <h2 className="text-[14px] font-semibold text-foreground">{n.title}</h2>
                   <span
                     className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
-                      priorityTone[n.priority] ?? priorityTone['Normal']
+                      priorityTone[n.priority] ?? priorityTone["Normal"]
                     }`}
                   >
                     {n.priority}

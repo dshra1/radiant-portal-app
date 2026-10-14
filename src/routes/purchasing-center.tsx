@@ -71,7 +71,10 @@ function Page() {
       const { data, error } = await supabase
         .from("purchase_order_items")
         .select("*")
-        .in("po_id", (orders ?? []).map((o) => o.id));
+        .in(
+          "po_id",
+          (orders ?? []).map((o) => o.id),
+        );
       if (error) throw error;
       return (data ?? []) as (PoItem & { po_id: string })[];
     },
@@ -81,7 +84,9 @@ function Page() {
     queryKey: ["vendors", "purchasing-center"],
     enabled: Boolean(user?.id),
     queryFn: async () => {
-      const { data, error } = await supabase.from("vendors").select("id, vendor_name, trade_category");
+      const { data, error } = await supabase
+        .from("vendors")
+        .select("id, vendor_name, trade_category");
       if (error) throw error;
       return data ?? [];
     },
@@ -131,7 +136,8 @@ function Page() {
             <ShoppingCart className="size-5 text-primary" />
           </div>
           <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-            View list <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            View list{" "}
+            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
 
@@ -145,7 +151,8 @@ function Page() {
             <FileText className="size-5 text-muted-foreground" />
           </div>
           <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-            Complete drafts <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            Complete drafts{" "}
+            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
 
@@ -159,7 +166,8 @@ function Page() {
             <CheckCircle2 className="size-5 text-emerald-600" />
           </div>
           <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-            View approved <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            View approved{" "}
+            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
 
@@ -168,12 +176,15 @@ function Page() {
             <div>
               <p className="label-caps text-muted-foreground">Committed value</p>
               <p className="mt-1 font-display text-3xl font-bold">{inrCompact(committed)}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Total of approved purchase orders</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Total of approved purchase orders
+              </p>
             </div>
             <IndianRupee className="size-5 text-amber-600" />
           </div>
           <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-            Spend by vendor <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            Spend by vendor{" "}
+            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
 
@@ -187,16 +198,25 @@ function Page() {
             <Store className="size-5 text-primary" />
           </div>
           <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-            Open directory <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            Open directory{" "}
+            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
       </div>
 
-      <Section title="Recent purchase orders" className="mt-4" action={
-        <Link to="/procurement" search={{ status: undefined }} className="text-xs font-semibold text-primary">
-          View all
-        </Link>
-      }>
+      <Section
+        title="Recent purchase orders"
+        className="mt-4"
+        action={
+          <Link
+            to="/procurement"
+            search={{ status: undefined }}
+            className="text-xs font-semibold text-primary"
+          >
+            View all
+          </Link>
+        }
+      >
         {recent.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">
             No purchase orders yet for {project.name}. Use “Create PO” to raise the first one.
@@ -212,7 +232,9 @@ function Page() {
               >
                 <div>
                   <p className="font-semibold tnum">{o.po_number}</p>
-                  <p className="text-xs text-muted-foreground">{o.vendor_name || "Vendor not set"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {o.vendor_name || "Vendor not set"}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-semibold tnum">{inr(valueByPo.get(o.id) ?? 0)}</span>
@@ -238,25 +260,45 @@ function Page() {
 
       <Section title="Procurement tools" className="mt-4">
         <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Link to="/price-ocr" className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40">
+          <Link
+            to="/price-ocr"
+            className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40"
+          >
             <ScanSearch className="size-5 text-primary" />
             <p className="mt-2 text-sm font-semibold">Price OCR</p>
-            <p className="text-xs text-muted-foreground">Scan proforma invoices into the price database</p>
+            <p className="text-xs text-muted-foreground">
+              Scan proforma invoices into the price database
+            </p>
           </Link>
-          <Link to="/price-intelligence" className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40">
+          <Link
+            to="/price-intelligence"
+            className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40"
+          >
             <BarChart3 className="size-5 text-primary" />
             <p className="mt-2 text-sm font-semibold">Price intelligence</p>
-            <p className="text-xs text-muted-foreground">Benchmark material rates and brand alternatives</p>
+            <p className="text-xs text-muted-foreground">
+              Benchmark material rates and brand alternatives
+            </p>
           </Link>
-          <Link to="/vendor-directory" className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40">
+          <Link
+            to="/vendor-directory"
+            className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40"
+          >
             <Store className="size-5 text-primary" />
             <p className="mt-2 text-sm font-semibold">Vendor directory</p>
-            <p className="text-xs text-muted-foreground">Add, import and manage your vendor master list</p>
+            <p className="text-xs text-muted-foreground">
+              Add, import and manage your vendor master list
+            </p>
           </Link>
-          <Link to="/contractors-labour" className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40">
+          <Link
+            to="/contractors-labour"
+            className="rounded-lg border border-border p-3 transition-colors hover:bg-secondary/40"
+          >
             <HardHat className="size-5 text-primary" />
             <p className="mt-2 text-sm font-semibold">Contractors & labour</p>
-            <p className="text-xs text-muted-foreground">Labour contracts and trade-wise market rates</p>
+            <p className="text-xs text-muted-foreground">
+              Labour contracts and trade-wise market rates
+            </p>
           </Link>
         </div>
       </Section>

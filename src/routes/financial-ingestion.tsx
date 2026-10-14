@@ -240,7 +240,11 @@ function Page() {
         direction: "out",
         source: "Statutory charge",
         party: c.authority || "Authority",
-        detail: [CHARGE_LABELS[String(c.category)] ?? String(c.category), c.description, String(c.status)]
+        detail: [
+          CHARGE_LABELS[String(c.category)] ?? String(c.category),
+          c.description,
+          String(c.status),
+        ]
           .filter(Boolean)
           .join(" · "),
         amount: num(c.amount),
@@ -254,7 +258,8 @@ function Page() {
   const filtered = txns.filter((t) => {
     if (filter === "in" && t.direction !== "in") return false;
     if (filter === "out" && t.direction !== "out") return false;
-    if (filter !== "all" && filter !== "in" && filter !== "out" && t.source !== filter) return false;
+    if (filter !== "all" && filter !== "in" && filter !== "out" && t.source !== filter)
+      return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return [t.party, t.detail, t.reference, t.mode, String(t.amount)].some((v) =>
@@ -307,8 +312,7 @@ function Page() {
     setStatus(`Exported ${filtered.length} rows.`);
   };
 
-  const loading =
-    paymentsQuery.isPending || capitalQuery.isPending || chargesQuery.isPending;
+  const loading = paymentsQuery.isPending || capitalQuery.isPending || chargesQuery.isPending;
   const files = filesQuery.data ?? [];
 
   return (
@@ -375,7 +379,6 @@ function Page() {
           ))}
         </div>
 
-
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="text-lg font-bold text-foreground">Upload financial documents</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -424,7 +427,7 @@ function Page() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-foreground">{f.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {fmtSize(Number(f.metadata?.['size'] ?? 0))} ·{" "}
+                      {fmtSize(Number(f.metadata?.["size"] ?? 0))} ·{" "}
                       {f.created_at ? new Date(f.created_at).toLocaleString("en-IN") : "—"}
                     </p>
                   </div>
@@ -504,8 +507,8 @@ function Page() {
                 ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                      Nothing recorded yet for this project. Add owner funds in Capital Ledger, bills
-                      in Bills & Payments or charges in Common & Statutory Expenses.
+                      Nothing recorded yet for this project. Add owner funds in Capital Ledger,
+                      bills in Bills & Payments or charges in Common & Statutory Expenses.
                     </td>
                   </tr>
                 ) : (

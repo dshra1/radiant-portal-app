@@ -174,13 +174,12 @@ const STORAGE_KEY = "saha.boq.approvalMode";
 
 /**
  * Approval gate: when on, cost-affecting BOQ edits become requests instead of
- * direct writes. Only Admin / PM can decide on requests or switch the gate off.
+ * direct writes. Only an admin can decide on requests or switch the gate off.
  */
 export function useApprovalGate() {
   const { access } = useAccess();
-  const canDecide = Boolean(
-    access?.roles.includes("admin") || access?.roles.includes("pm"),
-  );
+  // BOQ rate / quantity changes are approved by an admin (review notes, 14 Oct).
+  const canDecide = Boolean(access?.roles.includes("admin"));
   const [approvalMode, setMode] = useState(false);
 
   useEffect(() => {

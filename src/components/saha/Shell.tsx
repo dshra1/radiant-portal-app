@@ -39,7 +39,6 @@ import { navForRole, roles, type NavItem } from "@/components/saha/nav";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { SAMPLE_DATA_ROUTES } from "@/components/saha/sample-data";
 
-
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { NotificationBell } from "@/components/saha/NotificationBell";
@@ -67,11 +66,11 @@ function SignOutButton() {
 
 const mobileNav: NavItem[] = [
   { to: "/", label: "Hub", icon: Home },
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/site-today", label: "Site Today", icon: LayoutDashboard },
   { to: "/projects", label: "Projects", icon: Building2 },
-  { to: "/boq", label: "BOQ", icon: Calculator },
+  { to: "/boq-engine", label: "BOQ", icon: Calculator },
   { to: "/pour-cards", label: "Pours", icon: ClipboardCheck },
-  { to: "/qa", label: "QA", icon: ScanEye },
+  { to: "/qa-inspection", label: "QA", icon: ScanEye },
 ];
 
 const groupTones: Record<string, string> = {
@@ -127,9 +126,9 @@ export function Shell({
 
   const groups = useMemo(() => navForRole(role, isAdmin), [role, isAdmin]);
 
-
   const activeGroup = useMemo(
-    () => groups.find((g) => g.items.some((i) => i.to === pathname))?.id ?? groups[0]?.id ?? "planning",
+    () =>
+      groups.find((g) => g.items.some((i) => i.to === pathname))?.id ?? groups[0]?.id ?? "planning",
     [groups, pathname],
   );
   const [open, setOpen] = useState<Record<string, boolean>>({ [activeGroup]: true });
@@ -195,7 +194,6 @@ export function Shell({
     refetchOnWindowFocus: true,
   });
   const current = projects[0];
-
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -337,7 +335,6 @@ export function Shell({
 
           <SignOutButton />
 
-
           <div className="relative hidden min-w-0 sm:block">
             <button
               type="button"
@@ -392,7 +389,9 @@ export function Shell({
                             {p.location}
                           </span>
                         </span>
-                        <span className="label-caps shrink-0 text-muted-foreground">{p.health}</span>
+                        <span className="label-caps shrink-0 text-muted-foreground">
+                          {p.health}
+                        </span>
                       </Link>
                     </li>
                   ))}
@@ -492,7 +491,9 @@ export function Shell({
         <div className="border-b border-border bg-gradient-to-b from-primary-soft/50 to-card px-4 pb-5 pt-4 md:px-6">
           <div className="mx-auto flex w-full max-w-none flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="display-title truncate text-2xl text-foreground sm:text-3xl">{title}</h1>
+              <h1 className="display-title truncate text-2xl text-foreground sm:text-3xl">
+                {title}
+              </h1>
               {subtitle && <p className="mt-0.5 text-[13px] text-muted-foreground">{subtitle}</p>}
             </div>
             {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -507,15 +508,14 @@ export function Shell({
                 <p>
                   <span className="font-bold uppercase tracking-wide">Sample data</span> — the{" "}
                   {SAMPLE_DATA_ROUTES[pathname]} shown here are illustrative placeholders, not your
-                  project&apos;s numbers. Live screens today: Project Details, Project Setup, BOQ Engine,
-                  Command Center, Notifications and Chat.
+                  project&apos;s numbers. Live screens today: Project Details, Project Setup, BOQ
+                  Engine, Command Center, Notifications and Chat.
                 </p>
               </div>
             )}
             {children}
           </div>
         </main>
-
 
         <Link
           to="/ai"

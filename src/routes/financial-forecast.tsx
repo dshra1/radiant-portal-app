@@ -2,14 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  TrendingUp,
-  Wallet,
-  Landmark,
-  AlertTriangle,
-  CalendarClock,
-  FileDown,
-} from "lucide-react";
+import { TrendingUp, Wallet, Landmark, AlertTriangle, CalendarClock, FileDown } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
@@ -57,7 +50,20 @@ function monthKey(d: string): string {
 function monthLabel(key: string): string {
   if (!key) return "—";
   const [y, m] = key.split("-");
-  const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const names = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return `${names[Number(m) - 1] ?? "?"} ${String(y).slice(2)}`;
 }
 function esc(v: string) {
@@ -216,7 +222,8 @@ function Page() {
       keys.add(k);
       const t = String(c.entry_type).toLowerCase();
       if (t === "deposit" || t === "receipt") inMap.set(k, (inMap.get(k) ?? 0) + num(c.amount));
-      else if (t === "withdrawal" || t === "refund") outMap.set(k, (outMap.get(k) ?? 0) + num(c.amount));
+      else if (t === "withdrawal" || t === "refund")
+        outMap.set(k, (outMap.get(k) ?? 0) + num(c.amount));
     }
     for (const p of payments.data ?? []) {
       const k = monthKey(String(p.payment_date ?? ""));
@@ -238,15 +245,11 @@ function Page() {
 
     const burnMonths = months.filter((x) => x.outflow > 0);
     const monthlyBurn =
-      burnMonths.length > 0
-        ? burnMonths.reduce((s, x) => s + x.outflow, 0) / burnMonths.length
-        : 0;
+      burnMonths.length > 0 ? burnMonths.reduce((s, x) => s + x.outflow, 0) / burnMonths.length : 0;
     const runwayMonths = monthlyBurn > 0 ? fundsInHand / monthlyBurn : 0;
     const monthsToComplete = monthlyBurn > 0 ? costToComplete / monthlyBurn : 0;
     const projectedFinish =
-      monthlyBurn > 0
-        ? new Date(Date.now() + monthsToComplete * 30.4 * 86400000)
-        : null;
+      monthlyBurn > 0 ? new Date(Date.now() + monthsToComplete * 30.4 * 86400000) : null;
     const targetHandover = projectRow.data?.target_handover_date
       ? new Date(String(projectRow.data.target_handover_date))
       : null;
@@ -283,7 +286,15 @@ function Page() {
       targetHandover,
       dueSoon,
     };
-  }, [boq.data, bills.data, payments.data, capital.data, charges.data, projectRow.data, contingencyPct]);
+  }, [
+    boq.data,
+    bills.data,
+    payments.data,
+    capital.data,
+    charges.data,
+    projectRow.data,
+    contingencyPct,
+  ]);
 
   const maxBar = Math.max(1, ...m.months.map((x) => Math.max(x.inflow, x.outflow)));
 
@@ -402,7 +413,6 @@ function Page() {
                 tone={gapCritical ? "bad" : "good"}
                 to="/cost-dashboard"
               />
-
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -436,12 +446,16 @@ function Page() {
                           <div
                             title={`In ${inrFull(x.inflow)}`}
                             className="w-1/2 rounded-t bg-primary"
-                            style={{ height: `${Math.max((x.inflow / maxBar) * 100, x.inflow > 0 ? 4 : 0)}%` }}
+                            style={{
+                              height: `${Math.max((x.inflow / maxBar) * 100, x.inflow > 0 ? 4 : 0)}%`,
+                            }}
                           />
                           <div
                             title={`Out ${inrFull(x.outflow)}`}
                             className="w-1/2 rounded-t bg-destructive"
-                            style={{ height: `${Math.max((x.outflow / maxBar) * 100, x.outflow > 0 ? 4 : 0)}%` }}
+                            style={{
+                              height: `${Math.max((x.outflow / maxBar) * 100, x.outflow > 0 ? 4 : 0)}%`,
+                            }}
                           />
                         </div>
                         <span className="text-xs text-muted-foreground">{monthLabel(x.key)}</span>
@@ -453,7 +467,10 @@ function Page() {
 
               <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
                 <h2 className="text-lg font-semibold text-foreground">Runway & timeline</h2>
-                <Row label="Average monthly spend" value={m.monthlyBurn > 0 ? inr(m.monthlyBurn) : "—"} />
+                <Row
+                  label="Average monthly spend"
+                  value={m.monthlyBurn > 0 ? inr(m.monthlyBurn) : "—"}
+                />
                 <Row
                   label="Cash runway"
                   value={
@@ -504,7 +521,9 @@ function Page() {
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                <h2 className="mb-3 text-lg font-semibold text-foreground">Where the forecast comes from</h2>
+                <h2 className="mb-3 text-lg font-semibold text-foreground">
+                  Where the forecast comes from
+                </h2>
                 <div className="flex flex-col gap-2 text-sm">
                   <Row label="BOQ estimated cost" value={inrFull(m.boqTotal)} />
                   <Row label={`Contingency @ ${contingencyPct}%`} value={inrFull(m.contingency)} />
@@ -516,13 +535,22 @@ function Page() {
                   <Row label="Owner funding received" value={inrFull(m.inflow)} />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2 text-sm">
-                  <Link to="/bills-payments" className="rounded-lg border border-border px-3 py-1.5">
+                  <Link
+                    to="/bills-payments"
+                    className="rounded-lg border border-border px-3 py-1.5"
+                  >
                     Bills & payments
                   </Link>
-                  <Link to="/capital-ledger" className="rounded-lg border border-border px-3 py-1.5">
+                  <Link
+                    to="/capital-ledger"
+                    className="rounded-lg border border-border px-3 py-1.5"
+                  >
                     Capital ledger
                   </Link>
-                  <Link to="/common-expenses" className="rounded-lg border border-border px-3 py-1.5">
+                  <Link
+                    to="/common-expenses"
+                    className="rounded-lg border border-border px-3 py-1.5"
+                  >
                     Common expenses
                   </Link>
                 </div>
@@ -551,7 +579,9 @@ function Page() {
                             <td className="py-2 pr-3 font-medium text-foreground">
                               {b.bill_number || "—"}
                             </td>
-                            <td className="py-2 pr-3 text-muted-foreground">{b.vendor_name || "—"}</td>
+                            <td className="py-2 pr-3 text-muted-foreground">
+                              {b.vendor_name || "—"}
+                            </td>
                             <td className="py-2 pr-3 text-muted-foreground">{b.due_date || "—"}</td>
                             <td className="py-2 text-right font-semibold text-foreground">
                               {inrFull(b.outstanding)}
@@ -612,16 +642,7 @@ function Kpi({
   return <div className={cls}>{body}</div>;
 }
 
-
-function Row({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "good" | "bad";
-}) {
+function Row({ label, value, tone }: { label: string; value: string; tone?: "good" | "bad" }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-1.5 text-sm last:border-0">
       <span className="text-muted-foreground">{label}</span>
