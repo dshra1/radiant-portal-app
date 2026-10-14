@@ -99,13 +99,37 @@ export function Shell({
   subtitle,
   actions,
   children,
+  bare = false,
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   children: ReactNode;
+  /** No title block or page padding: the page fills the screen under the header (manual). */
+  bare?: boolean;
 }) {
   const [expanded, setExpanded] = useState(true);
+  // Tablets and small laptops start with the icon sidebar so pages get the width;
+  // the person's own choice is remembered.
+  useEffect(() => {
+    let saved: string | null = null;
+    try {
+      saved = window.localStorage.getItem("saha-sidebar");
+    } catch {
+      /* storage blocked */
+    }
+    if (saved === "open") setExpanded(true);
+    else if (saved === "closed" || window.innerWidth < 1280) setExpanded(false);
+  }, []);
+  const toggleSidebar = () =>
+    setExpanded((v) => {
+      try {
+        window.localStorage.setItem("saha-sidebar", v ? "closed" : "open");
+      } catch {
+        /* storage blocked */
+      }
+      return !v;
+    });
   const { access } = useAccess();
   const user = useSessionUser();
   const isAdmin = access?.isAdmin ?? false;
@@ -323,7 +347,7 @@ export function Shell({
             </>
           )}
           <button
-            onClick={() => setExpanded((v) => !v)}
+            onClick={toggleSidebar}
             className="flex w-full items-center gap-3 rounded px-3 py-2 text-[13px] font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
           >
             {expanded ? <PanelLeftClose className="size-4" /> : <PanelLeft className="size-4" />}
@@ -583,21 +607,27 @@ export function Shell({
           </nav>
         )}
 
-        <div className="border-b border-border bg-gradient-to-b from-primary-soft/50 to-card px-4 pb-5 pt-4 md:px-6">
-          <div className="mx-auto flex w-full max-w-none flex-wrap items-end justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="display-title truncate text-2xl text-foreground sm:text-3xl">
-                {title}
-              </h1>
-              {subtitle && <p className="mt-0.5 text-[13px] text-muted-foreground">{subtitle}</p>}
+        {!bare && (
+          <div className="border-b border-border bg-gradient-to-b from-primary-soft/50 to-card px-4 pb-5 pt-4 md:px-6">
+            <div className="mx-auto flex w-full max-w-none flex-wrap items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="display-title truncate text-2xl text-foreground sm:text-3xl">
+                  {title}
+                </h1>
+                {subtitle && <p className="mt-0.5 text-[13px] text-muted-foreground">{subtitle}</p>}
+              </div>
+              {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
             </div>
-            {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
           </div>
-        </div>
+        )}
 
-        <main className="flex-1 p-4 md:p-6">
-          <div className="mx-auto w-full max-w-none">{children}</div>
-        </main>
+        {bare ? (
+          <main className="flex-1">{children}</main>
+        ) : (
+          <main className="flex-1 p-4 md:p-6">
+            <div className="mx-auto w-full max-w-none">{children}</div>
+          </main>
+        )}
 
         <Link
           to="/ai"
@@ -608,7 +638,7 @@ export function Shell({
           <span className="hidden sm:inline">Saha AI Assistant</span>
         </Link>
 
-        <nav className="sticky bottom-0 z-20 flex h-16 w-full items-center justify-around border-t border-border bg-card px-2 md:hidden">
+        <nav className="sticky bottom-0 z-20 flex min-h-16 w-full items-center justify-around border-t border-border bg-card px-2 pb-[env(safe-area-inset-bottom)] md:hidden">
           {mobileNav.map((item) => {
             const active = pathname === item.to;
             return (

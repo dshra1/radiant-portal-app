@@ -434,7 +434,7 @@ function Page() {
                 const li = liabilityOf(o.name);
                 return (
                   <div key={i} className="p-4 space-y-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700">
                         {initials(String(o.name ?? ""))}
                       </div>
@@ -443,7 +443,7 @@ function Page() {
                         onChange={(e) => update(i, { name: e.target.value })}
                         disabled={!canEdit}
                         placeholder="Owner name"
-                        className="flex-1 rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2 text-sm font-semibold text-slate-900"
+                        className="min-w-0 flex-1 basis-40 rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2 text-sm font-semibold text-slate-900"
                       />
                       <select
                         value={String(o.role ?? "Land Holder")}

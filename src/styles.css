@@ -465,12 +465,16 @@
   .w-64, .w-72, .w-80, .w-96 { max-width: 100% !important; min-width: 0 !important; }
 
   /* Wide tables scroll horizontally instead of pushing the page */
-  table { display: block !important; overflow-x: auto !important; max-width: 100% !important; white-space: nowrap; }
-  table > thead, table > tbody, table > tfoot { display: table; width: max-content; min-width: 100%; }
+  /* display:block makes the browser wrap thead / tbody in ONE anonymous table, so
+     header and body columns stay aligned while the table scrolls sideways. */
+  table { display: block !important; overflow-x: auto !important; max-width: 100% !important; white-space: nowrap; overscroll-behavior-x: contain; }
 
   /* Any long flex row can wrap and its text can truncate */
   [class*="flex-row"] { flex-wrap: wrap !important; }
   [class*="overflow-x-auto"] { -webkit-overflow-scrolling: touch; }
+
+  /* iPhone zooms in on any field under 16px and stays zoomed: keep fields at 16px */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px !important; }
 
   /* Type scale trim so headlines fit 360px */
   [class*="text-display"], [class*="text-headline-lg"] { font-size: 1.6rem !important; line-height: 1.2 !important; }

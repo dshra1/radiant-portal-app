@@ -1240,7 +1240,7 @@ function Projects() {
                 <div className="mt-3">
                   <p className="label-caps mb-1.5 text-muted-foreground">Phase progress</p>
                   <PhaseBar phases={phases} />
-                  <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground">
+                  <div className="mt-1.5 flex flex-wrap justify-between gap-x-2 text-[10px] text-muted-foreground">
                     {phases.map((ph) => (
                       <span key={ph.name}>{ph.name}</span>
                     ))}

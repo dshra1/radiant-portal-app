@@ -511,7 +511,7 @@ function Page() {
           ))}
         </div>
 
-        <div className="flex flex-col md:flex-row gap-3 md:items-center">
+        <div className="flex flex-col md:flex-row md:flex-wrap gap-3 md:items-center">
           <div className="flex rounded-lg border border-border overflow-hidden text-sm font-semibold">
             <button
               onClick={() => setTab("stock")}
@@ -530,13 +530,13 @@ function Page() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search item, code, vendor, GRN…"
-            className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm"
+            className="min-w-0 flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm"
           />
           {tab === "stock" && (
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-border bg-background text-sm"
+              className="min-w-0 max-w-full px-3 py-2 rounded-lg border border-border bg-background text-sm md:max-w-xs"
             >
               <option value="all">All categories</option>
               {categories.map((c) => (
