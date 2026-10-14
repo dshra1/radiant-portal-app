@@ -101,7 +101,9 @@ function Index() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
-        .select("id,name,location,target_budget,spend,total_staff,health,total_built_up_sft")
+        .select(
+          "id,name,location,target_budget,spend,total_staff,health,total_built_up_sft,saleable_sft,estimate_amount",
+        )
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data ?? [];
@@ -260,7 +262,7 @@ function Index() {
                           onClick={() => {
                             setActiveProject(p.id);
                             setProjectMenuOpen(false);
-                            void navigate({ to: "/dashboard" });
+                            void navigate({ to: "/site-execution" });
                           }}
                           className={cn(
                             "flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left hover:bg-secondary",
@@ -332,9 +334,9 @@ function Index() {
                   type="button"
                   onClick={() => {
                     setActiveProject(p.id);
-                    void navigate({ to: "/dashboard" });
+                    void navigate({ to: "/site-execution" });
                   }}
-                  title={`Open ${p.name} dashboard`}
+                  title={`Open ${p.name} programme`}
                   className={cn(
                     "group block w-full cursor-pointer rounded-2xl border bg-gradient-to-br from-primary/10 to-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40",
                     isActive ? "border-primary/40" : "border-border",
@@ -362,10 +364,15 @@ function Index() {
 
                   <div className="mt-4 grid grid-cols-3 gap-3">
                     <MiniMetric
-                      label="Built-up"
-                      value={`${num(Number(p.total_built_up_sft ?? 0))} sft`}
+                      label={Number(p.saleable_sft ?? 0) ? "Saleable" : "Built-up"}
+                      value={`${num(Number(p.saleable_sft || p.total_built_up_sft || 0))} sft`}
                     />
-                    <MiniMetric label="Staff" value={num(Number(p.total_staff ?? 0))} />
+                    <MiniMetric
+                      label="Estimate"
+                      value={
+                        Number(p.estimate_amount ?? 0) ? inrCompact(Number(p.estimate_amount)) : "—"
+                      }
+                    />
                     <MiniMetric
                       label={isActive ? "POs Pending" : "BOQ Items"}
                       value={
@@ -378,7 +385,12 @@ function Index() {
 
                   <div className="mt-4">
                     <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Budget consumed</span>
+                      <span className="text-muted-foreground">
+                        Spent of budget
+                        {Number(p.estimate_amount ?? 0) > budget && budget > 0
+                          ? ` · estimate ${Math.round(((Number(p.estimate_amount) - budget) / budget) * 100)}% over`
+                          : ""}
+                      </span>
                       <span className="font-semibold">
                         {inrCompact(spend)} / {inrCompact(budget)}
                       </span>

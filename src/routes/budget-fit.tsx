@@ -9,6 +9,7 @@ import { suggestBudgetFit, type BudgetSwap } from "@/lib/budget.functions";
 import { raiseChangeRequest, useApprovalGate } from "@/lib/approvals";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
+import { boqTotals } from "@/lib/boq-totals";
 
 export const Route = createFileRoute("/budget-fit")({
   head: () => ({
@@ -58,7 +59,7 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
-        .select("id,name,location,target_budget,total_built_up_sft")
+        .select("id,name,location,target_budget,total_built_up_sft,saleable_sft,contingency_pct")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -77,19 +78,26 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("boq_items")
-        .select("id,quantity,rate")
+        .select("id,quantity,rate,gst_pct,item_code,package,package_no,work_scope")
         .eq("project_id", activeId);
       if (error) throw error;
       return data ?? [];
     },
   });
 
+  // The report's project cost: BOQ incl. GST at each line's rate + contingency (budget is incl. GST).
   const liveTotal = useMemo(
-    () => (boqQuery.data ?? []).reduce((s, r) => s + toNum(r.quantity) * toNum(r.rate), 0),
-    [boqQuery.data],
+    () =>
+      boqTotals(
+        boqQuery.data ?? [],
+        project?.contingency_pct === undefined || project?.contingency_pct === null
+          ? 5
+          : toNum(project.contingency_pct),
+      ).project.incl,
+    [boqQuery.data, project?.contingency_pct],
   );
   const budget = toNum(project?.target_budget);
-  const sft = toNum(project?.total_built_up_sft);
+  const sft = toNum(project?.saleable_sft) || toNum(project?.total_built_up_sft);
   const gap = budget > 0 ? liveTotal - budget : 0;
 
   const [swaps, setSwaps] = useState<BudgetSwap[]>([]);
@@ -197,7 +205,10 @@ function Page() {
           <select
             value={activeId}
             onChange={(e) => {
-              (setProjectId(e.target.value), setGlobalProject(e.target.value));
+              {
+                setProjectId(e.target.value);
+                setGlobalProject(e.target.value);
+              }
               setSwaps([]);
               setPicked([]);
               setStatus("");

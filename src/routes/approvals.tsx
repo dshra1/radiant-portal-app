@@ -136,7 +136,10 @@ function Page() {
           <select
             value={activeId}
             onChange={(e) => {
-              (setProjectId(e.target.value), setGlobalProject(e.target.value));
+              {
+                setProjectId(e.target.value);
+                setGlobalProject(e.target.value);
+              }
               setStatus("");
             }}
             className="min-w-[220px] rounded-xl border border-border bg-background px-3 py-2 text-sm"

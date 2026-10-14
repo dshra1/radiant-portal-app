@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Shell } from "@/components/saha/Shell";
@@ -9,6 +9,7 @@ import { inrCompact } from "@/data/saha";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { ProgrammeFlow } from "@/components/saha/ProgrammeFlow";
+import { useSiteWeek } from "@/lib/site-week";
 
 export const Route = createFileRoute("/projects-setup")({
   head: () => ({
@@ -78,8 +79,23 @@ function Page() {
   const slabCount = totalFloors;
   const builtupArea = geometry.typical * geometry.slabSft;
   const castingArea = slabCount * geometry.slabSft;
-  const concreteVolume = Math.round(castingArea * 0.035);
-  const rebarWeight = Math.round((castingArea * 3) / 1000);
+  // Concrete and steel from the report (stage ledger RMC and the steel order schedule);
+  // the rules of thumb only when a project has no imported programme yet.
+  const stageWeek = useSiteWeek(project?.id ?? "");
+  const fromReport = useMemo(() => {
+    const st = stageWeek.data?.stages ?? [];
+    if (!st.length) return null;
+    let rmc = 0;
+    let steelKg = 0;
+    for (const s of st) {
+      for (const m of s.materials)
+        if (m.unit === "m³" && /rmc|ready-mix/i.test(m.material)) rmc += Number(m.qty) || 0;
+      steelKg += Number(s.steel?.totalKg ?? 0);
+    }
+    return { rmc: Math.round(rmc), steelT: Math.round(steelKg / 100) / 10 };
+  }, [stageWeek.data]);
+  const concreteVolume = fromReport?.rmc ?? Math.round(castingArea * 0.035);
+  const rebarWeight = fromReport?.steelT ?? Math.round((castingArea * 3) / 1000);
 
   const saveGeometry = async () => {
     if (!project) throw new Error("Add a project before configuring its geometry.");
@@ -802,14 +818,15 @@ function Page() {
 
                       <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
                         <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                          Concrete Volume (M25)
+                          RMC (from the report)
                         </span>
                         <div className="flex items-baseline gap-space-xs mt-space-2xs">
                           <span
                             className="font-tabular-metric text-tabular-metric text-tertiary"
                             id="metricConcreteVol"
                           >
-                            ~{concreteVolume}
+                            {fromReport ? "" : "~"}
+                            {concreteVolume}
                           </span>
                           <span className="font-label-sm text-label-sm text-on-surface-variant">
                             CUM
@@ -822,22 +839,24 @@ function Page() {
 
                       <div className="flex flex-col p-space-sm rounded-lg bg-surface-container-lowest shadow-sm">
                         <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                          Estimated TMT Rebar
+                          TMT steel to order
                         </span>
                         <div className="flex items-baseline gap-space-xs mt-space-2xs">
                           <span
                             className="font-tabular-metric text-tabular-metric text-on-surface"
                             id="metricRebarWeight"
                           >
-                            ~{rebarWeight}
+                            {fromReport ? "" : "~"}
+                            {rebarWeight}
                           </span>
                           <span className="font-label-sm text-label-sm text-on-surface-variant">
                             MT
                           </span>
                         </div>
                         <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs truncate">
-                          @ {Number(project?.steel_ratio_kg_per_sft ?? 0).toLocaleString("en-IN")}{" "}
-                          kg/SFT · {project?.steel_grade ?? "Grade pending"}
+                          {fromReport
+                            ? `Steel order schedule, by stage and bar size · ${project?.steel_grade ?? ""}`
+                            : `Rule of thumb ${Number(project?.steel_ratio_kg_per_sft ?? 0)} kg/sft until the programme is imported`}
                         </span>
                       </div>
                     </div>

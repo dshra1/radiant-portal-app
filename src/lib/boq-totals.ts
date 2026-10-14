@@ -5,6 +5,8 @@
  * of the sub-total (on both the amount and its GST); project cost = sub-total +
  * contingency. Grouped by the report's packages and split common / individual.
  */
+import { categoryOf } from "@/lib/stage-budget";
+
 export type TotalsLine = {
   quantity: number | string | null;
   rate: number | string | null;
@@ -107,4 +109,30 @@ export function inrShort(v: number) {
   if (Math.abs(v) >= 1e7) return crore(v);
   if (Math.abs(v) >= 1e5) return lakh(v);
   return `₹${Math.round(v).toLocaleString("en-IN")}`;
+}
+
+/**
+ * The report's cost split for the money pages: material, machinery, labour and misc
+ * (each incl. GST), the sub-total, the contingency and the project cost.
+ */
+export function reportCost(
+  lines: (TotalsLine & { description?: string | null; line_group?: string | null })[],
+  contingencyPct = 5,
+) {
+  const t = boqTotals(lines, contingencyPct);
+  const split = { material: 0, machinery: 0, labour: 0, misc: 0 };
+  for (const l of lines) {
+    if (l.item_code === "CONT") continue;
+    const cat = categoryOf({
+      item_code: l.item_code ?? "",
+      description: l.description ?? "",
+      package_no: Number(l.package_no ?? 0),
+      line_group: l.line_group ?? "",
+      quantity: Number(l.quantity ?? 0),
+      rate: Number(l.rate ?? 0),
+      gst_pct: Number(gstPctOf(l)),
+    });
+    split[cat] += lineAmounts(l).incl;
+  }
+  return { ...split, totals: t };
 }

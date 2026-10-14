@@ -8,6 +8,7 @@ import { LABOUR_SECTION } from "@/lib/boq.functions";
 import { useChangeRequests, num } from "@/lib/approvals";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
+import { reportCost } from "@/lib/boq-totals";
 
 export const Route = createFileRoute("/cost-dashboard")({
   head: () => ({
@@ -51,7 +52,9 @@ function Page() {
       const { data, error } = await supabase
 
         .from("site_projects")
-        .select("id,name,location,target_budget,total_built_up_sft,spend,pmc_scope")
+        .select(
+          "id,name,location,target_budget,total_built_up_sft,saleable_sft,contingency_pct,spend,pmc_scope",
+        )
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -71,7 +74,9 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("boq_items")
-        .select("id,stage,quantity,rate")
+        .select(
+          "id,stage,quantity,rate,gst_pct,item_code,description,package,package_no,line_group,work_scope",
+        )
         .eq("project_id", activeId);
       if (error) throw error;
       return data ?? [];
@@ -131,20 +136,20 @@ function Page() {
   const pending = useChangeRequests(activeId, "pending");
 
   const rows = boqQuery.data ?? [];
-  const material = useMemo(
+  // The report's split (incl. GST): material + machinery + misc, and labour; contingency on top.
+  const report = useMemo(
     () =>
-      rows
-        .filter((r) => r.stage !== LABOUR_SECTION)
-        .reduce((s, r) => s + num(r.quantity) * num(r.rate), 0),
-    [rows],
+      reportCost(
+        rows,
+        project?.contingency_pct === undefined || project?.contingency_pct === null
+          ? 5
+          : num(project.contingency_pct),
+      ),
+    [rows, project?.contingency_pct],
   );
-  const labour = useMemo(
-    () =>
-      rows
-        .filter((r) => r.stage === LABOUR_SECTION)
-        .reduce((s, r) => s + num(r.quantity) * num(r.rate), 0),
-    [rows],
-  );
+  const material = report.material + report.machinery + report.misc;
+  const labour = report.labour;
+  const contingency = report.totals.contingency.incl;
 
   const scope = (project?.pmc_scope ?? {}) as SavedScope;
   const feePct = num(scope.feePct) || 3;
@@ -184,8 +189,9 @@ function Page() {
   const pendingSaving = (pending.data ?? []).reduce((s, r) => s + num(r.saving), 0);
 
   const budget = num(project?.target_budget);
-  const sft = num(project?.total_built_up_sft);
-  const projectCost = material + labour + pmcFee + statutory;
+  const sft = num(project?.saleable_sft) || num(project?.total_built_up_sft);
+  // Statutory charges are inside the BOQ's approvals package: shown, not added again.
+  const projectCost = material + labour + contingency + pmcFee;
   const remaining = budget - projectCost;
   const remainingAfterPending = budget - (projectCost - pendingSaving);
 
@@ -197,14 +203,14 @@ function Page() {
     tone: string;
   }> = [
     {
-      label: "Material BOQ",
+      label: "Material, machinery & misc (incl. GST)",
       value: crore(material),
       sub: sft > 0 ? `${(material / sft).toFixed(0)} /sft` : "—",
       icon: PieChart,
       tone: "border-sky-500/40 bg-sky-500/5",
     },
     {
-      label: "Labour contracts",
+      label: "Labour (incl. GST)",
       value: crore(labour),
       sub: sft > 0 ? `${(labour / sft).toFixed(0)} /sft` : "—",
       icon: HardHat,
@@ -218,9 +224,9 @@ function Page() {
       tone: "border-violet-500/40 bg-violet-500/5",
     },
     {
-      label: "Common & statutory charges",
-      value: crore(statutory),
-      sub: "Permissions, LRS, HMWSSB, electricity, architect",
+      label: "Contingency",
+      value: crore(contingency),
+      sub: `Statutory charges paid so far ${crore(statutory)} (inside the BOQ approvals package)`,
       icon: Landmark,
       tone: "border-rose-500/40 bg-rose-500/5",
     },
@@ -263,7 +269,10 @@ function Page() {
           </span>
           <select
             value={activeId}
-            onChange={(e) => (setProjectId(e.target.value), setGlobalProject(e.target.value))}
+            onChange={(e) => {
+              setProjectId(e.target.value);
+              setGlobalProject(e.target.value);
+            }}
             className="min-w-[220px] rounded-xl border border-border bg-background px-3 py-2 text-sm"
           >
             {projects.map((p) => (

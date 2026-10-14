@@ -34,20 +34,92 @@ async function buildLiveContext(accessToken: string) {
     sb
       .from("site_projects")
       .select(
-        "name,location,type,health,target_budget,spend,total_built_up_sft,total_slab_sft,phases",
+        "id,name,location,type,health,target_budget,estimate_amount,saleable_sft,contingency_pct,spend,total_built_up_sft,total_slab_sft,single_floor_slab_sft,concrete_grade,steel_grade,start_date,target_handover_date,brand_preferences,landowners",
       )
       .limit(30),
-    sb.from("notifications").select("*").limit(25),
-    sb.from("team_messages").select("channel,author_name,author_role,body").limit(30),
+    sb
+      .from("notifications")
+      .select("title,body,category,created_at")
+      .order("created_at", { ascending: false })
+      .limit(25),
+    sb
+      .from("team_messages")
+      .select("channel,author_name,author_role,body")
+      .order("created_at", { ascending: false })
+      .limit(30),
   ]);
-
   for (const r of [projects, notifications, messages]) {
     if (r.error) console.error("saha ai context read failed:", r.error.message);
+  }
+
+  // The PMC report for each project: BOQ by package, programme stages, stock and tenders.
+  const reports: string[] = [];
+  for (const p of (projects.data ?? []).slice(0, 3)) {
+    const [boq, stages, stock, rfqs] = await Promise.all([
+      sb
+        .from("boq_items")
+        .select("package,package_no,item_code,quantity,rate,gst_pct,work_scope")
+        .eq("project_id", p.id),
+      sb
+        .from("site_stages")
+        .select(
+          "code,name,stage_group,floor,planned_start,planned_end,actual_pct,hold_point,closed_at",
+        )
+        .eq("project_id", p.id)
+        .neq("code", "")
+        .order("sort"),
+      sb
+        .from("stock_items")
+        .select("description,unit,reorder_level,order_by")
+        .eq("project_id", p.id)
+        .limit(400),
+      sb.from("rfqs").select("title,status").eq("project_id", p.id).limit(60),
+    ]);
+    const pk = new Map<string, { excl: number; incl: number; lines: number }>();
+    let excl = 0;
+    let incl = 0;
+    for (const l of boq.data ?? []) {
+      if (l.item_code === "CONT") continue;
+      const e = Number(l.quantity) * Number(l.rate);
+      const i = e * (1 + (l.gst_pct === null ? 18 : Number(l.gst_pct)) / 100);
+      excl += e;
+      incl += i;
+      const k = `${l.package_no} ${l.package || "Other"}`;
+      const t = pk.get(k) ?? { excl: 0, incl: 0, lines: 0 };
+      t.excl += e;
+      t.incl += i;
+      t.lines++;
+      pk.set(k, t);
+    }
+    const cont = Number(p.contingency_pct ?? 5) / 100;
+    const today = new Date().toISOString().slice(0, 10);
+    const st = stages.data ?? [];
+    const onNow = st.filter(
+      (s) => !s.closed_at && (s.planned_start ?? "") <= today && (s.planned_end ?? "") >= today,
+    );
+    const next = st.filter((s) => !s.closed_at && (s.planned_start ?? "") > today).slice(0, 8);
+    reports.push(
+      [
+        `PMC REPORT FOR ${p.name} (the report is final and is the reference; use these figures, not rules of thumb):`,
+        `BOQ: excl. GST Rs ${Math.round(excl)}, incl. GST Rs ${Math.round(incl)}, + ${Math.round(cont * 100)}% contingency = project cost Rs ${Math.round(incl * (1 + cont))}; budget Rs ${p.target_budget}; saleable ${p.saleable_sft} sft.`,
+        `packages = ${JSON.stringify([...pk.entries()].map(([k, v]) => ({ package: k, excl: Math.round(v.excl), incl: Math.round(v.incl), lines: v.lines })))}`,
+        `programme: ${st.length} stages, start ${p.start_date}, handover ${p.target_handover_date}. On now: ${JSON.stringify(onNow.map((s) => `${s.code} ${s.name} ${s.actual_pct}%`))}. Next: ${JSON.stringify(next.map((s) => `${s.code} ${s.name} from ${s.planned_start}`))}`,
+        `stage_groups = ${JSON.stringify([...new Set(st.map((s) => s.stage_group))])}`,
+        `stock (material, unit, order-by) = ${JSON.stringify(
+          (stock.data ?? [])
+            .filter((x) => x.order_by)
+            .slice(0, 120)
+            .map((x) => [x.description, x.unit, x.order_by]),
+        )}`,
+        `tenders = ${JSON.stringify((rfqs.data ?? []).map((r) => `${r.title} (${r.status})`))}`,
+      ].join("\n"),
+    );
   }
 
   return [
     "LIVE APP DATA (JSON, read-only snapshot):",
     `projects = ${JSON.stringify(projects.data ?? [])}`,
+    ...reports,
     `notifications = ${JSON.stringify(notifications.data ?? [])}`,
     `recent_team_chat = ${JSON.stringify(messages.data ?? [])}`,
   ].join("\n\n");
@@ -76,7 +148,9 @@ export const Route = createFileRoute("/api/chat")({
             },
           },
         );
-        const profileRows = profileRes.ok ? ((await profileRes.json()) as { status?: string }[]) : [];
+        const profileRows = profileRes.ok
+          ? ((await profileRes.json()) as { status?: string }[])
+          : [];
         if (profileRows[0]?.status !== "approved")
           return new Response("Your account is waiting for approval by an admin", { status: 403 });
 

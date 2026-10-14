@@ -48,7 +48,6 @@ export const navGroups: NavGroup[] = [
     label: "Main · Planning & Master Database",
     items: [
       { to: "/", label: "Saha OS Hub", icon: Home },
-      { to: "/dashboard", label: "Command Dashboard", icon: LayoutDashboard },
       { to: "/messages", label: "Team Chat", icon: MessagesSquare },
       { to: "/ai", label: "Saha AI Assistant", icon: Bot },
       { to: "/notifications", label: "Action Centre", icon: BellRing },

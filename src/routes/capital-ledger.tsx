@@ -342,7 +342,10 @@ function Page() {
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={activeId}
-              onChange={(e) => (setProjectId(e.target.value), setGlobalProject(e.target.value))}
+              onChange={(e) => {
+                setProjectId(e.target.value);
+                setGlobalProject(e.target.value);
+              }}
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
             >
               {projects.length === 0 && <option value="">No projects yet</option>}

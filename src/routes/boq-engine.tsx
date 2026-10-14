@@ -113,6 +113,11 @@ const SCOPES = [
   { key: "individual", label: "Individual works" },
 ] as const;
 
+/** Report package ("01 Structure") when the line came from the PMC BOQ, else its trade. */
+function groupOf(it: { stage: string; package?: string | null; package_no?: number | null }) {
+  return it.package ? `${String(it.package_no ?? 0).padStart(2, "0")} ${it.package}` : it.stage;
+}
+
 function scopeOf(it: { work_scope?: string | null }) {
   return it.work_scope === "individual" ? "individual" : "common";
 }
@@ -757,9 +762,10 @@ function Page() {
 
   const stages = useMemo(() => {
     const map = new Map<string, number>();
-    for (const it of items) map.set(it.stage, (map.get(it.stage) ?? 0) + 1);
-    // Construction-stage order (site preparation → finishing → handover), not alphabetical.
+    for (const it of items) map.set(groupOf(it), (map.get(groupOf(it)) ?? 0) + 1);
+    // Report packages in their order (01 Structure …); older lines by construction stage.
     const rank = (name: string) => {
+      if (/^\d{2} /.test(name)) return Number(name.slice(0, 2)) - 100;
       const i = (BOQ_SECTIONS as readonly string[]).indexOf(name);
       return i === -1 ? 999 : i;
     };
@@ -769,13 +775,14 @@ function Page() {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     const rank = (name: string) => {
+      if (/^\d{2} /.test(name)) return Number(name.slice(0, 2)) - 100;
       const i = (BOQ_SECTIONS as readonly string[]).indexOf(name);
       return i === -1 ? 999 : i;
     };
     return items
       .filter(
         (it) =>
-          (stage === "ALL" || it.stage === stage) &&
+          (stage === "ALL" || groupOf(it) === stage) &&
           (workScope === "ALL" || scopeOf(it) === workScope) &&
           (q === "" ||
             `${it.description} ${it.category} ${it.brand} ${it.supplier} ${it.item_code}`
@@ -784,8 +791,8 @@ function Page() {
       )
       .sort(
         (a, b) =>
-          rank(a.stage) - rank(b.stage) ||
-          a.stage.localeCompare(b.stage) ||
+          rank(groupOf(a)) - rank(groupOf(b)) ||
+          groupOf(a).localeCompare(groupOf(b)) ||
           (a.sort_order ?? 0) - (b.sort_order ?? 0),
       );
   }, [items, stage, workScope, search]);
@@ -1248,7 +1255,7 @@ function Page() {
                       <tr className="border-t border-border align-top">
                         <td className="px-2 py-2">
                           <div className="text-[11px] font-semibold uppercase text-primary">
-                            {it.stage}
+                            {groupOf(it)}
                           </div>
                           <Cell
                             value={it.category}
@@ -1528,7 +1535,7 @@ function Page() {
           </div>
         )}
 
-        {stages.length > 0 && (
+        {stages.length > 0 && !items.some((it) => it.package) && (
           <div className="rounded-xl border border-border bg-card p-3">
             <h2 className="mb-2 text-sm font-semibold">Trade-wise estimate roll-up</h2>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

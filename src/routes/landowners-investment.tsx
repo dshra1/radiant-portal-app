@@ -325,7 +325,10 @@ function Page() {
             </p>
             <select
               value={activeId}
-              onChange={(e) => (setProjectId(e.target.value), setGlobalProject(e.target.value))}
+              onChange={(e) => {
+                setProjectId(e.target.value);
+                setGlobalProject(e.target.value);
+              }}
               className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm"
             >
               {projects.length === 0 && <option value="">No projects yet</option>}

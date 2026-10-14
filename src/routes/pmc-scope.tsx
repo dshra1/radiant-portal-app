@@ -209,7 +209,10 @@ function Page() {
           <select
             value={activeId}
             onChange={(e) => {
-              (setProjectId(e.target.value), setGlobalProject(e.target.value));
+              {
+                setProjectId(e.target.value);
+                setGlobalProject(e.target.value);
+              }
               setLoadedFor("");
               setIncluded([]);
               setStatus("");
