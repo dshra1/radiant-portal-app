@@ -44,8 +44,63 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/**
+ * Supabase relay at /sb/* on the app's own domain. Indian ISPs (Jio and others)
+ * block *.supabase.co since Feb 2026, so phones on those networks got "Failed to
+ * fetch" at sign-in. The browser talks to /sb/…; this Worker forwards to Supabase
+ * (Cloudflare reaches it fine). Auth, database, storage and signed file URLs all
+ * pass through unchanged.
+ */
+const SB_PREFIX = "/sb/";
+const SB_DEFAULT = "https://kimwplrodbviijzaoypl.supabase.co";
+
+function supabaseUpstream(env: unknown): string {
+  const fromEnv =
+    (env as { SUPABASE_URL?: string } | undefined)?.SUPABASE_URL ??
+    (typeof process !== "undefined" ? process.env?.["SUPABASE_URL"] : undefined);
+  return (fromEnv || SB_DEFAULT).replace(/\/+$/, "");
+}
+
+async function relayToSupabase(request: Request, env: unknown): Promise<Response> {
+  const url = new URL(request.url);
+  const target = supabaseUpstream(env) + url.pathname.slice(SB_PREFIX.length - 1) + url.search;
+  const headers = new Headers(request.headers);
+  headers.delete("host");
+  headers.delete("cookie");
+  const init: RequestInit & { duplex?: string } = {
+    method: request.method,
+    headers,
+    redirect: "manual",
+  };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    init.body = request.body;
+    init.duplex = "half";
+  }
+  const upstream = await fetch(target, init);
+  const out = new Headers(upstream.headers);
+  out.delete("content-encoding");
+  out.delete("content-length");
+  out.set("x-sb-relay", "1");
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: out,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    if (new URL(request.url).pathname.startsWith(SB_PREFIX)) {
+      try {
+        return await relayToSupabase(request, env);
+      } catch (error) {
+        console.error("supabase relay failed", error);
+        return new Response(JSON.stringify({ message: "Supabase relay failed" }), {
+          status: 502,
+          headers: { "content-type": "application/json", "x-sb-relay": "1" },
+        });
+      }
+    }
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

@@ -104,6 +104,10 @@ function AuthPage() {
         <div className="flex items-center gap-3">
           <img
             src={sahaLogo.url}
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (!img.src.endsWith("/app-icon-192.png")) img.src = "/app-icon-192.png";
+            }}
             alt="Saha Developers"
             className="h-11 w-11 rounded-lg bg-white object-contain p-1"
           />

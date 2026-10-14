@@ -232,6 +232,10 @@ export function Shell({
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-4">
           <img
             src={sahaLogo.url}
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (!img.src.endsWith("/app-icon-192.png")) img.src = "/app-icon-192.png";
+            }}
             alt="Saha Developers"
             className="size-8 shrink-0 rounded bg-white object-contain p-0.5"
           />

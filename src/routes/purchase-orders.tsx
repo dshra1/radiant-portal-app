@@ -305,7 +305,15 @@ function PoDocument({
       <div className="panel space-y-4 p-6 text-sm text-foreground">
         <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
           <div className="flex items-center gap-3">
-            <img src={logoAsset.url} alt="Saha Developers" className="h-12 w-auto" />
+            <img
+              src={logoAsset.url}
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (!img.src.endsWith("/app-icon-192.png")) img.src = "/app-icon-192.png";
+              }}
+              alt="Saha Developers"
+              className="h-12 w-auto"
+            />
             <div>
               <p className="text-base font-bold">{po.project_name || "Saha Developers"}</p>
               <p className="text-muted-foreground">{po.site_address}</p>

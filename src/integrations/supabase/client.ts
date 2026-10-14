@@ -7,6 +7,26 @@ function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
 }
 
+/**
+ * Safety net for the /sb relay: if a request through it fails or the relay is not
+ * there (an older deployment), the same request goes straight to Supabase.
+ */
+function withRelayFallback(base: typeof fetch, relayUrl: string | null, directUrl: string): typeof fetch {
+  if (!relayUrl) return base;
+  return async (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (!url.startsWith(relayUrl)) return base(input, init);
+    const direct = directUrl + url.slice(relayUrl.length);
+    try {
+      const res = await base(input, init);
+      if (res.headers.get('x-sb-relay') === '1') return res;
+      return base(direct, init);
+    } catch {
+      return base(direct, init);
+    }
+  };
+}
+
 function createSupabaseFetch(supabaseKey: string): typeof fetch {
   return (input, init) => {
     const headers = new Headers(
@@ -44,11 +64,23 @@ function createSupabaseClient() {
     throw new Error(message);
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  // In the browser, go through the app's own /sb relay (src/server.ts): *.supabase.co
+  // is blocked on several Indian mobile networks. Same session key as before, so
+  // people stay signed in.
+  const projectRef = new URL(SUPABASE_URL).hostname.split('.')[0];
+  const inBrowser = typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol);
+  const API_URL = inBrowser ? `${window.location.origin}/sb` : SUPABASE_URL;
+
+  return createClient<Database>(API_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: {
-      fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
+      fetch: withRelayFallback(
+        createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
+        inBrowser ? API_URL : null,
+        SUPABASE_URL.replace(/\/+$/, ''),
+      ),
     },
     auth: {
+      storageKey: `sb-${projectRef}-auth-token`,
       storage: brokeredPreviewStorage(),
       persistSession: true,
       autoRefreshToken: true,
