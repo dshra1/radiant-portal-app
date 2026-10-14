@@ -66,6 +66,8 @@ export type OrderItem = {
   orderBy: string;
   overdue: boolean;
   steel?: boolean;
+  /** PO number if a purchase order already covers this item. */
+  po?: string;
 };
 
 export type PreStartItem = { item: string; neededBy: string | null; owner: string; why: string };
@@ -105,6 +107,7 @@ export function buildWeek(
   startDate: string | null,
   handover: string | null,
   today = todayDay(),
+  ordered: Map<string, string> = new Map(),
 ): SiteWeek {
   const starts = stages.map((s) => toDay(s.plannedStart)).filter(Number.isFinite);
   const first = Number.isFinite(toDay(startDate)) ? toDay(startDate) : Math.min(...starts);
@@ -156,7 +159,16 @@ export function buildWeek(
       });
     }
   }
-  orders.sort((a, b) => toDay(a.orderBy) - toDay(b.orderBy));
+  for (const o of orders) {
+    const po = ordered.get(`${o.code}|${o.steel ? "STEEL" : o.what}`);
+    if (po) {
+      o.po = po;
+      o.overdue = false;
+    }
+  }
+  orders.sort(
+    (a, b) => Number(Boolean(a.po)) - Number(Boolean(b.po)) || toDay(a.orderBy) - toDay(b.orderBy),
+  );
 
   const holds = now.flatMap((s) =>
     s.checks
@@ -228,11 +240,34 @@ export function useSiteWeek(projectId: string) {
           closedAt: s.closed_at ?? null,
         }));
       const notes = (pr.data?.control_notes ?? {}) as { beforeStart?: PreStartItem[] };
+      // Material already on a purchase order for its stage.
+      const ordered = new Map<string, string>();
+      const pos = await supabase
+        .from("purchase_orders")
+        .select("id,po_number,status")
+        .eq("project_id", projectId)
+        .neq("stage_code", "");
+      const live = (pos.data ?? []).filter((p) => !/reject|cancel/i.test(p.status ?? ""));
+      if (live.length) {
+        const items = await supabase
+          .from("purchase_order_items")
+          .select("po_id,stage_code,material_key")
+          .in(
+            "po_id",
+            live.map((p) => p.id),
+          )
+          .neq("material_key", "");
+        const num = new Map(live.map((p) => [p.id, p.po_number]));
+        for (const it of items.data ?? [])
+          ordered.set(`${it.stage_code}|${it.material_key}`, num.get(it.po_id) ?? "PO");
+      }
       return buildWeek(
         stages,
         notes,
         pr.data?.start_date ?? null,
         pr.data?.target_handover_date ?? null,
+        todayDay(),
+        ordered,
       );
     },
   });

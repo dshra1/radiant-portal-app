@@ -46,6 +46,44 @@ export function useStageFinance(projectId: string) {
     queryKey: ["stage_finance", projectId],
     enabled: Boolean(projectId),
     queryFn: async () => {
+      const [bills, labour] = await Promise.all([
+        supabase
+          .from("bills")
+          .select("stage_code,cost_type,basic_amount,gst_amount,other_charges,status")
+          .eq("project_id", projectId)
+          .neq("stage_code", ""),
+        supabase
+          .from("labour_entries")
+          .select("stage_code,headcount,day_rate,hours")
+          .eq("project_id", projectId)
+          .neq("stage_code", ""),
+      ]);
+      // Costs already recorded against each stage (bills by cost type + the labour log).
+      const recorded = new Map<string, Money4 & { bills: number; labourDays: number }>();
+      const rec = (code: string) => {
+        let r = recorded.get(code);
+        if (!r) {
+          r = { material: 0, machinery: 0, labour: 0, misc: 0, bills: 0, labourDays: 0 };
+          recorded.set(code, r);
+        }
+        return r;
+      };
+      for (const b of bills.data ?? []) {
+        if (/reject|cancel/i.test(b.status ?? "")) continue;
+        const r = rec(b.stage_code);
+        const k = (
+          ["material", "machinery", "labour", "misc"].includes(b.cost_type)
+            ? b.cost_type
+            : "material"
+        ) as BudgetCategory;
+        r[k] += n(b.basic_amount) + n(b.gst_amount) + n(b.other_charges);
+        r.bills++;
+      }
+      for (const l of labour.data ?? []) {
+        const r = rec(l.stage_code);
+        r.labour += n(l.headcount) * n(l.day_rate) * (n(l.hours) ? n(l.hours) / 8 : 1);
+        r.labourDays += n(l.headcount);
+      }
       const [boq, st, pr, fin] = await Promise.all([
         supabase
           .from("boq_items")
@@ -99,7 +137,15 @@ export function useStageFinance(projectId: string) {
         (t, r) => t + n(r.credit_carried) - n(r.budget?.creditApplied),
         0,
       );
-      return { budget, stages, owners, finance, credit, projectName: pr.data?.name ?? "" };
+      return {
+        budget,
+        stages,
+        owners,
+        finance,
+        credit,
+        recorded,
+        projectName: pr.data?.name ?? "",
+      };
     },
   });
 }

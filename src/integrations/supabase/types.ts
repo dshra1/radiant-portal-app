@@ -129,6 +129,8 @@ export type Database = {
       }
       bills: {
         Row: {
+          stage_code: string
+          cost_type: string
           attachment_path: string
           basic_amount: number
           bill_date: string | null
@@ -152,6 +154,8 @@ export type Database = {
           vendor_name: string
         }
         Insert: {
+          stage_code?: string
+          cost_type?: string
           attachment_path?: string
           basic_amount?: number
           bill_date?: string | null
@@ -175,6 +179,8 @@ export type Database = {
           vendor_name?: string
         }
         Update: {
+          stage_code?: string
+          cost_type?: string
           attachment_path?: string
           basic_amount?: number
           bill_date?: string | null
@@ -457,6 +463,7 @@ export type Database = {
       }
       labour_entries: {
         Row: {
+          stage_code: string
           area: string
           contractor: string
           created_at: string
@@ -474,6 +481,7 @@ export type Database = {
           work_done: string
         }
         Insert: {
+          stage_code?: string
           area?: string
           contractor?: string
           created_at?: string
@@ -491,6 +499,7 @@ export type Database = {
           work_done?: string
         }
         Update: {
+          stage_code?: string
           area?: string
           contractor?: string
           created_at?: string
@@ -1040,6 +1049,8 @@ export type Database = {
       }
       purchase_order_items: {
         Row: {
+          stage_code: string
+          material_key: string
           brand: string
           created_at: string
           description: string
@@ -1055,6 +1066,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          stage_code?: string
+          material_key?: string
           brand?: string
           created_at?: string
           description?: string
@@ -1070,6 +1083,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          stage_code?: string
+          material_key?: string
           brand?: string
           created_at?: string
           description?: string
@@ -1096,6 +1111,7 @@ export type Database = {
       }
       purchase_orders: {
         Row: {
+          stage_code: string
           approved_at: string | null
           approved_by: string | null
           approved_by_name: string
@@ -1127,6 +1143,7 @@ export type Database = {
           vendor_name: string
         }
         Insert: {
+          stage_code?: string
           approved_at?: string | null
           approved_by?: string | null
           approved_by_name?: string
@@ -1158,6 +1175,7 @@ export type Database = {
           vendor_name?: string
         }
         Update: {
+          stage_code?: string
           approved_at?: string | null
           approved_by?: string | null
           approved_by_name?: string
@@ -1842,6 +1860,7 @@ export type Database = {
       }
       stock_movements: {
         Row: {
+          stage_code: string
           created_at: string
           created_by: string | null
           description: string
@@ -1861,6 +1880,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          stage_code?: string
           created_at?: string
           created_by?: string | null
           description?: string
@@ -1880,6 +1900,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          stage_code?: string
           created_at?: string
           created_by?: string | null
           description?: string

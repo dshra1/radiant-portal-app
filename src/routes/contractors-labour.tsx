@@ -7,6 +7,7 @@ import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
+import { StageSelect } from "@/components/saha/StageSelect";
 
 export const Route = createFileRoute("/contractors-labour")({
   head: () => ({
@@ -41,6 +42,7 @@ type Entry = {
   area: string;
   supervisor: string;
   notes: string;
+  stage_code: string;
 };
 
 type Draft = Omit<Entry, "id">;
@@ -72,6 +74,7 @@ function emptyDraft(): Draft {
     area: "",
     supervisor: "",
     notes: "",
+    stage_code: "",
   };
 }
 
@@ -101,7 +104,7 @@ function Page() {
       const { data, error } = await supabase
         .from("labour_entries")
         .select(
-          "id,work_date,contractor,trade,headcount,hours,day_rate,work_done,area,supervisor,notes",
+          "id,work_date,contractor,trade,headcount,hours,day_rate,work_done,area,supervisor,notes,stage_code",
         )
         .eq("project_id", project.id)
         .order("work_date", { ascending: false });
@@ -325,6 +328,13 @@ function Page() {
                   onChange={(e) => setDraft({ ...draft, contractor: e.target.value })}
                   className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                   placeholder="e.g. Ramesh Masonry Works"
+                />
+              </Field>
+              <Field label="Stage (programme)">
+                <StageSelect
+                  projectId={project.id}
+                  value={draft.stage_code}
+                  onChange={(code) => setDraft({ ...draft, stage_code: code })}
                 />
               </Field>
               <Field label="Trade">

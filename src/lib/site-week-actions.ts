@@ -86,7 +86,7 @@ export function alertsFor(week: SiteWeek): Alert[] {
   }
   const byDate = new Map<string, typeof week.orders>();
   for (const o of week.orders) {
-    if (toDay(o.orderBy) > today + 3) continue;
+    if (o.po || toDay(o.orderBy) > today + 3) continue;
     byDate.set(o.orderBy, [...(byDate.get(o.orderBy) ?? []), o]);
   }
   for (const [date, items] of byDate) {

@@ -252,6 +252,7 @@ function Page() {
                                   <StageDetail
                                     b={b}
                                     f={f}
+                                    recorded={data.recorded.get(b.code)}
                                     due={due(b)}
                                     canApprove={canApprove}
                                     busy={busy}
@@ -348,6 +349,7 @@ function Status({ f }: { f: FinanceRow | undefined }) {
 function StageDetail({
   b,
   f,
+  recorded,
   due,
   canApprove,
   busy,
@@ -358,6 +360,7 @@ function StageDetail({
 }: {
   b: StageBudget;
   f: FinanceRow | undefined;
+  recorded: (Money4 & { bills: number; labourDays: number }) | undefined;
   due: string;
   canApprove: boolean;
   busy: string;
@@ -421,6 +424,34 @@ function StageDetail({
       {b.code !== PRE && (
         <div className="rounded-xl border border-border p-3">
           <h3 className="text-sm font-bold">Actual cost after the stage</h3>
+          {recorded ? (
+            <div className="mt-1 rounded-lg bg-secondary/60 p-2 text-[12px]">
+              Recorded against {b.code}: {recorded.bills} bill{recorded.bills === 1 ? "" : "s"}
+              {recorded.labourDays ? `, ${recorded.labourDays} labour man-days` : ""} ·{" "}
+              {CATS.map((c) => `${c.label.toLowerCase()} ${lakhs(recorded[c.key])}`).join(", ")}
+              {!locked && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActual({
+                      material: recorded.material,
+                      machinery: recorded.machinery,
+                      labour: recorded.labour,
+                      misc: recorded.misc,
+                    })
+                  }
+                  className="ml-2 font-semibold text-primary underline"
+                >
+                  Use these figures
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="mt-1 text-[12px] text-muted-foreground">
+              Tag bills (Bills &amp; Payments) and the labour log (Contractors &amp; Labour) with
+              stage {b.code} and they add up here.
+            </p>
+          )}
           <p className="text-[12px] text-muted-foreground">
             From the bills, labour and machinery paid for this stage. Saved as a draft; only an
             admin or PM can approve it and send it to the landowners.

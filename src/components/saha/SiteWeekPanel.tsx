@@ -257,7 +257,7 @@ export function SiteWeekPanel({
         {showOrders && (
           <Block
             icon={<ShoppingCart className="size-4" />}
-            title={`To order (order-by within 2 weeks: ${w.orders.length})`}
+            title={`To order (order-by within 2 weeks: ${w.orders.filter((o) => !o.po).length} open, ${w.orders.filter((o) => o.po).length} on PO)`}
           >
             {w.orders.length === 0 ? (
               <p className="text-[13px] text-muted-foreground">Nothing due to order.</p>
@@ -266,7 +266,10 @@ export function SiteWeekPanel({
                 <table className="w-full text-[12px]">
                   <tbody>
                     {w.orders.slice(0, focus === "materials" ? 60 : 10).map((o, i) => (
-                      <tr key={i} className="border-t border-border/50 align-top">
+                      <tr
+                        key={i}
+                        className={`border-t border-border/50 align-top ${o.po ? "text-muted-foreground" : ""}`}
+                      >
                         <td
                           className={`whitespace-nowrap pr-2 font-semibold ${o.overdue ? "text-destructive" : ""}`}
                         >
@@ -277,17 +280,33 @@ export function SiteWeekPanel({
                         <td className="whitespace-nowrap text-right">
                           {o.qty.toLocaleString("en-IN")} {o.unit}
                         </td>
+                        <td className="whitespace-nowrap pl-2 text-right">
+                          {o.po ? (
+                            <span className="font-semibold text-emerald-700">{o.po}</span>
+                          ) : (
+                            <Link
+                              to="/po-create"
+                              search={{ stage: o.code }}
+                              className="font-semibold text-primary underline"
+                            >
+                              PO
+                            </Link>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 <div className="mt-2 flex gap-2">
-                  <Link
-                    to="/po-create"
-                    className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
-                  >
-                    Raise purchase order
-                  </Link>
+                  {w.orders.find((o) => !o.po) && (
+                    <Link
+                      to="/po-create"
+                      search={{ stage: w.orders.find((o) => !o.po)!.code }}
+                      className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
+                    >
+                      Raise PO for {w.orders.find((o) => !o.po)!.code}
+                    </Link>
+                  )}
                   <Link
                     to="/inventory-control"
                     className="rounded-lg border border-border px-3 py-1 text-xs font-semibold"

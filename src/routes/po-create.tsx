@@ -5,17 +5,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess } from "@/lib/access";
 import { inr, num } from "@/data/saha";
-import {
-  DEFAULT_PO_TERMS,
-  amountInWords,
-  lineTotals,
-  n,
-  poTotals,
-  type PoItem,
-} from "@/lib/po";
+import { DEFAULT_PO_TERMS, amountInWords, lineTotals, n, poTotals, type PoItem } from "@/lib/po";
 import { Plus, Save, Send, Trash2, PackageSearch } from "lucide-react";
+import { StageSelect } from "@/components/saha/StageSelect";
+import { useActiveProject } from "@/hooks/useActiveProject";
+import { useSiteWeek } from "@/lib/site-week";
+
+type Search = { stage?: string };
 
 export const Route = createFileRoute("/po-create")({
+  validateSearch: (s: Record<string, unknown>): Search =>
+    typeof s["stage"] === "string" ? { stage: s["stage"] } : {},
   head: () => ({
     meta: [
       { title: "Raise Purchase Order | Saha OS" },
@@ -66,6 +66,9 @@ const field =
 const label = "label-caps text-muted-foreground";
 
 function Page() {
+  const search = Route.useSearch();
+  const activeProject = useActiveProject();
+  const [poStage, setPoStage] = useState(search.stage ?? "");
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { access } = useAccess();
@@ -87,8 +90,9 @@ function Page() {
 
   const [projectId, setProjectId] = useState("");
   useEffect(() => {
-    if (!projectId && projects?.[0]) setProjectId(projects[0].id);
-  }, [projects, projectId]);
+    if (!projectId && projects?.[0])
+      setProjectId(projects.find((p) => p.id === activeProject.id)?.id ?? projects[0].id);
+  }, [projects, projectId, activeProject.id]);
   const project = projects?.find((p) => p.id === projectId) ?? null;
 
   const [poNumber, setPoNumber] = useState("");
@@ -119,6 +123,50 @@ function Page() {
   });
 
   const [items, setItems] = useState<PoItem[]>([emptyItem(0)]);
+
+  // Opened from the site plan for a stage: start with that stage's material to order.
+  const week = useSiteWeek(projectId);
+  const [prefilled, setPrefilled] = useState("");
+  useEffect(() => {
+    if (!poStage || !week.data || prefilled === poStage) return;
+    const st = week.data.stages.find((s) => s.code === poStage);
+    if (!st) return;
+    const ordered = new Set(
+      week.data.orders
+        .filter((o) => o.code === poStage && o.po)
+        .map((o) => (o.steel ? "STEEL" : o.what)),
+    );
+    const rows: PoItem[] = [];
+    for (const m of st.materials) {
+      if (!m.orderBy || ordered.has(m.material)) continue;
+      rows.push({
+        ...emptyItem(rows.length),
+        description: m.material,
+        unit: m.unit,
+        quantity: m.qty,
+        material_key: m.material,
+        stage_code: poStage,
+      });
+    }
+    if (st.steel && !ordered.has("STEEL"))
+      for (const b of st.steel.bars)
+        rows.push({
+          ...emptyItem(rows.length),
+          description: `TMT bar Fe550D ${b.dia} mm (${b.bars} nos × 12 m)`,
+          unit: "kg",
+          quantity: b.orderKg,
+          material_key: "STEEL",
+          stage_code: poStage,
+        });
+    if (rows.length) {
+      setItems(rows);
+      setMeta((m) => ({
+        ...m,
+        notes: m.notes || `For stage ${poStage} · ${st.name.replace(/^[A-Z0-9]+ · /, "")}`,
+      }));
+    }
+    setPrefilled(poStage);
+  }, [poStage, week.data, prefilled]);
   const totals = useMemo(
     () =>
       poTotals(items, {
@@ -180,6 +228,7 @@ function Page() {
           freight_charges: n(meta.freight_charges),
           other_charges: n(meta.other_charges),
           tax_mode: meta.tax_mode,
+          stage_code: poStage,
           terms: meta.terms,
           notes: meta.notes,
           status,
@@ -202,6 +251,8 @@ function Page() {
           discount_pct: n(it.discount_pct),
           gst_pct: n(it.gst_pct),
           sort_order: i,
+          stage_code: it.stage_code || poStage,
+          material_key: it.material_key ?? "",
         })),
       );
       if (itemErr) throw itemErr;
@@ -215,7 +266,10 @@ function Page() {
   });
 
   return (
-    <Shell title="Raise Purchase Order" subtitle="GST-format purchase order routed to the PM for approval">
+    <Shell
+      title="Raise Purchase Order"
+      subtitle="GST-format purchase order routed to the PM for approval"
+    >
       <div className="mx-auto flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
         <header className="panel flex flex-wrap items-end justify-between gap-3 p-4">
           <div>
@@ -224,6 +278,18 @@ function Page() {
               {poNumber ? poNumber : "Generating PO number…"} — assigned when you save
             </p>
           </div>
+          <label className="text-sm">
+            <span className="label-caps text-muted-foreground">For stage</span>
+            <StageSelect
+              projectId={projectId}
+              value={poStage}
+              onChange={(code) => {
+                setPoStage(code);
+                setPrefilled("");
+              }}
+              className="mt-1 block w-72 rounded border border-border bg-card px-2.5 py-2 text-sm"
+            />
+          </label>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -518,7 +584,9 @@ function Page() {
                             type="number"
                             className={`${field} text-right`}
                             value={String(it[k])}
-                            onChange={(e) => setItem(it.id, { [k]: e.target.value } as Partial<PoItem>)}
+                            onChange={(e) =>
+                              setItem(it.id, { [k]: e.target.value } as Partial<PoItem>)
+                            }
                           />
                         </td>
                       ))}

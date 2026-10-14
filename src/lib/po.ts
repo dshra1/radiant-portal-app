@@ -13,6 +13,9 @@ export type PoItem = {
   discount_pct: number | string;
   gst_pct: number | string;
   sort_order: number;
+  /** Stage-ledger material this line buys (site plan "to order" list). */
+  material_key?: string;
+  stage_code?: string;
 };
 
 export type PoRecord = {
@@ -97,8 +100,25 @@ export function poTotals(
 }
 
 const ONES = [
-  "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
-  "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen",
+  "",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+  "Ten",
+  "Eleven",
+  "Twelve",
+  "Thirteen",
+  "Fourteen",
+  "Fifteen",
+  "Sixteen",
+  "Seventeen",
+  "Eighteen",
   "Nineteen",
 ];
 const TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];

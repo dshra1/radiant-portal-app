@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
+import { StageSelect } from "@/components/saha/StageSelect";
 
 export const Route = createFileRoute("/bills-payments")({
   head: () => ({
@@ -39,6 +40,8 @@ export type Bill = {
   deductions: number;
   status: string;
   notes: string;
+  stage_code: string;
+  cost_type: string;
 };
 
 type Payment = {
@@ -87,6 +90,8 @@ function emptyBill(): BillDraft {
     deductions: 0,
     status: "draft",
     notes: "",
+    stage_code: "",
+    cost_type: "material",
   };
 }
 
@@ -112,7 +117,7 @@ function Page() {
     queryFn: async (): Promise<Bill[]> => {
       const { data, error } = await supabase
         .from("bills")
-        .select("id,project_id,bill_number,bill_date,due_date,vendor_name,vendor_gstin,category,description,basic_amount,gst_amount,other_charges,retention_amount,deductions,status,notes")
+        .select("id,project_id,bill_number,bill_date,due_date,vendor_name,vendor_gstin,category,description,basic_amount,gst_amount,other_charges,retention_amount,deductions,status,notes,stage_code,cost_type")
         .eq("project_id", project.id)
         .order("bill_date", { ascending: false });
       if (error) throw error;
@@ -378,7 +383,7 @@ function Page() {
                     <td className="p-3">
                       <p className="font-semibold">{b.bill_number || "—"}</p>
                       <p className="text-xs text-muted-foreground">{b.bill_date ?? "—"}{b.due_date ? ` · due ${b.due_date}` : ""}</p>
-                      <p className="text-xs text-muted-foreground">{b.category}</p>
+                      <p className="text-xs text-muted-foreground">{[b.category, b.stage_code && `stage ${b.stage_code}`, b.cost_type].filter(Boolean).join(" · ")}</p>
                     </td>
                     <td className="p-3">
                       <p className="font-semibold">{b.vendor_name || "—"}</p>
@@ -394,7 +399,7 @@ function Page() {
                       {b.status === "draft" && <button onClick={() => setStatusMut.mutate({ id: b.id, status: "verified" })} className="text-primary font-semibold mr-3">Verify</button>}
                       {b.status === "verified" && canApprove && <button onClick={() => setStatusMut.mutate({ id: b.id, status: "approved" })} className="text-primary font-semibold mr-3">Approve</button>}
                       {(b.status === "approved" || b.status === "paid") && <button onClick={() => { setPayFor(b); setPayDraft((d) => ({ ...d, amount: Math.max(bal, 0) })); }} className="text-primary font-semibold mr-3">Pay</button>}
-                      <button onClick={() => { setDraft({ bill_number: b.bill_number, bill_date: b.bill_date, due_date: b.due_date, vendor_name: b.vendor_name, vendor_gstin: b.vendor_gstin, category: b.category, description: b.description, basic_amount: b.basic_amount, gst_amount: b.gst_amount, other_charges: b.other_charges, retention_amount: b.retention_amount, deductions: b.deductions, status: b.status, notes: b.notes }); setEditingId(b.id); }} className="font-semibold mr-3">Edit</button>
+                      <button onClick={() => { setDraft({ bill_number: b.bill_number, bill_date: b.bill_date, due_date: b.due_date, vendor_name: b.vendor_name, vendor_gstin: b.vendor_gstin, category: b.category, description: b.description, basic_amount: b.basic_amount, gst_amount: b.gst_amount, other_charges: b.other_charges, retention_amount: b.retention_amount, deductions: b.deductions, status: b.status, notes: b.notes, stage_code: b.stage_code, cost_type: b.cost_type }); setEditingId(b.id); }} className="font-semibold mr-3">Edit</button>
                       <button onClick={() => { if (confirm(`Delete bill ${b.bill_number}?`)) deleteBill.mutate(b.id); }} className="text-destructive font-semibold">Delete</button>
                     </td>
                   </tr>
@@ -450,6 +455,28 @@ function Page() {
                   />
                 </label>
               ))}
+              <label>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Stage (programme)</span>
+                <StageSelect
+                  projectId={project.id}
+                  value={draft.stage_code}
+                  onChange={(code) => setDraft({ ...draft, stage_code: code })}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                />
+              </label>
+              <label>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Cost type</span>
+                <select
+                  value={draft.cost_type}
+                  onChange={(e) => setDraft({ ...draft, cost_type: e.target.value })}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                >
+                  <option value="material">Material</option>
+                  <option value="machinery">Machinery</option>
+                  <option value="labour">Labour</option>
+                  <option value="misc">Misc</option>
+                </select>
+              </label>
             </div>
             <p className="text-sm mt-3">Gross <strong>{inr(draft.basic_amount + draft.gst_amount + draft.other_charges)}</strong> · Payable <strong>{inr(draft.basic_amount + draft.gst_amount + draft.other_charges - draft.retention_amount - draft.deductions)}</strong></p>
             <div className="flex justify-end gap-2 mt-5">
