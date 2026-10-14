@@ -110,7 +110,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: "/capital-ledger", label: "Capital Ledger", icon: Wallet },
       { to: "/landowners-investment", label: "Landowners & Investment", icon: Landmark },
-      { to: "/flats", label: "Flats  Individual Works", icon: Building2 },
+      { to: "/flats", label: "Flats & Individual Works", icon: Building2 },
       { to: "/common-expenses", label: "Common & Statutory Expenses", icon: Landmark },
       { to: "/pmc-scope", label: "PMC Scope & Commercials", icon: BadgeIndianRupee },
       { to: "/cost-dashboard", label: "Cost Dashboard", icon: BadgeIndianRupee },
@@ -143,7 +143,7 @@ export type Role = (typeof roles)[number];
 /** Groups each role may see. Admin sees everything. */
 const roleGroups: Record<Role, string[] | "all"> = {
   "Admin / Owner": "all",
-  "Project Manager (PM)": ["planning", "site", "stock", "accounts", "qa"],
+  "Project Manager (PM)": ["planning", "site", "stock", "accounts", "money", "qa"],
   "Site Engineer": ["site", "qa", "stock"],
   "Site Supervisor": ["site", "qa", "stock"],
   "Purchase / Stores": ["stock", "accounts"],
