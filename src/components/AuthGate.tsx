@@ -21,7 +21,8 @@ function Screen({ children }: { children: ReactNode }) {
 export function AuthGate({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isPublic = pathname.startsWith("/auth") || pathname.startsWith("/api");
+  const isPublic =
+    pathname.startsWith("/auth") || pathname.startsWith("/api") || pathname.startsWith("/install");
   const { loading, signedIn, access, refetch } = useAccess();
 
   useEffect(() => {
@@ -45,8 +46,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <Screen>
         <h1 className="text-lg font-bold text-white">Access revoked</h1>
         <p className="mt-3 text-sm text-white/70">
-          Your workspace access has been withdrawn by an administrator. Contact the project
-          admin if you believe this is a mistake.
+          Your workspace access has been withdrawn by an administrator. Contact the project admin if
+          you believe this is a mistake.
         </p>
         <SignOut />
       </Screen>
@@ -63,8 +64,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           <span className="font-semibold text-white">
             {access?.email || access?.profile?.email || "this account"}
           </span>
-          .
-          An admin or project manager must approve this account and assign viewing permissions
+          . An admin or project manager must approve this account and assign viewing permissions
           before the workspace opens.
         </p>
         <div className="mt-6 flex flex-col gap-2">
@@ -80,7 +80,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
       </Screen>
     );
   }
-
 
   if (access.roles.length === 0) {
     return (

@@ -27,7 +27,7 @@ export function InstallAppButton() {
     window.addEventListener("appinstalled", onInstalled);
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => {});
     }
 
     return () => {
@@ -36,7 +36,12 @@ export function InstallAppButton() {
     };
   }, []);
 
-  if (installed) return null;
+  // The /install page has its own big button.
+  if (
+    installed ||
+    (typeof window !== "undefined" && window.location.pathname.startsWith("/install"))
+  )
+    return null;
 
   const handleClick = async () => {
     if (deferred) {

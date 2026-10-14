@@ -60,6 +60,7 @@ import { Route as QaInspectionRouteImport } from './routes/qa-inspection'
 import { Route as QualityRouteImport } from './routes/quality'
 import { Route as ReplanRouteImport } from './routes/replan'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as InstallRouteImport } from './routes/install'
 import { Route as RolesAccessRouteImport } from './routes/roles-access'
 import { Route as ScopeBriefRouteImport } from './routes/scope-brief'
 import { Route as SiteExecutionRouteImport } from './routes/site-execution'
@@ -332,6 +333,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InstallRoute = InstallRouteImport.update({
+  id: '/install',
+  path: '/install',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RolesAccessRoute = RolesAccessRouteImport.update({
   id: '/roles-access',
   path: '/roles-access',
@@ -465,6 +471,7 @@ export interface FileRoutesByFullPath {
   '/quality': typeof QualityRoute
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/install': typeof InstallRoute
   '/roles-access': typeof RolesAccessRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
@@ -534,6 +541,7 @@ export interface FileRoutesByTo {
   '/quality': typeof QualityRoute
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/install': typeof InstallRoute
   '/roles-access': typeof RolesAccessRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
@@ -604,6 +612,7 @@ export interface FileRoutesById {
   '/quality': typeof QualityRoute
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/install': typeof InstallRoute
   '/roles-access': typeof RolesAccessRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
@@ -675,6 +684,7 @@ export interface FileRouteTypes {
     | '/quality'
     | '/replan'
     | '/reset-password'
+    | '/install'
     | '/roles-access'
     | '/scope-brief'
     | '/site-execution'
@@ -744,6 +754,7 @@ export interface FileRouteTypes {
     | '/quality'
     | '/replan'
     | '/reset-password'
+    | '/install'
     | '/roles-access'
     | '/scope-brief'
     | '/site-execution'
@@ -813,6 +824,7 @@ export interface FileRouteTypes {
     | '/quality'
     | '/replan'
     | '/reset-password'
+    | '/install'
     | '/roles-access'
     | '/scope-brief'
     | '/site-execution'
@@ -883,6 +895,7 @@ export interface RootRouteChildren {
   QualityRoute: typeof QualityRoute
   ReplanRoute: typeof ReplanRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  InstallRoute: typeof InstallRoute
   RolesAccessRoute: typeof RolesAccessRoute
   ScopeBriefRoute: typeof ScopeBriefRoute
   SiteExecutionRoute: typeof SiteExecutionRoute
@@ -1260,6 +1273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/install': {
+      id: '/install'
+      path: '/install'
+      fullPath: '/install'
+      preLoaderRoute: typeof InstallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/roles-access': {
       id: '/roles-access'
       path: '/roles-access'
@@ -1427,6 +1447,7 @@ const rootRouteChildren: RootRouteChildren = {
   QualityRoute: QualityRoute,
   ReplanRoute: ReplanRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  InstallRoute: InstallRoute,
   RolesAccessRoute: RolesAccessRoute,
   ScopeBriefRoute: ScopeBriefRoute,
   SiteExecutionRoute: SiteExecutionRoute,

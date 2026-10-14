@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { InstallAppButton } from "../components/InstallAppButton";
+import { AppUpdater } from "../components/AppUpdater";
 import { AuthGate } from "../components/AuthGate";
 import { Toaster } from "../components/ui/sonner";
 
@@ -150,6 +151,7 @@ function RootComponent() {
         <Outlet />
       </AuthGate>
       <InstallAppButton />
+      <AppUpdater />
       <Toaster position="top-center" richColors closeButton />
       {/* Desktop quick launcher: mobile uses the shared bottom nav in Shell */}
       <Link
