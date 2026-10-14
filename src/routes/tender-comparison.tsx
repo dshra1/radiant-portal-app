@@ -9,6 +9,15 @@ import { useActiveProject } from "@/hooks/useActiveProject";
 import { inr, inrCompact } from "@/data/saha";
 import { Download, Plus, Trophy, Trash2, FilePlus2, Gavel } from "lucide-react";
 import { toast } from "sonner";
+import {
+  MIN_QUOTES,
+  awardSummary,
+  awardTender,
+  lineQuotes,
+  lowestPicks,
+  quoteCount,
+  type ItemAward,
+} from "@/lib/tender-award";
 
 export const Route = createFileRoute("/tender-comparison")({
   head: () => ({
@@ -45,6 +54,11 @@ type Rfq = {
   awarded_bid_id: string | null;
   awarded_vendor_name: string;
   created_at: string;
+  item_awards?: Record<string, ItemAward>;
+  award_note?: string;
+  awarded_by_name?: string;
+  awarded_at?: string | null;
+  po_numbers?: string[];
 };
 type RfqItem = {
   id: string;
@@ -54,6 +68,8 @@ type RfqItem = {
   unit: string;
   benchmark_rate: number;
   sort: number;
+  item_code?: string;
+  gst_pct?: number;
 };
 type RfqBid = {
   id: string;
@@ -93,6 +109,9 @@ function Page() {
     access.access?.roles?.some((r: string) => ["admin", "pm", "purchase"].includes(r)),
   );
 
+  /** Admin and PM award tenders (the database enforces it too). */
+  const canAward = Boolean(access.access?.isAdmin || access.access?.roles?.includes("pm"));
+  const isAdmin = Boolean(access.access?.isAdmin);
   const [selectedRfq, setSelectedRfq] = useState<string>("");
   const [showNew, setShowNew] = useState(false);
   const [showBid, setShowBid] = useState(false);
@@ -181,19 +200,24 @@ function Page() {
     return m;
   }, [items, bids]);
 
-  async function award(bidId: string, vendor: string) {
+  const [picks, setPicks] = useState<Record<string, string>>({});
+  useEffect(() => {
     if (!rfq) return;
-    const { error } = await db
-      .from("rfqs")
-      .update({ status: "awarded", awarded_bid_id: bidId, awarded_vendor_name: vendor })
-      .eq("id", rfq.id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success(`Tender awarded to ${vendor}`);
-    qc.invalidateQueries({ queryKey: ["rfqs", project.id] });
+    const saved = rfq.item_awards ?? {};
+    setPicks(
+      Object.keys(saved).length
+        ? Object.fromEntries(Object.entries(saved).map(([k, v]) => [k, v.bid_id]))
+        : lowestPicks(items, bids),
+    );
+  }, [rfq?.id, rfq?.item_awards, itemsQ.dataUpdatedAt, bidsQ.dataUpdatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  const quotes = quoteCount(bids);
+  const awarded = rfq?.status === "awarded";
+  function pickAll(bid: RfqBid) {
+    const next: Record<string, string> = {};
+    for (const it of items) if (Number(bid.rates?.[it.id] ?? 0) > 0) next[it.id] = bid.id;
+    setPicks(next);
   }
+
   async function removeBid(id: string) {
     const { error } = await db.from("rfq_bids").delete().eq("id", id);
     if (error) {
@@ -284,6 +308,13 @@ function Page() {
           }}
         />
       )}
+
+      <TenderOverview
+        projectId={project.id}
+        rfqs={rfqs}
+        selected={rfq?.id ?? ""}
+        onSelect={setSelectedRfq}
+      />
 
       <Section title="Active tender">
         {rfqs.length === 0 ? (
@@ -427,10 +458,11 @@ function Page() {
                           {canManage && rfq.status !== "awarded" && (
                             <div className="mt-2 flex gap-2">
                               <button
-                                onClick={() => award(r.bid.id, r.bid.vendor_name)}
-                                className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"
+                                onClick={() => pickAll(r.bid)}
+                                title="Pick this vendor for every line they quoted"
+                                className="inline-flex items-center gap-1 rounded border border-primary px-2 py-1 text-xs font-semibold text-primary"
                               >
-                                <Gavel className="h-3 w-3" /> Award
+                                <Gavel className="h-3 w-3" /> Pick all lines
                               </button>
                               <button
                                 onClick={() => removeBid(r.bid.id)}
@@ -452,13 +484,33 @@ function Page() {
                           <div className="text-xs text-muted-foreground">
                             Qty {it.qty} {it.unit} • Benchmark {inr(Number(it.benchmark_rate || 0))}
                           </div>
+                          {lineQuotes(it, bids) < MIN_QUOTES && (
+                            <div className="text-xs font-semibold text-amber-700">
+                              {lineQuotes(it, bids)} of {MIN_QUOTES} quotes on this line
+                            </div>
+                          )}
                         </td>
                         {ranked.map((r) => {
                           const rate = Number(r.bid.rates?.[it.id] ?? 0);
                           const isLow =
                             rate > 0 && rate === lowestRatePerItem[it.id] && ranked.length > 1;
+                          const picked = picks[it.id] === r.bid.id;
                           return (
-                            <td key={r.bid.id} className={`p-3 ${isLow ? "bg-primary/5" : ""}`}>
+                            <td
+                              key={r.bid.id}
+                              onClick={() =>
+                                !awarded &&
+                                canAward &&
+                                rate > 0 &&
+                                setPicks((p) => ({ ...p, [it.id]: r.bid.id }))
+                              }
+                              title={
+                                !awarded && canAward && rate > 0
+                                  ? "Award this line to this vendor"
+                                  : undefined
+                              }
+                              className={`p-3 ${isLow ? "bg-primary/5" : ""} ${picked ? "outline outline-2 -outline-offset-2 outline-primary" : ""} ${!awarded && canAward && rate > 0 ? "cursor-pointer" : ""}`}
+                            >
                               <div className="font-semibold text-foreground">
                                 {rate ? inr(rate) : "—"}
                               </div>
@@ -468,6 +520,11 @@ function Page() {
                               {isLow && (
                                 <div className="text-xs font-semibold text-primary">
                                   Lowest line rate
+                                </div>
+                              )}
+                              {picked && (
+                                <div className="text-xs font-bold text-primary">
+                                  {awarded ? "✓ Awarded" : "✓ Picked"}
                                 </div>
                               )}
                             </td>
@@ -509,19 +566,51 @@ function Page() {
                 </table>
               </div>
             )}
-            {rfq.status === "awarded" && (
+            {awarded && (
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border p-4">
                 <p className="text-sm text-foreground">
-                  Awarded to <strong>{rfq.awarded_vendor_name}</strong>. Raise the purchase order
-                  from the winning quote.
+                  Awarded to <strong>{rfq.awarded_vendor_name}</strong>
+                  {rfq.awarded_by_name ? ` by ${rfq.awarded_by_name}` : ""}
+                  {rfq.awarded_at
+                    ? ` on ${new Date(rfq.awarded_at).toLocaleDateString("en-IN")}`
+                    : ""}
+                  .{" "}
+                  {(rfq.po_numbers ?? []).length > 0
+                    ? `Purchase orders raised: ${(rfq.po_numbers ?? []).join(", ")} (waiting for approval).`
+                    : "Raise the purchase order from the winning quote."}
+                  {rfq.award_note ? ` Award note: ${rfq.award_note}` : ""}
                 </p>
                 <Link
-                  to="/po-create"
+                  to={(rfq.po_numbers ?? []).length ? "/purchase-orders" : "/po-create"}
                   className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
                 >
-                  Create PO for {rfq.awarded_vendor_name}
+                  {(rfq.po_numbers ?? []).length ? "Open purchase orders" : "Create PO"}
                 </Link>
               </div>
+            )}
+            {!awarded && items.length > 0 && (
+              <AwardPanel
+                quotes={quotes}
+                canAward={canAward}
+                isAdmin={isAdmin}
+                summary={awardSummary(items, bids, picks)}
+                onAward={async (note) => {
+                  await awardTender({
+                    rfq,
+                    project: { id: project.id, name: project.name, location: null },
+                    items,
+                    bids,
+                    picks,
+                    note,
+                    who: {
+                      id: user?.id ?? null,
+                      name: access.access?.profile?.full_name || access.access?.email || "PMC",
+                    },
+                  });
+                  await qc.invalidateQueries({ queryKey: ["rfqs", project.id] });
+                  await qc.invalidateQueries({ queryKey: ["purchase_orders"] });
+                }}
+              />
             )}
             {ranked.length > 1 && rfq.status !== "awarded" && l1 && (
               <div className="border-t border-border p-4 text-sm text-muted-foreground">
@@ -594,18 +683,16 @@ function NewRfqForm({
       toast.error(error.message);
       return;
     }
-    const { error: ie } = await db
-      .from("rfq_items")
-      .insert(
-        rows.map((i, idx) => ({
-          rfq_id: data.id,
-          description: i.description.trim(),
-          qty: Number(i.qty),
-          unit: i.unit || "MT",
-          benchmark_rate: Number(i.benchmark_rate) || 0,
-          sort: idx,
-        })),
-      );
+    const { error: ie } = await db.from("rfq_items").insert(
+      rows.map((i, idx) => ({
+        rfq_id: data.id,
+        description: i.description.trim(),
+        qty: Number(i.qty),
+        unit: i.unit || "MT",
+        benchmark_rate: Number(i.benchmark_rate) || 0,
+        sort: idx,
+      })),
+    );
     setSaving(false);
     if (ie) {
       toast.error(ie.message);
@@ -763,19 +850,17 @@ function AddBidForm({
       return;
     }
     setSaving(true);
-    const { error } = await db
-      .from("rfq_bids")
-      .insert({
-        rfq_id: rfq.id,
-        vendor_name: vendor.trim(),
-        rates: rateMap,
-        freight_total: Number(freight) || 0,
-        payment_terms: terms.trim(),
-        lead_time: lead.trim(),
-        notes: notes.trim(),
-        created_by: userId ?? null,
-        created_by_name: "",
-      });
+    const { error } = await db.from("rfq_bids").insert({
+      rfq_id: rfq.id,
+      vendor_name: vendor.trim(),
+      rates: rateMap,
+      freight_total: Number(freight) || 0,
+      payment_terms: terms.trim(),
+      lead_time: lead.trim(),
+      notes: notes.trim(),
+      created_by: userId ?? null,
+      created_by_name: "",
+    });
     setSaving(false);
     if (error) {
       toast.error(error.message);
@@ -871,5 +956,210 @@ function AddBidForm({
         {saving ? "Saving…" : "Save quote"}
       </button>
     </div>
+  );
+}
+
+function AwardPanel({
+  quotes,
+  canAward,
+  isAdmin,
+  summary,
+  onAward,
+}: {
+  quotes: number;
+  canAward: boolean;
+  isAdmin: boolean;
+  summary: ReturnType<typeof awardSummary>;
+  onAward: (note: string) => Promise<void>;
+}) {
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const enough = quotes >= MIN_QUOTES;
+  const blocked = !enough && !(isAdmin && note.trim());
+  return (
+    <div className="border-t border-border p-4">
+      <h3 className="text-sm font-bold text-foreground">Award</h3>
+      <p
+        className={`mt-1 text-sm ${enough ? "text-muted-foreground" : "font-semibold text-amber-700"}`}
+      >
+        {quotes} of {MIN_QUOTES} vendor quotes received.{" "}
+        {enough
+          ? "Click a rate in the table to award that line to another vendor; the lowest rate is picked by default."
+          : isAdmin
+            ? "Award is locked until three quotes are in. As admin you can award with fewer only with a written reason (e.g. single OEM, rate contract)."
+            : "Award is locked until three quotes are in. Ask more vendors for quotes."}
+      </p>
+      {summary.vendors.length > 0 && (
+        <table className="mt-2 w-full max-w-2xl text-sm">
+          <tbody>
+            {summary.vendors.map((v) => (
+              <tr key={v.bid.id} className="border-t border-border/60">
+                <td className="py-1 pr-3 font-medium text-foreground">{v.bid.vendor_name}</td>
+                <td className="py-1 pr-3 text-muted-foreground">
+                  {v.lines.length} line{v.lines.length > 1 ? "s" : ""}
+                </td>
+                <td className="py-1 text-right font-semibold text-foreground">{inr(v.value)}</td>
+              </tr>
+            ))}
+            <tr className="border-t-2 border-border">
+              <td className="py-1 pr-3 font-bold text-foreground">Award total, excl. GST</td>
+              <td className="py-1 pr-3 text-muted-foreground">
+                PMC benchmark {inr(summary.benchmark)}
+              </td>
+              <td className="py-1 text-right font-bold text-foreground">{inr(summary.total)}</td>
+            </tr>
+          </tbody>
+        </table>
+      )}
+      {summary.unpicked.length > 0 && (
+        <p className="mt-1 text-xs text-amber-700">
+          {summary.unpicked.length} line{summary.unpicked.length > 1 ? "s have" : " has"} no quote
+          yet and will not be ordered.
+        </p>
+      )}
+      {canAward ? (
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <label className="min-w-[260px] flex-1 text-sm text-foreground">
+            Award note {enough ? "(optional)" : "(reason, required for fewer than 3 quotes)"}
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. L1 on all lines; negotiated 2% off"
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={busy || blocked || !summary.vendors.length}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onAward(note);
+                toast.success(
+                  `Awarded. ${summary.vendors.length} purchase order${summary.vendors.length > 1 ? "s" : ""} raised for approval.`,
+                );
+              } catch (e) {
+                toast.error((e as Error).message);
+              }
+              setBusy(false);
+            }}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+          >
+            <Gavel className="h-4 w-4" />
+            {busy
+              ? "Awarding…"
+              : `Award and raise ${summary.vendors.length || ""} PO${summary.vendors.length === 1 ? "" : "s"}`}
+          </button>
+        </div>
+      ) : (
+        <p className="mt-2 text-xs text-muted-foreground">Only an admin or PM can award.</p>
+      )}
+    </div>
+  );
+}
+
+/** Every tender of the project with its quote count, L1 total and enquiry date. */
+function TenderOverview({
+  projectId,
+  rfqs,
+  selected,
+  onSelect,
+}: {
+  projectId: string;
+  rfqs: Rfq[];
+  selected: string;
+  onSelect: (id: string) => void;
+}) {
+  const q = useQuery({
+    queryKey: ["rfq-overview", projectId, rfqs.length],
+    enabled: rfqs.length > 0,
+    queryFn: async () => {
+      const ids = rfqs.map((r) => r.id);
+      const [bids, items] = await Promise.all([
+        db.from("rfq_bids").select("rfq_id,rates").in("rfq_id", ids),
+        db.from("rfq_items").select("id,rfq_id,qty").in("rfq_id", ids),
+      ]);
+      if (bids.error) throw bids.error;
+      if (items.error) throw items.error;
+      return {
+        bids: (bids.data ?? []) as { rfq_id: string; rates: Record<string, number> }[],
+        items: (items.data ?? []) as { id: string; rfq_id: string; qty: number }[],
+      };
+    },
+  });
+  if (!rfqs.length) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const enquiryOf = (r: Rfq) =>
+    r.deadline
+      ? new Date(Date.parse(`${r.deadline}T00:00:00Z`) - 14 * 86_400_000).toISOString().slice(0, 10)
+      : null;
+  const rows = [...rfqs]
+    .map((r) => {
+      const bids = (q.data?.bids ?? []).filter((b) => b.rfq_id === r.id);
+      const quoted = bids.filter((b) =>
+        Object.values(b.rates ?? {}).some((v) => Number(v) > 0),
+      ).length;
+      const its = (q.data?.items ?? []).filter((i) => i.rfq_id === r.id);
+      let l1 = 0;
+      for (const it of its) {
+        const rs = bids.map((b) => Number(b.rates?.[it.id] ?? 0)).filter((v) => v > 0);
+        if (rs.length) l1 += Math.min(...rs) * Number(it.qty);
+      }
+      return { r, quoted, l1, enquiry: enquiryOf(r) };
+    })
+    .sort((a, b) => (a.enquiry ?? "9999").localeCompare(b.enquiry ?? "9999"));
+  return (
+    <Section title={`All tenders (${rfqs.length})`}>
+      <div className="max-h-80 overflow-auto">
+        <table className="w-full min-w-[760px] text-sm">
+          <thead className="sticky top-0 bg-muted/60 text-left text-xs uppercase text-muted-foreground">
+            <tr>
+              <th className="p-2">Tender</th>
+              <th className="p-2">Send enquiry by</th>
+              <th className="p-2">Quotes due</th>
+              <th className="p-2 text-right">Quotes</th>
+              <th className="p-2 text-right">L1 total</th>
+              <th className="p-2 text-right">Benchmark</th>
+              <th className="p-2">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ r, quoted, l1, enquiry }) => {
+              const late =
+                r.status !== "awarded" && quoted < MIN_QUOTES && r.deadline && r.deadline < today;
+              return (
+                <tr
+                  key={r.id}
+                  onClick={() => onSelect(r.id)}
+                  className={`cursor-pointer border-t border-border/60 hover:bg-muted/30 ${r.id === selected ? "bg-primary/5" : ""}`}
+                >
+                  <td className="p-2 font-medium text-foreground">
+                    {r.rfq_number} · {r.title.replace(/^Pkg \d+ · /, "")}
+                  </td>
+                  <td className="p-2">{enquiry ?? "—"}</td>
+                  <td className={`p-2 ${late ? "font-semibold text-red-600" : ""}`}>
+                    {r.deadline ?? "—"}
+                  </td>
+                  <td
+                    className={`p-2 text-right font-semibold ${quoted >= MIN_QUOTES ? "text-primary" : "text-amber-700"}`}
+                  >
+                    {quoted} / {MIN_QUOTES}
+                  </td>
+                  <td className="p-2 text-right">{l1 ? inrCompact(l1) : "—"}</td>
+                  <td className="p-2 text-right text-muted-foreground">
+                    {inrCompact(Number(r.budget_estimate || 0))}
+                  </td>
+                  <td className="p-2">
+                    <StatusBadge tone={STATUS_TONE[r.status] ?? "slate"}>
+                      {r.status.toUpperCase()}
+                    </StatusBadge>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Section>
   );
 }

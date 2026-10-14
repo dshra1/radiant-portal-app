@@ -272,6 +272,7 @@ export async function importTenders(
   let added = 0;
   let refreshed = 0;
   let kept = 0;
+  let quoted = 0;
   for (const p of packages) {
     const rfqNumber = `CE-PKG-${p.no}`;
     const budget = Math.round(p.items.reduce((s, i) => s + i.qty * i.benchmarkRate, 0));
@@ -299,6 +300,8 @@ export async function importTenders(
       qty: i.qty,
       unit: i.unit,
       benchmark_rate: i.benchmarkRate,
+      item_code: i.code,
+      gst_pct: i.gstPct,
       sort: idx,
     }));
 
@@ -311,14 +314,23 @@ export async function importTenders(
     if (rfqId) {
       const up = await supabase.from("rfqs").update(values).eq("id", rfqId);
       if (up.error) throw new Error(`Tender ${rfqNumber}: ${up.error.message}`);
-      const bids = await supabase
+      // Quotes typed in the app stay; the line items stay with them.
+      const typed = await supabase
         .from("rfq_bids")
         .select("id", { count: "exact", head: true })
-        .eq("rfq_id", rfqId);
-      if ((bids.count ?? 0) > 0) {
+        .eq("rfq_id", rfqId)
+        .neq("source", "workbook");
+      if ((typed.count ?? 0) > 0) {
         kept++;
+        quoted += await importWorkbookBids(rfqId, p, userId);
         continue;
       }
+      const delBids = await supabase
+        .from("rfq_bids")
+        .delete()
+        .eq("rfq_id", rfqId)
+        .eq("source", "workbook");
+      if (delBids.error) throw new Error(`Tender ${rfqNumber}: ${delBids.error.message}`);
       const del = await supabase.from("rfq_items").delete().eq("rfq_id", rfqId);
       if (del.error) throw new Error(`Tender ${rfqNumber}: ${del.error.message}`);
       refreshed++;
@@ -343,11 +355,52 @@ export async function importTenders(
       .from("rfq_items")
       .insert(items.map((i) => ({ ...i, rfq_id: rfqId! })));
     if (insItems.error) throw new Error(`Tender ${rfqNumber} items: ${insItems.error.message}`);
+    quoted += await importWorkbookBids(rfqId!, p, userId);
   }
   log(
     `Tenders: ${added} RFQs created, ${refreshed} refreshed` +
-      (kept ? `, ${kept} left as they are (bids entered or awarded).` : "."),
+      (kept ? `, ${kept} kept with their quotes or award` : "") +
+      `; ${quoted} vendor quote${quoted === 1 ? "" : "s"} from the workbook.`,
   );
+}
+
+/**
+ * Vendor quotes typed into the workbook's three vendor columns become bids
+ * (source "workbook"), matched to the tender's lines by item code. They replace
+ * the previous workbook bids; quotes typed in the app are left alone.
+ */
+async function importWorkbookBids(rfqId: string, p: QuotePackage, userId: string | undefined) {
+  const its = await supabase.from("rfq_items").select("id,item_code").eq("rfq_id", rfqId);
+  if (its.error) throw new Error(`Tender items: ${its.error.message}`);
+  const idOf = new Map((its.data ?? []).map((i) => [i.item_code, i.id]));
+  const bids = p.vendors
+    .map((vendor, k) => {
+      const rates: Record<string, number> = {};
+      for (const it of p.items) {
+        const r = it.rates[k] ?? 0;
+        const id = idOf.get(it.code);
+        if (r > 0 && id) rates[id] = r;
+      }
+      return { vendor, rates };
+    })
+    .filter((b) => b.vendor && Object.keys(b.rates).length);
+  const del = await supabase.from("rfq_bids").delete().eq("rfq_id", rfqId).eq("source", "workbook");
+  if (del.error) throw new Error(`Tender quotes: ${del.error.message}`);
+  if (!bids.length) return 0;
+  const ins = await supabase.from("rfq_bids").insert(
+    bids.map((b) => ({
+      rfq_id: rfqId,
+      vendor_name: b.vendor,
+      rates: b.rates as unknown as Json,
+      source: "workbook",
+      notes: "From the quotation workbook",
+      created_by: userId ?? null,
+      created_by_name: "PMC workbook import",
+    })),
+  );
+  if (ins.error) throw new Error(`Tender quotes: ${ins.error.message}`);
+  await supabase.from("rfqs").update({ status: "evaluating" }).eq("id", rfqId).eq("status", "open");
+  return bids.length;
 }
 
 // ---------- drawings ----------

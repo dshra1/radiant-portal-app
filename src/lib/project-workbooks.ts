@@ -128,6 +128,8 @@ export type QuotePackage = {
   ask: string;
   neededFrom: string | null;
   enquiryBy: string | null;
+  /** Vendor names from the package sheet (up to three; "" when not entered). */
+  vendors: string[];
   items: {
     code: string;
     item: string;
@@ -139,6 +141,9 @@ export type QuotePackage = {
     individualQty: number;
     neededFrom: string | null;
     benchmarkRate: number;
+    gstPct: number;
+    /** Vendor rates excl. GST, same order as `vendors` (0 = not quoted). */
+    rates: number[];
   }[];
 };
 
@@ -1077,7 +1082,15 @@ export function parseQuotation(wb: XLSX.WorkBook): QuotePackage[] {
       common: col("common qty"),
       indiv: col("individual"),
       needed: col("needed on site"),
+      gst: col("gst %"),
+      v: [col("vendor 1 rate"), col("vendor 2 rate"), col("vendor 3 rate")],
     };
+    // Vendor names sit in the row above the header, under "Vendor 1 / 2 / 3".
+    const nameRow = data[h - 1] ?? [];
+    const vendors = c.v.map((ci, k) => {
+      const v = str(at(nameRow, ci));
+      return v && !/^vendor \d$/i.test(v) ? v : v ? `Vendor ${k + 1}` : "";
+    });
     const i0 = info.get(no);
     const pkg: QuotePackage = {
       no,
@@ -1085,6 +1098,7 @@ export function parseQuotation(wb: XLSX.WorkBook): QuotePackage[] {
       ask: i0?.ask ?? str(data[1]?.[0]).replace(/^Ask:\s*/i, ""),
       neededFrom: i0?.needed ?? null,
       enquiryBy: i0?.enquiry ?? null,
+      vendors,
       items: [],
     };
     for (let i = h + 1; i < data.length; i++) {
@@ -1102,6 +1116,11 @@ export function parseQuotation(wb: XLSX.WorkBook): QuotePackage[] {
         individualQty: num(at(r, c.indiv)),
         neededFrom: isoDate(at(r, c.needed)),
         benchmarkRate: bench.get(`${no}|${code}`) ?? 0,
+        gstPct: (() => {
+          const g = num(at(r, c.gst));
+          return g > 0 && g < 1 ? Math.round(g * 1000) / 10 : g || 18;
+        })(),
+        rates: c.v.map((ci) => num(at(r, ci))),
       });
     }
     if (pkg.items.length) out.push(pkg);

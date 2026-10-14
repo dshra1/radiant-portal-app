@@ -183,9 +183,60 @@ async function qualityAlerts(projectId: string, today: number): Promise<Alert[]>
   return out;
 }
 
+/** Tenders: send the enquiry 45 days before first need; three quotes before the due date. */
+async function tenderAlerts(projectId: string, today: number): Promise<Alert[]> {
+  const out: Alert[] = [];
+  const r = await supabase
+    .from("rfqs")
+    .select("id,rfq_number,title,deadline,status")
+    .eq("project_id", projectId)
+    .neq("status", "awarded");
+  const list = (r.data ?? []).filter((x) => x.deadline);
+  if (!list.length) return out;
+  const b = await supabase
+    .from("rfq_bids")
+    .select("rfq_id,rates")
+    .in(
+      "rfq_id",
+      list.map((x) => x.id),
+    );
+  const quotes = new Map<string, number>();
+  for (const bid of b.data ?? []) {
+    const rates = (bid.rates ?? {}) as Record<string, number>;
+    if (Object.values(rates).some((v) => Number(v) > 0))
+      quotes.set(bid.rfq_id, (quotes.get(bid.rfq_id) ?? 0) + 1);
+  }
+  for (const t of list) {
+    const q = quotes.get(t.id) ?? 0;
+    if (q >= 3) continue;
+    const due = toDay(t.deadline ?? "");
+    const enquiry = due - 14;
+    const name = `${t.rfq_number} ${t.title.replace(/^Pkg \d+ · /, "")}`;
+    if (due < today)
+      out.push({
+        title: `Quotes overdue: ${name}`,
+        body: `${q} of 3 quotes by ${fmtDay(t.deadline ?? "")}. Award is locked until three quotes are in.`,
+        priority: "High",
+        link: "/tender-comparison",
+      });
+    else if (enquiry <= today + 7)
+      out.push({
+        title: `Send enquiry: ${name}`,
+        body: `Enquiry by ${fmtDay(new Date(enquiry * 86_400_000).toISOString().slice(0, 10))}, quotes due ${fmtDay(t.deadline ?? "")}. ${q} of 3 quotes so far.`,
+        priority: q ? "Normal" : "High",
+        link: "/tender-comparison",
+      });
+  }
+  return out;
+}
+
 /** Raises today's alerts that were not raised in the last 14 days. */
 export async function raiseAlerts(projectId: string, week: SiteWeek, who: Who) {
-  const alerts = [...alertsFor(week), ...(await qualityAlerts(projectId, week.today))];
+  const alerts = [
+    ...alertsFor(week),
+    ...(await qualityAlerts(projectId, week.today)),
+    ...(await tenderAlerts(projectId, week.today)),
+  ];
   if (!alerts.length) return 0;
   const since = new Date(Date.now() - 14 * 86_400_000).toISOString();
   const prev = await supabase

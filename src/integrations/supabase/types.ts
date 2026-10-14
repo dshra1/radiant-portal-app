@@ -1283,6 +1283,7 @@ export type Database = {
       }
       rfq_bids: {
         Row: {
+          source: string
           created_at: string
           created_by: string | null
           created_by_name: string
@@ -1297,6 +1298,7 @@ export type Database = {
           vendor_name: string
         }
         Insert: {
+          source?: string
           created_at?: string
           created_by?: string | null
           created_by_name?: string
@@ -1311,6 +1313,7 @@ export type Database = {
           vendor_name?: string
         }
         Update: {
+          source?: string
           created_at?: string
           created_by?: string | null
           created_by_name?: string
@@ -1336,6 +1339,8 @@ export type Database = {
       }
       rfq_items: {
         Row: {
+          item_code: string
+          gst_pct: number
           benchmark_rate: number
           created_at: string
           description: string
@@ -1346,6 +1351,8 @@ export type Database = {
           unit: string
         }
         Insert: {
+          item_code?: string
+          gst_pct?: number
           benchmark_rate?: number
           created_at?: string
           description?: string
@@ -1356,6 +1363,8 @@ export type Database = {
           unit?: string
         }
         Update: {
+          item_code?: string
+          gst_pct?: number
           benchmark_rate?: number
           created_at?: string
           description?: string
@@ -1377,6 +1386,12 @@ export type Database = {
       }
       rfqs: {
         Row: {
+          item_awards: Json
+          award_note: string
+          awarded_by: string | null
+          awarded_by_name: string
+          awarded_at: string | null
+          po_numbers: Json
           awarded_bid_id: string | null
           awarded_vendor_name: string
           budget_estimate: number
@@ -1393,6 +1408,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          item_awards?: Json
+          award_note?: string
+          awarded_by?: string | null
+          awarded_by_name?: string
+          awarded_at?: string | null
+          po_numbers?: Json
           awarded_bid_id?: string | null
           awarded_vendor_name?: string
           budget_estimate?: number
@@ -1409,6 +1430,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          item_awards?: Json
+          award_note?: string
+          awarded_by?: string | null
+          awarded_by_name?: string
+          awarded_at?: string | null
+          po_numbers?: Json
           awarded_bid_id?: string | null
           awarded_vendor_name?: string
           budget_estimate?: number
