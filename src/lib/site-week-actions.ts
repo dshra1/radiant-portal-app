@@ -138,9 +138,54 @@ export function alertsFor(week: SiteWeek): Alert[] {
   return out;
 }
 
+/** Cubes due for testing (7 / 28 days after the actual pour) and open NCRs past their date. */
+async function qualityAlerts(projectId: string, today: number): Promise<Alert[]> {
+  const out: Alert[] = [];
+  const [cubes, ncrs] = await Promise.all([
+    supabase
+      .from("cube_tests")
+      .select("stage_code, pour, actual_pour_date, mean_7, cube_28_1")
+      .eq("project_id", projectId)
+      .not("actual_pour_date", "is", null),
+    supabase
+      .from("ncrs")
+      .select("ncr_no, stage_code, what_wrong, target_date")
+      .eq("project_id", projectId)
+      .neq("status", "CLOSED"),
+  ]);
+  for (const c of cubes.data ?? []) {
+    const poured = toDay(c.actual_pour_date ?? "");
+    if (!Number.isFinite(poured)) continue;
+    for (const [days, done] of [
+      [7, c.mean_7 != null],
+      [28, c.cube_28_1 != null],
+    ] as const) {
+      const due = poured + days;
+      if (!done && due <= today + 1)
+        out.push({
+          title: `${days}-day cubes ${due < today ? "overdue" : "due"}: ${c.stage_code} ${c.pour}`,
+          body: `Poured ${fmtDay(c.actual_pour_date ?? "")}. Test the ${days}-day cubes and enter the results in the cube register.`,
+          priority: "High",
+          link: "/quality?tab=cubes",
+        });
+    }
+  }
+  for (const n of ncrs.data ?? []) {
+    const due = toDay(n.target_date ?? "");
+    if (Number.isFinite(due) && due < today)
+      out.push({
+        title: `NCR overdue: ${n.ncr_no} ${n.stage_code}`,
+        body: `${n.what_wrong} · correction was due ${fmtDay(n.target_date ?? "")}.`,
+        priority: "High",
+        link: "/quality?tab=ncr",
+      });
+  }
+  return out;
+}
+
 /** Raises today's alerts that were not raised in the last 14 days. */
 export async function raiseAlerts(projectId: string, week: SiteWeek, who: Who) {
-  const alerts = alertsFor(week);
+  const alerts = [...alertsFor(week), ...(await qualityAlerts(projectId, week.today))];
   if (!alerts.length) return 0;
   const since = new Date(Date.now() - 14 * 86_400_000).toISOString();
   const prev = await supabase
