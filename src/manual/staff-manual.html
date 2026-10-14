@@ -170,7 +170,7 @@ details p{margin-top:8px;color:var(--muted)}
     <div>
       <p class="eyebrow">SAHA Developers · PMC · Staff briefing</p>
       <h1>Saha OS Staff Manual</h1>
-      <p class="lede">How the team runs 77:76 Cyber Enclave in Saha OS. Pick your role below: the briefing, the guided tour, the weekly cycle and the page map all change to show your part of the work. The app is at <span class="mono">radiant-portal-app.dshra1.workers.dev</span>.</p>
+      <p class="lede">How the team runs 77:76 Cyber Enclave in Saha OS. Pick your role below: the briefing, the guided tour, the weekly cycle and the page map all change to show your part of the work. The app is at <span class="mono">radiant-portal-app.dshra1.workers.dev</span>; this manual is also inside it under <b>How to use Saha OS</b>.</p>
     </div>
     <div class="facts tnum" aria-label="Project at a glance">
       <div class="fact"><b>Stilt + 5 · 10 flats</b><span>4 × 4BHK (floors 1–2), 6 × 3BHK (3–5)</span></div>
@@ -266,11 +266,12 @@ const SEES = {
   buy:["stock","accounts"], acc:["stock","accounts","money"],
   own:["money","accounts","stock","qa"],
 };
-const ALWAYS = ["/","/messages","/notifications","/ai"];
+const ALWAYS = ["/","/manual","/messages","/notifications","/ai"];
 
 const GROUPS = [
  {id:"planning", label:"Planning & master database", pages:[
   ["/","Saha OS Hub","daily","Start of every day. This week's stages and the next ones, orders due, hold points and close-outs waiting, with live project figures.",["Read the Site Week panel at the top: stages now, next, and what is late.","Click a stage card for its material, directions and checks.","Use the Drawings and Budget links on a stage card to jump to that stage."]],
+  ["/manual","Staff Manual","","This manual, inside the app. It opens on your role. Every role has it in the menu and at the bottom of the sidebar (How to use Saha OS).",["Use it to brief new staff on their first day."]],
   ["/messages","Team Chat","daily","Crew chat: direct messages, groups and files. Stage tasks pushed by the PM arrive in the \"Site plan\" channel and the daily report posts here.",["Open the Site plan channel each morning.","Reply in the thread for the stage you are working on."]],
   ["/ai","Saha AI Assistant","","Ask questions about the project in plain words. It reads the live BOQ by package, the programme (now and next), stock order-by dates and tenders.",["Ask things like \"what steel do I need for C2 columns\" or \"which orders are due this week\".","Check figures it gives against the page it names before acting."]],
   ["/notifications","Action Centre","daily","All alerts in one place: orders to place, stages starting, hold points, behind-plan stages, cubes due, NCRs overdue, payment requests.",["Work the High items first.","Each alert links to the page where you act on it."]],
