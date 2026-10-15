@@ -150,6 +150,8 @@ const OWNERS = [
  {id:"srihari", name:"Srihari", p:"b", wing:"N", share:.20, units:["502"], opts:["4BHK-N","3BHK-N"], def:"4BHK-N", note:"plot 78 · north wing · 20%"},
  {id:"krishna", name:"Krishna Reddy", p:"b", wing:"S", share:1, units:["101","201","301","401","501"], opts:["HOSTEL-S","3BHK-S","4BHK-S"], def:"HOSTEL-S", note:"plot 93 · south wing"}
 ];
+const ONLY = null;
+if (ONLY) { const keep = OWNERS.filter(o=>o.p===ONLY); OWNERS.length = 0; OWNERS.push(...keep); }
 const PROJ = {
  a:{code:"77:76", title:"77:76 · Cyber Enclave, Madhapur", sub:"Stilt + 5 floors · 2 flats per floor, 10 flats · 4BHK on floors 1–2, 3BHK on floors 3–5 · roads on the north and east"},
  b:{code:"78:93", title:"78:93 · Cyber Enclave, Madhapur", sub:"Cellar + stilt + 5 floors · south wing (plot 93) and north wing (plot 78) around one core · roads on the west, north and south"}
@@ -157,7 +159,7 @@ const PROJ = {
 const qOwner = (() => { try { const q = (new URLSearchParams(location.search).get("owner") || "").toLowerCase().trim(); if (!q) return null; const o = OWNERS.find(o => o.id === q || o.name.toLowerCase() === q || q.startsWith(o.name.toLowerCase().split(" ")[0])); return o ? o.id : null; } catch(e) { return null; } })();
 const LOCK = (() => { try { return !!qOwner && new URLSearchParams(location.search).get("lock") === "1"; } catch(e) { return false; } })();
 let S = {owner: qOwner || store.get("lo.owner") || "geeta", ch: null, spec: store.get("lo.spec") || "prem"};
-if (!OWNERS.some(o=>o.id===S.owner)) S.owner = "geeta";
+if (!OWNERS.some(o=>o.id===S.owner)) S.owner = OWNERS[0].id;
 const own = () => OWNERS.find(o=>o.id===S.owner);
 const P = () => own().p;
 
@@ -336,7 +338,7 @@ function header(){
  $("#pTitle").textContent = p.title; $("#pSub").textContent = p.sub;
  $("#idxPj").textContent = own().name + " · " + p.code;
  const g = k => OWNERS.filter(o=>o.p===k).map(o=>`<button class="own" data-o="${o.id}" aria-pressed="${o.id===S.owner}">${esc(o.name)}</button>`).join("");
- $("#who").innerHTML = LOCK ? `<div class="grp"><span class="gl">Prepared for</span><span class="own" aria-pressed="true">${esc(own().name)}</span></div>` : `<div class="grp"><span class="gl">77:76 owners</span>${g("a")}</div><div class="grp"><span class="gl">78:93 owners</span>${g("b")}</div>`;
+ $("#who").innerHTML = LOCK ? `<div class="grp"><span class="gl">Prepared for</span><span class="own" aria-pressed="true">${esc(own().name)}</span></div>` : ["a","b"].filter(k=>OWNERS.some(o=>o.p===k)).map(k=>`<div class="grp"><span class="gl">${PROJ[k].code} owners</span>${g(k)}</div>`).join("");
  $("#who").onclick = e => { const b = e.target.closest("[data-o]"); if(!b) return; S.owner = b.dataset.o; store.set("lo.owner",S.owner); header(); render(); };
  $("#idx").innerHTML = CH.map(([k,t],i)=>`<li><button data-c="${k}" aria-current="${k===S.ch}"><span>${pad2(i)}</span>${t}</button></li>`).join("");
  $("#idx").onclick = e => { const b = e.target.closest("[data-c]"); if(b) go(b.dataset.c); };
