@@ -146,8 +146,8 @@ const OWNERS = [
  {id:"vijay", name:"Vijay Kumar & others", p:"a", share:.30, sides:["W","E"], duplex:true, note:"30% of the landowners' share"},
  {id:"shivanand", name:"Shivanand", p:"a", share:.10, sides:["W","E"], note:"10% of the landowners' share"},
  {id:"ramana", name:"Ramana", p:"a", share:.10, sides:["W","E"], note:"10% of the landowners' share"},
- {id:"srinath", name:"Srinath", p:"b", wing:"N", share:.80, units:["102","202","302","402"], opts:["OFFICE-N","3BHK-N","4BHK-N"], def:"OFFICE-N", note:"plot 78 · north wing · 80%"},
- {id:"srihari", name:"Srihari", p:"b", wing:"N", share:.20, units:["502"], opts:["4BHK-N","3BHK-N"], def:"4BHK-N", note:"plot 78 · north wing · 20%"},
+ {id:"srinath", name:"Srinath", p:"b", wing:"N", share:.80, units:["202","302","402","502"], opts:["OFFICE-N","3BHK-N","4BHK-N"], def:"OFFICE-N", note:"plot 78 · north wing · 80%"},
+ {id:"srihari", name:"Srihari", p:"b", wing:"N", share:.20, units:["102"], opts:["4BHK-N","3BHK-N"], def:"4BHK-N", note:"plot 78 · north wing · 20%"},
  {id:"krishna", name:"Krishna Reddy", p:"b", wing:"S", share:1, units:["101","201","301","401","501"], opts:["HOSTEL-S","3BHK-S","4BHK-S"], def:"HOSTEL-S", note:"plot 93 · south wing"}
 ];
 const ONLY = null;
@@ -419,7 +419,7 @@ const VIEWS = {
   <div class="cols"><div class="card"><h3 style="margin-top:0">Building</h3><dl class="kv">
    <dt>Levels</dt><dd>Cellar (9′ height), stilt, floors 1–5 at 10′, terrace; plinth to terrace 59′</dd>
    <dt>South wing</dt><dd>Plot 93 · Krishna Reddy · units 101–501 · north-facing · basis: 6-room hostel, each room with its own bath</dd>
-   <dt>North wing</dt><dd>Plot 78 · Srinath (102–402) and Srihari (502) · south-facing · basis: open-plan office with MD room and conference</dd>
+   <dt>North wing</dt><dd>Plot 78 · Srinath (202–502) and Srihari (102) · south-facing · basis: open-plan office with MD room and conference</dd>
    <dt>Options</dt><dd>3BHK or 4BHK on the same shell, floor by floor</dd>
    <dt>Core</dt><dd>One stair and one MRL lift (8 passengers, 7 stops, cellar to floor 5)</dd>
    <dt>Water</dt><dd>2 bores, a sump and an overhead tank for each wing, plus a common tanker sump</dd>
@@ -632,7 +632,7 @@ const VIEWS = {
   <div class="sum"><div>Share of the common works (${esc(o.note)})</div><div>${amt(T.cX)}</div><div>Individual works · ${a ? (T.picked.length ? "flats "+T.picked.join(", ") : Math.round(o.share*100)+"% of all 10 flats (allotment pending)") : "units "+o.units.join(", ")}</div><div>${amt(T.iX)}</div><div><b>Cost</b></div><div><b>${amt(T.X)}</b></div><div>GST</div><div>${amt(T.G)}</div><div class="tot">Total for ${esc(o.name)}, incl. GST</div><div class="tot">${amt(T.total)}</div></div>
   ${costRows(a ? [["",T]] : [["Cellar + stilt + 5 floors",totals(o,true)],["Stilt + 5 floors (no cellar)",totals(o,false)]], sbuOf(o))}
   ${a && T.byShare ? `<p class="note">Until the flats are allotted, the individual works of all 10 flats are shared by the same percentage as the common works. Once your flats are fixed, your amount becomes the individual works of those flats only.</p>` : ""}
-  ${!a && o.wing==="N" ? `<p class="note">The north wing's common share is split 80 : 20 between Srinath and Srihari; each pays the individual works of his own units (Srinath 102–402, Srihari 502).</p>` : ""}
+  ${!a && o.wing==="N" ? `<p class="note">The north wing's common share is split 80 : 20 between Srinath and Srihari; each pays the individual works of his own units (Srinath 202–502, Srihari 102).</p>` : ""}
   ${LOCK ? "" : `<h3>All ${esc(PROJ[o.p].code)} owners</h3>
   <div class="tw"><table><thead><tr><th>Owner</th><th class="n">Common share</th><th class="n">Own ${a?"flats":"units"}</th><th class="n">Cost</th><th class="n">GST</th><th class="n">Total incl. GST</th></tr></thead><tbody>${rows}</tbody></table></div>`}
   <p class="note">Payments are requested stage by stage as the work is done, by share; a saving at the end of a stage is credited to the next request.</p>`;
