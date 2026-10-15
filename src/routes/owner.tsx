@@ -8,6 +8,7 @@ import {
   HardHat,
   IndianRupee,
   MessageSquarePlus,
+  Presentation,
   Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -35,8 +36,8 @@ import {
 } from "@/lib/owner-portal";
 import type { FlatLineRow } from "@/lib/flats";
 
-type Tab = "overview" | "common" | "flat" | "requests" | "options";
-const TABS: Tab[] = ["overview", "common", "flat", "requests", "options"];
+type Tab = "presentation" | "overview" | "common" | "flat" | "requests" | "options";
+const TABS: Tab[] = ["presentation", "overview", "common", "flat", "requests", "options"];
 
 export const Route = createFileRoute("/owner")({
   validateSearch: (s: Record<string, unknown>): { tab?: Tab; owner?: string } => {
@@ -98,6 +99,7 @@ function Page() {
     );
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
+    { key: "presentation", label: "Presentation", icon: <Presentation className="size-4" /> },
     { key: "overview", label: "Overview & progress", icon: <HardHat className="size-4" /> },
     { key: "common", label: "Common works", icon: <IndianRupee className="size-4" /> },
     {
@@ -161,7 +163,9 @@ function Page() {
           </div>
         </header>
 
-        {data.isLoading || !ownerName ? (
+        {tab === "presentation" ? (
+          <OwnerPresentation ownerName={ownerName} />
+        ) : data.isLoading || !ownerName ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : tab === "overview" ? (
           <Overview projectId={project.id} ownerName={ownerName} />
@@ -176,6 +180,33 @@ function Page() {
         )}
       </div>
     </Shell>
+  );
+}
+
+// ---------------------------------------------------------------- presentation
+/**
+ * The landowners' presentation (plans, services, branded specs and lump-sum
+ * costs for 77:76 and 78:93) is a static page in public/landowner-presentation.
+ * The owner's name preselects them inside the page.
+ */
+function OwnerPresentation({ ownerName }: { ownerName: string }) {
+  const src = `/landowner-presentation/index.html${ownerName ? `?owner=${encodeURIComponent(ownerName)}` : ""}`;
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-muted-foreground">
+        Plans, furniture, electrical, plumbing, makes and finishes, and the common, unit and total
+        cost for each landowner.{" "}
+        <a className="font-semibold text-primary underline" href={src} target="_blank" rel="noreferrer">
+          Open full screen
+        </a>
+      </p>
+      <iframe
+        key={src}
+        title="Landowners' presentation"
+        src={src}
+        className="h-[calc(100vh-14rem)] min-h-[560px] w-full rounded-xl border border-border bg-white"
+      />
+    </div>
   );
 }
 
