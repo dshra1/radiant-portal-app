@@ -222,7 +222,7 @@ function phase2(anchor, note, only){
 
 
 /* ---------- own-portion plan views ---------- */
-const A_CROP = {W:"10 160 900 700", E:"845 160 965 700", WE:"0 150 1820 720"};
+const A_CROP = {W:"10 160 858 700", E:"862 160 948 700", WE:"0 150 1820 720"};
 function aPlanView(o){
  const k = o.sides.length>1 ? "WE" : o.sides[0];
  const types = [...new Set(aFlats(o).map(f=>f.floor<=2?"4":"3"))];
