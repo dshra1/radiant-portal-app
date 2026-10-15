@@ -365,9 +365,9 @@ function sitePlan(lv0){
 const CH_ALL = [
  ["welcome","Welcome"],["building","The building"],["elev","Elevation & facade"],["struct","Structure: foundations, columns, steel"],["plans","Floor plans & furniture"],["electrical","Electrical & conduits"],["plumbing","Plumbing & bathrooms"],["mysvc","Your unit: conduits & pipes"],
  ["sanitary","Sanitary & CP fittings"],["finishes","Tiles, granite, paint, ceilings"],["doors","Doors & windows"],["common","Lift & common areas"],["site","Parking & site services"],["corridor","Granite, lobbies & corridors"],
- ["ccost","Common works: specs & cost"],["icost","Your units: specs & cost"],["total","Your total"],["pay","Payment schedule"],["scope","Who does what & timeline"]
+ ["ccost","Common works: specs & cost"],["boq","Bill of quantities (BOQ)"],["icost","Your units: specs & cost"],["total","Your total"],["pay","Payment schedule"],["scope","Who does what & timeline"]
 ];
-const CHL = () => P()==="b" ? CH_ALL.filter(c=>!["sanitary","finishes","icost"].includes(c[0])).flatMap(c=> c[0]==="ccost" ? [["ccost","Common works: quantities & cost"],["suggest","Your units: suggestions & scope"]] : c[0]==="total" ? [["total","Your share of the common works"]] : c[0]==="mysvc" ? [["mysvc","Your unit: slab conduits & pipes"]] : [c]) : CH_ALL;
+const CHL = () => P()==="b" ? CH_ALL.filter(c=>!["sanitary","finishes","icost"].includes(c[0])).flatMap(c=> c[0]==="ccost" ? [["ccost","Common works: specs & cost"],["boq","Bill of quantities (BOQ)"],["suggest","Your units: suggestions & scope"]] : c[0]==="total" ? [["total","Your share of the common works"]] : c[0]==="mysvc" ? [["mysvc","Your unit: slab conduits & pipes"]] : [c]) : CH_ALL;
 const pad2 = i => String(i+1).padStart(2,"0");
 
 function header(){
@@ -598,13 +598,7 @@ const VIEWS = {
     return `<p class="note">Cost before GST of each group of works; the item-wise quantities follow below. GST is added once at the bottom.</p>`+brkTable(R, cols, foot); }
    if (a) return `<p class="note">The breakdown and quantities are shown for the "As presented" specification; switch the specification above to see them.</p>`;
    return `<p class="note">Cost before GST of each work package in the value option, with the contingency spread over the packages.</p>`+brkTable(D.b.brk.ve.map(r=>[r[0],r[1]]).concat(less), cols, foot); })()}
-  ${S.spec!=="prem" ? "" : (()=>{ const Dp = D[o.p], fmtq = q => (typeof q==="number" ? (Math.abs(q)>=100 ? Math.round(q).toLocaleString("en-IN") : (+q.toFixed(2)).toLocaleString("en-IN")) : esc(q||""));
-   const sub = Dp.boq.reduce((s,g)=>s+g[1].reduce((x,l)=>x+l[6],0),0);
-   return `<h3>Item-wise quantities (BOQ)</h3>
-   <p class="note">Every common-works item with its quantity, unit and rate, as taken off our drawings, for your architect to check. Amounts are before GST and before the 5% contingency, for the whole building${a?"":" with the cellar"}. Tap a group to open it. <a href="files/${a?"BOQ-77-76-Common-Works.xlsx":"BOQ-78-93-Common-Works.xlsx"}" download>Download the full BOQ as Excel</a>.</p>
-   ${Dp.boq.map(([g,ls])=>`<details class="boq"><summary><span>${esc(g)}</span><span class="n">${amt(ls.reduce((s,l)=>s+l[6],0))} · ${ls.length} items</span></summary><div class="tw"><table><thead><tr><th>Code</th><th>Item</th><th class="n">Qty</th><th>Unit</th><th class="n">Rate ₹</th><th class="n">Amount ₹</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${esc(l[0])}</td><td style="min-width:220px">${esc(l[1])}${l[2]?`<br><small style="color:var(--muted)">${esc(l[2])}</small>`:""}</td><td class="n">${fmtq(l[3])}</td><td>${esc(l[4]||"")}</td><td class="n">${Math.round(l[5]).toLocaleString("en-IN")}</td><td class="n">${Math.round(l[6]).toLocaleString("en-IN")}</td></tr>`).join("")}</tbody></table></div></details>`).join("")}
-   <div class="tw"><table><tbody><tr><td>All items, before GST</td><td class="n">${amt(sub)}</td></tr><tr><td>Contingency (5%)</td><td class="n">${amt(Dp.boqCont)}</td></tr>${!a&&!S.cellar?`<tr><td>Less: cellar not built</td><td class="n">${amt(-CELLAR_COST*(1-D.b.gst.cellar))}</td></tr>`:""}<tr><td><b>Cost</b></td><td class="n"><b>${amt(c-cg)}</b></td></tr><tr><td>GST</td><td class="n">${amt(cg)}</td></tr><tr class="tot"><td>Total common works incl. GST</td><td class="n">${amt(c)}</td></tr></tbody></table></div>
-   <p class="note">Quantities are PMC take-offs for estimating; the final quantities are measured on site and billed at the agreed rates.${a?"":" Items marked LS are lump sums for work that is quoted as a package (site set-up, lift, approvals)."}</p>`; })()}
+  <div class="callout">The item-wise quantities (BOQ) for every common-works item are in the next chapter, <b>Bill of quantities</b>, with an Excel download.</div>
   <h3>Shares of the common works</h3>
   <div class="tw"><table>${cgHead("Owner")}<tbody>
    ${OWNERS.filter(x=>x.p===o.p).map(x=>{ const t=totals(x); return cgRow(esc(x.name)+` <small>${esc(x.note)}</small>`, t.common, t.cG, x.id===o.id?"tot":""); }).join("")}
@@ -661,6 +655,21 @@ const VIEWS = {
    const tot = t => D.b.units[t].total, g = t => tot(t)*D.b.gst.units[t];
    return `<p class="note">Cost before GST per unit (one floor), with the 5% contingency spread over the packages. GST is added once at the bottom.</p>`+brkTable(R, ts.map((t,i)=>[esc(TYPE_NAME[t]), r=>r[i+1]]), [["<b>Cost per unit</b>", ts.map(t=>tot(t)-g(t))], ["GST", ts.map(g)], ["Per unit incl. GST", ts.map(tot), "tot"]]); })()}
   ${incl}`;
+ },
+ boq(){
+  const o = own(), T = totals(o, S.cellar), a = o.p==="a";
+  const c = bldCommon(o.p), cg = bldCommonG(o.p);
+  if (S.spec!=="prem") return `<p class="lead">The bill of quantities is for the "As presented" specification.</p>${specToggle()}`;
+  return `<p class="lead">Every common-works item with its quantity, unit, rate and amount, so your architect can check it against the drawings.</p>
+  ${specToggle()}
+  ${(()=>{ const Dp = D[o.p], fmtq = q => (typeof q==="number" ? (Math.abs(q)>=100 ? Math.round(q).toLocaleString("en-IN") : (+q.toFixed(2)).toLocaleString("en-IN")) : esc(q||""));
+   const sub = Dp.boq.reduce((s,g)=>s+g[1].reduce((x,l)=>x+l[6],0),0);
+   return `
+   <p class="note">Every common-works item with its quantity, unit and rate, as taken off our drawings, for your architect to check. Amounts are before GST and before the 5% contingency, for the whole building${a?"":" with the cellar"}. Tap a group to open it. <a href="files/${a?"BOQ-77-76-Common-Works.xlsx":"BOQ-78-93-Common-Works.xlsx"}" download>Download the full BOQ as Excel</a>.</p>
+   ${Dp.boq.map(([g,ls])=>`<details class="boq"><summary><span>${esc(g)}</span><span class="n">${amt(ls.reduce((s,l)=>s+l[6],0))} · ${ls.length} items</span></summary><div class="tw"><table><thead><tr><th>Code</th><th>Item</th><th class="n">Qty</th><th>Unit</th><th class="n">Rate ₹</th><th class="n">Amount ₹</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${esc(l[0])}</td><td style="min-width:220px">${esc(l[1])}${l[2]?`<br><small style="color:var(--muted)">${esc(l[2])}</small>`:""}</td><td class="n">${fmtq(l[3])}</td><td>${esc(l[4]||"")}</td><td class="n">${Math.round(l[5]).toLocaleString("en-IN")}</td><td class="n">${Math.round(l[6]).toLocaleString("en-IN")}</td></tr>`).join("")}</tbody></table></div></details>`).join("")}
+   <div class="tw"><table><tbody><tr><td>All items, before GST</td><td class="n">${amt(sub)}</td></tr><tr><td>Contingency (5%)</td><td class="n">${amt(Dp.boqCont)}</td></tr>${!a&&!S.cellar?`<tr><td>Less: cellar not built</td><td class="n">${amt(-CELLAR_COST*(1-D.b.gst.cellar))}</td></tr>`:""}<tr><td><b>Cost</b></td><td class="n"><b>${amt(c-cg)}</b></td></tr><tr><td>GST</td><td class="n">${amt(cg)}</td></tr><tr class="tot"><td>Total common works incl. GST</td><td class="n">${amt(c)}</td></tr></tbody></table></div>
+   <p class="note">Quantities are PMC take-offs for estimating; the final quantities are measured on site and billed at the agreed rates.${a?"":" Items marked LS are lump sums for work that is quoted as a package (site set-up, lift, approvals)."}</p>`; })()}
+  <p class="note">Your share of the common works is ${a?Math.round(o.share*100)+"%":Math.round(o.share*50)+"%"} of the total: ${amt(T.cX)} + GST ${amt(T.cG)} = ${amt(T.common)}.</p>`;
  },
  suggest(){
   const o = own(), pick = bPick(o);
