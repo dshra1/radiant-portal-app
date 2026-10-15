@@ -164,7 +164,7 @@ function Page() {
         </header>
 
         {tab === "presentation" ? (
-          <OwnerPresentation ownerName={ownerName} />
+          <OwnerPresentation ownerName={ownerName} lock={!isManager} />
         ) : data.isLoading || !ownerName ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : tab === "overview" ? (
@@ -189,8 +189,9 @@ function Page() {
  * costs for 77:76 and 78:93) is a static page in public/landowner-presentation.
  * The owner's name preselects them inside the page.
  */
-function OwnerPresentation({ ownerName }: { ownerName: string }) {
-  const src = `/landowner-presentation/index.html${ownerName ? `?owner=${encodeURIComponent(ownerName)}` : ""}`;
+function OwnerPresentation({ ownerName, lock }: { ownerName: string; lock: boolean }) {
+  // A landowner sees only their own flats / wing; the PMC can switch owners.
+  const src = `/landowner-presentation/index.html${ownerName ? `?owner=${encodeURIComponent(ownerName)}${lock ? "&lock=1" : ""}` : ""}`;
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm text-muted-foreground">

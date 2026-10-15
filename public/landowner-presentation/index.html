@@ -142,19 +142,20 @@ const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}},
 
 /* ---------- owners ---------- */
 const OWNERS = [
- {id:"geeta", name:"Geeta", p:"a", share:.50, note:"50% of the landowners' share"},
- {id:"vijay", name:"Vijay Kumar & others", p:"a", share:.30, note:"30% of the landowners' share"},
- {id:"shivanand", name:"Shivanand", p:"a", share:.10, note:"10% of the landowners' share"},
- {id:"ramana", name:"Ramana", p:"a", share:.10, note:"10% of the landowners' share"},
- {id:"srinath", name:"Srinath", p:"b", wing:"N", share:.80, units:["102","202","302","402"], note:"plot 78 · north wing · 80%"},
- {id:"srihari", name:"Srihari", p:"b", wing:"N", share:.20, units:["502"], note:"plot 78 · north wing · 20%"},
- {id:"krishna", name:"Krishna Reddy", p:"b", wing:"S", share:1, units:["101","201","301","401","501"], note:"plot 93 · south wing"}
+ {id:"geeta", name:"Geeta", p:"a", share:.50, sides:["E"], note:"50% of the landowners' share"},
+ {id:"vijay", name:"Vijay Kumar & others", p:"a", share:.30, sides:["W","E"], duplex:true, note:"30% of the landowners' share"},
+ {id:"shivanand", name:"Shivanand", p:"a", share:.10, sides:["W","E"], note:"10% of the landowners' share"},
+ {id:"ramana", name:"Ramana", p:"a", share:.10, sides:["W","E"], note:"10% of the landowners' share"},
+ {id:"srinath", name:"Srinath", p:"b", wing:"N", share:.80, units:["102","202","302","402"], opts:["OFFICE-N","3BHK-N","4BHK-N"], def:"OFFICE-N", note:"plot 78 · north wing · 80%"},
+ {id:"srihari", name:"Srihari", p:"b", wing:"N", share:.20, units:["502"], opts:["4BHK-N","3BHK-N"], def:"4BHK-N", note:"plot 78 · north wing · 20%"},
+ {id:"krishna", name:"Krishna Reddy", p:"b", wing:"S", share:1, units:["101","201","301","401","501"], opts:["HOSTEL-S","3BHK-S","4BHK-S"], def:"HOSTEL-S", note:"plot 93 · south wing"}
 ];
 const PROJ = {
  a:{code:"77:76", title:"77:76 · Cyber Enclave, Madhapur", sub:"Stilt + 5 floors · 2 flats per floor, 10 flats · 4BHK on floors 1–2, 3BHK on floors 3–5 · roads on the north and east"},
  b:{code:"78:93", title:"78:93 · Cyber Enclave, Madhapur", sub:"Cellar + stilt + 5 floors · south wing (plot 93) and north wing (plot 78) around one core · roads on the west, north and south"}
 };
 const qOwner = (() => { try { const q = (new URLSearchParams(location.search).get("owner") || "").toLowerCase().trim(); if (!q) return null; const o = OWNERS.find(o => o.id === q || o.name.toLowerCase() === q || q.startsWith(o.name.toLowerCase().split(" ")[0])); return o ? o.id : null; } catch(e) { return null; } })();
+const LOCK = (() => { try { return !!qOwner && new URLSearchParams(location.search).get("lock") === "1"; } catch(e) { return false; } })();
 let S = {owner: qOwner || store.get("lo.owner") || "geeta", ch: null, spec: store.get("lo.spec") || "prem"};
 if (!OWNERS.some(o=>o.id===S.owner)) S.owner = "geeta";
 const own = () => OWNERS.find(o=>o.id===S.owner);
@@ -163,24 +164,26 @@ const P = () => own().p;
 /* ---------- 77:76 flats and 78:93 units ---------- */
 const A_FLATS = ["101","102","201","202","301","302","401","402","501","502"].map(n=>{
  const f = +n[0], side = n[2]==="1" ? "F1" : "F2", t = side + (f<=2 ? "-4" : "-3");
- return {n, floor:f, t};
+ return {n, floor:f, t, side: n[2]==="1" ? "W" : "E"};
 });
+const aFlats = (o = own()) => A_FLATS.filter(f => o.sides.includes(f.side));
 const aFlatCost = t => D.a.types[t][S.spec];
-const aPicked = () => { try { const v = JSON.parse(store.get("lo.flats."+S.owner)); return Array.isArray(v) ? v : []; } catch(e) { return []; } };
+const aPicked = (o = own()) => { try { const v = JSON.parse(store.get("lo.flats."+o.id)); const ok = aFlats(o).map(f=>f.n); return Array.isArray(v) ? v.filter(n=>ok.includes(n)) : []; } catch(e) { return []; } };
 const B_OPTS = {S:[["HOSTEL-S","Hostel · 6 rooms"],["3BHK-S","3BHK"],["4BHK-S","4BHK"]], N:[["OFFICE-N","Office"],["3BHK-N","3BHK"],["4BHK-N","4BHK"]]};
-const bDefault = w => w==="S" ? {"101":"HOSTEL-S","201":"HOSTEL-S","301":"HOSTEL-S","401":"HOSTEL-S","501":"HOSTEL-S"} : {"102":"OFFICE-N","202":"OFFICE-N","302":"OFFICE-N","402":"OFFICE-N","502":"OFFICE-N"};
-const bPick = w => { let d = bDefault(w); try { const v = JSON.parse(store.get("lo.units."+w)); if (v && typeof v==="object") d = Object.assign(d, v); } catch(e) {} return d; };
+const TYPE_IMG = {"HOSTEL-S":"typ_S_H","3BHK-S":"typ_S_3","4BHK-S":"typ_S_4","OFFICE-N":"typ_S_H","3BHK-N":"typ_N_3","4BHK-N":"typ_N_4"};
+const TYPE_NAME = {"HOSTEL-S":"Hostel · 6 rooms","3BHK-S":"3BHK","4BHK-S":"4BHK","OFFICE-N":"Office","3BHK-N":"3BHK","4BHK-N":"4BHK"};
+const bPick = o => { const d = {}; o.units.forEach(u=>d[u]=o.def); try { const v = JSON.parse(store.get("lo.units."+o.id)); if (v && typeof v==="object") o.units.forEach(u=>{ if (o.opts.includes(v[u])) d[u]=v[u]; }); } catch(e) {} return d; };
 
 function totals(o = own()){
  if (o.p === "a"){
   const common = D.a.common[S.spec] * o.share;
-  const picked = aPicked();
+  const picked = aPicked(o);
   const ind = picked.reduce((s,n)=>s + aFlatCost(A_FLATS.find(f=>f.n===n).t), 0);
   const allInd = A_FLATS.reduce((s,f)=>s + aFlatCost(f.t), 0) * o.share;
   return {common, ind, total: common + ind, picked, allInd};
  }
  const wingCommon = D.b.common[S.spec] / 2, common = wingCommon * o.share;
- const pick = bPick(o.wing);
+ const pick = bPick(o);
  const ind = o.units.reduce((s,u)=>s + D.b.units[pick[u]].total, 0);
  return {common, ind, total: common + ind, wingCommon, pick};
 }
@@ -209,11 +212,39 @@ function viewer(list){
  setTimeout(()=>{ const s = document.getElementById(id+"s"), im = document.getElementById(id+"i"); if(!s) return; s.onchange = () => { im.src = list[s.value][0]; im.alt = list[s.value][1]; }; },0);
  return `<div class="bar"><label class="lab" for="${id}s">Drawing</label><select id="${id}s">${list.map((x,i)=>`<option value="${i}">${esc(x[1])}</option>`).join("")}</select><span class="note">Scroll inside the sheet to pan.</span></div><div class="sheetbox"><img id="${id}i" src="${list[0][0]}" alt="${esc(list[0][1])}"></div>`;
 }
-function phase2(anchor, note){
+function phase2(anchor, note, only){
+ const q = only ? `?only=${only}` : "";
  const id = "f" + (++viewerSeq);
  const t = store.get("lo.p2") || "4bhk";
- setTimeout(()=>{ document.querySelectorAll(`[data-p2="${id}"]`).forEach(b=>b.onclick=()=>{ store.set("lo.p2",b.dataset.v); document.querySelectorAll(`[data-p2="${id}"]`).forEach(x=>x.setAttribute("aria-pressed",x===b)); document.getElementById(id).src=`files/phase2-${b.dataset.v}.html#${anchor}`; }); },0);
- return `<div class="bar"><span class="lab">Flat type</span><span class="seg">${[["4bhk","4BHK · floors 1–2"],["3bhk","3BHK · floors 3–5"]].map(([v,l])=>`<button data-p2="${id}" data-v="${v}" aria-pressed="${t===v}">${l}</button>`).join("")}</span><span class="note">${note}</span></div><iframe class="frame" id="${id}" title="Interactive drawing set" src="files/phase2-${t}.html#${anchor}" loading="lazy"></iframe>`;
+ setTimeout(()=>{ document.querySelectorAll(`[data-p2="${id}"]`).forEach(b=>b.onclick=()=>{ store.set("lo.p2",b.dataset.v); document.querySelectorAll(`[data-p2="${id}"]`).forEach(x=>x.setAttribute("aria-pressed",x===b)); document.getElementById(id).src=`files/phase2-${b.dataset.v}.html${q}#${anchor}`; }); },0);
+ return `<div class="bar"><span class="lab">Flat type</span><span class="seg">${[["4bhk","4BHK · floors 1–2"],["3bhk","3BHK · floors 3–5"]].map(([v,l])=>`<button data-p2="${id}" data-v="${v}" aria-pressed="${t===v}">${l}</button>`).join("")}</span><span class="note">${note}</span></div><iframe class="frame" id="${id}" title="Interactive drawing set" src="files/phase2-${t}.html${q}#${anchor}" loading="lazy"></iframe>`;
+}
+
+
+/* ---------- own-portion plan views ---------- */
+const A_CROP = {W:"10 160 900 700", E:"845 160 965 700", WE:"0 150 1820 720"};
+function aPlanView(o){
+ const k = o.sides.length>1 ? "WE" : o.sides[0];
+ const types = [...new Set(aFlats(o).map(f=>f.floor<=2?"4":"3"))];
+ let t = store.get("lo.ap") || "4"; if (!types.includes(t)) t = types[0];
+ setTimeout(()=>{ const s=document.getElementById("apv"); if(s) s.onchange=()=>{ store.set("lo.ap",s.value); render(); }; },0);
+ const src = t==="4" ? "files/p77_4bhk-1.png" : "files/p77_3bhk-1.png";
+ return `<div class="bar"><label class="lab" for="apv">Plan</label><select id="apv">${types.map(x=>`<option value="${x}" ${x===t?"selected":""}>${x==="4"?"4BHK · floors 1–2":"3BHK · floors 3–5"}${k==="WE"?" · west + east flats":k==="E"?" · east flat (Flat-02)":" · west flat (Flat-01)"}</option>`).join("")}</select></div>
+ <div class="svcbox"><svg viewBox="${A_CROP[k]}" class="svc" style="min-width:${k==="WE"?900:620}px"><image href="${src}" x="0" y="0" width="1820" height="1287"/></svg></div>`;
+}
+function wingPlan(t, w){
+ const vb = w==="S" ? "-3 -4 50 54" : "45 -4 50 54";
+ return `<div class="svcbox"><svg viewBox="${vb}" class="svc" style="min-width:620px"><image href="files/${TYPE_IMG[t]}.png" x="-8" y="-9" width="108" height="60" preserveAspectRatio="none"/></svg></div>`;
+}
+function bPlanView(o){
+ const pick = bPick(o); let t = store.get("lo.bp."+o.id); if (!o.opts.includes(t)) t = pick[o.units[0]];
+ setTimeout(()=>{ const s=document.getElementById("bpv"); if(s) s.onchange=()=>{ store.set("lo.bp."+o.id,s.value); render(); }; },0);
+ return `<div class="bar"><label class="lab" for="bpv">Plan</label><select id="bpv">${o.opts.map(x=>`<option value="${x}" ${x===t?"selected":""}>${TYPE_NAME[x]}${o.units.some(u=>pick[u]===x)?" · your current choice":" · option"}</option>`).join("")}</select></div>${wingPlan(t, o.wing)}`;
+}
+function bSheets(kind){
+ const o = own(), all = B_SHEETS[kind];
+ const hostel = o.opts.includes("HOSTEL-S"), office = o.opts.includes("OFFICE-N");
+ return all.filter(([src,t]) => /common|Flow of water|Water input|Terrace/.test(t) || (hostel && /^Hostel/.test(t)) || (office && /^Office/.test(t)));
 }
 
 /* ---------- unit services drawings (owner's own portion only) ---------- */
@@ -304,7 +335,7 @@ function header(){
  $("#pTitle").textContent = p.title; $("#pSub").textContent = p.sub;
  $("#idxPj").textContent = own().name + " · " + p.code;
  const g = k => OWNERS.filter(o=>o.p===k).map(o=>`<button class="own" data-o="${o.id}" aria-pressed="${o.id===S.owner}">${esc(o.name)}</button>`).join("");
- $("#who").innerHTML = `<div class="grp"><span class="gl">77:76 owners</span>${g("a")}</div><div class="grp"><span class="gl">78:93 owners</span>${g("b")}</div>`;
+ $("#who").innerHTML = LOCK ? `<div class="grp"><span class="gl">Prepared for</span><span class="own" aria-pressed="true">${esc(own().name)}</span></div>` : `<div class="grp"><span class="gl">77:76 owners</span>${g("a")}</div><div class="grp"><span class="gl">78:93 owners</span>${g("b")}</div>`;
  $("#who").onclick = e => { const b = e.target.closest("[data-o]"); if(!b) return; S.owner = b.dataset.o; store.set("lo.owner",S.owner); header(); render(); };
  $("#idx").innerHTML = CH.map(([k,t],i)=>`<li><button data-c="${k}" aria-current="${k===S.ch}"><span>${pad2(i)}</span>${t}</button></li>`).join("");
  $("#idx").onclick = e => { const b = e.target.closest("[data-c]"); if(b) go(b.dataset.c); };
@@ -365,15 +396,15 @@ const VIEWS = {
  },
  plans(){
   if (P()==="a") return `<p class="lead">The typical floor carries both flats around the core. Floors 1–2 are 4BHK; floors 3–5 are 3BHK, where Bedroom-03 becomes a family hall. The interactive set below draws the furniture, AC units, electrical, conduit, drainage, water, tiles and ceiling as layers: tick the checkboxes above each plan to switch them on and off.</p>
-  ${viewer(A_SHEETS.plans)}
-  <h3>Furniture layout (interactive)</h3>
+  ${aPlanView(own())}
+  <h3>Furniture layout</h3>
   <ul class="list"><li>King bed 6′0″ × 6′6″ in every bedroom, side tables beside it, nothing in a door swing.</li><li>Wardrobes 2′0″ deep on the west or south walls, never over a window.</li><li>AC indoor units on a side wall with the throw across the bed, at 8′0″; outdoor units on the AC wall of the north balcony or on brackets, none on the east elevation.</li></ul>
-  ${phase2("furniture","Furniture and AC layers are on by default; scroll inside the frame.")}
-  <h3>Your flat with services: pick a view</h3>${VIEWS.mysvc()}`;
-  return `<p class="lead">Each wing is the same 42′ × 45′6″ shell on every floor. The basis plan has a 6-room hostel in the south wing and an open office in the north wing. 3BHK and 4BHK plans fit the same shell, the same windows and the same plumbing stacks, so each owner can choose floor by floor.</p>
-  ${viewer(B_SHEETS.plans)}
-  <div class="cols" style="margin-top:16px"><div class="card"><h3 style="margin-top:0">Hostel · south wing</h3><ul class="list"><li>Six rooms of 13′3″ × 16′0″ off a 10′6″ corridor, each with a bed, wardrobe and study table.</li><li>Every room has its own bath on the outer wall, with a ventilator and exhaust fan.</li><li>Corner balcony at the road end.</li></ul></div>
-  <div class="card"><h3 style="margin-top:0">Office · north wing</h3><ul class="list"><li>Reception and three open-office zones, about 34 desks.</li><li>MD room with its own toilet, a glass-walled conference room, a break-out area and a pantry.</li><li>Three staff WCs; corner balcony at the road end.</li></ul></div></div>
+  ${own().sides.length>1 ? phase2("furniture","Furniture and AC layers are on by default; scroll inside the frame.") : ""}
+  <h3>Your flat with services: pick a view</h3>${VIEWS.mysvc()}
+  ${own().duplex ? `<h3>Duplex option · floors 4 + 5</h3><p class="lead">Floors 4 and 5 can be combined into a duplex for either flat: an internal stair, the kitchen, dining and parents' bedroom below, the master suite, bedrooms and family lounge above. External plumbing lines, windows and elevations stay as on the typical floor.</p><div class="sheetbox"><img src="files/duplex-both.png" alt="Duplex flats, floors 4 and 5, both levels"></div><h3>Duplex services (Flat-02)</h3><iframe class="frame" title="Flat-02 duplex services" src="files/duplex-services.html" loading="lazy"></iframe>` : ""}`;
+  return `<p class="lead">Your wing is a 42′ × 45′6″ shell, the same on every floor. Only your wing is shown. The options you can choose fit the same shell, the same windows and the same plumbing stacks.</p>
+  ${bPlanView(own())}
+  <div class="cols" style="margin-top:16px">${own().opts.includes("HOSTEL-S")?`<div class="card"><h3 style="margin-top:0">Hostel</h3><ul class="list"><li>Six rooms of 13′3″ × 16′0″ off a 10′6″ corridor, each with a bed, wardrobe and study table.</li><li>Every room has its own bath on the outer wall, with a ventilator and exhaust fan.</li><li>Corner balcony at the road end.</li></ul></div>`:""}${own().opts.includes("OFFICE-N")?`<div class="card"><h3 style="margin-top:0">Office</h3><ul class="list"><li>Reception and three open-office zones, about 34 desks.</li><li>MD room with its own toilet, a glass-walled conference room, a break-out area and a pantry.</li><li>Three staff WCs; corner balcony at the road end.</li></ul></div>`:""}<div class="card"><h3 style="margin-top:0">3BHK and 4BHK</h3><ul class="list"><li>Every bedroom with an attached toilet on the outer wall; master bedroom the largest.</li><li>Living, dining and kitchen along the road side; corner balcony at the road end.</li><li>Choose the option for each floor before that floor's slab is poured.</li></ul></div></div>
   <h3>Your wing with services: pick a view</h3>${VIEWS.mysvc()}`;
  },
  electrical(){
@@ -383,7 +414,7 @@ const VIEWS = {
   <div class="cols" style="margin-top:8px"><div class="card"><h3 style="margin-top:0">Inside your ${a?"flat":"unit"}</h3><ul class="list"><li>Light rows switched in groups; bedroom light and fan on 2-way switches at the door and the bed.</li><li>A 16 A socket and a concealed copper pair with drain for every AC position.</li><li>Geyser point in every bathroom; exhaust fan in every toilet and the kitchen.</li><li>TV and data points; video door phone at the main door.</li>${a?"":"<li>Office: Cat 6 data point at every desk and a rack at the entry.</li>"}</ul></div>
   <div class="card"><h3 style="margin-top:0">Common works</h3><ul class="list"><li>Meter panel, rising main from the meter to your DB position, earthing to the DB.</li><li>Ceiling points with their conduits cast into each slab before it is poured (they cannot be added later).</li><li>Common lighting in the stilt, lobbies, stair and outside, with sensors; ${a?"a 25 kVA generator for the common services":"a generator pad and changeover for each wing (the generator itself is the owners' choice)"}.</li><li>CCTV, gate access and intercom backbone; lightning arrester.</li></ul></div></div>
   <h3>Electrical and conduit drawings</h3>
-  ${a ? phase2("electrical","Every point, circuit and conduit run for each flat; the wall-by-wall sheets follow further down the frame.") : viewer(B_SHEETS.elec)}`;
+  ${a ? (own().sides.length>1 ? phase2("electrical","Every point, circuit and conduit run for each flat; the wall-by-wall sheets follow further down the frame.") : VIEWS.mysvc()) : viewer(bSheets("elec"))}`;
  },
  plumbing(){
   const a = P()==="a";
@@ -392,7 +423,7 @@ const VIEWS = {
   <div class="cols" style="margin-top:8px"><div class="card"><h3 style="margin-top:0">Bathrooms</h3><ul class="list"><li>Wall-hung WC on a concealed cistern; vessel basin on a granite counter; shower area behind a half wall with a granite coping.</li><li>Toilet floors waterproofed with 1′ upturns and a 48-hour ponding test before tiling; shower walls waterproofed to 7′.</li><li>Raised black-granite threshold at each toilet door to keep water inside.</li><li>Access panels in the toilet false ceiling for the traps of the toilet above.</li></ul></div>
   <div class="card"><h3 style="margin-top:0">Water for the building</h3><ul class="list">${a?"<li>Bore water for all use; municipal water for drinking only, from its own sump and tank compartment.</li><li>Overhead tank raised 10′ above the terrace so floors 4 and 5 get good pressure without booster pumps.</li>":"<li>Two bores, a 30 kL sump and a 10 kL overhead tank for each wing, plus one common tanker sump.</li><li>Pumps with dry-run and level control; overflow, scour and level indicators on every tank.</li>"}<li>Rain-water harvesting pits, storm drains and sewer to the municipal line.</li></ul></div></div>
   <h3>Plumbing drawings</h3>
-  ${a ? phase2("toilets","Toilet layouts, then shafts, sleeves, supply and drain runs further down the frame.") : viewer(B_SHEETS.plumb)}`;
+  ${a ? (own().sides.length>1 ? phase2("toilets","Toilet layouts, then shafts, sleeves, supply and drain runs further down the frame.") : VIEWS.mysvc()) : viewer(bSheets("plumb"))}`;
  },
  sanitary(){
   return `<p class="lead">All sanitary ware and CP (chrome-plated) fittings are Kohler, the same models in every bathroom so that spares and service stay simple.</p>
@@ -472,21 +503,21 @@ const VIEWS = {
    const T = totals(o);
    return `<p class="lead">Each flat's individual works are one lump sum for the specification shown in this presentation. Tick the flats that are yours to see your amount; the allotment of flats is still to be confirmed.</p>
    ${specToggle()}
-   <div class="tw"><table><thead><tr><th>Flat type</th><th>Flats</th><th class="n">Per flat</th></tr></thead><tbody>${Object.entries(D.a.types).map(([k,t])=>`<tr><td>${esc(t.label)}</td><td>${A_FLATS.filter(f=>f.t===k).map(f=>f.n).join(", ")}</td><td class="n">${L(t[S.spec])}</td></tr>`).join("")}</tbody></table></div>
+   <div class="tw"><table><thead><tr><th>Flat type</th><th>Flats</th><th class="n">Per flat</th></tr></thead><tbody>${Object.entries(D.a.types).filter(([k])=>aFlats(o).some(f=>f.t===k)).map(([k,t])=>`<tr><td>${esc(t.label)}</td><td>${aFlats(o).filter(f=>f.t===k).map(f=>f.n).join(", ")}</td><td class="n">${L(t[S.spec])}</td></tr>`).join("")}</tbody></table></div>
    <h3>Your flats</h3>
-   <div class="flats" id="flatPick">${A_FLATS.map(f=>`<label><input type="checkbox" id="fl${f.n}" value="${f.n}" ${picked.includes(f.n)?"checked":""}><span><b>Flat ${f.n}</b><small>${esc(D.a.types[f.t].label)}</small><span class="amt">${L(aFlatCost(f.t))}</span></span></label>`).join("")}</div>
+   <div class="flats" id="flatPick">${aFlats(o).map(f=>`<label><input type="checkbox" id="fl${f.n}" value="${f.n}" ${picked.includes(f.n)?"checked":""}><span><b>Flat ${f.n}</b><small>${esc(D.a.types[f.t].label)}</small><span class="amt">${L(aFlatCost(f.t))}</span></span></label>`).join("")}</div>
    <div class="figs"><div class="fig key"><div class="l">${esc(o.name)} · selected flats</div><div class="v">${picked.length?L(T.ind):"₹0"}</div><div class="s">${picked.length?picked.length+" flat(s)":"no flats ticked yet"}</div></div><div class="fig"><div class="l">For reference: all 10 flats at your share</div><div class="v">${amt(T.allInd)}</div><div class="s">${Math.round(o.share*100)}% of ${Cr(A_FLATS.reduce((s,f)=>s+aFlatCost(f.t),0))}</div></div></div>
    ${incl}`;
   }
-  const pick = bPick(o.wing), T = totals(o);
-  const units = o.wing==="S" ? ["101","201","301","401","501"] : ["102","202","302","402","502"];
-  setTimeout(()=>{ document.querySelectorAll("select[data-u]").forEach(s=>s.onchange=()=>{ const v=bPick(o.wing); v[s.dataset.u]=s.value; store.set("lo.units."+o.wing, JSON.stringify(v)); render(); }); },0);
+  const pick = bPick(o), T = totals(o);
+  const units = o.units;
+  setTimeout(()=>{ document.querySelectorAll("select[data-u]").forEach(s=>s.onchange=()=>{ const v=bPick(o); v[s.dataset.u]=s.value; store.set("lo.units."+o.id, JSON.stringify(v)); render(); }); },0);
   return `<p class="lead">Each unit's individual works are one lump sum for the chosen use. Pick the use for each floor; the choice for a floor is needed before that floor's slab is poured, because the sleeves and ceiling points are cast to suit it.</p>
-  <div class="tw"><table><thead><tr><th>Unit</th><th>Owner</th><th>Use</th><th class="n">Carpet</th><th class="n">Individual works</th></tr></thead><tbody>
-  ${units.map(u=>{ const ow = OWNERS.find(x=>x.p==="b" && x.units.includes(u)); const mine = o.units.includes(u); return `<tr${mine?"":' style="opacity:.6"'}><td>${u}</td><td>${esc(ow.name)}</td><td><select id="u${u}" data-u="${u}" ${mine?"":"disabled"}>${B_OPTS[o.wing].map(([k,t])=>`<option value="${k}" ${pick[u]===k?"selected":""}>${t}</option>`).join("")}</select></td><td class="n">${D.b.units[pick[u]].carpet.toLocaleString("en-IN")} sft</td><td class="n">${L(D.b.units[pick[u]].total)}</td></tr>`; }).join("")}
+  <div class="tw"><table><thead><tr><th>Unit</th><th>Use</th><th class="n">Carpet</th><th class="n">Individual works</th></tr></thead><tbody>
+  ${units.map(u=>{ return `<tr><td>${u}</td><td><select id="u${u}" data-u="${u}">${o.opts.map(k=>`<option value="${k}" ${pick[u]===k?"selected":""}>${TYPE_NAME[k]}</option>`).join("")}</select></td><td class="n">${D.b.units[pick[u]].carpet.toLocaleString("en-IN")} sft</td><td class="n">${L(D.b.units[pick[u]].total)}</td></tr>`; }).join("")}
   </tbody></table></div>
   <div class="figs"><div class="fig key"><div class="l">${esc(o.name)} · your units</div><div class="v">${amt(T.ind)}</div><div class="s">${o.units.length} unit(s): ${o.units.join(", ")}</div></div>
-  ${Object.entries(D.b.units).filter(([k])=>k.endsWith("-"+o.wing)).map(([k,u])=>`<div class="fig"><div class="l">${esc(B_OPTS[o.wing].find(x=>x[0]===k)[1])} · per floor</div><div class="v">${L(u.total)}</div><div class="s">${u.carpet.toLocaleString("en-IN")} sft carpet</div></div>`).join("")}</div>
+  ${o.opts.map(k=>[k,D.b.units[k]]).map(([k,u])=>`<div class="fig"><div class="l">${esc(TYPE_NAME[k])} · per floor</div><div class="v">${L(u.total)}</div><div class="s">${u.carpet.toLocaleString("en-IN")} sft carpet</div></div>`).join("")}</div>
   ${incl}`;
  },
  total(){
@@ -497,8 +528,8 @@ const VIEWS = {
   <div class="sum"><div>Share of the common works (${esc(o.note)})</div><div>${amt(T.common)}</div><div>Individual works · ${a ? (T.picked.length ? "flats "+T.picked.join(", ") : "no flats ticked (see Your units)") : "units "+o.units.join(", ")}</div><div>${amt(T.ind)}</div><div class="tot">Total for ${esc(o.name)}</div><div class="tot">${amt(T.total)}</div></div>
   ${a && !T.picked.length ? `<p class="note">If the landowners take up the individual works of all 10 flats in their shares, your amount would be ${amt(T.common + T.allInd)} (${amt(T.common)} + ${amt(T.allInd)}).</p>` : ""}
   ${!a && o.wing==="N" ? `<p class="note">The north wing's common share is split 80 : 20 between Srinath and Srihari; each pays the individual works of his own units (Srinath 102–402, Srihari 502).</p>` : ""}
-  <h3>All ${esc(PROJ[o.p].code)} owners</h3>
-  <div class="tw"><table><thead><tr><th>Owner</th><th class="n">Common share</th><th class="n">Own units</th><th class="n">Total</th></tr></thead><tbody>${rows}</tbody></table></div>
+  ${LOCK ? "" : `<h3>All ${esc(PROJ[o.p].code)} owners</h3>
+  <div class="tw"><table><thead><tr><th>Owner</th><th class="n">Common share</th><th class="n">Own units</th><th class="n">Total</th></tr></thead><tbody>${rows}</tbody></table></div>`}
   <p class="note">Payments are requested stage by stage as the work is done, by share; a saving at the end of a stage is credited to the next request.</p>`;
  },
  mysvc(){
@@ -508,7 +539,7 @@ const VIEWS = {
   <div class="bar"><span class="lab">Layers</span><span class="seg" id="svl">${SVCL.filter(l=>a||l[0]!=="furn").map(([k,t])=>`<button data-l="${k}" aria-pressed="${SV.has(k)}">${t}</button>`).join("")}</span></div>`;
   setTimeout(()=>{ const v=document.getElementById("svv"); if(v) v.onchange=()=>{ SV=new Set(SVPRE[+v.value][1]); store.set("lo.svl",JSON.stringify([...SV])); render(); }; const s=document.getElementById("svl"); if(s) s.onclick=e=>{ const b=e.target.closest("[data-l]"); if(!b) return; const k=b.dataset.l; SV.has(k)?SV.delete(k):SV.add(k); store.set("lo.svl",JSON.stringify([...SV])); render(); }; const u=document.getElementById("svu"); if(u) u.onchange=()=>{ store.set("lo.svu."+S.owner,u.value); render(); }; },0);
   if (a){
-   const mine = aPicked(); const list = mine.length ? mine : A_FLATS.map(f=>f.n);
+   const mine = aPicked(o); const list = mine.length ? mine : aFlats(o).map(f=>f.n);
    let cur = store.get("lo.svu."+S.owner); if (!list.includes(cur)) cur = list[0];
    const f = A_FLATS.find(x=>x.n===cur), key = (f.floor<=2?"4":"3") + (f.n[2]==="1"?"W":"E"), F = D.a.svc[key];
    const slabFt = F.econd.filter(c=>c[2]==="slab").reduce((s,c)=>s+c[1].slice(1).reduce((t,p,i)=>t+Math.abs(p[0]-c[1][i][0])+Math.abs(p[1]-c[1][i][1]),0),0);
@@ -518,11 +549,12 @@ const VIEWS = {
    <div class="cols" style="margin-top:12px"><div class="card"><h3 style="margin-top:0">Points in flat ${cur}</h3><div class="tw"><table><tbody>${svcCounts(F.elec.map(e=>e[0]))}</tbody></table></div></div>
    <div class="card"><h3 style="margin-top:0">Where the common works hand over</h3><ul class="list"><li><b>Electrical:</b> the rising main from your meter ends at your DB position in the ${esc(F.ho.db[4])}; ${F.ho.cps.length} ceiling points with conduit are cast in your slab by SAHA (${F.ho.cps.map(c=>c[1]).join(", ")}).</li><li><b>Water:</b> ${F.ho.wps.length} valves, one in each wet room and the kitchen / utility, fed from the duct down-takes.</li><li><b>Drains:</b> ${(F.ho.sls||[]).length} slab sleeves for WCs, showers, traps and basins, and ${(F.ho.wss||[]).length} wall sleeves for the kitchen and utility, all cast before the pour.</li><li>Your own conduits run about ${Math.round(slabFt)} ft in the slab and false ceiling, plus the wall drops to every switch and socket.</li></ul></div></div>`;
   }
-  const w = o.wing, pick = bPick(w), basis = w==="S" ? "HOSTEL-S" : "OFFICE-N";
+  const w = o.wing, pick = bPick(o), basis = w==="S" ? "HOSTEL-S" : "OFFICE-N";
   const q = D.b.svc.conduit.qty[w];
   const nonBasis = o.units.filter(u=>pick[u]!==basis);
+  if (nonBasis.length === o.units.length) { const t = pick[o.units[0]]; return `<p class="lead">Your ${o.units.length>1?"units are":"unit is"} set to ${esc(TYPE_NAME[t])} (${o.units.join(", ")}). Here is that layout for your wing only.</p>${wingPlan(t, w)}<div class="callout">The conduit, electrical-point, water and drainage layout for the ${esc(TYPE_NAME[t])} is drawn and issued to you once you confirm this option, before your floor's slab is poured, because the slab conduits and sleeves are cast to suit it. The common handover points stay the same: a water valve in each wet room from the duct, drain sleeves to the stacks, and the rising main to your DB position.</div>`; }
   return `<p class="lead">Only your wing: the ${w==="S"?"south (plot 93)":"north (plot 78)"} half of the typical floor, with every slab conduit, electrical point, water line, drain, sleeve and stack. The other wing is not shown. The same layout repeats on each of your floors (${o.units.join(", ")}).</p>
-  ${nonBasis.length?`<div class="callout">Units ${nonBasis.join(", ")} are set to ${esc(B_OPTS[w].find(x=>x[0]===pick[nonBasis[0]])[1])} in Your units. The drawing shows the ${w==="S"?"hostel":"office"} services; the ${esc(B_OPTS[w].find(x=>x[0]===pick[nonBasis[0]])[1])} services layout is issued once that choice is confirmed, before that floor's slab is poured.</div>`:""}
+  ${nonBasis.length?`<div class="callout">Units ${nonBasis.join(", ")} are set to ${esc(TYPE_NAME[pick[nonBasis[0]]])} in Your units. The drawing shows the ${w==="S"?"hostel":"office"} services; the ${esc(TYPE_NAME[pick[nonBasis[0]]])} services layout is issued once that choice is confirmed, before that floor's slab is poured.</div>`:""}
   ${lay}<div class="svcbox">${svgB(w)}</div>${svcLegend()}
   <div class="cols" style="margin-top:12px"><div class="card"><h3 style="margin-top:0">Per floor</h3><div class="tw"><table><tbody>
    <tr><td>Slab conduit 20 mm</td><td class="n">${Math.round(q.slab20)} ft</td></tr><tr><td>Slab conduit 25 mm</td><td class="n">${Math.round(q.slab25)} ft</td></tr><tr><td>Wall conduit</td><td class="n">${Math.round(q.wall20+q.wall25)} ft</td></tr>${q.floor25?`<tr><td>Floor conduit (floor boxes)</td><td class="n">${Math.round(q.floor25)} ft</td></tr>`:""}${q.data?`<tr><td>Data cable</td><td class="n">${Math.round(q.data)} ft</td></tr>`:""}<tr><td>Ceiling drops cast in the slab</td><td class="n">${q.drops}</td></tr>
@@ -531,7 +563,7 @@ const VIEWS = {
  },
  site(){
   if (P()==="a") return `<p class="lead">20 cars under the stilt slab on one east–west drive, 2 per flat; the water tanks, sumps, bore and the electrical room with the meter panel and generator are shown in the interactive set below.</p>
-  ${phase2("parking","Scroll down inside the frame for the water system (bore, sumps, overhead tank) and the power system (meter panel, generator).")}`;
+  ${phase2("parking","Scroll down inside the frame for the water system (bore, sumps, overhead tank) and the power system (meter panel, generator).", "parking,water,power,drainage")}`;
   return `<p class="lead">Both parking levels and every site service, drawn on the approved layout. West road at the top, south road on the left, north road on the right, the 77:76 boundary at the bottom.</p>
   <div class="bar"><span class="lab">Level</span><span class="seg" id="lvl">${[["stilt","Stilt · 20 cars + site services"],["cellar","Cellar · 18 cars"]].map(([k,t])=>`<button data-v="${k}" aria-pressed="${(store.get("lo.lvl")||"stilt")===k}">${t}</button>`).join("")}</span></div>
   <div class="svcbox">${sitePlan(store.get("lo.lvl")||"stilt")}</div>${(setTimeout(()=>{const l=document.getElementById("lvl"); if(l) l.onclick=e=>{const b=e.target.closest("[data-v]"); if(!b) return; store.set("lo.lvl",b.dataset.v); render();};},0),"")}

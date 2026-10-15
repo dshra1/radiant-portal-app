@@ -1,0 +1,1358 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Flat-02 Duplex Services</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a drawing sheet. Title block on top, a sticky layer bar, the plan as the hero, schedules below in a two-column reference grid. */
+:root{
+  --paper:#f2f4f1; --sheet:#fbfcfa; --ink:#18201c; --muted:#5a655f; --rule:#cfd6d0; --accent:#1d5c45; --accent-soft:#dfece5;
+  --hall:#f4f1e6; --bed:#e9eff7; --wet:#e1eff2; --kit:#f8eadc; --bal:#e3f0df; --stair:#f6e3d1; --store:#ece8f3; --core:#e2e2dc;
+  --wall:#2b302d; --outer:#121614; --win:#2f6fdb; --rail:#2f8a4f; --acwall:#8a5a2b; --col:#121614;
+  --furn:#8f9993; --furn-fill:rgba(143,153,147,.10);
+  --ac:#0c7fb8; --ac-fill:#d6eef9;
+  --bore:#118a6b; --muni:#2459c9; --hot:#d9480f;
+  --soil:#7a3b12; --waste:#b8860b; --rain:#5d7187;
+  --light:#18201c; --p6:#2e8b57; --p16:#c0392b; --lv:#7b4fd0; --clight:#3a73c9;
+  --f-disp:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0f1312; --sheet:#151a18; --ink:#e3e9e5; --muted:#9aa6a0; --rule:#2c3532; --accent:#6fc3a0; --accent-soft:#1c2c26;
+  --hall:#1d1f1a; --bed:#18202b; --wet:#16252a; --kit:#2a2119; --bal:#1a2618; --stair:#2c2219; --store:#211f2a; --core:#232624;
+  --wall:#c9d1cc; --outer:#e8eeea; --win:#6ea0ff; --rail:#5cc17f; --acwall:#c48f5a; --col:#e8eeea;
+  --furn:#7f8a85; --furn-fill:rgba(127,138,133,.12); --ac:#4fb8ea; --ac-fill:#123447;
+  --bore:#3fc9a2; --muni:#6e9bff; --hot:#ff8a4c; --soil:#d58a55; --waste:#e2b33a; --rain:#94a7bd;
+  --light:#e3e9e5; --p6:#5cc28a; --p16:#ff7a6b; --lv:#b192ff; --clight:#78a6ff; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0f1312; --sheet:#151a18; --ink:#e3e9e5; --muted:#9aa6a0; --rule:#2c3532; --accent:#6fc3a0; --accent-soft:#1c2c26;
+  --hall:#1d1f1a; --bed:#18202b; --wet:#16252a; --kit:#2a2119; --bal:#1a2618; --stair:#2c2219; --store:#211f2a; --core:#232624;
+  --wall:#c9d1cc; --outer:#e8eeea; --win:#6ea0ff; --rail:#5cc17f; --acwall:#c48f5a; --col:#e8eeea;
+  --furn:#7f8a85; --furn-fill:rgba(127,138,133,.12); --ac:#4fb8ea; --ac-fill:#123447;
+  --bore:#3fc9a2; --muni:#6e9bff; --hot:#ff8a4c; --soil:#d58a55; --waste:#e2b33a; --rain:#94a7bd;
+  --light:#e3e9e5; --p6:#5cc28a; --p16:#ff7a6b; --lv:#b192ff; --clight:#78a6ff; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:20px 56px}
+header.tb{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px 28px;align-items:end;border:1.5px solid var(--ink);background:var(--sheet);padding:18px 20px}
+.eyebrow{font-family:var(--f-disp);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:var(--accent)}
+h1{font-family:var(--f-disp);font-weight:700;font-size:clamp(26px,4vw,40px);line-height:1.05;margin:4px 0 6px;text-wrap:balance}
+.meta{color:var(--muted);font-size:14px;margin:0}
+.kpis{display:grid;grid-template-columns:repeat(4,auto);gap:0;border-left:1px solid var(--rule)}
+.kpi{padding:4px 16px;border-right:1px solid var(--rule)}
+.kpi b{display:block;font-family:var(--f-mono);font-weight:500;font-size:22px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:var(--f-disp)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);border-bottom:1px solid var(--rule);margin:18px 0 0;padding:10px 0;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.seg{display:inline-flex;border:1.5px solid var(--ink)}
+.seg button{font:600 13px var(--f-disp);letter-spacing:.05em;text-transform:uppercase;background:transparent;color:var(--ink);border:0;padding:7px 12px;cursor:pointer}
+.seg button+button{border-left:1.5px solid var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--sheet)}
+.layers{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--rule);background:var(--sheet);padding:5px 10px 5px 8px;font-size:13px;cursor:pointer;user-select:none}
+.chip input{margin:0;accent-color:var(--accent)}
+.chip i{width:18px;height:4px;display:inline-block;border-radius:1px}
+.chip:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
+.figs{display:grid;gap:18px;margin-top:16px}
+figure{margin:0;background:var(--sheet);border:1px solid var(--rule)}
+figcaption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--rule);font-family:var(--f-disp);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:14px}
+figcaption small{font-family:var(--f-body);font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:13px}
+.scroll{overflow-x:auto}
+svg.plan{display:block;width:100%;min-width:760px;height:auto}
+/* plan base */
+.room{stroke:none}.room.hall{fill:var(--hall)}.room.bed{fill:var(--bed)}.room.wet{fill:var(--wet)}.room.kit{fill:var(--kit)}.room.bal{fill:var(--bal)}.room.stair{fill:var(--stair)}.room.store{fill:var(--store)}
+.core rect{fill:var(--core)}.core path,.core line{stroke:var(--muted);stroke-width:.8;fill:none}.core .liftbox{fill:none;stroke:var(--muted)}
+.wall{stroke:var(--wall);stroke-width:4.5;fill:none;stroke-linecap:square}.outer{stroke:var(--outer);stroke-width:7;fill:none;stroke-linecap:square}
+.win{stroke:var(--win);stroke-width:5}.rail{stroke:var(--rail);stroke-width:4;stroke-dasharray:6 4}.acwall{stroke:var(--acwall);stroke-width:6}
+.door{fill:none;stroke:var(--muted);stroke-width:1.2}.slide{stroke:var(--win);stroke-width:2.5;stroke-dasharray:5 3}
+.col{fill:var(--col)}
+.duct circle{fill:var(--sheet);stroke:var(--ink);stroke-width:1.6}.duct.capped circle{stroke-dasharray:2 2}
+.stairg line{stroke:var(--hot);stroke-width:.8;opacity:.6}.stairpath{fill:none;stroke:var(--hot);stroke-width:2.2}
+text{font-family:var(--f-disp);fill:var(--ink);text-anchor:middle}
+.lbl{font-size:10.5px;font-weight:700;letter-spacing:.04em}.lbl-d{font-size:8.5px;fill:var(--muted);font-family:var(--f-mono)}.lbl-s{font-size:8.5px;font-weight:600;fill:var(--muted);letter-spacing:.06em}
+.bgw{paint-order:stroke;stroke:var(--sheet);stroke-width:3px}
+.north path{fill:var(--ink)}
+/* layers */
+.L-furn rect,.L-furn circle,.L-furn ellipse{fill:var(--furn-fill);stroke:var(--furn);stroke-width:.9}.L-furn line{stroke:var(--furn);stroke-width:.8;stroke-dasharray:3 2}
+.fl{font-size:6.8px;fill:var(--muted);font-family:var(--f-body);font-weight:500}
+.cu{fill:none;stroke:var(--ac);stroke-width:1.6;stroke-dasharray:5 2.5}
+.hw{stroke:var(--wall);stroke-width:2.6;stroke-dasharray:6 2}.odu-t{fill:var(--sheet);stroke:var(--ac);stroke-width:1.4;stroke-dasharray:3 2}.aclt{font-size:7px;font-weight:700;fill:var(--ac)}
+.idu{fill:var(--ac-fill);stroke:var(--ac);stroke-width:1.4}.odu{fill:var(--ac);stroke:none}.throw{stroke:var(--ac);stroke-width:1.2;stroke-dasharray:3 2}.arrhead{fill:var(--ac)}
+.acl{font-size:7.5px;font-weight:700;fill:var(--sheet)}.actag{font-size:7.8px;font-weight:700;fill:var(--ac);paint-order:stroke;stroke:var(--sheet);stroke-width:2.5px}
+.w-bore,.w-muni,.w-hot{fill:none;stroke-width:2;stroke-linejoin:round}.w-bore{stroke:var(--bore)}.w-muni{stroke:var(--muni);stroke-dasharray:1 3;stroke-linecap:round;stroke-width:2.6}.w-hot{stroke:var(--hot);stroke-dasharray:5 3}
+.valve{fill:var(--bore)}.gey{fill:var(--sheet);stroke:var(--hot);stroke-width:1.4}.gl{font-size:6.5px;font-weight:700;fill:var(--hot)}
+.d-soil,.d-waste,.d-rain{fill:none;stroke-linejoin:round}.d-soil{stroke:var(--soil);stroke-width:3}.d-waste{stroke:var(--waste);stroke-width:2;stroke-dasharray:6 2.5}.d-rain{stroke:var(--rain);stroke-width:2}
+.trap{fill:var(--sheet);stroke:var(--soil);stroke-width:1.4}.lin{stroke:var(--soil);stroke-width:4}
+.c-light,.c-p6,.c-home,.c-p16,.c-lv{fill:none;stroke-width:1;stroke-linejoin:round}
+.c-light{stroke:var(--clight);opacity:.75}.c-p6{stroke:var(--p6)}.c-home{stroke:var(--clight);stroke-width:1.4;opacity:.55}.c-p16{stroke:var(--p16);opacity:.7}.c-lv{stroke:var(--lv);stroke-dasharray:4 2;opacity:.75}
+.floor{stroke-dasharray:1.5 2.5!important;stroke-width:1.6}
+.s-light circle{fill:var(--sheet);stroke:var(--light);stroke-width:1}.s-light path{stroke:var(--light);stroke-width:.9}
+.s-fan circle{fill:var(--sheet);stroke:var(--light);stroke-width:1}.s-fan path{stroke:var(--light);stroke-width:1.1}
+.s-6{fill:var(--sheet);stroke:var(--p6);stroke-width:1.3}.s-16 path,.s-16 rect{fill:var(--p16)}.sl2{font-size:6.5px;font-weight:700;fill:var(--p16)}
+.s-lv rect{fill:var(--sheet);stroke:var(--lv);stroke-width:1.2}.sl{font-size:5.6px;font-weight:700;fill:var(--lv)}
+.s-b circle{fill:var(--p16)}.s-db rect{fill:var(--ink)}.sb{fill:var(--ink)}
+.s-fan text.sl{fill:var(--light)}
+.plans:not(.on-furn) .L-furn,.plans:not(.on-ac) .L-ac,.plans:not(.on-water) .L-water,.plans:not(.on-drain) .L-drain,.plans:not(.on-elec) .L-elec,.plans:not(.on-cond) .L-cond{display:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 14px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend svg{width:26px;height:12px;overflow:visible}
+.plans:not(.on-furn) .lg-furn,.plans:not(.on-ac) .lg-ac,.plans:not(.on-water) .lg-water,.plans:not(.on-drain) .lg-drain,.plans:not(.on-elec) .lg-elec,.plans:not(.on-cond) .lg-cond{display:none}
+/* sections */
+section{margin-top:40px}
+h2{font-family:var(--f-disp);font-weight:700;font-size:24px;letter-spacing:.01em;margin:0 0 4px;text-wrap:balance}
+h2 .code{font-family:var(--f-mono);font-weight:500;font-size:14px;color:var(--accent);margin-right:10px;vertical-align:3px}
+h3{font-family:var(--f-disp);font-weight:600;font-size:15px;text-transform:uppercase;letter-spacing:.06em;margin:18px 0 6px;color:var(--muted)}
+p.lead{margin:0 0 12px;max-width:72ch;color:var(--ink)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:22px}
+.grid2>*{min-width:0}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--sheet)}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--f-disp);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1.5px solid var(--ink);white-space:nowrap}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+td.tag{font-family:var(--f-mono);font-weight:500;color:var(--ac);white-space:nowrap}
+tr.tot td{font-weight:600;border-top:1.5px solid var(--ink)}
+.tablewrap{overflow-x:auto;border:1px solid var(--rule)}
+ul.tight{margin:6px 0 0;padding-left:20px;max-width:80ch}ul.tight li{margin:3px 0}
+.note{font-size:13px;color:var(--muted);margin-top:8px;max-width:80ch}
+.pill{display:inline-block;font-family:var(--f-disp);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border:1px solid var(--accent);color:var(--accent);background:var(--accent-soft)}
+footer{margin-top:44px;padding-top:14px;border-top:1.5px solid var(--ink);font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 24px}
+@media (max-width:760px){header.tb{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,auto);border-left:0}.kpi{border-right:0;border-left:1px solid var(--rule)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="wrap">
+<header class="tb">
+  <div>
+    <div class="eyebrow">SAHA Developers · Cyber Enclave, Madhapur · Floors 4 + 5 · Rev C services · 13 Oct 2026</div>
+    <h1>Flat-02 Duplex Services</h1>
+    <p class="meta">Furniture, air conditioning, water supply, drainage, electrical points and conduit for the east duplex. Built on the A100-3 grid with the Rev P1 plumbing rules; Rev C bathrooms follow the A106 orientation rules. Concept for coordination, not for construction.</p>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><b>18 TR</b><span>10 split ACs</span></div>
+    <div class="kpi"><b>116+111</b><span>elec. points</span></div>
+    <div class="kpi"><b>17.4 / 16.4</b><span>kW demand 4th / 5th</span></div>
+    <div class="kpi"><b>0</b><span>outside stacks moved</span></div>
+  </div>
+</header>
+
+<div class="bar" role="toolbar" aria-label="Plan controls">
+  <div class="seg" role="group" aria-label="Floor">
+    <button id="f4" aria-pressed="true" data-f="4">4th · lower</button><button id="f5" aria-pressed="false" data-f="5">5th · upper</button><button id="fb" aria-pressed="false" data-f="b">Both</button>
+  </div>
+  <div class="layers" role="group" aria-label="Layers">
+    <label class="chip"><input type="checkbox" id="l-furn" data-l="furn" checked><i style="background:var(--furn)"></i>Furniture</label>
+    <label class="chip"><input type="checkbox" id="l-ac" data-l="ac" checked><i style="background:var(--ac)"></i>AC</label>
+    <label class="chip"><input type="checkbox" id="l-water" data-l="water"><i style="background:var(--bore)"></i>Water supply</label>
+    <label class="chip"><input type="checkbox" id="l-drain" data-l="drain"><i style="background:var(--soil)"></i>Drainage</label>
+    <label class="chip"><input type="checkbox" id="l-elec" data-l="elec"><i style="background:var(--p16)"></i>Electrical points</label>
+    <label class="chip"><input type="checkbox" id="l-cond" data-l="cond"><i style="background:var(--clight)"></i>Conduit</label>
+  </div>
+</div>
+
+<div class="plans on-furn on-ac" id="plans">
+ <div class="figs">
+  <figure id="fig4"><figcaption>4th floor · lower level <small>Main entry · Bedrooms 1 and 2 · office · living · lounge · pantry · laundry balcony</small></figcaption>
+   <div class="scroll"><svg class="plan" viewBox="850 228 910 600" role="img" aria-label="Flat-02 duplex 4th floor · lower level services plan">
+<g class="core"><rect x="866" y="268" width="99" height="522"/><rect class="liftbox" x="870" y="272" width="91" height="108"/><path d="M870 272 L961 380 M961 272 L870 380"/><text x="915" y="333" class="lbl-s">LIFT</text><text x="915" y="490" class="lbl-s" transform="rotate(-90 915 490)">LOBBY</text><line x1="870" y1="600" x2="961" y2="600"/><line x1="870" y1="614" x2="961" y2="614"/><line x1="870" y1="628" x2="961" y2="628"/><line x1="870" y1="642" x2="961" y2="642"/><line x1="870" y1="656" x2="961" y2="656"/><line x1="870" y1="670" x2="961" y2="670"/><line x1="870" y1="684" x2="961" y2="684"/><line x1="870" y1="698" x2="961" y2="698"/><line x1="870" y1="712" x2="961" y2="712"/><line x1="870" y1="726" x2="961" y2="726"/><line x1="870" y1="740" x2="961" y2="740"/><line x1="870" y1="754" x2="961" y2="754"/><line x1="870" y1="768" x2="961" y2="768"/><line x1="870" y1="782" x2="961" y2="782"/><text x="915" y="700" class="lbl-s bgw">STAIR (common)</text></g>
+<rect class="room hall" x="968" y="270" width="179" height="177"/>
+<rect class="room wet" x="1150" y="270" width="102" height="84"/>
+<rect class="room wet" x="1150" y="358" width="102" height="89"/>
+<rect class="room bed" x="1256" y="270" width="245" height="177"/>
+<rect class="room bal" x="1506" y="270" width="227" height="69"/>
+<rect class="room hall" x="968" y="453" width="765" height="152"/>
+<rect class="room hall" x="1506" y="343" width="227" height="110"/>
+<rect class="room bed" x="968" y="611" width="256" height="176"/>
+<rect class="room wet" x="1228" y="611" width="76" height="176"/>
+<rect class="room stair" x="1308" y="611" width="106" height="176"/>
+<rect class="room bal" x="1418" y="611" width="194" height="176"/>
+<rect class="room kit" x="1616" y="611" width="117" height="176"/>
+<g class="stairg"><line x1="1308" y1="623" x2="1414" y2="623"/><line x1="1308" y1="635" x2="1414" y2="635"/><line x1="1308" y1="647" x2="1414" y2="647"/><line x1="1308" y1="659" x2="1414" y2="659"/><line x1="1308" y1="671" x2="1414" y2="671"/><line x1="1308" y1="683" x2="1414" y2="683"/><line x1="1308" y1="695" x2="1414" y2="695"/><line x1="1308" y1="707" x2="1414" y2="707"/><line x1="1308" y1="719" x2="1414" y2="719"/><line x1="1308" y1="731" x2="1414" y2="731"/><line x1="1308" y1="743" x2="1414" y2="743"/><line x1="1361.0" y1="611" x2="1361.0" y2="751"/><polyline class="stairpath" points="1385.0,621 1385.0,769 1337.0,769 1337.0,621"/><text x="1361.0" y="699.0" class="lbl-s bgw">STAIR UP ↑</text></g>
+<path class="wall" d="M968 450H1095 M1135 450H1152 M1192 450H1345 M1390 450H1506 M1147 270V450 M1150 356H1252 M1254 270V290 M1254 330V450 M1503 270V450 M1506 341H1620 M1705 341H1733 M968 608H1105 M1150 608H1312 M1411 608H1436 M1484 608H1650 M1694 608H1733 M1226 611V618 M1226 660V787 M1306 611V787 M1416 611V787 M1614 611V640 M1614 688V787"/>
+<path class="outer" d="M965 268H1735 M1735 268V790 M965 268V465 M965 510V790 M965 790H1418 M1612 790H1735"/>
+<line class="rail" x1="1418" y1="790" x2="1612" y2="790"/>
+<line class="rail" x1="1610" y1="268" x2="1733" y2="268"/><line class="acwall" x1="1506" y1="268" x2="1610" y2="268"/>
+<line class="win" x1="1010" y1="268" x2="1080" y2="268"/>
+<line class="win" x1="1380" y1="268" x2="1450" y2="268"/>
+<line class="win" x1="1185" y1="268" x2="1215" y2="268"/>
+<line class="win" x1="1735" y1="470" x2="1735" y2="585"/>
+<line class="win" x1="1735" y1="670" x2="1735" y2="725"/>
+<line class="win" x1="1000" y1="790" x2="1075" y2="790"/>
+<line class="win" x1="1115" y1="790" x2="1190" y2="790"/>
+<line class="win" x1="1240" y1="790" x2="1265" y2="790"/>
+<line class="win" x1="1320" y1="790" x2="1345" y2="790"/>
+<line class="win" x1="1640" y1="790" x2="1700" y2="790"/>
+<path class="door" d="M968 465 L1013 465 A45.0 45.0 0 0 1 968 510"/>
+<path class="door" d="M1135 450 L1135 410 A40.0 40.0 0 0 0 1095 450"/>
+<path class="door" d="M1254 290 L1294 290 A40.0 40.0 0 0 1 1254 330"/>
+<path class="door" d="M1390 450 L1390 405 A45.0 45.0 0 0 0 1345 450"/>
+<path class="door" d="M1150 608 L1150 653 A45.0 45.0 0 0 1 1105 608"/>
+<path class="door" d="M1226 618 L1184 618 A42.0 42.0 0 0 0 1226 660"/>
+<path class="door" d="M1436 608 L1436 656 A48.0 48.0 0 0 0 1484 608"/>
+<path class="door" d="M1614 640 L1566 640 A48.0 48.0 0 0 0 1614 688"/>
+<path class="door" d="M1694 608 L1694 652 A44.0 44.0 0 0 1 1650 608"/>
+<line class="slide" x1="1152" y1="450" x2="1192" y2="450"/>
+<line class="slide" x1="1620" y1="341" x2="1705" y2="341"/>
+<rect class="col" x="1246" y="376" width="14" height="14"/>
+<rect class="col" x="1496" y="376" width="14" height="14"/>
+<rect class="col" x="965" y="376" width="14" height="14"/>
+<rect class="col" x="1720" y="376" width="14" height="14"/>
+<rect class="col" x="1546" y="665" width="14" height="14"/>
+<rect class="col" x="1219" y="693" width="14" height="14"/>
+<rect class="col" x="965" y="269" width="14" height="14"/>
+<rect class="col" x="1720" y="269" width="14" height="14"/>
+<rect class="col" x="965" y="775" width="14" height="14"/>
+<rect class="col" x="1720" y="775" width="14" height="14"/>
+<g class="duct"><circle cx="1172" cy="260" r="7"/><text x="1172" y="249" class="lbl-s">N1</text></g>
+<g class="duct"><circle cx="1273" cy="260" r="7"/><text x="1273" y="249" class="lbl-s">N2</text></g>
+<g class="duct"><circle cx="1303" cy="798" r="7"/><text x="1303" y="816" class="lbl-s">S1</text></g>
+<g class="duct"><circle cx="1618" cy="798" r="7"/><text x="1618" y="816" class="lbl-s">S2</text></g>
+<g class="labels">
+<text x="1057" y="300" class="lbl">OFFICE</text>
+<text x="1057" y="312" class="lbl-d">11&#x27;7&quot; × 12&#x27;2&quot;</text>
+<text x="1201" y="300" class="lbl">TOILET</text>
+<text x="1201" y="312" class="lbl-d">7&#x27;0&quot; × 5&#x27;7&quot;</text>
+<text x="1201" y="385" class="lbl">POWDER</text>
+<text x="1201" y="397" class="lbl-d">7&#x27;0&quot; × 6&#x27;2&quot;</text>
+<text x="1378" y="295" class="lbl">BEDROOM 2</text>
+<text x="1378" y="307" class="lbl-d">16&#x27;10&quot; × 12&#x27;2&quot;</text>
+<text x="1640" y="300" class="lbl">NORTH BALCONY</text>
+<text x="1640" y="312" class="lbl-d">15&#x27;6&quot; × 4&#x27;8&quot;</text>
+<text x="1080" y="470" class="lbl">ENTRY HALL</text>
+<text x="1335" y="470" class="lbl">LIVING</text>
+<text x="1335" y="482" class="lbl-d">19&#x27;6&quot; × 10&#x27;8&quot;</text>
+<text x="1620" y="360" class="lbl">LOUNGE / ENTERTAINMENT</text>
+<text x="1620" y="372" class="lbl-d">drawing + dining, open</text>
+<text x="1095" y="640" class="lbl">BEDROOM 1</text>
+<text x="1095" y="652" class="lbl-d">17&#x27;0&quot; × 12&#x27;2&quot;</text>
+<text x="1266" y="640" class="lbl">TOILET</text>
+<text x="1266" y="652" class="lbl-d">5&#x27;0&quot; × 12&#x27;2&quot;</text>
+<text x="1515" y="640" class="lbl">LAUNDRY BALCONY</text>
+<text x="1515" y="652" class="lbl-d">13&#x27;3&quot; × 12&#x27;2&quot;</text>
+<text x="1675" y="628" class="lbl">PANTRY</text>
+<text x="1675" y="640" class="lbl-d">8&#x27;0&quot; × 12&#x27;2&quot;</text>
+<text x="1352" y="244" class="lbl-s">30′ NORTH ROAD</text><text x="1752" y="530" class="lbl-s" transform="rotate(90 1752 530)">30′ EAST ROAD</text><text x="1000" y="822" class="lbl-s">South</text><g class="north"><path d="M874 250 L880 234 L886 250 Z"/><text x="880" y="260" class="lbl-s">N</text></g></g>
+<g class="layer L-furn">
+<rect x="1109" y="318" width="36" height="75" rx="1.5"/><text x="1127.0" y="358.5" class="fl">desk</text>
+<circle cx="1094" cy="356" r="8"/>
+<circle cx="1010" cy="395" r="22"/><text x="1010" y="398" class="fl">table</text>
+<circle cx="1010" cy="365" r="7"/>
+<circle cx="1010" cy="425" r="7"/>
+<rect x="990" y="272" width="110" height="14" rx="1.5"/><text x="1045.0" y="282.0" class="fl">books</text>
+<rect x="980" y="587" width="100" height="18" rx="1.5"/><text x="1030.0" y="599.0" class="fl">shoe cabinet</text>
+<rect x="1000" y="455" width="70" height="14" rx="1.5"/><text x="1035.0" y="465.0" class="fl">console</text>
+<rect x="1262" y="455" width="78" height="14" rx="1.5"/><text x="1301.0" y="465.0" class="fl">TV unit</text>
+<rect x="1240" y="545" width="102" height="40" rx="1.5"/><text x="1291.0" y="568.0" class="fl">sofa 3-seater</text>
+<rect x="1268" y="498" width="52" height="26" rx="1.5"/>
+<rect x="1200" y="492" width="34" height="34" rx="1.5"/>
+<rect x="1200" y="536" width="34" height="34" rx="1.5"/>
+<rect x="1508" y="355" width="15" height="90" rx="1.5"/>
+<rect x="1588" y="357" width="34" height="88" rx="1.5"/>
+<rect x="1588" y="445" width="92" height="30" rx="1.5"/><text x="1634.0" y="463.0" class="fl">sectional sofa</text>
+<rect x="1545" y="385" width="30" height="40" rx="1.5"/>
+<circle cx="1560" cy="535" r="24"/><text x="1560" y="538" class="fl">games</text>
+<circle cx="1560" cy="503" r="7"/>
+<circle cx="1560" cy="567" r="7"/>
+<circle cx="1528" cy="535" r="7"/>
+<circle cx="1592" cy="535" r="7"/>
+<rect x="1490" y="586" width="150" height="18" rx="1.5"/><text x="1565.0" y="598.0" class="fl">bar counter</text>
+<circle cx="1505" cy="575" r="6"/>
+<circle cx="1535" cy="575" r="6"/>
+<circle cx="1565" cy="575" r="6"/>
+<circle cx="1595" cy="575" r="6"/>
+<rect x="1660" y="290" width="40" height="30" rx="1.5"/><text x="1680.0" y="308.0" class="fl">seat</text>
+<rect x="1406" y="314" width="94" height="87" rx="1.5"/><text x="1453.0" y="360.5" class="fl">king 6′×6′6″</text>
+<rect x="1484" y="318" width="12" height="37.5" rx="1.5"/>
+<rect x="1484" y="359.5" width="12" height="37.5" rx="1.5"/>
+<rect x="1486" y="295" width="14" height="17" rx="1.5"/>
+<rect x="1486" y="403" width="14" height="17" rx="1.5"/>
+<rect x="1258" y="362" width="29" height="85" rx="1.5"/><text x="1272.5" y="407.5" class="fl">wardrobe</text>
+<rect x="1290" y="272" width="70" height="18" rx="1.5"/><text x="1325.0" y="284.0" class="fl">study</text>
+<rect x="1128" y="682" width="94" height="87" rx="1.5"/><text x="1175.0" y="728.5" class="fl">king 6′×6′6″</text>
+<rect x="1206" y="686" width="12" height="37.5" rx="1.5"/>
+<rect x="1206" y="727.5" width="12" height="37.5" rx="1.5"/>
+<rect x="1206" y="664" width="16" height="16" rx="1.5"/>
+<rect x="1206" y="770" width="16" height="16" rx="1.5"/>
+<rect x="968" y="618" width="29" height="148" rx="1.5"/><text x="982.5" y="695.0" class="fl">wardrobe</text>
+<rect x="1000" y="612" width="90" height="20" rx="1.5"/><text x="1045.0" y="625.0" class="fl">study</text>
+<rect x="1424" y="735" width="30" height="48" rx="1.5"/><text x="1439.0" y="762.0" class="fl">WM+dryer</text>
+<rect x="1462" y="755" width="40" height="30" rx="1.5"/><text x="1482.0" y="773.0" class="fl">sink</text>
+<line x1="1520" y1="630" x2="1600" y2="630"/>
+<line x1="1520" y1="650" x2="1600" y2="650"/>
+<line x1="1520" y1="670" x2="1600" y2="670"/>
+<text x="1525" y="690" class="fl" text-anchor="start">drying lines</text>
+<rect x="1420" y="620" width="14" height="90" rx="1.5"/>
+<rect x="1704" y="615" width="29" height="170" rx="1.5"/>
+<rect x="1620" y="758" width="84" height="29" rx="1.5"/>
+<rect x="1712" y="672" width="18" height="40" rx="1.5"/>
+<rect x="1620" y="615" width="32" height="32" rx="1.5"/><text x="1636.0" y="634.0" class="fl">fridge</text>
+<text x="1640" y="700" class="fl" text-anchor="start">counter</text>
+<rect x="1150.0" y="270.0" width="38.71499999999992" height="80.90999999999997" rx="1.5"/><text x="1169.3575" y="313.455" class="fl">shower</text>
+<line class="hw" x1="1188.715" y1="270.0" x2="1188.715" y2="321.91"/>
+<ellipse cx="1225.4" cy="337.135" rx="8.5" ry="12.5"/><text x="1225.4" y="340.135" class="fl">WC</text>
+<rect x="1218.15" y="270.0" width="29.0" height="21.75" rx="1.5"/><text x="1232.65" y="283.875" class="fl">basin</text>
+<rect x="1208.85" y="337.55" width="7" height="7" rx="1.5"/>
+<rect x="1196.4" y="342.21000000000004" width="18.84999999999991" height="8.699999999999932" rx="1.5"/>
+<ellipse cx="1179.0" cy="371.775" rx="8.5" ry="12.5"/><text x="1179.0" y="374.775" class="fl">WC</text>
+<rect x="1229.75" y="389.9" width="21.75" height="29.0" rx="1.5"/>
+<rect x="1194.35" y="364.65" width="7" height="7" rx="1.5"/>
+<rect x="1228.0" y="743.965" width="72.5" height="43.5" rx="1.5"/><text x="1264.25" y="768.715" class="fl">shower</text>
+<line class="hw" x1="1228.0" y1="743.965" x2="1271.5" y2="743.965"/>
+<ellipse cx="1249.75" cy="730.19" rx="8.5" ry="12.5"/><text x="1249.75" y="733.19" class="fl">WC</text>
+<rect x="1278.75" y="640.0" width="21.75" height="29.0" rx="1.5"/>
+<rect x="1276.7" y="732.2" width="7" height="7" rx="1.5"/>
+<rect x="1291.8" y="705.25" width="8.700000000000045" height="18.850000000000023" rx="1.5"/>
+</g>
+<g class="layer L-ac">
+<polyline class="cu" points="1044.0,618.0 1095.0,618.0 1095.0,800.0"/>
+<rect class="idu" x="1000" y="612" width="44" height="11"/><line class="throw" x1="1022" y1="628" x2="1022" y2="690" marker-end="url(#arr)"/>
+<rect class="odu" x="1075" y="792" width="22" height="16"/><text x="1086" y="803" class="acl">1</text>
+<text x="1036.0" y="659.0" class="actag">AC-1 · 1.5 TR</text>
+<polyline class="cu" points="1344.0,278.0 1503.0,278.0 1520.0,276.0"/>
+<rect class="idu" x="1300" y="272" width="44" height="11"/><line class="throw" x1="1322" y1="288" x2="1322" y2="350" marker-end="url(#arr)"/>
+<rect class="odu" x="1509" y="268" width="22" height="16"/><text x="1520" y="279" class="acl">2</text>
+<text x="1336.0" y="319.0" class="actag">AC-2 · 1.5 TR</text>
+<polyline class="cu" points="1139.0,344.0 1139.0,528.0 1452.0,528.0 1452.0,760.0"/>
+<rect class="idu" x="1133" y="322" width="11" height="44"/><line class="throw" x1="1128" y1="344" x2="1066" y2="344" marker-end="url(#arr)"/>
+<rect class="odu" x="1441" y="760" width="22" height="16"/><text x="1452" y="771" class="acl">3</text>
+<text x="1097.0" y="338.0" class="actag">AC-3 · 1.5 TR</text>
+<polyline class="cu" points="1284.0,453.0 1284.0,300.0 1503.0,300.0 1556.0,290.0 1556.0,276.0"/>
+<rect class="idu" x="1262" y="453" width="44" height="11"/><line class="throw" x1="1284" y1="470" x2="1284" y2="530" marker-end="url(#arr)"/>
+<rect class="odu" x="1545" y="268" width="22" height="16"/><text x="1556" y="279" class="acl">4</text>
+<text x="1298.0" y="500.0" class="actag">AC-4 · 2 TR</text>
+<polyline class="cu" points="1542.0,343.0 1592.0,290.0 1592.0,276.0"/>
+<rect class="idu" x="1520" y="343" width="44" height="11"/><line class="throw" x1="1542" y1="360" x2="1542" y2="420" marker-end="url(#arr)"/>
+<rect class="odu" x="1581" y="268" width="22" height="16"/><text x="1592" y="279" class="acl">5</text>
+<text x="1556.0" y="390.0" class="actag">AC-5 · 2 TR</text>
+</g>
+<g class="layer L-water">
+<polyline class="w-bore" points="1618.0,798.0 1618.0,778.0 1722.0,778.0 1722.0,697.0"/>
+<polyline class="w-muni" points="1612.0,798.0 1612.0,782.0 1728.0,782.0 1728.0,715.0"/>
+<polyline class="w-hot" points="1718.0,705.0 1712.0,705.0"/>
+<polyline class="w-bore" points="1618.0,778.0 1450.0,778.0 1445.0,770.0"/>
+<polyline class="w-bore" points="1490.0,778.0 1482.0,770.0"/>
+<polyline class="w-bore" points="1172.0,262.0 1172.0,276.0 1170.0,282.0"/>
+<polyline class="w-bore" points="1172.0,276.0 1232.0,276.0 1232.0,282.0"/>
+<polyline class="w-bore" points="1172.0,276.0 1160.0,276.0 1160.0,365.0 1179.0,368.0"/>
+<polyline class="w-bore" points="1160.0,365.0 1248.0,365.0 1248.0,404.0"/>
+<polyline class="w-bore" points="1200.0,276.0 1200.0,344.0 1225.0,344.0"/>
+<polyline class="w-hot" points="1205.0,346.0 1205.0,280.0 1170.0,280.0"/>
+<polyline class="w-hot" points="1205.0,280.0 1232.0,280.0"/>
+<polyline class="w-bore" points="1303.0,798.0 1297.0,780.0 1297.0,654.0"/>
+<polyline class="w-bore" points="1297.0,748.0 1250.0,748.0"/>
+<polyline class="w-hot" points="1297.0,714.0 1294.0,714.0 1294.0,766.0"/>
+<polyline class="w-hot" points="1294.0,714.0 1294.0,654.0"/>
+<path class="valve" d="M1168 279 L1176 285 L1176 279 L1168 285 Z"/>
+<path class="valve" d="M1293 769 L1301 775 L1301 769 L1293 775 Z"/>
+<path class="valve" d="M1614 783 L1622 789 L1622 783 L1614 789 Z"/>
+<path class="valve" d="M1608 787 L1616 793 L1616 787 L1608 793 Z"/>
+<path class="valve" d="M1496 775 L1504 781 L1504 775 L1496 781 Z"/>
+<rect class="gey" x="1199" y="340" width="12" height="12" rx="2"/><text x="1205" y="349" class="gl">G</text>
+<rect class="gey" x="1291" y="708" width="12" height="12" rx="2"/><text x="1297" y="717" class="gl">G</text>
+<rect class="gey" x="1710" y="718" width="12" height="12" rx="2"/><text x="1716" y="727" class="gl">IG</text>
+</g>
+<g class="layer L-drain">
+<polyline class="d-waste" points="1722.0,697.0 1722.0,780.0 1622.0,780.0 1618.0,798.0"/>
+<polyline class="d-waste" points="1445.0,770.0 1445.0,786.0 1610.0,786.0 1618.0,798.0"/>
+<polyline class="d-waste" points="1482.0,770.0 1482.0,786.0"/>
+<polyline class="d-waste" points="1440.0,700.0 1440.0,786.0"/>
+<polyline class="d-waste" points="1590.0,760.0 1604.0,786.0"/>
+<polyline class="d-rain" points="1725.0,333.0 1740.0,333.0 1740.0,345.0"/>
+<polyline class="d-waste" points="1152.0,274.0 1170.0,270.0 1172.0,262.0"/>
+<polyline class="d-waste" points="1232.0,292.0 1232.0,272.0 1180.0,272.0 1172.0,262.0"/>
+<polyline class="d-soil" points="1225.0,344.0 1153.0,344.0 1153.0,272.0 1172.0,262.0"/>
+<polyline class="d-waste" points="1212.0,341.0 1212.0,346.0"/>
+<polyline class="d-soil" points="1179.0,362.0 1153.0,362.0 1153.0,344.0"/>
+<polyline class="d-waste" points="1240.0,404.0 1248.0,404.0 1248.0,362.0 1190.0,362.0"/>
+<polyline class="d-waste" points="1198.0,368.0 1198.0,362.0"/>
+<polyline class="d-waste" points="1299.0,784.0 1303.0,798.0"/>
+<polyline class="d-soil" points="1250.0,748.0 1298.0,748.0 1298.0,787.0 1303.0,798.0"/>
+<polyline class="d-waste" points="1296.0,660.0 1298.0,660.0 1298.0,748.0"/>
+<polyline class="d-waste" points="1280.0,736.0 1298.0,736.0"/>
+<rect class="trap" x="1208" y="337" width="8" height="8"/>
+<rect class="trap" x="1194" y="364" width="8" height="8"/>
+<rect class="trap" x="1276" y="732" width="8" height="8"/>
+<rect class="trap" x="1436" y="696" width="8" height="8"/>
+<rect class="trap" x="1586" y="756" width="8" height="8"/>
+<rect class="trap" x="1721" y="329" width="8" height="8"/>
+<line class="lin" x1="1152" y1="274" x2="1187" y2="274"/>
+<line class="lin" x1="1232" y1="783" x2="1300" y2="783"/>
+</g>
+<g class="layer L-cond">
+<line class="c-light" x1="971" y1="520" x2="1010" y2="490"/>
+<line class="c-light" x1="1010" y1="490" x2="1080" y2="490"/>
+<line class="c-light" x1="1080" y1="490" x2="1150" y2="490"/>
+<line class="c-light" x1="1150" y1="490" x2="1150" y2="570"/>
+<line class="c-light" x1="1150" y1="570" x2="1080" y2="570"/>
+<line class="c-light" x1="1080" y1="570" x2="1010" y2="570"/>
+<polyline class="c-p6 floor" points="971.0,520.0 971.0,456.0 1040.0,456.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 971.0,520.0 971.0,520.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,539.4 971.0,539.4 971.0,590.0"/>
+<line class="c-light" x1="1085" y1="444" x2="1102" y2="402"/>
+<line class="c-light" x1="1102" y1="402" x2="1057" y2="358"/>
+<line class="c-light" x1="1057" y1="358" x2="1012" y2="315"/>
+<line class="c-light" x1="1012" y1="315" x2="1012" y2="402"/>
+<line class="c-light" x1="1012" y1="402" x2="1102" y2="315"/>
+<polyline class="c-p6" points="1085.0,444.0 1085.0,385.0 1143.0,385.0"/>
+<polyline class="c-p6" points="1143.0,385.0 1143.0,330.0 1143.0,330.0"/>
+<polyline class="c-p6" points="1143.0,330.0 1143.0,274.0 1040.0,274.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1085.0,520.0 1085.0,444.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,540.8 1143.0,540.8 1143.0,350.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,542.2 1143.0,542.2 1143.0,368.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,533.6 1141.0,533.6 1141.0,316.0"/>
+<line class="c-light" x1="1258" y1="342" x2="1222" y2="312"/>
+<line class="c-light" x1="1222" y1="312" x2="1233" y2="271"/>
+<line class="c-light" x1="1233" y1="271" x2="1200" y2="271"/>
+<line class="c-light" x1="1200" y1="271" x2="1170" y2="312"/>
+<polyline class="c-p6" points="1258.0,342.0 1258.0,271.0 1212.0,271.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1258.0,520.0 1258.0,342.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,535.2 1222.0,535.2 1222.0,349.0"/>
+<line class="c-light" x1="1196" y1="456" x2="1215" y2="430"/>
+<line class="c-light" x1="1215" y1="430" x2="1200" y2="410"/>
+<line class="c-light" x1="1200" y1="410" x2="1251" y2="405"/>
+<polyline class="c-p6" points="1196.0,456.0 1196.0,425.0 1251.0,425.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1196.0,520.0 1196.0,456.0"/>
+<line class="c-light" x1="1338" y1="444" x2="1300" y2="400"/>
+<line class="c-light" x1="1300" y1="400" x2="1378" y2="400"/>
+<line class="c-light" x1="1378" y1="400" x2="1378" y2="358"/>
+<line class="c-light" x1="1378" y1="358" x2="1378" y2="315"/>
+<line class="c-light" x1="1378" y1="315" x2="1300" y2="315"/>
+<line class="c-light" x1="1300" y1="315" x2="1456" y2="315"/>
+<line class="c-light" x1="1456" y1="315" x2="1456" y2="400"/>
+<polyline class="c-p6" points="1338.0,444.0 1338.0,418.0 1497.0,418.0"/>
+<polyline class="c-p6" points="1497.0,418.0 1497.0,274.0 1330.0,274.0"/>
+<polyline class="c-p6" points="1330.0,274.0 1330.0,300.0 1497.0,300.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1338.0,520.0 1338.0,444.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,543.6 1460.0,543.6 1460.0,444.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,545.0 1475.0,545.0 1475.0,444.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,536.8 1350.0,536.8 1350.0,276.0"/>
+<line class="c-light" x1="1300" y1="604" x2="1335" y2="570"/>
+<line class="c-light" x1="1335" y1="570" x2="1335" y2="530"/>
+<line class="c-light" x1="1335" y1="530" x2="1335" y2="490"/>
+<line class="c-light" x1="1335" y1="490" x2="1235" y2="490"/>
+<line class="c-light" x1="1235" y1="490" x2="1235" y2="570"/>
+<line class="c-light" x1="1235" y1="570" x2="1435" y2="570"/>
+<line class="c-light" x1="1435" y1="570" x2="1435" y2="490"/>
+<polyline class="c-p6 floor" points="1300.0,604.0 1300.0,604.0 1240.0,604.0"/>
+<polyline class="c-p6" points="1240.0,604.0 1240.0,456.0 1283.0,456.0"/>
+<polyline class="c-p6" points="1283.0,456.0 1283.0,456.0 1335.0,456.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1300.0,520.0 1300.0,604.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,538.4 1300.0,538.4 1300.0,456.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,539.8 1318.0,539.8 1318.0,456.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,538.4 1258.0,538.4 1258.0,458.0"/>
+<line class="c-light" x1="1640" y1="604" x2="1610" y2="570"/>
+<line class="c-light" x1="1610" y1="570" x2="1610" y2="530"/>
+<line class="c-light" x1="1610" y1="530" x2="1610" y2="495"/>
+<line class="c-light" x1="1610" y1="495" x2="1530" y2="495"/>
+<line class="c-light" x1="1530" y1="495" x2="1530" y2="570"/>
+<line class="c-light" x1="1530" y1="570" x2="1560" y2="425"/>
+<line class="c-light" x1="1560" y1="425" x2="1560" y2="375"/>
+<line class="c-light" x1="1560" y1="375" x2="1610" y2="400"/>
+<line class="c-light" x1="1610" y1="400" x2="1680" y2="375"/>
+<line class="c-light" x1="1680" y1="375" x2="1680" y2="425"/>
+<line class="c-light" x1="1680" y1="425" x2="1690" y2="495"/>
+<line class="c-light" x1="1690" y1="495" x2="1690" y2="570"/>
+<polyline class="c-p6 floor" points="1640.0,604.0 1640.0,604.0 1600.0,604.0"/>
+<polyline class="c-p6 floor" points="1600.0,604.0 1600.0,604.0 1520.0,604.0"/>
+<polyline class="c-p6" points="1520.0,604.0 1520.0,520.0 1730.0,520.0"/>
+<polyline class="c-p6" points="1730.0,520.0 1730.0,425.0 1509.0,425.0"/>
+<polyline class="c-p6" points="1509.0,425.0 1509.0,365.0 1509.0,365.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1640.0,520.0 1640.0,604.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,541.2 1509.0,541.2 1509.0,385.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,542.6 1509.0,542.6 1509.0,405.0"/>
+<polyline class="c-p16 floor" points="971.0,556.0 981.0,540.0 1560.0,540.0 1560.0,604.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,532.6 1570.0,532.6 1570.0,346.0"/>
+<line class="c-light" x1="1509" y1="330" x2="1620" y2="305"/>
+<polyline class="c-p6" points="1509.0,330.0 1509.0,305.0 1730.0,305.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1509.0,520.0 1509.0,330.0"/>
+<line class="c-light" x1="1100" y1="614" x2="1095" y2="655"/>
+<line class="c-light" x1="1095" y1="655" x2="1095" y2="700"/>
+<line class="c-light" x1="1095" y1="700" x2="1095" y2="745"/>
+<line class="c-light" x1="1095" y1="745" x2="1010" y2="745"/>
+<line class="c-light" x1="1010" y1="745" x2="1010" y2="655"/>
+<line class="c-light" x1="1010" y1="655" x2="1180" y2="655"/>
+<line class="c-light" x1="1180" y1="655" x2="1180" y2="745"/>
+<polyline class="c-p6" points="1100.0,614.0 1100.0,676.0 1221.0,676.0"/>
+<polyline class="c-p6" points="1221.0,676.0 1221.0,784.0 1080.0,784.0"/>
+<polyline class="c-p6" points="1080.0,784.0 1080.0,776.0 1221.0,776.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1100.0,520.0 1100.0,614.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,544.0 1095.0,544.0 1095.0,784.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,545.4 1110.0,545.4 1110.0,784.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,534.2 1050.0,534.2 1050.0,615.0"/>
+<line class="c-light" x1="1221" y1="668" x2="1265" y2="680"/>
+<line class="c-light" x1="1265" y1="680" x2="1300" y2="654"/>
+<line class="c-light" x1="1300" y1="654" x2="1265" y2="766"/>
+<line class="c-light" x1="1265" y1="766" x2="1252" y2="787"/>
+<polyline class="c-p6" points="1221.0,668.0 1221.0,675.0 1300.0,675.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1221.0,520.0 1221.0,668.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,535.8 1300.0,535.8 1300.0,728.0"/>
+<line class="c-light" x1="1414" y1="604" x2="1360" y2="700"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1414.0,520.0 1414.0,604.0"/>
+<line class="c-light" x1="1490" y1="614" x2="1460" y2="650"/>
+<line class="c-light" x1="1460" y1="650" x2="1570" y2="720"/>
+<polyline class="c-p6" points="1490.0,614.0 1490.0,784.0 1500.0,784.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1490.0,520.0 1490.0,614.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,537.4 1422.0,537.4 1422.0,750.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,539.0 1422.0,539.0 1422.0,725.0"/>
+<line class="c-light" x1="1645" y1="614" x2="1675" y2="650"/>
+<line class="c-light" x1="1675" y1="650" x2="1675" y2="740"/>
+<polyline class="c-p6" points="1645.0,614.0 1645.0,660.0 1728.0,660.0"/>
+<polyline class="c-p6" points="1728.0,660.0 1728.0,690.0 1728.0,690.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1645.0,520.0 1645.0,614.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,540.6 1625.0,540.6 1625.0,618.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,533.2 1728.0,533.2 1728.0,640.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,534.8 1728.0,534.8 1728.0,740.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,536.4 1728.0,536.4 1728.0,705.0"/>
+<polyline class="c-p16 floor" points="971.0,556.0 981.0,538.0 1680.0,538.0 1680.0,784.0"/>
+</g>
+<g class="layer L-elec">
+<rect class="sb" x="966" y="517.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1010" cy="490" r="4"/><path d="M1007.2 487.2L1012.8 492.8M1012.8 487.2L1007.2 492.8"/></g>
+<g class="s-light"><circle cx="1010" cy="570" r="4"/><path d="M1007.2 567.2L1012.8 572.8M1012.8 567.2L1007.2 572.8"/></g>
+<g class="s-light"><circle cx="1080" cy="490" r="4"/><path d="M1077.2 487.2L1082.8 492.8M1082.8 487.2L1077.2 492.8"/></g>
+<g class="s-light"><circle cx="1080" cy="570" r="4"/><path d="M1077.2 567.2L1082.8 572.8M1082.8 567.2L1077.2 572.8"/></g>
+<g class="s-light"><circle cx="1150" cy="490" r="4"/><path d="M1147.2 487.2L1152.8 492.8M1152.8 487.2L1147.2 492.8"/></g>
+<g class="s-light"><circle cx="1150" cy="570" r="4"/><path d="M1147.2 567.2L1152.8 572.8M1152.8 567.2L1147.2 572.8"/></g>
+<g class="s-db"><rect x="967" y="544" width="8" height="24"/><text x="979" y="559" class="sl2" text-anchor="start">DB</text></g>
+<g class="s-lv"><rect x="966" y="586" width="10" height="8"/><text x="971" y="584" class="sl">VDP</text></g>
+<path class="s-6" d="M1036 459L1040 452L1044 459Z"/>
+<rect class="sb" x="1080" y="441.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1012" cy="315" r="4"/><path d="M1009.2 312.2L1014.8 317.8M1014.8 312.2L1009.2 317.8"/></g>
+<g class="s-light"><circle cx="1012" cy="402" r="4"/><path d="M1009.2 399.2L1014.8 404.8M1014.8 399.2L1009.2 404.8"/></g>
+<g class="s-light"><circle cx="1102" cy="315" r="4"/><path d="M1099.2 312.2L1104.8 317.8M1104.8 312.2L1099.2 317.8"/></g>
+<g class="s-light"><circle cx="1102" cy="402" r="4"/><path d="M1099.2 399.2L1104.8 404.8M1104.8 399.2L1099.2 404.8"/></g>
+<g class="s-fan"><circle cx="1057" cy="358" r="7"/><path d="M1057 358L1057 351M1057 358L1063 361.5M1057 358L1051 361.5"/></g>
+<path class="s-6" d="M1139 388L1143 381L1147 388Z"/>
+<path class="s-6" d="M1139 333L1143 326L1147 333Z"/>
+<g class="s-lv"><rect x="1138" y="346" width="10" height="8"/><text x="1143" y="344" class="sl">D</text></g>
+<g class="s-lv"><rect x="1138" y="364" width="10" height="8"/><text x="1143" y="362" class="sl">D</text></g>
+<path class="s-6" d="M1036 277L1040 270L1044 277Z"/>
+<g class="s-16"><path d="M1136.5 319.5L1141 311.5L1145.5 319.5Z"/><text x="1148" y="319" class="sl2">A</text></g>
+<rect class="sb" x="1253" y="339.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1222" cy="312" r="4"/><path d="M1219.2 309.2L1224.8 314.8M1224.8 309.2L1219.2 314.8"/></g>
+<g class="s-light"><circle cx="1170" cy="312" r="4"/><path d="M1167.2 309.2L1172.8 314.8M1172.8 309.2L1167.2 314.8"/></g>
+<g class="s-light"><circle cx="1233" cy="271" r="4"/><path d="M1230.2 268.2L1235.8 273.8M1235.8 268.2L1230.2 273.8"/></g>
+<g class="s-fan"><circle cx="1200" cy="271" r="4.5"/><text x="1200" y="273.5" class="sl">E</text></g>
+<g class="s-16"><path d="M1217.5 352.5L1222 344.5L1226.5 352.5Z"/><text x="1229" y="352" class="sl2">G</text></g>
+<path class="s-6" d="M1208 274L1212 267L1216 274Z"/>
+<rect class="sb" x="1191" y="453.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1200" cy="410" r="4"/><path d="M1197.2 407.2L1202.8 412.8M1202.8 407.2L1197.2 412.8"/></g>
+<g class="s-light"><circle cx="1251" cy="405" r="4"/><path d="M1248.2 402.2L1253.8 407.8M1253.8 402.2L1248.2 407.8"/></g>
+<g class="s-fan"><circle cx="1215" cy="430" r="4.5"/><text x="1215" y="432.5" class="sl">E</text></g>
+<path class="s-6" d="M1247 428L1251 421L1255 428Z"/>
+<rect class="sb" x="1333" y="441.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1300" cy="315" r="4"/><path d="M1297.2 312.2L1302.8 317.8M1302.8 312.2L1297.2 317.8"/></g>
+<g class="s-light"><circle cx="1300" cy="400" r="4"/><path d="M1297.2 397.2L1302.8 402.8M1302.8 397.2L1297.2 402.8"/></g>
+<g class="s-light"><circle cx="1378" cy="315" r="4"/><path d="M1375.2 312.2L1380.8 317.8M1380.8 312.2L1375.2 317.8"/></g>
+<g class="s-light"><circle cx="1378" cy="400" r="4"/><path d="M1375.2 397.2L1380.8 402.8M1380.8 397.2L1375.2 402.8"/></g>
+<g class="s-light"><circle cx="1456" cy="315" r="4"/><path d="M1453.2 312.2L1458.8 317.8M1458.8 312.2L1453.2 317.8"/></g>
+<g class="s-light"><circle cx="1456" cy="400" r="4"/><path d="M1453.2 397.2L1458.8 402.8M1458.8 397.2L1453.2 402.8"/></g>
+<g class="s-fan"><circle cx="1378" cy="358" r="7"/><path d="M1378 358L1378 351M1378 358L1384 361.5M1378 358L1372 361.5"/></g>
+<path class="s-6" d="M1493 303L1497 296L1501 303Z"/>
+<path class="s-6" d="M1493 421L1497 414L1501 421Z"/>
+<path class="s-6" d="M1326 277L1330 270L1334 277Z"/>
+<g class="s-lv"><rect x="1455" y="440" width="10" height="8"/><text x="1460" y="438" class="sl">TV</text></g>
+<g class="s-lv"><rect x="1470" y="440" width="10" height="8"/><text x="1475" y="438" class="sl">D</text></g>
+<g class="s-16"><path d="M1345.5 279.5L1350 271.5L1354.5 279.5Z"/><text x="1357" y="279" class="sl2">A</text></g>
+<rect class="sb" x="1295" y="601.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1235" cy="490" r="4"/><path d="M1232.2 487.2L1237.8 492.8M1237.8 487.2L1232.2 492.8"/></g>
+<g class="s-light"><circle cx="1235" cy="570" r="4"/><path d="M1232.2 567.2L1237.8 572.8M1237.8 567.2L1232.2 572.8"/></g>
+<g class="s-light"><circle cx="1335" cy="490" r="4"/><path d="M1332.2 487.2L1337.8 492.8M1337.8 487.2L1332.2 492.8"/></g>
+<g class="s-light"><circle cx="1335" cy="570" r="4"/><path d="M1332.2 567.2L1337.8 572.8M1337.8 567.2L1332.2 572.8"/></g>
+<g class="s-light"><circle cx="1435" cy="490" r="4"/><path d="M1432.2 487.2L1437.8 492.8M1437.8 487.2L1432.2 492.8"/></g>
+<g class="s-light"><circle cx="1435" cy="570" r="4"/><path d="M1432.2 567.2L1437.8 572.8M1437.8 567.2L1432.2 572.8"/></g>
+<g class="s-fan"><circle cx="1335" cy="530" r="7"/><path d="M1335 530L1335 523M1335 530L1341 533.5M1335 530L1329 533.5"/></g>
+<g class="s-lv"><rect x="1295" y="452" width="10" height="8"/><text x="1300" y="450" class="sl">TV</text></g>
+<g class="s-lv"><rect x="1313" y="452" width="10" height="8"/><text x="1318" y="450" class="sl">D</text></g>
+<path class="s-6" d="M1279 459L1283 452L1287 459Z"/>
+<path class="s-6" d="M1331 459L1335 452L1339 459Z"/>
+<g class="s-16"><path d="M1253.5 461.5L1258 453.5L1262.5 461.5Z"/><text x="1265" y="461" class="sl2">A</text></g>
+<path class="s-6" d="M1236 607L1240 600L1244 607Z"/>
+<rect class="sb" x="1635" y="601.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1560" cy="375" r="4"/><path d="M1557.2 372.2L1562.8 377.8M1562.8 372.2L1557.2 377.8"/></g>
+<g class="s-light"><circle cx="1560" cy="425" r="4"/><path d="M1557.2 422.2L1562.8 427.8M1562.8 422.2L1557.2 427.8"/></g>
+<g class="s-light"><circle cx="1680" cy="375" r="4"/><path d="M1677.2 372.2L1682.8 377.8M1682.8 372.2L1677.2 377.8"/></g>
+<g class="s-light"><circle cx="1680" cy="425" r="4"/><path d="M1677.2 422.2L1682.8 427.8M1682.8 422.2L1677.2 427.8"/></g>
+<g class="s-light"><circle cx="1530" cy="495" r="4"/><path d="M1527.2 492.2L1532.8 497.8M1532.8 492.2L1527.2 497.8"/></g>
+<g class="s-light"><circle cx="1530" cy="570" r="4"/><path d="M1527.2 567.2L1532.8 572.8M1532.8 567.2L1527.2 572.8"/></g>
+<g class="s-light"><circle cx="1610" cy="495" r="4"/><path d="M1607.2 492.2L1612.8 497.8M1612.8 492.2L1607.2 497.8"/></g>
+<g class="s-light"><circle cx="1610" cy="570" r="4"/><path d="M1607.2 567.2L1612.8 572.8M1612.8 567.2L1607.2 572.8"/></g>
+<g class="s-light"><circle cx="1690" cy="495" r="4"/><path d="M1687.2 492.2L1692.8 497.8M1692.8 492.2L1687.2 497.8"/></g>
+<g class="s-light"><circle cx="1690" cy="570" r="4"/><path d="M1687.2 567.2L1692.8 572.8M1692.8 567.2L1687.2 572.8"/></g>
+<g class="s-fan"><circle cx="1610" cy="530" r="7"/><path d="M1610 530L1610 523M1610 530L1616 533.5M1610 530L1604 533.5"/></g>
+<g class="s-lv"><rect x="1504" y="381" width="10" height="8"/><text x="1509" y="379" class="sl">TV</text></g>
+<g class="s-lv"><rect x="1504" y="401" width="10" height="8"/><text x="1509" y="399" class="sl">D</text></g>
+<path class="s-6" d="M1505 368L1509 361L1513 368Z"/>
+<path class="s-6" d="M1505 428L1509 421L1513 428Z"/>
+<g class="s-lv"><rect x="1604" y="396" width="12" height="8"/><text x="1610" y="402.5" class="sl">PJ</text></g>
+<path class="s-6" d="M1516 607L1520 600L1524 607Z"/>
+<path class="s-6" d="M1596 607L1600 600L1604 607Z"/>
+<g class="s-16"><path d="M1555.5 607.5L1560 599.5L1564.5 607.5Z"/><text x="1567" y="607" class="sl2">P</text></g>
+<g class="s-16"><path d="M1565.5 349.5L1570 341.5L1574.5 349.5Z"/><text x="1577" y="349" class="sl2">A</text></g>
+<path class="s-6" d="M1726 523L1730 516L1734 523Z"/>
+<rect class="sb" x="1504" y="327.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1620" cy="305" r="4"/><path d="M1617.2 302.2L1622.8 307.8M1622.8 302.2L1617.2 307.8"/></g>
+<path class="s-6" d="M1726 308L1730 301L1734 308Z"/>
+<g class="s-16"><rect x="1516.5" y="266.5" width="7" height="7"/></g>
+<g class="s-16"><rect x="1552.5" y="266.5" width="7" height="7"/></g>
+<g class="s-16"><rect x="1588.5" y="266.5" width="7" height="7"/></g>
+<rect class="sb" x="1095" y="611.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1010" cy="655" r="4"/><path d="M1007.2 652.2L1012.8 657.8M1012.8 652.2L1007.2 657.8"/></g>
+<g class="s-light"><circle cx="1010" cy="745" r="4"/><path d="M1007.2 742.2L1012.8 747.8M1012.8 742.2L1007.2 747.8"/></g>
+<g class="s-light"><circle cx="1095" cy="655" r="4"/><path d="M1092.2 652.2L1097.8 657.8M1097.8 652.2L1092.2 657.8"/></g>
+<g class="s-light"><circle cx="1095" cy="745" r="4"/><path d="M1092.2 742.2L1097.8 747.8M1097.8 742.2L1092.2 747.8"/></g>
+<g class="s-light"><circle cx="1180" cy="655" r="4"/><path d="M1177.2 652.2L1182.8 657.8M1182.8 652.2L1177.2 657.8"/></g>
+<g class="s-light"><circle cx="1180" cy="745" r="4"/><path d="M1177.2 742.2L1182.8 747.8M1182.8 742.2L1177.2 747.8"/></g>
+<g class="s-fan"><circle cx="1095" cy="700" r="7"/><path d="M1095 700L1095 693M1095 700L1101 703.5M1095 700L1089 703.5"/></g>
+<path class="s-6" d="M1217 679L1221 672L1225 679Z"/>
+<path class="s-6" d="M1217 779L1221 772L1225 779Z"/>
+<path class="s-6" d="M1076 787L1080 780L1084 787Z"/>
+<g class="s-lv"><rect x="1090" y="780" width="10" height="8"/><text x="1095" y="778" class="sl">TV</text></g>
+<g class="s-lv"><rect x="1105" y="780" width="10" height="8"/><text x="1110" y="778" class="sl">D</text></g>
+<g class="s-16"><path d="M1045.5 618.5L1050 610.5L1054.5 618.5Z"/><text x="1057" y="618" class="sl2">A</text></g>
+<rect class="sb" x="1216" y="665.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1265" cy="680" r="4"/><path d="M1262.2 677.2L1267.8 682.8M1267.8 677.2L1262.2 682.8"/></g>
+<g class="s-light"><circle cx="1265" cy="766" r="4"/><path d="M1262.2 763.2L1267.8 768.8M1267.8 763.2L1262.2 768.8"/></g>
+<g class="s-light"><circle cx="1300" cy="654" r="4"/><path d="M1297.2 651.2L1302.8 656.8M1302.8 651.2L1297.2 656.8"/></g>
+<g class="s-fan"><circle cx="1252" cy="787" r="4.5"/><text x="1252" y="789.5" class="sl">E</text></g>
+<g class="s-16"><path d="M1295.5 731.5L1300 723.5L1304.5 731.5Z"/><text x="1307" y="731" class="sl2">G</text></g>
+<path class="s-6" d="M1296 678L1300 671L1304 678Z"/>
+<rect class="sb" x="1409" y="601.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1360" cy="700" r="4"/><path d="M1357.2 697.2L1362.8 702.8M1362.8 697.2L1357.2 702.8"/></g>
+<rect class="sb" x="1485" y="611.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1460" cy="650" r="4"/><path d="M1457.2 647.2L1462.8 652.8M1462.8 647.2L1457.2 652.8"/></g>
+<g class="s-light"><circle cx="1570" cy="720" r="4"/><path d="M1567.2 717.2L1572.8 722.8M1572.8 717.2L1567.2 722.8"/></g>
+<g class="s-16"><path d="M1417.5 753.5L1422 745.5L1426.5 753.5Z"/><text x="1429" y="753" class="sl2">P</text></g>
+<g class="s-16"><path d="M1417.5 728.5L1422 720.5L1426.5 728.5Z"/><text x="1429" y="728" class="sl2">P</text></g>
+<path class="s-6" d="M1496 787L1500 780L1504 787Z"/>
+<rect class="sb" x="1640" y="611.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1675" cy="650" r="4"/><path d="M1672.2 647.2L1677.8 652.8M1677.8 647.2L1672.2 652.8"/></g>
+<g class="s-light"><circle cx="1675" cy="740" r="4"/><path d="M1672.2 737.2L1677.8 742.8M1677.8 737.2L1672.2 742.8"/></g>
+<g class="s-16"><path d="M1620.5 621.5L1625 613.5L1629.5 621.5Z"/><text x="1632" y="621" class="sl2">P</text></g>
+<g class="s-16"><path d="M1723.5 643.5L1728 635.5L1732.5 643.5Z"/><text x="1735" y="643" class="sl2">P</text></g>
+<path class="s-6" d="M1724 663L1728 656L1732 663Z"/>
+<g class="s-16"><path d="M1723.5 743.5L1728 735.5L1732.5 743.5Z"/><text x="1735" y="743" class="sl2">P</text></g>
+<path class="s-6" d="M1724 693L1728 686L1732 693Z"/>
+<g class="s-16"><path d="M1723.5 708.5L1728 700.5L1732.5 708.5Z"/><text x="1735" y="708" class="sl2">G</text></g>
+<g class="s-16"><path d="M1675.5 787.5L1680 779.5L1684.5 787.5Z"/><text x="1687" y="787" class="sl2">P</text></g>
+</g>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" class="arrhead"/></marker></defs>
+</svg></div>
+   <div class="legend" aria-label="Legend">
+    <span class="lg-furn"><svg viewBox="0 0 26 12"><rect x="1" y="1" width="24" height="10" fill="var(--furn-fill)" stroke="var(--furn)"/></svg>furniture</span>
+    <span class="lg-ac"><svg viewBox="0 0 26 12"><rect x="1" y="3" width="12" height="6" fill="var(--ac-fill)" stroke="var(--ac)"/><rect x="16" y="2" width="9" height="8" fill="var(--ac)"/></svg>indoor unit · outdoor unit</span>
+    <span class="lg-ac"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--ac)" stroke-width="1.6" stroke-dasharray="5 2.5"/></svg>copper + drain run</span>
+    <span class="lg-water"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--bore)" stroke-width="2"/></svg>bore water</span>
+    <span class="lg-water"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--muni)" stroke-width="2.6" stroke-dasharray="1 3" stroke-linecap="round"/></svg>municipal (RO only)</span>
+    <span class="lg-water"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--hot)" stroke-width="2" stroke-dasharray="5 3"/></svg>hot · G geyser</span>
+    <span class="lg-drain"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--soil)" stroke-width="3"/></svg>soil</span>
+    <span class="lg-drain"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--waste)" stroke-width="2" stroke-dasharray="6 2.5"/></svg>waste · ▫ floor trap</span>
+    <span class="lg-elec"><svg viewBox="0 0 26 12"><circle cx="6" cy="6" r="4" fill="var(--sheet)" stroke="var(--light)"/><circle cx="19" cy="6" r="5" fill="var(--sheet)" stroke="var(--light)"/></svg>light · fan</span>
+    <span class="lg-elec"><svg viewBox="0 0 26 12"><path d="M2 10L6 2L10 10Z" fill="var(--sheet)" stroke="var(--p6)"/><path d="M15 10L19.5 1L24 10Z" fill="var(--p16)"/></svg>6 A · 16 A (P power, A AC, G geyser)</span>
+    <span class="lg-elec"><svg viewBox="0 0 26 12"><rect x="2" y="3" width="10" height="7" fill="var(--sheet)" stroke="var(--lv)"/><rect x="15" y="4" width="10" height="5" fill="var(--ink)"/></svg>TV / data · switchboard</span>
+    <span class="lg-cond"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--clight)"/></svg>lights, in slab</span>
+    <span class="lg-cond"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--p6)"/></svg>6 A</span>
+    <span class="lg-cond"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--p16)"/></svg>16 A home-run</span>
+    <span class="lg-cond"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--lv)" stroke-dasharray="4 2"/></svg>low-voltage</span>
+    <span class="lg-cond"><svg viewBox="0 0 26 12"><line x1="1" y1="6" x2="25" y2="6" stroke="var(--p6)" stroke-width="1.6" stroke-dasharray="1.5 2.5"/></svg>in floor screed</span>
+   </div>
+  </figure>
+  <figure id="fig5" hidden><figcaption>5th floor · upper level <small>Elders' master suite · kitchen · long hall with main dining · office / meeting · Bedroom 4</small></figcaption>
+   <div class="scroll"><svg class="plan" viewBox="850 228 910 600" role="img" aria-label="Flat-02 duplex 5th floor · upper level services plan">
+<g class="core"><rect x="866" y="268" width="99" height="522"/><rect class="liftbox" x="870" y="272" width="91" height="108"/><path d="M870 272 L961 380 M961 272 L870 380"/><text x="915" y="333" class="lbl-s">LIFT</text><text x="915" y="490" class="lbl-s" transform="rotate(-90 915 490)">LOBBY</text><line x1="870" y1="600" x2="961" y2="600"/><line x1="870" y1="614" x2="961" y2="614"/><line x1="870" y1="628" x2="961" y2="628"/><line x1="870" y1="642" x2="961" y2="642"/><line x1="870" y1="656" x2="961" y2="656"/><line x1="870" y1="670" x2="961" y2="670"/><line x1="870" y1="684" x2="961" y2="684"/><line x1="870" y1="698" x2="961" y2="698"/><line x1="870" y1="712" x2="961" y2="712"/><line x1="870" y1="726" x2="961" y2="726"/><line x1="870" y1="740" x2="961" y2="740"/><line x1="870" y1="754" x2="961" y2="754"/><line x1="870" y1="768" x2="961" y2="768"/><line x1="870" y1="782" x2="961" y2="782"/><text x="915" y="700" class="lbl-s bgw">STAIR (common)</text></g>
+<rect class="room hall" x="968" y="270" width="284" height="177"/>
+<rect class="room wet" x="1256" y="270" width="90" height="96"/>
+<rect class="room wet" x="1256" y="370" width="90" height="77"/>
+<rect class="room bed" x="1350" y="270" width="151" height="177"/>
+<rect class="room bal" x="1506" y="270" width="227" height="69"/>
+<rect class="room hall" x="1506" y="343" width="227" height="104"/>
+<rect class="room hall" x="968" y="453" width="765" height="152"/>
+<rect class="room bed" x="968" y="611" width="256" height="176"/>
+<rect class="room wet" x="1228" y="611" width="76" height="176"/>
+<rect class="room stair" x="1308" y="611" width="106" height="176"/>
+<rect class="room store" x="1418" y="611" width="134" height="66"/>
+<rect class="room wet" x="1418" y="681" width="134" height="106"/>
+<rect class="room kit" x="1556" y="611" width="177" height="176"/>
+<g class="stairg"><line x1="1308" y1="623" x2="1414" y2="623"/><line x1="1308" y1="635" x2="1414" y2="635"/><line x1="1308" y1="647" x2="1414" y2="647"/><line x1="1308" y1="659" x2="1414" y2="659"/><line x1="1308" y1="671" x2="1414" y2="671"/><line x1="1308" y1="683" x2="1414" y2="683"/><line x1="1308" y1="695" x2="1414" y2="695"/><line x1="1308" y1="707" x2="1414" y2="707"/><line x1="1308" y1="719" x2="1414" y2="719"/><line x1="1308" y1="731" x2="1414" y2="731"/><line x1="1308" y1="743" x2="1414" y2="743"/><line x1="1361.0" y1="611" x2="1361.0" y2="751"/><polyline class="stairpath" points="1385.0,621 1385.0,769 1337.0,769 1337.0,621"/><text x="1361.0" y="699.0" class="lbl-s bgw">STAIR DOWN ↓</text></g>
+<path class="wall" d="M968 450H1080 M1125 450H1275 M1320 450H1380 M1425 450H1560 M1600 450H1733 M1254 270V450 M1256 368H1346 M1348 270V324 M1348 366V450 M1503 270V450 M1506 341H1620 M1705 341H1733 M968 608H1105 M1150 608H1312 M1411 608H1600 M1645 608H1733 M1226 611V618 M1226 660V787 M1306 611V787 M1416 611V787 M1418 679H1500 M1530 679H1554 M1554 611V700 M1554 744V787"/>
+<path class="outer" d="M965 268H1735 M1735 268V790 M965 268V465 M965 510V790 M965 790H1735"/>
+<line class="rail" x1="1610" y1="268" x2="1733" y2="268"/><line class="acwall" x1="1506" y1="268" x2="1610" y2="268"/>
+<line class="win" x1="1010" y1="268" x2="1080" y2="268"/>
+<line class="win" x1="1380" y1="268" x2="1450" y2="268"/>
+<line class="win" x1="1185" y1="268" x2="1215" y2="268"/>
+<line class="win" x1="1735" y1="470" x2="1735" y2="585"/>
+<line class="win" x1="1735" y1="670" x2="1735" y2="725"/>
+<line class="win" x1="1000" y1="790" x2="1075" y2="790"/>
+<line class="win" x1="1115" y1="790" x2="1190" y2="790"/>
+<line class="win" x1="1240" y1="790" x2="1265" y2="790"/>
+<line class="win" x1="1320" y1="790" x2="1345" y2="790"/>
+<line class="win" x1="1640" y1="790" x2="1700" y2="790"/>
+<line class="win" x1="1440" y1="790" x2="1500" y2="790"/>
+<line class="win" x1="1568" y1="790" x2="1605" y2="790"/>
+<path class="door" d="M968 465 L1013 465 A45.0 45.0 0 0 1 968 510"/>
+<path class="door" d="M1125 450 L1125 405 A45.0 45.0 0 0 0 1080 450"/>
+<path class="door" d="M1320 450 L1320 495 A45.0 45.0 0 0 1 1275 450"/>
+<path class="door" d="M1348 324 L1390 324 A42.0 42.0 0 0 1 1348 366"/>
+<path class="door" d="M1425 450 L1425 405 A45.0 45.0 0 0 0 1380 450"/>
+<path class="door" d="M1560 450 L1560 410 A40.0 40.0 0 0 1 1600 450"/>
+<path class="door" d="M1150 608 L1150 653 A45.0 45.0 0 0 1 1105 608"/>
+<path class="door" d="M1226 618 L1184 618 A42.0 42.0 0 0 0 1226 660"/>
+<path class="door" d="M1645 608 L1645 652 A44.0 44.0 0 0 1 1600 608"/>
+<path class="door" d="M1554 700 L1512 700 A42.0 42.0 0 0 0 1554 744"/>
+<path class="door" d="M1530 679 L1530 650 A29.0 29.0 0 0 0 1500 679"/>
+<line class="slide" x1="1620" y1="341" x2="1705" y2="341"/>
+<rect class="col" x="1246" y="376" width="14" height="14"/>
+<rect class="col" x="1496" y="376" width="14" height="14"/>
+<rect class="col" x="965" y="376" width="14" height="14"/>
+<rect class="col" x="1720" y="376" width="14" height="14"/>
+<rect class="col" x="1546" y="665" width="14" height="14"/>
+<rect class="col" x="1219" y="693" width="14" height="14"/>
+<rect class="col" x="965" y="269" width="14" height="14"/>
+<rect class="col" x="1720" y="269" width="14" height="14"/>
+<rect class="col" x="965" y="775" width="14" height="14"/>
+<rect class="col" x="1720" y="775" width="14" height="14"/>
+<g class="duct capped"><circle cx="1172" cy="260" r="7"/><text x="1172" y="249" class="lbl-s">N1</text></g>
+<g class="duct"><circle cx="1273" cy="260" r="7"/><text x="1273" y="249" class="lbl-s">N2</text></g>
+<g class="duct"><circle cx="1303" cy="798" r="7"/><text x="1303" y="816" class="lbl-s">S1</text></g>
+<g class="duct"><circle cx="1618" cy="798" r="7"/><text x="1618" y="816" class="lbl-s">S2</text></g>
+<g class="labels">
+<text x="1110" y="292" class="lbl">OFFICE / MEETING</text>
+<text x="1110" y="304" class="lbl-d">about 19&#x27;0&quot; × 12&#x27;2&quot;</text>
+<text x="1301" y="345" class="lbl">TOILET</text>
+<text x="1301" y="357" class="lbl-d">6&#x27;0&quot; × 6&#x27;6&quot;</text>
+<text x="1301" y="392" class="lbl">POWDER</text>
+<text x="1301" y="404" class="lbl-d">6&#x27;0&quot; × 5&#x27;2&quot;</text>
+<text x="1425" y="292" class="lbl">BEDROOM 4</text>
+<text x="1425" y="304" class="lbl-d">10&#x27;4&quot; × 12&#x27;2&quot;</text>
+<text x="1640" y="300" class="lbl">DECK</text>
+<text x="1640" y="312" class="lbl-d">15&#x27;6&quot; × 4&#x27;8&quot;</text>
+<text x="1620" y="368" class="lbl">SIT-OUT</text>
+<text x="1620" y="380" class="lbl-d">15&#x27;6&quot; × 7&#x27;2&quot;</text>
+<text x="1150" y="470" class="lbl">LONG HALL · LIVING</text>
+<text x="1600" y="470" class="lbl">MAIN DINING</text>
+<text x="1095" y="640" class="lbl">MASTER SUITE · ELDERS</text>
+<text x="1095" y="652" class="lbl-d">17&#x27;0&quot; × 12&#x27;2&quot;</text>
+<text x="1266" y="640" class="lbl">TOILET</text>
+<text x="1266" y="652" class="lbl-d">5&#x27;0&quot; × 12&#x27;2&quot;</text>
+<text x="1485" y="632" class="lbl">STORE</text>
+<text x="1485" y="712" class="lbl">UTILITY</text>
+<text x="1485" y="724" class="lbl-d">8&#x27;11&quot; × 7&#x27;2&quot;</text>
+<text x="1645" y="630" class="lbl">KITCHEN</text>
+<text x="1645" y="642" class="lbl-d">12&#x27;0&quot; × 12&#x27;2&quot;</text>
+<text x="1352" y="244" class="lbl-s">30′ NORTH ROAD</text><text x="1752" y="530" class="lbl-s" transform="rotate(90 1752 530)">30′ EAST ROAD</text><text x="1000" y="822" class="lbl-s">South</text><g class="north"><path d="M874 250 L880 234 L886 250 Z"/><text x="880" y="260" class="lbl-s">N</text></g></g>
+<g class="layer L-furn">
+<rect x="1052" y="333" width="116" height="51" rx="1.5"/><text x="1110.0" y="361.5" class="fl">meeting table</text>
+<circle cx="1071.3333333333333" cy="322" r="6.3"/>
+<circle cx="1071.3333333333333" cy="395" r="6.3"/>
+<circle cx="1110.0" cy="322" r="6.3"/>
+<circle cx="1110.0" cy="395" r="6.3"/>
+<circle cx="1148.6666666666667" cy="322" r="6.3"/>
+<circle cx="1148.6666666666667" cy="395" r="6.3"/>
+<circle cx="1041" cy="358.5" r="6.3"/>
+<circle cx="1179" cy="358.5" r="6.3"/>
+<rect x="970" y="318" width="6" height="80" rx="1.5"/>
+<text x="980" y="300" class="fl" text-anchor="start">screen</text>
+<rect x="1232" y="300" width="18" height="110" rx="1.5"/>
+<rect x="1000" y="455" width="76" height="14" rx="1.5"/><text x="1038.0" y="465.0" class="fl">TV unit</text>
+<rect x="990" y="545" width="102" height="40" rx="1.5"/><text x="1041.0" y="568.0" class="fl">sofa 3-seater</text>
+<rect x="1016" y="498" width="52" height="26" rx="1.5"/>
+<rect x="1110" y="500" width="34" height="34" rx="1.5"/>
+<rect x="1110" y="548" width="34" height="34" rx="1.5"/>
+<rect x="1520" y="500" width="145" height="58" rx="1.5"/><text x="1592.5" y="532.0" class="fl">dining 10-seater</text>
+<circle cx="1538.125" cy="489" r="6.3"/>
+<circle cx="1538.125" cy="569" r="6.3"/>
+<circle cx="1574.375" cy="489" r="6.3"/>
+<circle cx="1574.375" cy="569" r="6.3"/>
+<circle cx="1610.625" cy="489" r="6.3"/>
+<circle cx="1610.625" cy="569" r="6.3"/>
+<circle cx="1646.875" cy="489" r="6.3"/>
+<circle cx="1646.875" cy="569" r="6.3"/>
+<circle cx="1509" cy="529.0" r="6.3"/>
+<circle cx="1676" cy="529.0" r="6.3"/>
+<rect x="1660" y="455" width="70" height="14" rx="1.5"/><text x="1695.0" y="465.0" class="fl">crockery</text>
+<rect x="1540" y="380" width="34" height="34" rx="1.5"/>
+<rect x="1590" y="380" width="34" height="34" rx="1.5"/>
+<circle cx="1582" cy="425" r="10"/>
+<rect x="1700" y="346" width="30" height="30" rx="1.5"/><text x="1715.0" y="364.0" class="fl">puja</text>
+<rect x="1660" y="290" width="40" height="30" rx="1.5"/><text x="1680.0" y="308.0" class="fl">seat</text>
+<rect x="1427" y="322" width="73" height="73" rx="1.5"/><text x="1463.5" y="361.5" class="fl">queen 5′×6′6″</text>
+<rect x="1484" y="326" width="12" height="30.5" rx="1.5"/>
+<rect x="1484" y="360.5" width="12" height="30.5" rx="1.5"/>
+<rect x="1487" y="305" width="13" height="15" rx="1.5"/>
+<rect x="1487" y="397" width="13" height="15" rx="1.5"/>
+<rect x="1351" y="392" width="29" height="55" rx="1.5"/><text x="1365.5" y="422.5" class="fl">wardrobe</text>
+<rect x="1128" y="682" width="94" height="87" rx="1.5"/><text x="1175.0" y="728.5" class="fl">king 6′×6′6″</text>
+<rect x="1206" y="686" width="12" height="37.5" rx="1.5"/>
+<rect x="1206" y="727.5" width="12" height="37.5" rx="1.5"/>
+<rect x="1206" y="664" width="16" height="16" rx="1.5"/>
+<rect x="1206" y="770" width="16" height="16" rx="1.5"/>
+<rect x="968" y="618" width="29" height="148" rx="1.5"/><text x="982.5" y="695.0" class="fl">wardrobe</text>
+<rect x="1010" y="700" width="30" height="30" rx="1.5"/><text x="1025.0" y="718.0" class="fl">easy chair</text>
+<rect x="1420" y="614" width="130" height="14" rx="1.5"/><text x="1485.0" y="624.0" class="fl">shelves</text>
+<rect x="1500" y="755" width="46" height="30" rx="1.5"/><text x="1523.0" y="773.0" class="fl">wash sink</text>
+<rect x="1704" y="615" width="29" height="170" rx="1.5"/>
+<rect x="1580" y="758" width="124" height="29" rx="1.5"/>
+<rect x="1708" y="660" width="22" height="40" rx="1.5"/><text x="1719.0" y="683.0" class="fl">HOB</text>
+<rect x="1650" y="762" width="40" height="22" rx="1.5"/><text x="1670.0" y="776.0" class="fl">sink</text>
+<rect x="1615" y="762" width="30" height="22" rx="1.5"/><text x="1630.0" y="776.0" class="fl">DW</text>
+<rect x="1559" y="615" width="32" height="34" rx="1.5"/><text x="1575.0" y="635.0" class="fl">fridge</text>
+<rect x="1559" y="652" width="24" height="46" rx="1.5"/>
+<rect x="1256.0" y="270.0" width="38.71499999999992" height="94.25" rx="1.5"/><text x="1275.3575" y="320.125" class="fl">shower</text>
+<line class="hw" x1="1294.715" y1="270.0" x2="1294.715" y2="335.25"/>
+<ellipse cx="1319.075" cy="350.475" rx="8.5" ry="12.5"/><text x="1319.075" y="353.475" class="fl">WC</text>
+<rect x="1308.2" y="270.0" width="29.0" height="21.75" rx="1.5"/><text x="1322.7" y="283.875" class="fl">basin</text>
+<rect x="1330.8" y="339.0" width="7" height="7" rx="1.5"/>
+<rect x="1334.3" y="274.35" width="8.700000000000045" height="18.849999999999966" rx="1.5"/>
+<ellipse cx="1279.2" cy="383.775" rx="8.5" ry="12.5"/><text x="1279.2" y="386.775" class="fl">WC</text>
+<rect x="1321.25" y="387.4" width="21.75" height="26.100000000000023" rx="1.5"/>
+<rect x="1296.0" y="375.2" width="7" height="7" rx="1.5"/>
+<rect x="1228.0" y="743.965" width="72.5" height="43.5" rx="1.5"/><text x="1264.25" y="768.715" class="fl">shower</text>
+<line class="hw" x1="1228.0" y1="743.965" x2="1271.5" y2="743.965"/>
+<ellipse cx="1249.75" cy="730.19" rx="8.5" ry="12.5"/><text x="1249.75" y="733.19" class="fl">WC</text>
+<rect x="1278.75" y="640.0" width="21.75" height="29.0" rx="1.5"/>
+<rect x="1276.7" y="732.2" width="7" height="7" rx="1.5"/>
+<rect x="1291.8" y="705.25" width="8.700000000000045" height="18.850000000000023" rx="1.5"/>
+<text x="1232" y="700" class="fl" text-anchor="start">grab bars + seat</text>
+</g>
+<g class="layer L-ac">
+<polyline class="cu" points="1044.0,618.0 1095.0,618.0 1095.0,800.0"/>
+<rect class="idu" x="1000" y="612" width="44" height="11"/><line class="throw" x1="1022" y1="628" x2="1022" y2="690" marker-end="url(#arr)"/>
+<rect class="odu" x="1075" y="792" width="22" height="16"/><text x="1086" y="803" class="acl">6</text>
+<text x="1036.0" y="659.0" class="actag">AC-6 · 2 TR</text>
+<polyline class="cu" points="1484.0,441.0 1497.0,441.0 1497.0,300.0 1520.0,276.0"/>
+<rect class="idu" x="1440" y="436" width="44" height="11"/><line class="throw" x1="1462" y1="430" x2="1462" y2="372" marker-end="url(#arr)"/>
+<rect class="odu" x="1509" y="268" width="22" height="16"/><text x="1520" y="279" class="acl">7</text>
+<text x="1476.0" y="401.0" class="actag">AC-7 · 1.5 TR</text>
+<polyline class="cu" points="1243.0,322.0 1243.0,300.0 1226.0,300.0"/>
+<rect class="idu" x="1238" y="322" width="11" height="44"/><line class="throw" x1="1232" y1="344" x2="1170" y2="344" marker-end="url(#arr)"/>
+<rect class="odu-t" x="1204" y="292" width="22" height="16"/><text x="1215" y="303" class="aclt">8↑</text>
+<text x="1201.0" y="338.0" class="actag">AC-8 · 2 TR</text>
+<polyline class="cu" points="1162.0,453.0 1162.0,420.0 1169.0,420.0"/>
+<rect class="idu" x="1140" y="453" width="44" height="11"/><line class="throw" x1="1162" y1="470" x2="1162" y2="530" marker-end="url(#arr)"/>
+<rect class="odu-t" x="1169" y="412" width="22" height="16"/><text x="1180" y="423" class="aclt">9↑</text>
+<text x="1176.0" y="500.0" class="actag">AC-9 · 2 TR</text>
+<polyline class="cu" points="1682.0,453.0 1640.0,345.0 1592.0,290.0 1592.0,276.0"/>
+<rect class="idu" x="1660" y="453" width="44" height="11"/><line class="throw" x1="1682" y1="470" x2="1682" y2="530" marker-end="url(#arr)"/>
+<rect class="odu" x="1581" y="268" width="22" height="16"/><text x="1592" y="279" class="acl">10</text>
+<text x="1696.0" y="500.0" class="actag">AC-10 · 2 TR</text>
+</g>
+<g class="layer L-water">
+<polyline class="w-bore" points="1618.0,798.0 1618.0,778.0 1670.0,778.0 1670.0,772.0"/>
+<polyline class="w-bore" points="1630.0,778.0 1630.0,772.0"/>
+<polyline class="w-muni" points="1612.0,798.0 1612.0,784.0 1690.0,784.0 1690.0,778.0"/>
+<polyline class="w-bore" points="1618.0,778.0 1556.0,778.0 1523.0,770.0"/>
+<polyline class="w-hot" points="1545.0,705.0 1560.0,725.0 1660.0,725.0 1665.0,768.0"/>
+<polyline class="w-bore" points="1273.0,262.0 1273.0,276.0 1275.0,282.0"/>
+<polyline class="w-bore" points="1273.0,276.0 1322.0,276.0 1322.0,282.0"/>
+<polyline class="w-bore" points="1273.0,276.0 1340.0,276.0 1340.0,360.0 1319.0,362.0"/>
+<polyline class="w-bore" points="1259.0,300.0 1259.0,374.0 1279.0,374.0"/>
+<polyline class="w-bore" points="1340.0,374.0 1340.0,400.0"/>
+<polyline class="w-bore" points="1273.0,276.0 1259.0,276.0 1259.0,300.0"/>
+<polyline class="w-hot" points="1340.0,284.0 1340.0,280.0 1275.0,280.0"/>
+<polyline class="w-bore" points="1303.0,798.0 1297.0,780.0 1297.0,654.0"/>
+<polyline class="w-bore" points="1297.0,748.0 1250.0,748.0"/>
+<polyline class="w-hot" points="1297.0,714.0 1294.0,714.0 1294.0,766.0"/>
+<polyline class="w-hot" points="1294.0,714.0 1294.0,654.0"/>
+<path class="valve" d="M1269 279 L1277 285 L1277 279 L1269 285 Z"/>
+<path class="valve" d="M1293 769 L1301 775 L1301 769 L1293 775 Z"/>
+<path class="valve" d="M1614 783 L1622 789 L1622 783 L1614 789 Z"/>
+<path class="valve" d="M1608 787 L1616 793 L1616 787 L1608 793 Z"/>
+<path class="valve" d="M1556 775 L1564 781 L1564 775 L1556 781 Z"/>
+<rect class="gey" x="1334" y="278" width="12" height="12" rx="2"/><text x="1340" y="287" class="gl">G</text>
+<rect class="gey" x="1291" y="708" width="12" height="12" rx="2"/><text x="1297" y="717" class="gl">G</text>
+<rect class="gey" x="1539" y="699" width="12" height="12" rx="2"/><text x="1545" y="708" class="gl">G</text>
+</g>
+<g class="layer L-drain">
+<polyline class="d-waste" points="1670.0,772.0 1670.0,784.0 1622.0,784.0 1618.0,798.0"/>
+<polyline class="d-waste" points="1630.0,772.0 1630.0,784.0"/>
+<polyline class="d-waste" points="1523.0,770.0 1523.0,784.0 1552.0,784.0 1612.0,786.0 1618.0,798.0"/>
+<polyline class="d-waste" points="1500.0,740.0 1500.0,784.0"/>
+<polyline class="d-rain" points="1725.0,333.0 1740.0,333.0 1740.0,345.0"/>
+<polyline class="d-waste" points="1258.0,274.0 1270.0,270.0 1273.0,262.0"/>
+<polyline class="d-waste" points="1322.0,292.0 1322.0,272.0 1278.0,272.0 1273.0,262.0"/>
+<polyline class="d-soil" points="1319.0,362.0 1259.0,362.0 1259.0,272.0 1268.0,264.0"/>
+<polyline class="d-waste" points="1334.0,342.0 1334.0,362.0"/>
+<polyline class="d-soil" points="1279.0,372.0 1259.0,372.0 1259.0,362.0"/>
+<polyline class="d-waste" points="1332.0,400.0 1340.0,400.0 1340.0,372.0 1262.0,372.0"/>
+<polyline class="d-waste" points="1300.0,379.0 1300.0,372.0"/>
+<polyline class="d-waste" points="1299.0,784.0 1303.0,798.0"/>
+<polyline class="d-soil" points="1250.0,748.0 1298.0,748.0 1298.0,787.0 1303.0,798.0"/>
+<polyline class="d-waste" points="1296.0,660.0 1298.0,660.0 1298.0,748.0"/>
+<polyline class="d-waste" points="1280.0,736.0 1298.0,736.0"/>
+<rect class="trap" x="1330" y="338" width="8" height="8"/>
+<rect class="trap" x="1296" y="375" width="8" height="8"/>
+<rect class="trap" x="1276" y="732" width="8" height="8"/>
+<rect class="trap" x="1496" y="736" width="8" height="8"/>
+<rect class="trap" x="1721" y="329" width="8" height="8"/>
+<line class="lin" x1="1258" y1="274" x2="1293" y2="274"/>
+<line class="lin" x1="1232" y1="783" x2="1300" y2="783"/>
+</g>
+<g class="layer L-cond">
+<line class="c-light" x1="971" y1="520" x2="1010" y2="490"/>
+<line class="c-light" x1="1010" y1="490" x2="1010" y2="570"/>
+<line class="c-light" x1="1010" y1="570" x2="1108" y2="570"/>
+<line class="c-light" x1="1108" y1="570" x2="1110" y2="530"/>
+<line class="c-light" x1="1110" y1="530" x2="1108" y2="490"/>
+<line class="c-light" x1="1108" y1="490" x2="1206" y2="490"/>
+<line class="c-light" x1="1206" y1="490" x2="1206" y2="570"/>
+<line class="c-light" x1="1206" y1="570" x2="1304" y2="570"/>
+<line class="c-light" x1="1304" y1="570" x2="1304" y2="490"/>
+<line class="c-light" x1="1304" y1="490" x2="1402" y2="490"/>
+<line class="c-light" x1="1402" y1="490" x2="1400" y2="530"/>
+<line class="c-light" x1="1400" y1="530" x2="1402" y2="570"/>
+<line class="c-light" x1="1402" y1="570" x2="1500" y2="570"/>
+<line class="c-light" x1="1500" y1="570" x2="1500" y2="490"/>
+<line class="c-light" x1="1500" y1="490" x2="1598" y2="490"/>
+<line class="c-light" x1="1598" y1="490" x2="1592" y2="529"/>
+<line class="c-light" x1="1592" y1="529" x2="1598" y2="570"/>
+<line class="c-light" x1="1598" y1="570" x2="1696" y2="570"/>
+<line class="c-light" x1="1696" y1="570" x2="1696" y2="490"/>
+<polyline class="c-p6" points="971.0,520.0 971.0,456.0 1022.0,456.0"/>
+<polyline class="c-p6 floor" points="1022.0,456.0 1022.0,604.0 1060.0,604.0"/>
+<polyline class="c-p6" points="1060.0,604.0 1060.0,456.0 1076.0,456.0"/>
+<polyline class="c-p6" points="1076.0,456.0 1076.0,456.0 1500.0,456.0"/>
+<polyline class="c-p6" points="1500.0,456.0 1500.0,520.0 1730.0,520.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 971.0,520.0 971.0,520.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,539.4 971.0,539.4 971.0,590.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,540.8 1040.0,540.8 1040.0,456.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,542.2 1058.0,542.2 1058.0,456.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,533.6 1190.0,533.6 1190.0,456.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,535.2 1710.0,535.2 1710.0,456.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1414.0,520.0 1414.0,604.0"/>
+<line class="c-light" x1="1075" y1="444" x2="1110" y2="400"/>
+<line class="c-light" x1="1110" y1="400" x2="1110" y2="315"/>
+<line class="c-light" x1="1110" y1="315" x2="1110" y2="295"/>
+<line class="c-light" x1="1110" y1="295" x2="1010" y2="315"/>
+<line class="c-light" x1="1010" y1="315" x2="1010" y2="400"/>
+<line class="c-light" x1="1010" y1="400" x2="1210" y2="400"/>
+<line class="c-light" x1="1210" y1="400" x2="1210" y2="315"/>
+<polyline class="c-p6" points="1075.0,444.0 1075.0,380.0 971.0,380.0"/>
+<polyline class="c-p6" points="971.0,380.0 971.0,335.0 971.0,335.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1075.0,520.0 1075.0,444.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,543.6 971.0,543.6 971.0,358.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,545.0 971.0,545.0 971.0,400.0"/>
+<polyline class="c-lv floor" points="971.0,568.0 985.0,538.4 1110.0,538.4 1110.0,358.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,536.8 1246.0,536.8 1246.0,316.0"/>
+<line class="c-light" x1="1353" y1="378" x2="1320" y2="345"/>
+<line class="c-light" x1="1320" y1="345" x2="1320" y2="320"/>
+<line class="c-light" x1="1320" y1="320" x2="1275" y2="320"/>
+<line class="c-light" x1="1275" y1="320" x2="1322" y2="271"/>
+<polyline class="c-p6" points="1353.0,378.0 1353.0,271.0 1340.0,271.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1353.0,520.0 1353.0,378.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,538.4 1342.0,538.4 1342.0,298.0"/>
+<line class="c-light" x1="1265" y1="456" x2="1300" y2="430"/>
+<line class="c-light" x1="1300" y1="430" x2="1300" y2="405"/>
+<line class="c-light" x1="1300" y1="405" x2="1342" y2="400"/>
+<polyline class="c-p6" points="1265.0,456.0 1265.0,419.0 1342.0,419.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1265.0,520.0 1265.0,456.0"/>
+<line class="c-light" x1="1375" y1="444" x2="1390" y2="400"/>
+<line class="c-light" x1="1390" y1="400" x2="1425" y2="358"/>
+<line class="c-light" x1="1425" y1="358" x2="1460" y2="400"/>
+<line class="c-light" x1="1460" y1="400" x2="1460" y2="315"/>
+<line class="c-light" x1="1460" y1="315" x2="1390" y2="315"/>
+<polyline class="c-p6" points="1375.0,444.0 1375.0,405.0 1497.0,405.0"/>
+<polyline class="c-p6" points="1497.0,405.0 1497.0,312.0 1497.0,312.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1375.0,520.0 1375.0,444.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,539.8 1412.0,539.8 1412.0,444.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,541.2 1396.0,541.2 1396.0,444.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,540.0 1492.0,540.0 1492.0,436.0"/>
+<line class="c-light" x1="1606" y1="446" x2="1620" y2="395"/>
+<line class="c-light" x1="1620" y1="395" x2="1560" y2="395"/>
+<line class="c-light" x1="1560" y1="395" x2="1680" y2="395"/>
+<line class="c-light" x1="1680" y1="395" x2="1715" y2="352"/>
+<polyline class="c-p6" points="1606.0,446.0 1606.0,420.0 1730.0,420.0"/>
+<polyline class="c-p6" points="1730.0,420.0 1730.0,346.0 1700.0,346.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1606.0,520.0 1606.0,446.0"/>
+<line class="c-light" x1="1509" y1="330" x2="1620" y2="305"/>
+<polyline class="c-p6" points="1509.0,330.0 1509.0,305.0 1730.0,305.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1509.0,520.0 1509.0,330.0"/>
+<line class="c-light" x1="1100" y1="614" x2="1095" y2="655"/>
+<line class="c-light" x1="1095" y1="655" x2="1095" y2="700"/>
+<line class="c-light" x1="1095" y1="700" x2="1095" y2="745"/>
+<line class="c-light" x1="1095" y1="745" x2="1010" y2="745"/>
+<line class="c-light" x1="1010" y1="745" x2="1010" y2="655"/>
+<line class="c-light" x1="1010" y1="655" x2="1180" y2="655"/>
+<line class="c-light" x1="1180" y1="655" x2="1180" y2="745"/>
+<polyline class="c-p6" points="1100.0,614.0 1100.0,676.0 1221.0,676.0"/>
+<polyline class="c-p6" points="1221.0,676.0 1221.0,690.0 1221.0,690.0"/>
+<polyline class="c-p6 floor" points="1221.0,690.0 1221.0,740.0 1215.0,740.0"/>
+<polyline class="c-p6" points="1215.0,740.0 1215.0,784.0 1080.0,784.0"/>
+<polyline class="c-p6" points="1080.0,784.0 1080.0,776.0 1221.0,776.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1100.0,520.0 1100.0,614.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,542.6 1095.0,542.6 1095.0,784.0"/>
+<polyline class="c-lv" points="971.0,568.0 985.0,544.0 1110.0,544.0 1110.0,784.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,532.6 1050.0,532.6 1050.0,615.0"/>
+<line class="c-light" x1="1221" y1="668" x2="1265" y2="680"/>
+<line class="c-light" x1="1265" y1="680" x2="1300" y2="654"/>
+<line class="c-light" x1="1300" y1="654" x2="1265" y2="766"/>
+<line class="c-light" x1="1265" y1="766" x2="1252" y2="787"/>
+<polyline class="c-p6" points="1221.0,668.0 1221.0,727.0 1229.0,727.0"/>
+<polyline class="c-p6" points="1229.0,727.0 1229.0,675.0 1300.0,675.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1221.0,520.0 1221.0,668.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,534.2 1300.0,534.2 1300.0,728.0"/>
+<line class="c-light" x1="1300" y1="604" x2="1360" y2="700"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1300.0,520.0 1300.0,604.0"/>
+<line class="c-light" x1="1550" y1="752" x2="1485" y2="735"/>
+<line class="c-light" x1="1485" y1="735" x2="1485" y2="645"/>
+<polyline class="c-p6" points="1550.0,752.0 1550.0,720.0 1422.0,720.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1550.0,520.0 1550.0,752.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,535.8 1548.0,535.8 1548.0,705.0"/>
+<line class="c-light" x1="1595" y1="614" x2="1645" y2="660"/>
+<line class="c-light" x1="1645" y1="660" x2="1645" y2="740"/>
+<polyline class="c-p6" points="1595.0,614.0 1595.0,680.0 1730.0,680.0"/>
+<polyline class="c-p6 floor" points="1730.0,680.0 1730.0,705.0 1730.0,705.0"/>
+<polyline class="c-p6" points="1730.0,705.0 1730.0,784.0 1690.0,784.0"/>
+<polyline class="c-home" points="971.0,556.0 977.0,520.0 1595.0,520.0 1595.0,614.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,537.4 1728.0,537.4 1728.0,640.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,539.0 1728.0,539.0 1728.0,760.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,540.6 1560.0,540.6 1560.0,618.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,533.2 1560.0,533.2 1560.0,665.0"/>
+<polyline class="c-p16" points="971.0,556.0 981.0,534.8 1560.0,534.8 1560.0,690.0"/>
+<polyline class="c-p16 floor" points="971.0,556.0 981.0,536.4 1625.0,536.4 1625.0,784.0"/>
+</g>
+<g class="layer L-elec">
+<rect class="sb" x="966" y="517.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1010" cy="490" r="4"/><path d="M1007.2 487.2L1012.8 492.8M1012.8 487.2L1007.2 492.8"/></g>
+<g class="s-light"><circle cx="1010" cy="570" r="4"/><path d="M1007.2 567.2L1012.8 572.8M1012.8 567.2L1007.2 572.8"/></g>
+<g class="s-light"><circle cx="1108" cy="490" r="4"/><path d="M1105.2 487.2L1110.8 492.8M1110.8 487.2L1105.2 492.8"/></g>
+<g class="s-light"><circle cx="1108" cy="570" r="4"/><path d="M1105.2 567.2L1110.8 572.8M1110.8 567.2L1105.2 572.8"/></g>
+<g class="s-light"><circle cx="1206" cy="490" r="4"/><path d="M1203.2 487.2L1208.8 492.8M1208.8 487.2L1203.2 492.8"/></g>
+<g class="s-light"><circle cx="1206" cy="570" r="4"/><path d="M1203.2 567.2L1208.8 572.8M1208.8 567.2L1203.2 572.8"/></g>
+<g class="s-light"><circle cx="1304" cy="490" r="4"/><path d="M1301.2 487.2L1306.8 492.8M1306.8 487.2L1301.2 492.8"/></g>
+<g class="s-light"><circle cx="1304" cy="570" r="4"/><path d="M1301.2 567.2L1306.8 572.8M1306.8 567.2L1301.2 572.8"/></g>
+<g class="s-light"><circle cx="1402" cy="490" r="4"/><path d="M1399.2 487.2L1404.8 492.8M1404.8 487.2L1399.2 492.8"/></g>
+<g class="s-light"><circle cx="1402" cy="570" r="4"/><path d="M1399.2 567.2L1404.8 572.8M1404.8 567.2L1399.2 572.8"/></g>
+<g class="s-light"><circle cx="1500" cy="490" r="4"/><path d="M1497.2 487.2L1502.8 492.8M1502.8 487.2L1497.2 492.8"/></g>
+<g class="s-light"><circle cx="1500" cy="570" r="4"/><path d="M1497.2 567.2L1502.8 572.8M1502.8 567.2L1497.2 572.8"/></g>
+<g class="s-light"><circle cx="1598" cy="490" r="4"/><path d="M1595.2 487.2L1600.8 492.8M1600.8 487.2L1595.2 492.8"/></g>
+<g class="s-light"><circle cx="1598" cy="570" r="4"/><path d="M1595.2 567.2L1600.8 572.8M1600.8 567.2L1595.2 572.8"/></g>
+<g class="s-light"><circle cx="1696" cy="490" r="4"/><path d="M1693.2 487.2L1698.8 492.8M1698.8 487.2L1693.2 492.8"/></g>
+<g class="s-light"><circle cx="1696" cy="570" r="4"/><path d="M1693.2 567.2L1698.8 572.8M1698.8 567.2L1693.2 572.8"/></g>
+<g class="s-fan"><circle cx="1110" cy="530" r="7"/><path d="M1110 530L1110 523M1110 530L1116 533.5M1110 530L1104 533.5"/></g>
+<g class="s-fan"><circle cx="1400" cy="530" r="7"/><path d="M1400 530L1400 523M1400 530L1406 533.5M1400 530L1394 533.5"/></g>
+<g class="s-light"><circle cx="1592" cy="529" r="6"/><circle cx="1592" cy="529" r="2.5"/></g>
+<g class="s-db"><rect x="967" y="544" width="8" height="24"/><text x="979" y="559" class="sl2" text-anchor="start">DB</text></g>
+<g class="s-lv"><rect x="966" y="586" width="10" height="8"/><text x="971" y="584" class="sl">VDP</text></g>
+<g class="s-lv"><rect x="1035" y="452" width="10" height="8"/><text x="1040" y="450" class="sl">TV</text></g>
+<g class="s-lv"><rect x="1053" y="452" width="10" height="8"/><text x="1058" y="450" class="sl">D</text></g>
+<path class="s-6" d="M1018 459L1022 452L1026 459Z"/>
+<path class="s-6" d="M1072 459L1076 452L1080 459Z"/>
+<g class="s-16"><path d="M1185.5 459.5L1190 451.5L1194.5 459.5Z"/><text x="1197" y="459" class="sl2">A</text></g>
+<g class="s-16"><path d="M1705.5 459.5L1710 451.5L1714.5 459.5Z"/><text x="1717" y="459" class="sl2">A</text></g>
+<path class="s-6" d="M1726 523L1730 516L1734 523Z"/>
+<path class="s-6" d="M1496 459L1500 452L1504 459Z"/>
+<path class="s-6" d="M1056 607L1060 600L1064 607Z"/>
+<rect class="sb" x="1409" y="601.5" width="10" height="5"/>
+<rect class="sb" x="1070" y="441.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1010" cy="315" r="4"/><path d="M1007.2 312.2L1012.8 317.8M1012.8 312.2L1007.2 317.8"/></g>
+<g class="s-light"><circle cx="1010" cy="400" r="4"/><path d="M1007.2 397.2L1012.8 402.8M1012.8 397.2L1007.2 402.8"/></g>
+<g class="s-light"><circle cx="1110" cy="315" r="4"/><path d="M1107.2 312.2L1112.8 317.8M1112.8 312.2L1107.2 317.8"/></g>
+<g class="s-light"><circle cx="1110" cy="400" r="4"/><path d="M1107.2 397.2L1112.8 402.8M1112.8 397.2L1107.2 402.8"/></g>
+<g class="s-light"><circle cx="1210" cy="315" r="4"/><path d="M1207.2 312.2L1212.8 317.8M1212.8 312.2L1207.2 317.8"/></g>
+<g class="s-light"><circle cx="1210" cy="400" r="4"/><path d="M1207.2 397.2L1212.8 402.8M1212.8 397.2L1207.2 402.8"/></g>
+<g class="s-fan"><circle cx="1110" cy="295" r="7"/><path d="M1110 295L1110 288M1110 295L1116 298.5M1110 295L1104 298.5"/></g>
+<g class="s-lv"><rect x="966" y="354" width="10" height="8"/><text x="971" y="352" class="sl">TV</text></g>
+<path class="s-6" d="M967 338L971 331L975 338Z"/>
+<path class="s-6" d="M967 383L971 376L975 383Z"/>
+<g class="s-lv"><rect x="966" y="396" width="10" height="8"/><text x="971" y="394" class="sl">D</text></g>
+<g class="s-lv"><rect x="1105" y="354" width="10" height="8"/><text x="1110" y="352" class="sl">FB</text></g>
+<g class="s-16"><path d="M1241.5 319.5L1246 311.5L1250.5 319.5Z"/><text x="1253" y="319" class="sl2">A</text></g>
+<rect class="sb" x="1348" y="375.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1320" cy="320" r="4"/><path d="M1317.2 317.2L1322.8 322.8M1322.8 317.2L1317.2 322.8"/></g>
+<g class="s-light"><circle cx="1275" cy="320" r="4"/><path d="M1272.2 317.2L1277.8 322.8M1277.8 317.2L1272.2 322.8"/></g>
+<g class="s-light"><circle cx="1322" cy="271" r="4"/><path d="M1319.2 268.2L1324.8 273.8M1324.8 268.2L1319.2 273.8"/></g>
+<g class="s-fan"><circle cx="1320" cy="345" r="4.5"/><text x="1320" y="347.5" class="sl">E</text></g>
+<g class="s-16"><path d="M1337.5 301.5L1342 293.5L1346.5 301.5Z"/><text x="1349" y="301" class="sl2">G</text></g>
+<path class="s-6" d="M1336 274L1340 267L1344 274Z"/>
+<rect class="sb" x="1260" y="453.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1300" cy="405" r="4"/><path d="M1297.2 402.2L1302.8 407.8M1302.8 402.2L1297.2 407.8"/></g>
+<g class="s-light"><circle cx="1342" cy="400" r="4"/><path d="M1339.2 397.2L1344.8 402.8M1344.8 397.2L1339.2 402.8"/></g>
+<g class="s-fan"><circle cx="1300" cy="430" r="4.5"/><text x="1300" y="432.5" class="sl">E</text></g>
+<path class="s-6" d="M1338 422L1342 415L1346 422Z"/>
+<rect class="sb" x="1370" y="441.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1390" cy="315" r="4"/><path d="M1387.2 312.2L1392.8 317.8M1392.8 312.2L1387.2 317.8"/></g>
+<g class="s-light"><circle cx="1390" cy="400" r="4"/><path d="M1387.2 397.2L1392.8 402.8M1392.8 397.2L1387.2 402.8"/></g>
+<g class="s-light"><circle cx="1460" cy="315" r="4"/><path d="M1457.2 312.2L1462.8 317.8M1462.8 312.2L1457.2 317.8"/></g>
+<g class="s-light"><circle cx="1460" cy="400" r="4"/><path d="M1457.2 397.2L1462.8 402.8M1462.8 397.2L1457.2 402.8"/></g>
+<g class="s-fan"><circle cx="1425" cy="358" r="7"/><path d="M1425 358L1425 351M1425 358L1431 361.5M1425 358L1419 361.5"/></g>
+<path class="s-6" d="M1493 315L1497 308L1501 315Z"/>
+<path class="s-6" d="M1493 408L1497 401L1501 408Z"/>
+<g class="s-lv"><rect x="1407" y="440" width="10" height="8"/><text x="1412" y="438" class="sl">TV</text></g>
+<g class="s-lv"><rect x="1391" y="440" width="10" height="8"/><text x="1396" y="438" class="sl">D</text></g>
+<g class="s-16"><path d="M1487.5 439.5L1492 431.5L1496.5 439.5Z"/><text x="1499" y="439" class="sl2">A</text></g>
+<rect class="sb" x="1601" y="443.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1560" cy="395" r="4"/><path d="M1557.2 392.2L1562.8 397.8M1562.8 392.2L1557.2 397.8"/></g>
+<g class="s-light"><circle cx="1680" cy="395" r="4"/><path d="M1677.2 392.2L1682.8 397.8M1682.8 392.2L1677.2 397.8"/></g>
+<g class="s-fan"><circle cx="1620" cy="395" r="7"/><path d="M1620 395L1620 388M1620 395L1626 398.5M1620 395L1614 398.5"/></g>
+<path class="s-6" d="M1726 423L1730 416L1734 423Z"/>
+<g class="s-light"><circle cx="1715" cy="352" r="4"/><path d="M1712.2 349.2L1717.8 354.8M1717.8 349.2L1712.2 354.8"/></g>
+<path class="s-6" d="M1696 349L1700 342L1704 349Z"/>
+<rect class="sb" x="1504" y="327.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1620" cy="305" r="4"/><path d="M1617.2 302.2L1622.8 307.8M1622.8 302.2L1617.2 307.8"/></g>
+<path class="s-6" d="M1726 308L1730 301L1734 308Z"/>
+<g class="s-16"><rect x="1516.5" y="266.5" width="7" height="7"/></g>
+<g class="s-16"><rect x="1588.5" y="266.5" width="7" height="7"/></g>
+<rect class="sb" x="1095" y="611.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1010" cy="655" r="4"/><path d="M1007.2 652.2L1012.8 657.8M1012.8 652.2L1007.2 657.8"/></g>
+<g class="s-light"><circle cx="1010" cy="745" r="4"/><path d="M1007.2 742.2L1012.8 747.8M1012.8 742.2L1007.2 747.8"/></g>
+<g class="s-light"><circle cx="1095" cy="655" r="4"/><path d="M1092.2 652.2L1097.8 657.8M1097.8 652.2L1092.2 657.8"/></g>
+<g class="s-light"><circle cx="1095" cy="745" r="4"/><path d="M1092.2 742.2L1097.8 747.8M1097.8 742.2L1092.2 747.8"/></g>
+<g class="s-light"><circle cx="1180" cy="655" r="4"/><path d="M1177.2 652.2L1182.8 657.8M1182.8 652.2L1177.2 657.8"/></g>
+<g class="s-light"><circle cx="1180" cy="745" r="4"/><path d="M1177.2 742.2L1182.8 747.8M1182.8 742.2L1177.2 747.8"/></g>
+<g class="s-fan"><circle cx="1095" cy="700" r="7"/><path d="M1095 700L1095 693M1095 700L1101 703.5M1095 700L1089 703.5"/></g>
+<path class="s-6" d="M1217 679L1221 672L1225 679Z"/>
+<path class="s-6" d="M1217 779L1221 772L1225 779Z"/>
+<path class="s-6" d="M1076 787L1080 780L1084 787Z"/>
+<g class="s-lv"><rect x="1090" y="780" width="10" height="8"/><text x="1095" y="778" class="sl">TV</text></g>
+<g class="s-lv"><rect x="1105" y="780" width="10" height="8"/><text x="1110" y="778" class="sl">D</text></g>
+<g class="s-16"><path d="M1045.5 618.5L1050 610.5L1054.5 618.5Z"/><text x="1057" y="618" class="sl2">A</text></g>
+<g class="s-b"><circle cx="1221" cy="690" r="3.5"/><text x="1227" y="693" class="sl2">bell</text></g>
+<g class="s-light"><circle cx="1215" cy="740" r="4"/><path d="M1212.2 737.2L1217.8 742.8M1217.8 737.2L1212.2 742.8"/></g>
+<rect class="sb" x="1216" y="665.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1265" cy="680" r="4"/><path d="M1262.2 677.2L1267.8 682.8M1267.8 677.2L1262.2 682.8"/></g>
+<g class="s-light"><circle cx="1265" cy="766" r="4"/><path d="M1262.2 763.2L1267.8 768.8M1267.8 763.2L1262.2 768.8"/></g>
+<g class="s-light"><circle cx="1300" cy="654" r="4"/><path d="M1297.2 651.2L1302.8 656.8M1302.8 651.2L1297.2 656.8"/></g>
+<g class="s-fan"><circle cx="1252" cy="787" r="4.5"/><text x="1252" y="789.5" class="sl">E</text></g>
+<g class="s-16"><path d="M1295.5 731.5L1300 723.5L1304.5 731.5Z"/><text x="1307" y="731" class="sl2">G</text></g>
+<path class="s-6" d="M1296 678L1300 671L1304 678Z"/>
+<g class="s-b"><circle cx="1229" cy="727" r="3.5"/><text x="1235" y="730" class="sl2">bell</text></g>
+<rect class="sb" x="1295" y="601.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1360" cy="700" r="4"/><path d="M1357.2 697.2L1362.8 702.8M1362.8 697.2L1357.2 702.8"/></g>
+<rect class="sb" x="1545" y="749.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1485" cy="645" r="4"/><path d="M1482.2 642.2L1487.8 647.8M1487.8 642.2L1482.2 647.8"/></g>
+<g class="s-light"><circle cx="1485" cy="735" r="4"/><path d="M1482.2 732.2L1487.8 737.8M1487.8 732.2L1482.2 737.8"/></g>
+<g class="s-16"><path d="M1543.5 708.5L1548 700.5L1552.5 708.5Z"/><text x="1555" y="708" class="sl2">G</text></g>
+<path class="s-6" d="M1418 723L1422 716L1426 723Z"/>
+<rect class="sb" x="1590" y="611.5" width="10" height="5"/>
+<g class="s-light"><circle cx="1645" cy="660" r="4"/><path d="M1642.2 657.2L1647.8 662.8M1647.8 657.2L1642.2 662.8"/></g>
+<g class="s-light"><circle cx="1645" cy="740" r="4"/><path d="M1642.2 737.2L1647.8 742.8M1647.8 737.2L1642.2 742.8"/></g>
+<g class="s-16"><path d="M1723.5 643.5L1728 635.5L1732.5 643.5Z"/><text x="1735" y="643" class="sl2">P</text></g>
+<g class="s-16"><path d="M1723.5 763.5L1728 755.5L1732.5 763.5Z"/><text x="1735" y="763" class="sl2">P</text></g>
+<path class="s-6" d="M1726 683L1730 676L1734 683Z"/>
+<path class="s-6" d="M1726 708L1730 701L1734 708Z"/>
+<g class="s-16"><path d="M1555.5 621.5L1560 613.5L1564.5 621.5Z"/><text x="1567" y="621" class="sl2">P</text></g>
+<g class="s-16"><path d="M1555.5 668.5L1560 660.5L1564.5 668.5Z"/><text x="1567" y="668" class="sl2">P</text></g>
+<g class="s-16"><path d="M1555.5 693.5L1560 685.5L1564.5 693.5Z"/><text x="1567" y="693" class="sl2">P</text></g>
+<g class="s-16"><path d="M1620.5 787.5L1625 779.5L1629.5 787.5Z"/><text x="1632" y="787" class="sl2">P</text></g>
+<path class="s-6" d="M1686 787L1690 780L1694 787Z"/>
+</g>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" class="arrhead"/></marker></defs>
+</svg></div>
+   <div class="legend" aria-label="Legend (same as 4th floor)"><span>Same symbols as the 4th floor. N1 is dashed: no branch at this level.</span></div>
+  </figure>
+ </div>
+</div>
+
+<section id="furniture">
+ <h2><span class="code">01</span>Furniture and room use</h2>
+ <p class="lead">Beds sit with the head on the east wall, desks face east, the hob faces east and the puja unit is in the north-east of the sit-out. Every bed, desk and sofa keeps clear of the switchboards and door swings drawn on the electrical layer.</p>
+ <div class="grid2">
+  <div class="tablewrap"><table><thead><tr><th>4th floor</th><th>Furniture</th></tr></thead><tbody>
+   <tr><td>Entry hall</td><td>Shoe cabinet 7′ along the bedroom wall, console with mirror opposite, door phone by the main door</td></tr>
+   <tr><td>Office (NW)</td><td>Desk 5′×2′6″ on the east wall (sit facing east), round table for 2 visitors, bookshelf on the north wall</td></tr>
+   <tr><td>Living</td><td>3-seater sofa facing north, 2 armchairs, coffee table, TV unit on the Bedroom 2 wall; path to the stair kept clear</td></tr>
+   <tr><td>Lounge / entertainment</td><td>AV wall with screen and projector, sectional sofa, games table for 4, bar counter with 4 stools on the south wall</td></tr>
+   <tr><td>Bedroom 1 (SW)</td><td>King bed 6′×6′6″, head east; 10′ wardrobe on the west wall; study desk under the AC</td></tr>
+   <tr><td>Bedroom 2 (N)</td><td>King bed, head east; 6′ wardrobe on the west wall; study on the north wall</td></tr>
+   <tr><td>Pantry</td><td>L-counter on the east and south walls, sink under the east window, fridge in the north-west corner, induction hob</td></tr>
+   <tr><td>Laundry balcony</td><td>Washer and dryer stack, utility sink, 3 drying lines, open shelving on the stair wall</td></tr>
+   <tr><td>North balcony</td><td>Three outdoor units on the AC wall, seat at the east end</td></tr>
+  </tbody></table></div>
+  <div class="tablewrap"><table><thead><tr><th>5th floor</th><th>Furniture</th></tr></thead><tbody>
+   <tr><td>Long hall · living</td><td>3-seater sofa, 2 armchairs, coffee table, TV unit on the office wall</td></tr>
+   <tr><td>Long hall · dining</td><td>10-seater table 10′×4′ next to the kitchen door, crockery unit on the sit-out wall, pendant over the table</td></tr>
+   <tr><td>Kitchen (SE)</td><td>Hob on the east wall (cook faces east), sink and dishwasher under the south window, fridge and tall unit on the pillar wall</td></tr>
+   <tr><td>Utility + store</td><td>Wash sink, geyser for the kitchen hot tap, shelving in the store</td></tr>
+   <tr><td>Master suite · elders (SW)</td><td>King bed, head east, 10′ wardrobe on the west wall, easy chair; bell push at the bedside</td></tr>
+   <tr><td>Office / meeting</td><td>Table 8′×3′6″ for 8, screen on the lobby wall, credenza on the toilet wall, floor box under the table</td></tr>
+   <tr><td>Bedroom 4 (N)</td><td>Queen bed 5′×6′6″, head east; 5′ wardrobe on the toilet wall</td></tr>
+   <tr><td>Sit-out + deck</td><td>2 lounge chairs and side table, puja unit in the north-east corner, two outdoor units on the deck AC wall</td></tr>
+  </tbody></table></div>
+ </div>
+</section>
+
+<section id="ac">
+ <h2><span class="code">02</span>Air conditioning</h2>
+ <p class="lead">Ten inverter split ACs, 8.5 TR on the 4th floor and 9.5 TR on the 5th. The 5th floor sits under the terrace, so its rooms carry 0.5 TR more than the same rooms below. No outdoor unit goes on the east elevation.</p>
+ <div class="tablewrap"><table><thead><tr><th>Tag</th><th>Floor</th><th>Room</th><th class="num">TR</th><th>Indoor unit</th><th>Outdoor unit</th><th class="num">Copper run, m</th><th>Condensate</th></tr></thead><tbody>
+ <tr><td class="tag">AC-1</td><td>4th</td><td>Bedroom 1</td><td class="num">1.5</td><td>north wall, throw south</td><td>south ledge, between the bedroom windows</td><td class="num">6.4</td><td>ODU ledge drain</td></tr>
+<tr><td class="tag">AC-2</td><td>4th</td><td>Bedroom 2</td><td class="num">1.5</td><td>north wall, throw south</td><td>north balcony AC wall</td><td class="num">5.2</td><td>balcony outlet</td></tr>
+<tr><td class="tag">AC-3</td><td>4th</td><td>Office</td><td class="num">1.5</td><td>east wall, throw west</td><td>laundry balcony (south)</td><td class="num">16.8</td><td>laundry floor trap</td></tr>
+<tr><td class="tag">AC-4</td><td>4th</td><td>Entry hall + living</td><td class="num">2</td><td>north wall of living, throw south</td><td>north balcony AC wall</td><td class="num">10.7</td><td>balcony outlet</td></tr>
+<tr><td class="tag">AC-5</td><td>4th</td><td>Lounge / entertainment</td><td class="num">2</td><td>north wall, throw south</td><td>north balcony AC wall</td><td class="num">3.3</td><td>balcony outlet</td></tr>
+<tr><td class="tag">AC-6</td><td>5th</td><td>Master suite (elders)</td><td class="num">2</td><td>north wall, throw south</td><td>south ledge, between the bedroom windows</td><td class="num">6.4</td><td>ODU ledge drain</td></tr>
+<tr><td class="tag">AC-7</td><td>5th</td><td>Bedroom 4</td><td class="num">1.5</td><td>south wall, throw north</td><td>deck AC wall</td><td class="num">5.4</td><td>deck outlet</td></tr>
+<tr><td class="tag">AC-8</td><td>5th</td><td>Office / meeting</td><td class="num">2</td><td>east wall, throw west</td><td>terrace, directly above</td><td class="num">6.3</td><td>terrace drain</td></tr>
+<tr><td class="tag">AC-9</td><td>5th</td><td>Long hall · living end</td><td class="num">2</td><td>office wall, throw south</td><td>terrace, directly above</td><td class="num">6.3</td><td>terrace drain</td></tr>
+<tr><td class="tag">AC-10</td><td>5th</td><td>Long hall · dining end</td><td class="num">2</td><td>sit-out wall, throw south</td><td>deck AC wall</td><td class="num">5.8</td><td>deck outlet</td></tr>
+ </tbody></table></div>
+ <ul class="tight note">
+  <li>Builder provides concealed copper (insulated pair), PVC drain, a 16 A switch-socket at each indoor unit and an isolator at each outdoor unit. Total copper run about 73 m.</li>
+  <li>Rev C: nothing on the road faces. Three outdoor units share the 4th-floor north balcony AC wall and two share the 5th-floor deck wall; the 4th-floor office unit sits on the laundry balcony; the two 5th-floor units for the office and the living end go on the terrace directly above (dashed outline, ↑).</li>
+  <li>Terrace insulation (50 mm XPS with reflective tiles) would let the 5th-floor rooms drop back to the 4th-floor tonnage.</li>
+  <li>Option: one 16–18 HP VRF outdoor unit on the terrace directly above could replace the ten outdoor units. It costs more but clears both balconies and the north face.</li>
+ </ul>
+</section>
+
+<section id="plumbing">
+ <h2><span class="code">03</span>Plumbing</h2>
+ <p class="lead">Every wet room drains above the slab, through the outside wall into its existing duct. The 5th-floor toilet and powder room moved next to N2 and drain straight into it; N1 passes the 5th floor with no branch. The pantry, kitchen, utility and laundry balcony all drain to S2.</p>
+ <div class="grid2">
+  <div class="tablewrap"><table><thead><tr><th>4th floor</th><th>Points</th><th>Stack</th></tr></thead><tbody>
+   <tr><td>Toilet · Bedroom 2</td><td>Wall-hung WC, health faucet, basin, shower mixer, 25 L geyser, linear drain, floor trap</td><td>N1</td></tr>
+   <tr><td>Powder</td><td>WC, health faucet, basin</td><td>N1</td></tr>
+   <tr><td>Toilet · Bedroom 1</td><td>WC, health faucet, basin, shower mixer, 25 L geyser, linear drain, floor trap</td><td>S1</td></tr>
+   <tr><td>Pantry</td><td>Sink (hot and cold), RO point on municipal water, 6 L instant geyser under the counter</td><td>S2</td></tr>
+   <tr><td>Laundry balcony</td><td>Washer inlet and waste, dryer, utility sink, 2 floor traps (also take the rain that blows in)</td><td>S2</td></tr>
+   <tr><td>North balcony</td><td>Outlet and 75 mm down-pipe; condensate from three outdoor units</td><td>rain</td></tr>
+  </tbody></table></div>
+  <div class="tablewrap"><table><thead><tr><th>5th floor</th><th>Points</th><th>Stack</th></tr></thead><tbody>
+   <tr><td>Toilet · Bedroom 4 <span class="pill">moved</span></td><td>WC, health faucet, basin, shower mixer, 15 L geyser, linear drain, floor trap</td><td>N2</td></tr>
+   <tr><td>Powder <span class="pill">moved</span></td><td>WC, health faucet, basin</td><td>N2</td></tr>
+   <tr><td>Master toilet · elders</td><td>Comfort-height WC, health faucet, basin, shower with fold-down seat, 25 L geyser, grab bars, flush linear drain</td><td>S1</td></tr>
+   <tr><td>Kitchen</td><td>Sink (hot and cold), dishwasher, RO point on municipal water, PNG gas at the hob</td><td>S2</td></tr>
+   <tr><td>Utility</td><td>Wash sink, 25 L geyser feeding the kitchen hot tap, floor trap</td><td>S2</td></tr>
+   <tr><td>Deck</td><td>Outlet and 75 mm down-pipe; condensate from two outdoor units</td><td>rain</td></tr>
+  </tbody></table></div>
+ </div>
+ <ul class="tight note">
+  <li>Supply on both floors is the floors 4–5 bore zone with the tank raised 10 ft: 1¼″ down-take per duct, 1″ branch with a ball valve into each wet room, ¾″ to each shower mixer and ½″ to other points. Expect about 0.4–0.5 bar on the 5th floor, so specify low-pressure shower fittings there.</li>
+  <li>Municipal water goes to the two RO points only, through the ½″ down-take in S2. Bore and municipal pipes never connect.</li>
+  <li>Wet rooms need about 100 mm build-up above the slab for side-outlet drains. Waterproof the slab and the top of the fill, and pond-test both.</li>
+  <li>The 5th-floor toilet and both powder rooms have no window: their exhaust fans duct into the N1 / N2 shafts, so the north face stays exactly as on the typical floors.</li>
+  <li>This relies on N2 being kept in the 3BHK set, as A100-3 shows. If N2 is dropped, the 5th-floor toilet needs a ledge of about 8 ft back to N1 instead.</li>
+ </ul>
+</section>
+
+<section id="electrical">
+ <h2><span class="code">04</span>Electrical points</h2>
+ <p class="lead">Each floor keeps its own flat connection and DB by the main door, so the duplex has two meters and two 18 kW supplies. Points follow the A109/A112 rules: bedrooms get six ceiling lights in a 3 + 3 grid, halls a light every 4–5 ft, and switchboards sit outside wet rooms at 4′0″.</p>
+ <div class="grid2">
+  <div><h3>4th floor</h3><div class="tablewrap"><table><thead><tr><th>Room</th><th class="num">Lights</th><th class="num">Fans</th><th class="num">6 A</th><th class="num">16 A</th><th class="num">AC</th><th class="num">Geyser</th><th class="num">TV</th><th class="num">Data</th><th class="num">Exhaust</th><th class="num">Other</th></tr></thead><tbody><tr><td>Entry hall</td><td class="num">6</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">2</td></tr>
+<tr><td>Office</td><td class="num">4</td><td class="num">1</td><td class="num">3</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">2</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Toilet N</td><td class="num">3</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">·</td></tr>
+<tr><td>Powder</td><td class="num">2</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">·</td></tr>
+<tr><td>Bedroom 2</td><td class="num">6</td><td class="num">1</td><td class="num">3</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">1</td><td class="num">1</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Living</td><td class="num">6</td><td class="num">1</td><td class="num">3</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">1</td><td class="num">1</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Lounge</td><td class="num">10</td><td class="num">1</td><td class="num">5</td><td class="num">1</td><td class="num">1</td><td class="num">·</td><td class="num">1</td><td class="num">1</td><td class="num">·</td><td class="num">1</td></tr>
+<tr><td>North balcony</td><td class="num">1</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">3</td></tr>
+<tr><td>Bedroom 1</td><td class="num">6</td><td class="num">1</td><td class="num">3</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">1</td><td class="num">1</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Toilet S</td><td class="num">3</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">·</td></tr>
+<tr><td>Stair</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Laundry balcony</td><td class="num">2</td><td class="num">·</td><td class="num">1</td><td class="num">2</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Pantry</td><td class="num">2</td><td class="num">·</td><td class="num">2</td><td class="num">4</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td></tr>
+<tr class="tot"><td>Total (13 switchboards)</td><td class="num">52</td><td class="num">5</td><td class="num">25</td><td class="num">7</td><td class="num">5</td><td class="num">3</td><td class="num">4</td><td class="num">6</td><td class="num">3</td><td class="num">6</td></tr></tbody></table></div></div>
+  <div><h3>5th floor</h3><div class="tablewrap"><table><thead><tr><th>Room</th><th class="num">Lights</th><th class="num">Fans</th><th class="num">6 A</th><th class="num">16 A</th><th class="num">AC</th><th class="num">Geyser</th><th class="num">TV</th><th class="num">Data</th><th class="num">Exhaust</th><th class="num">Other</th></tr></thead><tbody><tr><td>Long hall</td><td class="num">17</td><td class="num">2</td><td class="num">5</td><td class="num">·</td><td class="num">2</td><td class="num">·</td><td class="num">1</td><td class="num">1</td><td class="num">·</td><td class="num">2</td></tr>
+<tr><td>Office / meeting</td><td class="num">6</td><td class="num">1</td><td class="num">2</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">1</td><td class="num">2</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Toilet N</td><td class="num">3</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">·</td></tr>
+<tr><td>Powder</td><td class="num">2</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">·</td></tr>
+<tr><td>Bedroom 4</td><td class="num">4</td><td class="num">1</td><td class="num">2</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">1</td><td class="num">1</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Sit-out</td><td class="num">3</td><td class="num">1</td><td class="num">2</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Deck</td><td class="num">1</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">2</td></tr>
+<tr><td>Master suite</td><td class="num">7</td><td class="num">1</td><td class="num">3</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">1</td><td class="num">1</td><td class="num">·</td><td class="num">1</td></tr>
+<tr><td>Toilet S</td><td class="num">3</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">1</td></tr>
+<tr><td>Stair</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Store + utility</td><td class="num">2</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">1</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td></tr>
+<tr><td>Kitchen</td><td class="num">2</td><td class="num">·</td><td class="num">3</td><td class="num">6</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td><td class="num">·</td></tr>
+<tr class="tot"><td>Total (13 switchboards)</td><td class="num">51</td><td class="num">6</td><td class="num">22</td><td class="num">6</td><td class="num">5</td><td class="num">3</td><td class="num">4</td><td class="num">5</td><td class="num">3</td><td class="num">6</td></tr></tbody></table></div></div>
+ </div>
+ <div class="grid2" style="margin-top:22px">
+  <div><h3>Circuits · 4th floor DB (3-phase)</h3><div class="tablewrap"><table><thead><tr><th>Circuit</th><th>Serves</th><th class="num">MCB</th><th class="num">Wire</th></tr></thead><tbody>
+   <tr><td>L1</td><td>Lights: bedrooms, office, toilets, powder</td><td class="num">10 A</td><td class="num">1.5</td></tr>
+   <tr><td>L2</td><td>Lights: entry hall, living, lounge, stair, pantry, balconies</td><td class="num">10 A</td><td class="num">1.5</td></tr>
+   <tr><td>P1 / P2</td><td>6 A sockets: bedrooms + office / hall, lounge, toilets</td><td class="num">16 A</td><td class="num">2.5</td></tr>
+   <tr><td>P3–P5</td><td>Pantry: counter and microwave / induction / fridge and wine fridge</td><td class="num">20 / 20 / 16 A</td><td class="num">4 / 4 / 2.5</td></tr>
+   <tr><td>P6 / P7</td><td>Washer / dryer</td><td class="num">16 / 20 A</td><td class="num">2.5 / 4</td></tr>
+   <tr><td>G1–G3</td><td>Geysers: two toilets, pantry instant geyser</td><td class="num">16 / 16 / 20 A</td><td class="num">2.5 / 2.5 / 4</td></tr>
+   <tr><td>A1–A5</td><td>One circuit per AC</td><td class="num">16–20 A</td><td class="num">2.5–4</td></tr>
+   <tr><td>X1</td><td>Outdoor: balconies, laundry (RCBO)</td><td class="num">10 A</td><td class="num">1.5</td></tr>
+  </tbody></table></div></div>
+  <div><h3>Circuits · 5th floor DB (3-phase)</h3><div class="tablewrap"><table><thead><tr><th>Circuit</th><th>Serves</th><th class="num">MCB</th><th class="num">Wire</th></tr></thead><tbody>
+   <tr><td>L1</td><td>Lights: master, Bedroom 4, office, toilets, powder, night lights</td><td class="num">10 A</td><td class="num">1.5</td></tr>
+   <tr><td>L2</td><td>Lights: long hall, kitchen, sit-out, puja, deck, utility, stair</td><td class="num">10 A</td><td class="num">1.5</td></tr>
+   <tr><td>P1 / P2</td><td>6 A sockets: bedrooms + office / hall, sit-out, toilets</td><td class="num">16 A</td><td class="num">2.5</td></tr>
+   <tr><td>P3–P6</td><td>Kitchen: counter ring / microwave and OTG / dishwasher / fridge, RO, chimney, hob ignition</td><td class="num">20 / 20 / 16 / 16 A</td><td class="num">4 / 4 / 2.5 / 2.5</td></tr>
+   <tr><td>G1–G3</td><td>Geysers: master toilet, Bedroom 4 toilet, utility</td><td class="num">16 A</td><td class="num">2.5</td></tr>
+   <tr><td>A6–A10</td><td>One circuit per AC</td><td class="num">16–20 A</td><td class="num">2.5–4</td></tr>
+   <tr><td>X1</td><td>Outdoor: deck (RCBO); call bells on a 12 V transformer</td><td class="num">10 A</td><td class="num">1.5</td></tr>
+  </tbody></table></div></div>
+ </div>
+ <div class="grid2" style="margin-top:22px">
+  <div><h3>Load · 4th floor (kW)</h3><div class="tablewrap"><table><thead><tr><th>Load</th><th class="num">Connected</th><th class="num">Diversity</th><th class="num">Demand</th></tr></thead><tbody><tr><td>Air conditioning</td><td class="num">9.0</td><td class="num">80%</td><td class="num">7.2</td></tr><tr><td>Geysers</td><td class="num">7.0</td><td class="num">50%</td><td class="num">3.5</td></tr><tr><td>Kitchen / pantry appliances</td><td class="num">4.6</td><td class="num">50%</td><td class="num">2.3</td></tr><tr><td>Laundry (washer, dryer)</td><td class="num">4.5</td><td class="num">50%</td><td class="num">2.2</td></tr><tr><td>Lights, fans, exhausts</td><td class="num">0.9</td><td class="num">90%</td><td class="num">0.8</td></tr><tr><td>6 A sockets (100 W each)</td><td class="num">2.5</td><td class="num">40%</td><td class="num">1.0</td></tr><tr><td>Projector, bells, misc</td><td class="num">0.3</td><td class="num">100%</td><td class="num">0.3</td></tr><tr class="tot"><td>Total</td><td class="num">28.8</td><td></td><td class="num">17.4</td></tr></tbody></table></div></div>
+  <div><h3>Load · 5th floor (kW)</h3><div class="tablewrap"><table><thead><tr><th>Load</th><th class="num">Connected</th><th class="num">Diversity</th><th class="num">Demand</th></tr></thead><tbody><tr><td>Air conditioning</td><td class="num">10.0</td><td class="num">80%</td><td class="num">8.0</td></tr><tr><td>Geysers</td><td class="num">6.0</td><td class="num">50%</td><td class="num">3.0</td></tr><tr><td>Kitchen / pantry appliances</td><td class="num">7.1</td><td class="num">50%</td><td class="num">3.5</td></tr><tr><td>Lights, fans, exhausts</td><td class="num">0.9</td><td class="num">90%</td><td class="num">0.8</td></tr><tr><td>6 A sockets (100 W each)</td><td class="num">2.2</td><td class="num">40%</td><td class="num">0.9</td></tr><tr><td>Projector, bells, misc</td><td class="num">0.1</td><td class="num">100%</td><td class="num">0.1</td></tr><tr class="tot"><td>Total</td><td class="num">26.3</td><td></td><td class="num">16.4</td></tr></tbody></table></div></div>
+ </div>
+ <p class="note">Maximum demand is about 17.4 kW on the 4th floor and 16.4 kW on the 5th, each within its 18 kW 3-phase connection. Every DB gets a 63 A 4-pole isolator, a 30 mA RCCB on socket, wet-room and kitchen circuits, and spare ways for future loads.</p>
+</section>
+
+<section id="conduit">
+ <h2><span class="code">05</span>Conduit and wiring</h2>
+ <p class="lead">Ceiling points, switchboards and every box at 3′0″ or higher are fed down from the slab; low sockets without switches come up through the 40 mm floor screed (dotted on the plan). Low-voltage runs in its own pipes to the DB location.</p>
+ <div class="grid2">
+  <div class="tablewrap"><table><thead><tr><th>Item (indicative, +10%)</th><th class="num">4th</th><th class="num">5th</th><th class="num">Total</th></tr></thead><tbody>
+   <tr><td>20 mm FRLS PVC · lights, 6 A, geysers (ft)</td><td class="num">1580</td><td class="num">1590</td><td class="num">3170</td></tr>
+   <tr><td>25 mm FRLS PVC · 16 A, AC, kitchen (ft)</td><td class="num">670</td><td class="num">620</td><td class="num">1290</td></tr>
+   <tr><td>20 mm low-voltage · TV, data, door phone (ft)</td><td class="num">470</td><td class="num">300</td><td class="num">770</td></tr>
+   <tr><td>Wall boxes, concealed GI (nos)</td><td class="num">67</td><td class="num">62</td><td class="num"></td></tr>
+   <tr><td>Ceiling junction boxes (nos)</td><td class="num">61</td><td class="num">59</td><td class="num"></td></tr>
+  </tbody></table></div>
+  <div class="tablewrap"><table><thead><tr><th>Wire (FRLS copper, approx.)</th><th class="num">Both floors</th></tr></thead><tbody>
+   <tr><td>1.5 sq mm · lights and fans</td><td class="num">1,450 m (about 17 coils of 90 m)</td></tr>
+   <tr><td>2.5 sq mm · 6 A sockets and geysers</td><td class="num">1,450 m (about 17 coils of 90 m)</td></tr>
+   <tr><td>4 sq mm · AC and 16 A</td><td class="num">1,180 m (about 14 coils of 90 m)</td></tr>
+   <tr><td>CAT6 / RG6 / door-phone cable</td><td class="num">to the low-voltage runs</td></tr>
+  </tbody></table></div>
+ </div>
+ <ul class="tight note">
+  <li>Lay two 32 mm sleeves through the 5th-floor slab beside the stair for data, HDMI and fibre between the floors; the home router sits in the 4th-floor office.</li>
+  <li>4th-floor lounge: 32 mm conduit from the AV wall to the projector point, plus 20 mm runs to four ceiling speakers. 5th-floor meeting room: 32 mm from the floor box under the table to the screen wall.</li>
+  <li>Stair lights switch two-way, at the foot on the 4th floor and at the head on the 5th.</li>
+  <li>Lengths are measured on this drawing from each switchboard and DB to the points, plus drops to box height (slab soffit 9′4″). Re-measure on site from the A112-style wall drawings before ordering.</li>
+ </ul>
+</section>
+
+<section id="elders">
+ <h2><span class="code">06</span>For the elders on the 5th floor</h2>
+ <ul class="tight">
+  <li>Everyday entry is the 5th-floor door from the lift, so no stairs are needed day to day.</li>
+  <li>Bell pushes at the bedside and a pull-cord in the master toilet, sounding in the long hall and kitchen.</li>
+  <li>Low-level night lights between the bed and the toilet door; two-way switching at the bedside.</li>
+  <li>Grab bars at the WC and in the shower, fold-down shower seat, R11 anti-skid tiles, a flush shower entry with the linear drain, lever taps and lever door handles.</li>
+  <li>Toilet doors open outward, as on the typical floor, so a fall behind the door never blocks it.</li>
+ </ul>
+</section>
+
+<section id="open">
+ <h2><span class="code">07</span>Points to confirm</h2>
+ <ul class="tight">
+  <li>N2 stays in the final 3BHK set (needed for the moved toilet and powder).</li>
+  <li>Beams over the removed walls (hall, living, lounge, drawing) show as ceiling drops at about 8′10″; the false-ceiling design should run with them.</li>
+  <li>North-face outdoor-unit brackets at the office need a screen and the architect's agreement on the road elevation.</li>
+  <li>Vastu consultant to sign off the moved toilet (north-centre) and the furniture orientations.</li>
+  <li>TSSPDCL: keep both flat connections at 18 kW each, or merge into one supply if preferred.</li>
+ </ul>
+</section>
+
+<footer><span>SAHA Developers · Cyber Enclave, Madhapur · Stilt + 5</span><span>Flat-02 duplex services · based on A100-3 R1, Rev P1 plumbing and Rev B layout · 13 Oct 2026</span><span>Scale: 1 ft = 14.5 drawing units; dimensions are clear inside sizes</span></footer>
+</div>
+<script>
+(function(){
+  var plans=document.getElementById('plans');
+  var f4=document.getElementById('fig4'), f5=document.getElementById('fig5');
+  var btns=[].slice.call(document.querySelectorAll('.seg button'));
+  var boxes=[].slice.call(document.querySelectorAll('.layers input'));
+  function setFloor(f){
+    btns.forEach(function(b){b.setAttribute('aria-pressed', String(b.dataset.f===f));});
+    f4.hidden = (f==='5'); f5.hidden = (f==='4');
+    try{localStorage.setItem('f2dup-floor',f);}catch(e){}
+  }
+  function apply(){
+    boxes.forEach(function(b){plans.classList.toggle('on-'+b.dataset.l,b.checked);});
+    try{localStorage.setItem('f2dup-layers',JSON.stringify(boxes.filter(function(b){return b.checked;}).map(function(b){return b.dataset.l;})));}catch(e){}
+  }
+  btns.forEach(function(b){b.addEventListener('click',function(){setFloor(b.dataset.f);});});
+  boxes.forEach(function(b){b.addEventListener('change',apply);});
+  try{
+    var f=localStorage.getItem('f2dup-floor'); if(f) setFloor(f);
+    var l=JSON.parse(localStorage.getItem('f2dup-layers')||'null'); if(Array.isArray(l)) boxes.forEach(function(b){b.checked=l.indexOf(b.dataset.l)>-1;});
+  }catch(e){}
+  apply();
+})();
+</script>
+
+</body></html>
