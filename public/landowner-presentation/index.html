@@ -158,7 +158,8 @@ const PROJ = {
 };
 const qOwner = (() => { try { const q = (new URLSearchParams(location.search).get("owner") || "").toLowerCase().trim(); if (!q) return null; const o = OWNERS.find(o => o.id === q || o.name.toLowerCase() === q || q.startsWith(o.name.toLowerCase().split(" ")[0])); return o ? o.id : null; } catch(e) { return null; } })();
 const LOCK = (() => { try { return !!qOwner && new URLSearchParams(location.search).get("lock") === "1"; } catch(e) { return false; } })();
-let S = {owner: qOwner || store.get("lo.owner") || "geeta", ch: null, spec: store.get("lo.spec") || "prem"};
+let S = {owner: qOwner || store.get("lo.owner") || "geeta", ch: null, spec: store.get("lo.spec") || "prem", cellar: store.get("lo.cellar") !== "no"};
+const CELLAR_COST = 11830000; /* Rev E1: net extra for the cellar incl. GST + 5% contingency (Rs 111–123 L by rock) */
 if (!OWNERS.some(o=>o.id===S.owner)) S.owner = OWNERS[0].id;
 const own = () => OWNERS.find(o=>o.id===S.owner);
 const P = () => own().p;
@@ -176,7 +177,7 @@ const TYPE_IMG = {"HOSTEL-S":"typ_S_H","3BHK-S":"typ_S_3","4BHK-S":"typ_S_4","OF
 const TYPE_NAME = {"HOSTEL-S":"Hostel · 6 rooms","3BHK-S":"3BHK","4BHK-S":"4BHK","OFFICE-N":"Office","3BHK-N":"3BHK","4BHK-N":"4BHK"};
 const bPick = o => { const d = {}; o.units.forEach(u=>d[u]=o.def); try { const v = JSON.parse(store.get("lo.units."+o.id)); if (v && typeof v==="object") o.units.forEach(u=>{ if (o.opts.includes(v[u])) d[u]=v[u]; }); } catch(e) {} return d; };
 
-function totals(o = own()){
+function totals(o = own(), cellar = S.cellar){
  if (o.p === "a"){
   const common = D.a.common[S.spec] * o.share;
   const picked = aPicked(o);
@@ -185,7 +186,7 @@ function totals(o = own()){
   const byShare = !picked.length, ind2 = byShare ? allInd : ind;
   return {common, ind: ind2, total: common + ind2, picked, allInd, byShare};
  }
- const wingCommon = D.b.common[S.spec] / 2, common = wingCommon * o.share;
+ const wingCommon = (D.b.common[S.spec] - (cellar ? 0 : CELLAR_COST)) / 2, common = wingCommon * o.share;
  const pick = bPick(o);
  const ind = o.units.reduce((s,u)=>s + D.b.units[pick[u]].total, 0);
  return {common, ind, total: common + ind, wingCommon, pick};
@@ -344,8 +345,8 @@ function header(){
  $("#idx").onclick = e => { const b = e.target.closest("[data-c]"); if(b) go(b.dataset.c); };
 }
 function go(k){ S.ch = k; store.set("lo.ch",k); try{history.replaceState(null,"","#"+k)}catch(e){} header(); render(); window.scrollTo({top:0}); const cur=document.querySelector('#idx [aria-current="true"]'); if(cur) cur.scrollIntoView({block:"nearest",inline:"center"}); }
-function specToggle(){ return `<div class="bar"><span class="lab">Specification</span><span class="seg" id="specSeg">${[["prem","As presented (premium brands)"],["ve","Value option"]].map(([v,l])=>`<button data-s="${v}" aria-pressed="${S.spec===v}">${l}</button>`).join("")}</span></div>`; }
-function wireSpec(){ const sg=$("#specSeg"); if(sg) sg.onclick=e=>{const b=e.target.closest("[data-s]"); if(!b) return; S.spec=b.dataset.s; store.set("lo.spec",S.spec); render();}; }
+function specToggle(){ return (P()==="b" ? `<div class="bar"><span class="lab">Building</span><span class="seg" id="celSeg">${[["yes","Cellar + stilt + 5 floors"],["no","Stilt + 5 floors (no cellar)"]].map(([v,l])=>`<button data-c="${v}" aria-pressed="${(S.cellar?"yes":"no")===v}">${l}</button>`).join("")}</span></div>` : "") + `<div class="bar"><span class="lab">Specification</span><span class="seg" id="specSeg">${[["prem","As presented (premium brands)"],["ve","Value option"]].map(([v,l])=>`<button data-s="${v}" aria-pressed="${S.spec===v}">${l}</button>`).join("")}</span></div>`; }
+function wireSpec(){ const cs=$("#celSeg"); if(cs) cs.onclick=e=>{const b=e.target.closest("[data-c]"); if(!b) return; S.cellar=b.dataset.c==="yes"; store.set("lo.cellar",b.dataset.c); render();}; const sg=$("#specSeg"); if(sg) sg.onclick=e=>{const b=e.target.closest("[data-s]"); if(!b) return; S.spec=b.dataset.s; store.set("lo.spec",S.spec); render();}; }
 
 function render(){
  const i = CH.findIndex(c=>c[0]===S.ch), [k,t] = CH[i];
@@ -368,6 +369,7 @@ const VIEWS = {
    <div class="fig"><div class="l">${a?"Your flats (individual works)":"Your units (individual works)"}</div><div class="v">${amt(T.ind)}</div><div class="s">${a ? (T.byShare ? Math.round(o.share*100)+"% of the individual works of all 10 flats (flat allotment pending)" : T.picked.length+" flat(s): "+T.picked.join(", ")) : o.units.length+" unit(s): "+o.units.join(", ")}</div></div>
    <div class="fig key"><div class="l">Your total</div><div class="v">${amt(T.total)}</div><div class="s">common share + your ${a?"flats":"units"}, incl. GST + contingency</div></div>
   </div>
+  ${a ? "" : (()=>{ const W = totals(o,true), N = totals(o,false); return `<h3>With or without the cellar</h3><div class="tw"><table><thead><tr><th></th><th class="n">Cellar + stilt + 5 floors</th><th class="n">Stilt + 5 floors (no cellar)</th></tr></thead><tbody><tr><td>Your share of the common works</td><td class="n">${amt(W.common)}</td><td class="n">${amt(N.common)}</td></tr><tr><td>Your units (individual works)</td><td class="n">${amt(W.ind)}</td><td class="n">${amt(N.ind)}</td></tr><tr class="tot"><td>Your total</td><td class="n">${amt(W.total)}</td><td class="n">${amt(N.total)}</td></tr><tr><td>Parking</td><td class="n">38 cars (stilt 20 + cellar 18)</td><td class="n">about 20 cars on the stilt</td></tr></tbody></table></div><p class="note">Dropping the cellar saves about ${L(CELLAR_COST)} on the whole building (excavation in rock, shoring, retaining walls, waterproofing, the ramp, cellar ventilation, lighting and pumps), so ${L(W.total - N.total)} on your share. It also shortens the programme by 8–10 weeks. Your unit costs do not change. The figures above follow the option chosen below.</p>`; })()}
   <div class="callout"><b>How the cost is shown.</b> Each figure here is one lump sum. The common works (structure, walls, windows, lift, lobbies, services, site works, approvals) are shared by the landowners; the works inside each unit (tiles, sanitary, fittings, wiring, doors, paint, ceilings) are paid by that unit's owner. "Common works" shows what the common amount buys, "Your units" what your unit amount buys, "Your total" adds them up and "Payment schedule" shows when each amount is paid.</div>
   ${specToggle()}
   <p class="note">"As presented" is the specification shown in this presentation (Kohler, Johnson, Asian Paints, Polycab, Legrand Myrius, Schindler). "Value option" keeps the layout and services and uses lower-cost finishes in places; it is shown for comparison.</p>`;
