@@ -221,6 +221,7 @@ const PCOL = {L:"#d49a00",PL:"#d49a00",LED:"#d49a00",WL:"#b8860b",ML:"#b8860b",F
 const B_PT = {"ceiling light":"L","LED panel 2×2":"PL","wall light":"WL","mirror light":"ML","ceiling fan":"FAN","exhaust fan":"EF","switchboard":"SB","6 A socket":"S6","16 A socket":"S16","TV + data":"TV","AC point":"AC","geyser point":"GEY","distribution board":"DB","floor box (6 A + data)":"FB","network rack":"RACK"};
 const PNAME = {L:"Ceiling light",PL:"LED panel",LED:"LED strip",WL:"Wall light",ML:"Mirror light",FAN:"Ceiling fan",EF:"Exhaust fan",SB:"Switchboard",S6:"6 A socket",S16:"16 A socket",TV:"TV point",DATA:"Data point",WIFI:"Wi-Fi point",AC:"AC point",GEY:"Geyser point",FB:"Floor box",DB:"Distribution board",RACK:"Network rack",VDP:"Video door phone",CAM:"Door camera"};
 const SVCL = [["furn","Furniture"],["slab","Conduits in the slab / ceiling"],["wall","Conduits in walls and floor"],["pts","Electrical points"],["water","Water lines (hot / cold)"],["drain","Drains, sleeves and stacks"],["hand","Common handover points"]];
+const SVPRE = [["Plan + furniture",["furn"]],["Electrical points",["furn","pts"]],["Conduits in the slab",["slab","pts"]],["Conduits in walls and floor",["wall","pts"]],["All conduits + points",["slab","wall","pts"]],["Water supply (hot / cold)",["water","hand"]],["Drainage, sleeves, stacks",["drain"]],["All plumbing",["water","drain","hand"]],["Common handover points",["hand"]],["Everything",["furn","slab","wall","pts","water","drain","hand"]]];
 let SV = (()=>{ try { const v = JSON.parse(store.get("lo.svl")); if (Array.isArray(v)) return new Set(v); } catch(e) {} return new Set(["furn","slab","pts","water","drain","hand"]); })();
 const pl = (pts, col, w, dash) => `<polyline points="${pts.map(p=>p.join(",")).join(" ")}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"${dash?` stroke-dasharray="${dash}"`:""}/>`;
 const dot = (x,y,col,r=.32,t="") => `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}" stroke="#fff" stroke-width=".07"><title>${esc(t)}</title></circle>`;
@@ -367,11 +368,13 @@ const VIEWS = {
   ${viewer(A_SHEETS.plans)}
   <h3>Furniture layout (interactive)</h3>
   <ul class="list"><li>King bed 6′0″ × 6′6″ in every bedroom, side tables beside it, nothing in a door swing.</li><li>Wardrobes 2′0″ deep on the west or south walls, never over a window.</li><li>AC indoor units on a side wall with the throw across the bed, at 8′0″; outdoor units on the AC wall of the north balcony or on brackets, none on the east elevation.</li></ul>
-  ${phase2("furniture","Furniture and AC layers are on by default; scroll inside the frame.")}`;
+  ${phase2("furniture","Furniture and AC layers are on by default; scroll inside the frame.")}
+  <h3>Your flat with services: pick a view</h3>${VIEWS.mysvc()}`;
   return `<p class="lead">Each wing is the same 42′ × 45′6″ shell on every floor. The basis plan has a 6-room hostel in the south wing and an open office in the north wing. 3BHK and 4BHK plans fit the same shell, the same windows and the same plumbing stacks, so each owner can choose floor by floor.</p>
   ${viewer(B_SHEETS.plans)}
   <div class="cols" style="margin-top:16px"><div class="card"><h3 style="margin-top:0">Hostel · south wing</h3><ul class="list"><li>Six rooms of 13′3″ × 16′0″ off a 10′6″ corridor, each with a bed, wardrobe and study table.</li><li>Every room has its own bath on the outer wall, with a ventilator and exhaust fan.</li><li>Corner balcony at the road end.</li></ul></div>
-  <div class="card"><h3 style="margin-top:0">Office · north wing</h3><ul class="list"><li>Reception and three open-office zones, about 34 desks.</li><li>MD room with its own toilet, a glass-walled conference room, a break-out area and a pantry.</li><li>Three staff WCs; corner balcony at the road end.</li></ul></div></div>`;
+  <div class="card"><h3 style="margin-top:0">Office · north wing</h3><ul class="list"><li>Reception and three open-office zones, about 34 desks.</li><li>MD room with its own toilet, a glass-walled conference room, a break-out area and a pantry.</li><li>Three staff WCs; corner balcony at the road end.</li></ul></div></div>
+  <h3>Your wing with services: pick a view</h3>${VIEWS.mysvc()}`;
  },
  electrical(){
   const a = P()==="a";
@@ -500,8 +503,10 @@ const VIEWS = {
  },
  mysvc(){
   const o = own(), a = o.p==="a";
-  const lay = `<div class="bar"><span class="lab">Show</span><span class="seg" id="svl">${SVCL.filter(l=>a||l[0]!=="furn").map(([k,t])=>`<button data-l="${k}" aria-pressed="${SV.has(k)}">${t}</button>`).join("")}</span></div>`;
-  setTimeout(()=>{ const s=document.getElementById("svl"); if(s) s.onclick=e=>{ const b=e.target.closest("[data-l]"); if(!b) return; const k=b.dataset.l; SV.has(k)?SV.delete(k):SV.add(k); store.set("lo.svl",JSON.stringify([...SV])); render(); }; const u=document.getElementById("svu"); if(u) u.onchange=()=>{ store.set("lo.svu."+S.owner,u.value); render(); }; },0);
+  const cur = [...SV].sort().join(","), pre = SVPRE.find(p=>[...p[1]].sort().join(",")===cur);
+  const lay = `<div class="bar"><label class="lab" for="svv">View</label><select id="svv">${SVPRE.filter(p=>a||!p[1].includes("furn")||p[1].length>1).map((p,i)=>`<option value="${SVPRE.indexOf(p)}" ${pre===p?"selected":""}>${p[0]}</option>`).join("")}${pre?"":`<option selected disabled>Custom layers</option>`}</select></div>
+  <div class="bar"><span class="lab">Layers</span><span class="seg" id="svl">${SVCL.filter(l=>a||l[0]!=="furn").map(([k,t])=>`<button data-l="${k}" aria-pressed="${SV.has(k)}">${t}</button>`).join("")}</span></div>`;
+  setTimeout(()=>{ const v=document.getElementById("svv"); if(v) v.onchange=()=>{ SV=new Set(SVPRE[+v.value][1]); store.set("lo.svl",JSON.stringify([...SV])); render(); }; const s=document.getElementById("svl"); if(s) s.onclick=e=>{ const b=e.target.closest("[data-l]"); if(!b) return; const k=b.dataset.l; SV.has(k)?SV.delete(k):SV.add(k); store.set("lo.svl",JSON.stringify([...SV])); render(); }; const u=document.getElementById("svu"); if(u) u.onchange=()=>{ store.set("lo.svu."+S.owner,u.value); render(); }; },0);
   if (a){
    const mine = aPicked(); const list = mine.length ? mine : A_FLATS.map(f=>f.n);
    let cur = store.get("lo.svu."+S.owner); if (!list.includes(cur)) cur = list[0];
