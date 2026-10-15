@@ -180,7 +180,8 @@ function totals(o = own()){
   const picked = aPicked(o);
   const ind = picked.reduce((s,n)=>s + aFlatCost(A_FLATS.find(f=>f.n===n).t), 0);
   const allInd = A_FLATS.reduce((s,f)=>s + aFlatCost(f.t), 0) * o.share;
-  return {common, ind, total: common + ind, picked, allInd};
+  const byShare = !picked.length, ind2 = byShare ? allInd : ind;
+  return {common, ind: ind2, total: common + ind2, picked, allInd, byShare};
  }
  const wingCommon = D.b.common[S.spec] / 2, common = wingCommon * o.share;
  const pick = bPick(o);
@@ -362,7 +363,7 @@ const VIEWS = {
   return `<p class="lead">Welcome, ${esc(o.name)}. This presentation walks you through your building: the plans and furniture layout, the electrical, conduit and plumbing design, the makes we have chosen for every fitting and finish, and what the common works and your own units cost. Use the chapter list to jump anywhere, or the Next button to go in order.</p>
   <div class="figs">
    <div class="fig"><div class="l">Your share of the common works</div><div class="v">${amt(T.common)}</div><div class="s">${esc(o.note)}</div></div>
-   <div class="fig"><div class="l">${a?"Your flats (individual works)":"Your units (individual works)"}</div><div class="v">${a && !T.picked.length ? "Pick flats" : amt(T.ind)}</div><div class="s">${a ? (T.picked.length ? T.picked.length+" flat(s): "+T.picked.join(", ") : "tick your flats under Your units") : o.units.length+" unit(s): "+o.units.join(", ")}</div></div>
+   <div class="fig"><div class="l">${a?"Your flats (individual works)":"Your units (individual works)"}</div><div class="v">${amt(T.ind)}</div><div class="s">${a ? (T.byShare ? Math.round(o.share*100)+"% of the individual works of all 10 flats (flat allotment pending)" : T.picked.length+" flat(s): "+T.picked.join(", ")) : o.units.length+" unit(s): "+o.units.join(", ")}</div></div>
    <div class="fig key"><div class="l">Your total</div><div class="v">${amt(T.total)}</div><div class="s">common share + your ${a?"flats":"units"}, incl. GST + contingency</div></div>
   </div>
   <div class="callout"><b>How the cost is shown.</b> Each figure here is one lump sum. The common works (structure, walls, windows, lift, lobbies, services, site works, approvals) are shared by the landowners; the works inside each unit (tiles, sanitary, fittings, wiring, doors, paint, ceilings) are paid by that unit's owner. "Common works" shows what the common amount buys, "Your units" what your unit amount buys, "Your total" adds them up and "Payment schedule" shows when each amount is paid.</div>
@@ -527,12 +528,12 @@ const VIEWS = {
    const picked = aPicked();
    setTimeout(()=>{ document.querySelectorAll("#flatPick input").forEach(c=>c.onchange=()=>{ const v=[...document.querySelectorAll("#flatPick input:checked")].map(x=>x.value); store.set("lo.flats."+S.owner, JSON.stringify(v)); render(); }); },0);
    const T = totals(o);
-   return `<p class="lead">Each flat's individual works are one lump sum for the specification shown in this presentation. Tick the flats that are yours to see your amount; the allotment of flats is still to be confirmed.</p>
+   return `<p class="lead">Each flat's individual works are one lump sum for the specification shown in this presentation. Until the flats are allotted, your amount is your share of all 10 flats. Once your flats are fixed, tick them here to see the amount for those flats only.</p>
    ${specToggle()}
    <div class="tw"><table><thead><tr><th>Flat type</th><th>Flats</th><th class="n">Per flat</th></tr></thead><tbody>${Object.entries(D.a.types).filter(([k])=>aFlats(o).some(f=>f.t===k)).map(([k,t])=>`<tr><td>${esc(t.label)}</td><td>${aFlats(o).filter(f=>f.t===k).map(f=>f.n).join(", ")}</td><td class="n">${L(t[S.spec])}</td></tr>`).join("")}</tbody></table></div>
    <h3>Your flats</h3>
    <div class="flats" id="flatPick">${aFlats(o).map(f=>`<label><input type="checkbox" id="fl${f.n}" value="${f.n}" ${picked.includes(f.n)?"checked":""}><span><b>Flat ${f.n}</b><small>${esc(D.a.types[f.t].label)}</small><span class="amt">${L(aFlatCost(f.t))}</span></span></label>`).join("")}</div>
-   <div class="figs"><div class="fig key"><div class="l">${esc(o.name)} · selected flats</div><div class="v">${picked.length?L(T.ind):"₹0"}</div><div class="s">${picked.length?picked.length+" flat(s)":"no flats ticked yet"}</div></div><div class="fig"><div class="l">For reference: all 10 flats at your share</div><div class="v">${amt(T.allInd)}</div><div class="s">${Math.round(o.share*100)}% of ${Cr(A_FLATS.reduce((s,f)=>s+aFlatCost(f.t),0))}</div></div></div>
+   <div class="figs"><div class="fig key"><div class="l">${esc(o.name)} · selected flats</div><div class="v">${picked.length?L(T.ind):"—"}</div><div class="s">${picked.length?picked.length+" flat(s)":"no flats ticked yet"}</div></div><div class="fig"><div class="l">For reference: all 10 flats at your share</div><div class="v">${amt(T.allInd)}</div><div class="s">${Math.round(o.share*100)}% of ${Cr(A_FLATS.reduce((s,f)=>s+aFlatCost(f.t),0))}</div></div></div>
    ${incl}`;
   }
   const pick = bPick(o), T = totals(o);
@@ -548,11 +549,11 @@ const VIEWS = {
  },
  total(){
   const o = own(), T = totals(o), a = o.p==="a";
-  const rows = OWNERS.filter(x=>x.p===o.p).map(x=>{ const t = totals(x); return `<tr${x.id===o.id?' class="tot"':""}><td>${esc(x.name)}</td><td class="n">${amt(t.common)}</td><td class="n">${a && !t.picked.length ? "—" : amt(t.ind)}</td><td class="n">${amt(t.total)}</td></tr>`; }).join("");
+  const rows = OWNERS.filter(x=>x.p===o.p).map(x=>{ const t = totals(x); return `<tr${x.id===o.id?' class="tot"':""}><td>${esc(x.name)}</td><td class="n">${amt(t.common)}</td><td class="n">${amt(t.ind)}</td><td class="n">${amt(t.total)}</td></tr>`; }).join("");
   return `<p class="lead">Your total is your share of the common works plus the individual works of your own ${a?"flats":"units"}, each a lump sum including GST and contingency.</p>
   ${specToggle()}
-  <div class="sum"><div>Share of the common works (${esc(o.note)})</div><div>${amt(T.common)}</div><div>Individual works · ${a ? (T.picked.length ? "flats "+T.picked.join(", ") : "no flats ticked (see Your units)") : "units "+o.units.join(", ")}</div><div>${amt(T.ind)}</div><div class="tot">Total for ${esc(o.name)}</div><div class="tot">${amt(T.total)}</div></div>
-  ${a && !T.picked.length ? `<p class="note">If the landowners take up the individual works of all 10 flats in their shares, your amount would be ${amt(T.common + T.allInd)} (${amt(T.common)} + ${amt(T.allInd)}).</p>` : ""}
+  <div class="sum"><div>Share of the common works (${esc(o.note)})</div><div>${amt(T.common)}</div><div>Individual works · ${a ? (T.picked.length ? "flats "+T.picked.join(", ") : Math.round(o.share*100)+"% of all 10 flats (allotment pending)") : "units "+o.units.join(", ")}</div><div>${amt(T.ind)}</div><div class="tot">Total for ${esc(o.name)}</div><div class="tot">${amt(T.total)}</div></div>
+  ${a && T.byShare ? `<p class="note">Until the flats are allotted, the individual works of all 10 flats are shared by the same percentage as the common works. Once your flats are fixed, your amount becomes the individual works of those flats only.</p>` : ""}
   ${!a && o.wing==="N" ? `<p class="note">The north wing's common share is split 80 : 20 between Srinath and Srihari; each pays the individual works of his own units (Srinath 102–402, Srihari 502).</p>` : ""}
   ${LOCK ? "" : `<h3>All ${esc(PROJ[o.p].code)} owners</h3>
   <div class="tw"><table><thead><tr><th>Owner</th><th class="n">Common share</th><th class="n">Own units</th><th class="n">Total</th></tr></thead><tbody>${rows}</tbody></table></div>`}
@@ -601,7 +602,8 @@ const VIEWS = {
   const n = sc.months.length;
   const common = sc.common.map(f => f * T.common);
   const ind = Array(n).fill(0);
-  if (a) T.picked.forEach(fl => { const f = A_FLATS.find(x=>x.n===fl); sc.floor[f.floor].forEach((v,i)=>ind[i] += v * aFlatCost(f.t)); });
+  if (a && T.byShare) A_FLATS.forEach(f => sc.floor[f.floor].forEach((v,i)=>ind[i] += v * aFlatCost(f.t) * o.share));
+  else if (a) T.picked.forEach(fl => { const f = A_FLATS.find(x=>x.n===fl); sc.floor[f.floor].forEach((v,i)=>ind[i] += v * aFlatCost(f.t)); });
   else o.units.forEach(u => { const fl = +u[0], c = D.b.units[T.pick[u]].total; sc.floor[fl].forEach((v,i)=>ind[i] += v * c); });
   const tot = common.map((c,i)=>c+ind[i]); const mx = Math.max(...tot, 1);
   let cum = 0;
@@ -610,7 +612,7 @@ const VIEWS = {
   return `<p class="lead">When ${esc(o.name)} pays, month by month, following the construction programme${a?"":" (counted from the start of work, once the start date is fixed)"}. Each amount is requested at the start of the stage it pays for, in proportion to ${a?"your share":"your wing's share and your own units"}.</p>
   ${specToggle()}
   <div class="figs"><div class="fig"><div class="l">Total to be paid</div><div class="v">${amt(T.total)}</div><div class="s">common share + your ${a?"flats":"units"}</div></div><div class="fig"><div class="l">Busiest month</div><div class="v">${L(tot[peak])}</div><div class="s">${sc.months[peak]}</div></div><div class="fig"><div class="l">Spread over</div><div class="v">${tot.filter(x=>x>=1).length} months</div><div class="s">${sc.months.find((m,i)=>tot[i]>=1)} to ${sc.months[tot.length-1-[...tot].reverse().findIndex(x=>x>=1)]}</div></div></div>
-  ${a && !T.picked.length ? `<div class="callout">No flats are ticked yet, so this schedule shows your share of the common works only. Tick your flats in "Your units" to add their individual works; each flat's works fall in the months after its floor is handed over as a shell.</div>` : ""}
+  ${a && T.byShare ? `<div class="callout">Flats are not allotted yet, so the individual works of all 10 flats are included at your share (${Math.round(o.share*100)}%). They fall in the months after each floor is handed over as a shell.</div>` : ""}
   <div class="tw"><table><thead><tr><th>${a?"Month":"Period"}</th><th>Work on site</th><th class="n">Common share</th><th class="n">Your ${a?"flats":"units"}</th><th class="n">To pay</th><th></th><th class="n">Paid to date</th></tr></thead><tbody>${rows}<tr class="tot"><td>Total</td><td></td><td class="n">${amt(T.common)}</td><td class="n">${amt(T.ind)}</td><td class="n">${amt(T.total)}</td><td></td><td></td></tr></tbody></table></div>
   <h3>How the requests work</h3>
   <ul class="list"><li>Before each stage starts, the PMC raises one payment request per owner for that stage's budget (material, machinery, labour), split by ${a?"each landowner's percentage":"wing and by each owner's percentage"}.</li><li>After the stage, the actual cost is approved by the PMC and shared with you; a saving is credited to your next request and a shortfall is added to it.</li><li>Your ${a?"flat's":"units'"} individual works are requested floor by floor, from the month that floor is handed over as a shell until the finishes are complete.</li><li>The months follow the planned programme; if the site runs ahead or behind, the requests move with it.</li></ul>`;
