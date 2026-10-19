@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { PRESENTATION_PATH, servePresentation } from "./lib/owner-presentation-gate";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -90,6 +91,22 @@ async function relayToSupabase(request: Request, env: unknown): Promise<Response
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    if (new URL(request.url).pathname === PRESENTATION_PATH) {
+      try {
+        const key =
+          (env as { SUPABASE_PUBLISHABLE_KEY?: string } | undefined)?.SUPABASE_PUBLISHABLE_KEY ??
+          import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ??
+          (typeof process !== "undefined" ? process.env?.["SUPABASE_PUBLISHABLE_KEY"] : undefined) ??
+          "";
+        return await servePresentation(request, supabaseUpstream(env), String(key));
+      } catch (error) {
+        console.error("presentation failed", error);
+        return new Response(JSON.stringify({ message: "Presentation failed to load" }), {
+          status: 502,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
     if (new URL(request.url).pathname.startsWith(SB_PREFIX)) {
       try {
         return await relayToSupabase(request, env);

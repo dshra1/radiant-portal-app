@@ -186,27 +186,64 @@ function Page() {
 // ---------------------------------------------------------------- presentation
 /**
  * The landowners' presentation (plans, services, branded specs and lump-sum
- * costs for 77:76 and 78:93) is a static page in public/landowner-presentation.
+ * costs for 77:76 and 78:93) is bundled into the Worker and served only after sign-in.
  * The owner's name preselects them inside the page.
  */
 function OwnerPresentation({ ownerName, lock }: { ownerName: string; lock: boolean }) {
-  // A landowner sees only their own flats / wing; the PMC can switch owners.
-  const src = `/landowner-presentation/index.html${ownerName ? `?owner=${encodeURIComponent(ownerName)}${lock ? "&lock=1" : ""}` : ""}`;
+  // The page is served only to a signed-in, approved login (see lib/owner-presentation-gate):
+  // a landowner gets their own project's page locked to their name; the PMC gets every owner.
+  const pres = useQuery({
+    queryKey: ["owner_presentation", lock ? "" : ownerName],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error("Sign in to see the presentation.");
+      const q = !lock && ownerName ? `?owner=${encodeURIComponent(ownerName)}` : "";
+      const res = await fetch(`/owner-presentation${q}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(body.message ?? "The presentation could not be loaded.");
+      }
+      return res.text();
+    },
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const openFull = () => {
+    if (!pres.data) return;
+    const url = URL.createObjectURL(new Blob([pres.data], { type: "text/html" }));
+    window.open(url, "_blank", "noopener");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm text-muted-foreground">
         Plans, furniture, electrical, plumbing, makes and finishes, and the common, unit and total
-        cost for each landowner.{" "}
-        <a className="font-semibold text-primary underline" href={src} target="_blank" rel="noreferrer">
+        cost for {lock ? "your flats" : "each landowner"}.{" "}
+        <button
+          type="button"
+          className="font-semibold text-primary underline disabled:opacity-50"
+          onClick={openFull}
+          disabled={!pres.data}
+        >
           Open full screen
-        </a>
+        </button>
       </p>
-      <iframe
-        key={src}
-        title="Landowners' presentation"
-        src={src}
-        className="h-[calc(100vh-14rem)] min-h-[560px] w-full rounded-xl border border-border bg-white"
-      />
+      {pres.isError ? (
+        <p className="rounded-xl border border-border bg-card p-4 text-sm">
+          {(pres.error as Error).message}
+        </p>
+      ) : !pres.data ? (
+        <p className="text-sm text-muted-foreground">Loading the presentation…</p>
+      ) : (
+        <iframe
+          title="Landowners' presentation"
+          srcDoc={pres.data}
+          className="h-[calc(100vh-14rem)] min-h-[560px] w-full rounded-xl border border-border bg-white"
+        />
+      )}
     </div>
   );
 }
