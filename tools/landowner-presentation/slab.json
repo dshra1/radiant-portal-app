@@ -1,0 +1,668 @@
+{
+ "a": {
+  "rows": [
+   [
+    "1",
+    "1st floor slab: total",
+    null,
+    null,
+    null,
+    3917.5,
+    0
+   ],
+   [
+    "1a",
+    "Flat-01 (west block)",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "1b",
+    "Core: lift lobby / corridor (lift + stair = openings)",
+    7,
+    14.5,
+    1,
+    101.5,
+    1
+   ],
+   [
+    "1c",
+    "Flat-02 (east block)",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "2",
+    "2nd floor slab: total",
+    null,
+    null,
+    null,
+    3917.5,
+    0
+   ],
+   [
+    "2a",
+    "Flat-01 (west block)",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "2b",
+    "Core: lift lobby / corridor (lift + stair = openings)",
+    7,
+    14.5,
+    1,
+    101.5,
+    1
+   ],
+   [
+    "2c",
+    "Flat-02 (east block)",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "3",
+    "3rd floor slab: total",
+    null,
+    null,
+    null,
+    3917.5,
+    0
+   ],
+   [
+    "3a",
+    "Flat-01 (west block)",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "3b",
+    "Core: lift lobby / corridor (lift + stair = openings)",
+    7,
+    14.5,
+    1,
+    101.5,
+    1
+   ],
+   [
+    "3c",
+    "Flat-02 (east block)",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "4",
+    "4th floor slab: total",
+    null,
+    null,
+    null,
+    3917.5,
+    0
+   ],
+   [
+    "4a",
+    "Flat-01 (west block)",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "4b",
+    "Core: lift lobby / corridor (lift + stair = openings)",
+    7,
+    14.5,
+    1,
+    101.5,
+    1
+   ],
+   [
+    "4c",
+    "Flat-02 (east block)",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "5",
+    "5th floor slab: total",
+    null,
+    null,
+    null,
+    3917.5,
+    0
+   ],
+   [
+    "5a",
+    "Flat-01 (west block)",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "5b",
+    "Core: lift lobby / corridor (lift + stair = openings)",
+    7,
+    14.5,
+    1,
+    101.5,
+    1
+   ],
+   [
+    "5c",
+    "Flat-02 (east block)",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "6",
+    "Terrace (roof) slab: total",
+    null,
+    null,
+    null,
+    3917.5,
+    0
+   ],
+   [
+    "6a",
+    "Over Flat-01",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "6b",
+    "Over core: lobby (lift + stair = openings)",
+    7,
+    14.5,
+    1,
+    101.5,
+    1
+   ],
+   [
+    "6c",
+    "Over Flat-02",
+    53,
+    36,
+    1,
+    1908,
+    1
+   ],
+   [
+    "7",
+    "Stair head room + lift machine-room roofs",
+    null,
+    null,
+    null,
+    148,
+    0
+   ],
+   [
+    "8",
+    "OHT-W (15 kL, over Flat-01): base + top",
+    14.5833333333333,
+    9.16666666666667,
+    2,
+    267.4,
+    0
+   ],
+   [
+    "9",
+    "OHT-E (15 kL, over Flat-02): base + top",
+    14.5833333333333,
+    9.16666666666667,
+    2,
+    267.4,
+    0
+   ]
+  ],
+  "tot": 24187.7,
+  "out": [
+   [
+    "Stilt floor (slab on grade)",
+    113,
+    36,
+    4068
+   ],
+   [
+    "Underground sump top slab (NE corner)",
+    17,
+    9.41666666666667,
+    160.1
+   ],
+   [
+    "Watchman block roof (west setback)",
+    18,
+    8,
+    144
+   ],
+   [
+    "Security cabin roof (gates)",
+    8,
+    6,
+    48
+   ]
+  ],
+  "zones": [
+   [
+    "Flat-01 (west): 1a–6a + OHT-W",
+    11715.4
+   ],
+   [
+    "Core: 1b–6b + head room / machine room",
+    757
+   ],
+   [
+    "Flat-02 (east): 1c–6c + OHT-E",
+    11715.4
+   ]
+  ],
+  "note": "Each floor slab = Flat-01 53′ × 36′ + lift lobby 7′ × 14′6″ + Flat-02 53′ × 36′ = 3,917.5 sft (the lift shaft and stair are openings). Gross footprint 113′ × 36′ = 4,068 sft.",
+  "lab": {
+   "basis": 24188,
+   "rate": 220,
+   "lines": [
+    [
+     "All slabs incl. the OHT slabs",
+     "24,188 sft × ₹220 (Option B, D-130: everything — shuttering, steel, concreting, AAC, plaster outside and in the core, parapets)",
+     5321360
+    ],
+    [
+     "— common share",
+     "₹146.67 on all 24,188 sft + ₹73.33 on the roof slabs (terrace, head room, OHTs, 4,598 sft)",
+     3884761
+    ],
+    [
+     "— each flat's share",
+     "₹73.33 on its own slab, 1,959 sft (half the floor slab incl. half the lobby) = ₹1.44 L per flat, 10 flats",
+     1436599
+    ]
+   ]
+  }
+ },
+ "b": {
+  "rows": [
+   [
+    "1",
+    "Podium (stilt) slab: total",
+    null,
+    null,
+    null,
+    4960,
+    0
+   ],
+   [
+    "1a",
+    "Flat-01 zone (south wing)",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "1b",
+    "Core (lift / corridor / stairs)",
+    8,
+    45.5,
+    1,
+    364,
+    1
+   ],
+   [
+    "1c",
+    "Flat-02 zone (north wing)",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "1d",
+    "South setback strip (over the cellar)",
+    6,
+    45.5,
+    1,
+    273,
+    1
+   ],
+   [
+    "1e",
+    "North setback strip (over the cellar)",
+    6,
+    45.5,
+    1,
+    273,
+    1
+   ],
+   [
+    "1f",
+    "Landing roof (east setback)",
+    19,
+    12,
+    1,
+    228,
+    1
+   ],
+   [
+    "2",
+    "1st floor slab: total",
+    null,
+    null,
+    null,
+    4186,
+    0
+   ],
+   [
+    "2a",
+    "Flat-01",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "2b",
+    "Core (lift / corridor / stairs)",
+    8,
+    45.5,
+    1,
+    364,
+    1
+   ],
+   [
+    "2c",
+    "Flat-02",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "3",
+    "2nd floor slab: total",
+    null,
+    null,
+    null,
+    4186,
+    0
+   ],
+   [
+    "3a",
+    "Flat-01",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "3b",
+    "Core (lift / corridor / stairs)",
+    8,
+    45.5,
+    1,
+    364,
+    1
+   ],
+   [
+    "3c",
+    "Flat-02",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "4",
+    "3rd floor slab: total",
+    null,
+    null,
+    null,
+    4186,
+    0
+   ],
+   [
+    "4a",
+    "Flat-01",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "4b",
+    "Core (lift / corridor / stairs)",
+    8,
+    45.5,
+    1,
+    364,
+    1
+   ],
+   [
+    "4c",
+    "Flat-02",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "5",
+    "4th floor slab: total",
+    null,
+    null,
+    null,
+    4186,
+    0
+   ],
+   [
+    "5a",
+    "Flat-01",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "5b",
+    "Core (lift / corridor / stairs)",
+    8,
+    45.5,
+    1,
+    364,
+    1
+   ],
+   [
+    "5c",
+    "Flat-02",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "6",
+    "5th floor slab: total",
+    null,
+    null,
+    null,
+    4186,
+    0
+   ],
+   [
+    "6a",
+    "Flat-01",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "6b",
+    "Core (lift / corridor / stairs)",
+    8,
+    45.5,
+    1,
+    364,
+    1
+   ],
+   [
+    "6c",
+    "Flat-02",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "7",
+    "Terrace slab: total",
+    null,
+    null,
+    null,
+    4186,
+    0
+   ],
+   [
+    "7a",
+    "Over Flat-01",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "7b",
+    "Over core (lift / corridor / stairs)",
+    8,
+    45.5,
+    1,
+    364,
+    1
+   ],
+   [
+    "7c",
+    "Over Flat-02",
+    42,
+    45.5,
+    1,
+    1911,
+    1
+   ],
+   [
+    "8",
+    "Stair head room + lift overrun roofs",
+    null,
+    null,
+    null,
+    178,
+    0
+   ],
+   [
+    "9",
+    "OHT South (10 kL): base + top",
+    8.53,
+    8.53,
+    2,
+    145.5,
+    0
+   ],
+   [
+    "10",
+    "OHT North (10 kL): base + top",
+    8.53,
+    8.53,
+    2,
+    145.5,
+    0
+   ]
+  ],
+  "tot": 30545.0,
+  "out": [
+   [
+    "Ramp slab (200 mm, south road to cellar)",
+    74,
+    12,
+    888
+   ],
+   [
+    "Cellar floor (150 mm, VDF + hardener)",
+    null,
+    null,
+    4960
+   ]
+  ],
+  "zones": [
+   [
+    "Flat-01 (south, plot 93): slabs 1a, 1d, 2a–7a + OHT South",
+    13795.5
+   ],
+   [
+    "Core: 1b, 2b–7b + head room",
+    2726
+   ],
+   [
+    "Flat-02 (north, plot 78): 1c, 1e, 1f, 2c–7c + OHT North",
+    14023.5
+   ]
+  ],
+  "note": "Cellar scheme: the podium (stilt) slab is suspended over the cellar, with the N / S setback strips and the east landing roof. Each floor slab = south wing 42′ × 45′6″ + core 8′ × 45′6″ + north wing 42′ × 45′6″ = 4,186 sft.",
+  "lab": {
+   "basis": 30254,
+   "rate": 200,
+   "lines": [
+    [
+     "Common-area vendor, all slabs except the OHT slabs",
+     "30,254 sft × ₹200 (P-58: frame, common walls and common plaster; P4.01)",
+     6050800
+    ],
+    [
+     "Owners: internal walls + plaster (not on the slab rate)",
+     "₹100 per sft of 4½″ brickwork, plaster both faces included — e.g. hostel floor 962 sft = ₹0.96 L, office floor 661 sft = ₹0.66 L, 3BHK ≈ 1,166 sft, 4BHK ≈ 1,141 sft (individual works, P-58)",
+     null
+    ]
+   ]
+  }
+ }
+}

@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
+    "presentation": "node tools/landowner-presentation/build.mjs",
+    "presentation:check": "node tools/landowner-presentation/build.mjs --check",
+    "prebuild": "node tools/landowner-presentation/build.mjs",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",

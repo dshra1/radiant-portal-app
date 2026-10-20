@@ -1,0 +1,225 @@
+{
+ "common": [
+  [
+   "1 Site set-up",
+   "Site engineer + supervisor, 18 months (SE08 ₹16.2 L)",
+   "SAHA PMC team supervises; one supervisor at ₹40k/month",
+   1115100
+  ],
+  [
+   "1 Site set-up",
+   "Watch and ward ₹25k × 18 months (SE01)",
+   "Watchman living on site, ₹15k/month",
+   223020
+  ],
+  [
+   "1 Site set-up",
+   "Plant + tool hire ₹3 L (SE09)",
+   "Civil contractor brings mixer, vibrators, hoist (write into the ₹220 contract)",
+   247800
+  ],
+  [
+   "2 Foundation + frame",
+   "Steel ≈ 91.3 t (PMC preliminary BBS)",
+   "Engineer's optimised design + couplers on 16/20 mm, target ≈ 84 t",
+   482897
+  ],
+  [
+   "2 Foundation + frame",
+   "Murrum fill under stilt 552 m³ @ ₹1,100 (PV02)",
+   "Reuse the 596 m³ footing excavation; buy only the balance",
+   451392
+  ],
+  [
+   "2 Foundation + frame",
+   "RMC M30 on slabs/beams of floors 3–5 + terrace (≈ 300 m³)",
+   "RMC M25 there (engineer to approve)",
+   125999
+  ],
+  [
+   "2 Foundation + frame",
+   "Concrete pump on every pour (ST07 ₹3.0 L)",
+   "Pump for slabs only; columns + stairs by hoist + bucket",
+   123900
+  ],
+  [
+   "3 Masonry",
+   "Bed-joint mesh every 3rd course (MAB1)",
+   "Only at sill / lintel level + every 4th course",
+   141218
+  ],
+  [
+   "4 Waterproofing + paint",
+   "Terrace heat-reflective tiles ₹70/sft (PPC8)",
+   "Keep PU membrane; heat-reflective paint ₹25/sft",
+   218420
+  ],
+  [
+   "4 Waterproofing + paint",
+   "Exterior paint ₹14/sft (PPB6)",
+   "Mid-range exterior emulsion ₹11/sft",
+   66646
+  ],
+  [
+   "5 Windows + MS",
+   "Frameless glass balcony railing ₹1,500/rft (RM01)",
+   "MS powder-coated with SS top rail",
+   144313
+  ],
+  [
+   "5 Windows + MS",
+   "ACP pipe boxes ₹350/sft (RM04)",
+   "Aluminium louvre / cement-board box",
+   170362
+  ],
+  [
+   "6 Lift",
+   "MRL lift 8 persons (LF01)",
+   "MRL 6 persons, same shaft",
+   388500
+  ],
+  [
+   "7 Common areas",
+   "Parking false ceiling at beam soffit (CA27)",
+   "Paint the soffit and beams",
+   484121
+  ],
+  [
+   "7 Common areas",
+   "SS 304 stair railing (CA08)",
+   "MS railing with SS handrail",
+   138768
+  ],
+  [
+   "7 Common areas",
+   "Granite dado 3′6″ on stair wall (CA07)",
+   "Texture paint",
+   179141
+  ],
+  [
+   "7 Common areas",
+   "Planter boxes (CA38)",
+   "Soil beds with a 9″ brick kerb",
+   210531
+  ],
+  [
+   "8 Facade",
+   "Champagne vertical-fin zones (FC01)",
+   "Same zones in texture paint + grooves; keep portal frames",
+   1289074
+  ],
+  [
+   "8 Facade",
+   "Linear LED in the portal frames (FC04)",
+   "Drop; up-lights at the stilt only",
+   182883
+  ],
+  [
+   "9 Services",
+   "Transformer 100 kVA (CE13)",
+   "Only if TSSPDCL insists; 10 flats usually fed LT from the pole",
+   991200
+  ],
+  [
+   "9 Services",
+   "DG 25 kVA (CE10)",
+   "DG 20 kVA (lift 7.5 kW + pumps + common lights)",
+   123900
+  ],
+  [
+   "10 Site works",
+   "Compound wall RCC posts + 9″ brick (SW01)",
+   "Precast RCC panel wall, painted",
+   393630
+  ],
+  [
+   "10 Site works",
+   "Watchman block 166 sft + 2 baths (SW06)",
+   "Watchman cabin in the stilt with 1 toilet",
+   303555
+  ],
+  [
+   "10 Site works",
+   "Landscape (SW05)",
+   "Lawn + low planting only",
+   101214
+  ],
+  [
+   "11 Contingency",
+   "Contingency 5% on the whole BOQ",
+   "3% once the dealer quotes are firm",
+   1444409
+  ]
+ ],
+ "own": [
+  [
+   "Doors",
+   "Bedroom / toilet / utility / powder doors, 8′ WPC + veneer ≈ ₹20k",
+   "7′ laminate flush doors + WPC toilet doors ≈ ₹12.5k",
+   864202
+  ],
+  [
+   "Ceiling",
+   "Cove LED strip (CA02), ₹450 per 4 m",
+   "No cove LED; downlights in living / dining only",
+   105958
+  ],
+  [
+   "Sanitary",
+   "Kohler Trace WC + concealed cistern (SN01 + SN02)",
+   "Floor-mounted EWC (Hindware / Parryware)",
+   604964
+  ],
+  [
+   "Ceiling",
+   "Gypsum false ceiling in all rooms (CA01)",
+   "Living, dining, foyer + toilets only (≈ half)",
+   507333
+  ],
+  [
+   "CP",
+   "Kohler CP fittings (CP package)",
+   "Jaquar Continental range (≈ 30% less)",
+   398227
+  ],
+  [
+   "Tiles",
+   "800 × 1600 vitrified ₹44 + laying ₹35",
+   "600 × 1200 GVT ₹38, laid ₹30 on cement bed",
+   164897
+  ],
+  [
+   "Tiles",
+   "C2 tile adhesive (TL14)",
+   "Cement bed (40% of adhesive cost)",
+   187485
+  ],
+  [
+   "Drainage",
+   "Linear SS shower drain 600 mm (DR05)",
+   "SS square anti-cockroach trap",
+   235906
+  ],
+  [
+   "Sanitary",
+   "Bath accessory sets (SN14)",
+   "Basic sets",
+   210630
+  ],
+  [
+   "Paint",
+   "Premium interior emulsion (PPB1)",
+   "Standard interior emulsion",
+   106154
+  ],
+  [
+   "Electrical",
+   "FR-LSH copper wire (EL03–EL05)",
+   "FR copper wire, same make (≈ 8% less)",
+   91190
+  ]
+ ],
+ "sft": 24804,
+ "master": 75910879,
+ "flats": 10
+}
