@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
 /**
- * Public download page: https://radiant-portal-app.dshra1.workers.dev/install
+ * Public download page: https://app.saha-developers.com/install
  * One link (or the QR code) for the site team. Android installs the app with one
  * tap; iPhone / iPad get the Safari steps; a computer shows the QR code to scan.
  * No sign-in needed to see this page; the app asks for it after it opens.
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/install")({
   component: InstallPage,
 });
 
-const LINK = "https://radiant-portal-app.dshra1.workers.dev/install";
+const LINK = "https://app.saha-developers.com/install";
 
 type PromptEvent = Event & {
   prompt: () => Promise<void>;
