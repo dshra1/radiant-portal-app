@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>West Duplex · Room Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ivory:#f6efe3;--paper:#fffaf2;--ink:#2a1d15;--muted:#7a6656;--terra:#b95636;--teak:#6b4a2b;--gold:#c89b57;--line:#e3d6c3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif}
+header{padding:20px 28px 12px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 28px;border-bottom:1px solid var(--line)}
+.brand{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--terra);font-weight:600}
+h1{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:34px;margin:2px 0 0;line-height:1.05}
+.meta{color:var(--muted);font-size:14px}
+.floors{margin-left:auto;display:flex;gap:6px}
+.floors button,.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:8px 16px;font:500 14px Inter;cursor:pointer}
+.floors button.on{background:var(--teak);color:#fff;border-color:var(--teak)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 28px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+.chip{white-space:nowrap;font-size:13px;padding:7px 14px}
+.chip .n{color:var(--gold);font-weight:600;margin-right:6px}
+.chip.on{background:var(--terra);border-color:var(--terra);color:#fff}.chip.on .n{color:#fde7c8}
+main{display:grid;grid-template-columns:minmax(360px,1.35fr) minmax(360px,1fr);gap:24px;padding:22px 28px 36px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px}
+.planwrap{padding:14px 14px 10px;align-self:start;position:sticky;top:12px}
+.plantitle{display:flex;justify-content:space-between;align-items:baseline;padding:2px 4px 8px}
+.plantitle b{font-family:'Cormorant Garamond',serif;font-size:22px}
+.plantitle span{font-size:12px;color:var(--muted)}
+svg{width:100%;height:auto;display:block}
+.hot{fill:transparent;cursor:pointer;transition:fill .15s}
+.hot:hover{fill:rgba(185,86,54,.12)}
+.hot.sel{fill:rgba(185,86,54,.16);stroke:#b95636;stroke-width:.3}
+.cam path{fill:rgba(185,86,54,.38);stroke:none}
+.cam circle{fill:var(--terra);stroke:#fff;stroke-width:.18}
+.npt{font:700 1px Inter;fill:var(--teak)}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);padding:8px 6px 2px;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.panel{overflow:hidden}
+.shot{position:relative;background:#1f1712;aspect-ratio:16/9}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.tag{position:absolute;left:14px;top:14px;background:rgba(31,23,18,.72);color:#f4ecdf;font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;border-radius:6px}
+.nav{position:absolute;inset:auto 12px 12px auto;display:flex;gap:8px}
+.nav button{width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,250,242,.92);color:var(--ink);font-size:20px;cursor:pointer}
+.body{padding:20px 22px 22px}
+.body h2{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:32px;margin:0;line-height:1.1}
+.sub{color:var(--muted);font-size:14px;margin-top:2px}
+.size{display:inline-block;margin-top:12px;background:#f3e3cf;color:var(--teak);font-weight:600;font-size:14px;padding:6px 12px;border-radius:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 26px;margin-top:18px}
+.grid h3{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--terra);margin:0 0 6px}
+.grid ul{margin:0;padding-left:18px;font-size:14.5px}
+.grid li{margin:3px 0}
+.full{grid-column:1/-1}
+.key{display:flex;gap:14px;align-items:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.key svg{width:180px;flex:none;border:1px solid var(--line);border-radius:8px;background:#fff}
+.sched{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 18px;margin:12px 6px 4px;font-size:13px}
+.sched div{display:flex;justify-content:space-between;border-bottom:1px dotted var(--line);padding:3px 0}
+.sched b{font-weight:600;color:var(--teak)}
+.sched .on{color:var(--terra)}
+footer{padding:0 28px 28px;color:var(--muted);font-size:12px}
+@media (max-width:900px){.planwrap{position:static}main{grid-template-columns:1fr;padding:14px}header,.chips{padding-left:14px;padding-right:14px}.grid{grid-template-columns:1fr}h1{font-size:28px}.floors{margin-left:0}}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="brand">SAHA Developers · SAHA Interiorz · Cyber Enclave 77:76</div>
+  <h1>West Duplex · Room Explorer</h1>
+  <div class="meta">Floors 4–5 · Rev N1 (Option 2) · Indian fusion</div></div>
+  <div class="floors"><button data-f="4">Floor 4</button><button data-f="5">Floor 5</button></div>
+</header>
+<div class="chips" id="chips"></div>
+<main>
+  <section class="card planwrap">
+    <div class="plantitle"><b id="ptitle"></b><span>Furniture layout + room sizes · tap a room · North is up</span></div>
+    <div id="plan"></div>
+    <div class="sched" id="sched"></div>
+    <div class="legend"><span><i style="background:rgba(185,86,54,.16);outline:2px solid #b95636"></i>Selected room</span><span><i style="background:rgba(185,86,54,.5);border-radius:50%"></i>Camera + view</span></div>
+  </section>
+  <section class="card panel">
+    <div class="shot"><img id="img" alt=""><div class="tag" id="tag"></div>
+      <div class="nav"><button id="prev" aria-label="Previous">‹</button><button id="next" aria-label="Next">›</button></div></div>
+    <div class="body">
+      <h2 id="name"></h2><div class="sub" id="sub"></div><div class="size" id="size"></div>
+      <div class="grid">
+        <div class="full"><h3>What's provided</h3><ul id="scope"></ul></div>
+        <div><h3>Finishes</h3><ul id="fin"></ul></div>
+        <div><h3>Lights + AC</h3><ul id="light"></ul></div>
+      </div>
+      <div class="key"><div id="key"></div><div>Key plan: the dot marks where the camera stands, the wedge shows which way it looks.</div></div>
+    </div>
+  </section>
+</main>
+<footer>Concept renders for discussion. Dimensions as per the approved Rev N1 plans; finishes and fittings to be confirmed at BOQ stage.</footer>
+<script>
+const DATA={"F4": [["gwt", 0.75, 0.75, 5.75, 7.75, "Toilet"], ["gwd", 0.75, 8.13, 5.75, 12.33, "Dress"], ["guest", 6.08, 0.75, 17.58, 12.33, "Guest room"], ["pwd", 17.96, 0.75, 22.96, 5.6, "Powder"], ["lob", 17.96, 5.98, 22.96, 12.33, "Lobby"], ["garden", 23.33, 0.75, 34.88, 3.6, "Indoor garden"], ["living", 23.33, 3.6, 34.88, 12.33, "Living"], ["nbal", 35.25, 0.75, 46.5, 5.42, "N balcony"], ["puja", 46.88, 0.75, 52.25, 5.42, "Puja"], ["hall", 35.25, 5.79, 52.25, 23.13, "Double-height hall"], ["tvunit", 50.4, 8.3, 52.25, 15.8, "TV wall unit"], ["dining", 19.08, 12.71, 34.88, 23.5, "Dining"], ["pbath", 0.75, 12.71, 5.75, 23.5, "Bath"], ["pdr", 0.75, 23.88, 5.75, 35.25, "Dresser"], ["parents", 6.13, 12.71, 18.71, 35.25, "Parents' suite"], ["stair", 19.08, 23.88, 26.2, 35.25, "Stair"], ["store", 26.58, 23.88, 30.58, 35.25, "Store"], ["kitchen", 30.96, 23.88, 46.88, 35.25, "Kitchen"], ["util", 47.25, 23.88, 52.25, 35.25, "Utility"]], "F5": [["kt", 0.75, 0.75, 5.75, 7.75, "Toilet"], ["kd", 0.75, 8.13, 5.75, 12.33, "Dress"], ["kids", 6.08, 0.75, 17.58, 12.33, "Kids' suite"], ["kst", 17.96, 0.75, 22.96, 12.33, "Study bay"], ["gvoid", 23.33, 0.75, 31.9, 3.6, "Garden below"], ["study", 23.33, 3.6, 34.88, 12.33, "Master sitting / study"], ["nbal5", 35.25, 0.75, 46.5, 5.42, "N balcony"], ["upuja", 46.88, 0.75, 52.25, 5.42, "Meditation"], ["void", 35.06, 5.6, 52.25, 23.32, "Void over hall"], ["lounge", 19.08, 12.71, 34.88, 23.5, "Family lounge"], ["mbath", 0.75, 12.71, 5.75, 23.5, "Master bath"], ["mdr", 0.75, 23.88, 5.75, 35.25, "Walk-in"], ["master", 6.13, 12.71, 18.71, 35.25, "Master suite"], ["stair5", 19.08, 23.88, 26.2, 35.25, "Stair"], ["pantry", 26.58, 23.88, 30.58, 35.25, "Pantry"], ["ulob", 30.96, 23.88, 35.96, 27.5, "Lobby"], ["cbath", 30.96, 27.88, 35.96, 35.25, "Common bath"], ["laun", 36.33, 23.88, 46.88, 30.0, "Laundry"], ["lin", 47.25, 23.88, 52.25, 30.0, "Linen"], ["sbal", 36.33, 30.38, 52.25, 35.25, "S balcony"]], "V": [{"id": "entrance", "f": 4, "room": "hall", "cam": [50.6, 19.5, 180], "name": "Entrance view", "size": "Hall 17\u20320\u2033 \u00d7 17\u20324\u2033 \u00b7 19\u20327\u2033 high", "sub": "From the main door, looking west", "scope": ["Sofa wall: exposed brick cladding with terracotta jaali panel", "5\u2032 open walkway (no door) to the dining", "Teak baton railing to the 5th-floor family lounge above", "Full-height glass sliders to the N balcony"], "fin": ["Grey Kota stone with red oxide border", "Exposed red brick + terracotta jaali", "Teak rafters, skylight over the double-height"], "light": ["Large brass lantern in the double-height void", "Brass wall lights", "VRV ducted (bulkhead + linear grilles)"]}, {"id": "hall", "f": 4, "room": "hall", "cam": [49.5, 21.5, -90], "name": "Double-height hall", "size": "17\u20320\u2033 \u00d7 17\u20324\u2033 \u00b7 19\u20327\u2033 high", "sub": "Looking north to the balcony and puja", "scope": ["8\u20326\u2033 sofa on the W (brick + jaali) wall, facing the TV", "2 lounge chairs, coffee table, jute rug", "Puja door on the N wall, beside the balcony glass", "Upper gallery overlooks the hall"], "fin": ["Grey Kota stone, red oxide inlay at the door", "Brick + terracotta jaali; lime-plaster walls", "Teak rafters and jaali-framed skylight"], "light": ["Brass lantern chandelier (approx. 18\u2032 drop)", "Brass wall sconces", "VRV ducted"]}, {"id": "tv", "f": 4, "room": "hall", "cam": [37, 13, 0], "name": "Hall: TV + main-door wall", "size": "E wall \u00b7 full double height", "sub": "Looking east to the lift-lobby wall", "scope": ["Fluted teak panelling, full double height, brass inlays", "Floating teak TV console", "Main door beside the TV wall", "N balcony glass on the left"], "fin": ["Fluted teak with brass strips", "Grey Kota stone"], "light": ["Brass lantern", "Concealed uplight at the console", "VRV ducted"]}, {"id": "tvunit", "f": 4, "room": "tvunit", "cam": [42, 12, 0], "name": "TV wall unit (double height)", "size": "Wall 17\u20324\u2033 wide \u00d7 19\u20327\u2033 high \u00b7 TV console approx. 8\u2032 long", "sub": "Straight-on view of the E wall", "scope": ["Fluted teak panelling, floor to ceiling across the full double height", "Thin vertical brass inlay strips", "75\u2033 TV wall-mounted at eye level, concealed wiring", "Floating teak console with drawers", "Main door flush with the panelling at the right end"], "fin": ["Teak veneer fluted panels, matt PU", "Brass strips", "Kota stone floor"], "light": ["Concealed warm LED under and behind the console", "Skylight + brass lantern above"]}, {"id": "puja", "f": 4, "room": "puja", "cam": [49.5, 7.5, -90], "name": "Puja", "size": "5\u20324\u2033 \u00d7 4\u20328\u2033", "sub": "NE corner of the N balcony (same on every floor)", "scope": ["Carved teak double doors with brass ring pulls", "Teak mandir with backlit terracotta-tone jaali", "Drawer base for puja items", "Brass bells and diyas"], "fin": ["White marble floor", "Teak + backlit jaali"], "light": ["Backlit jaali (warm 2700K)", "Brass bell lamps"]}, {"id": "living", "f": 4, "room": "living", "cam": [29, 11.8, -90], "name": "Living + indoor garden", "size": "Living 11\u20327\u2033 \u00d7 8\u20329\u2033 \u00b7 garden 11\u20327\u2033 \u00d7 2\u203210\u2033 (double height)", "sub": "Option 2 \u00b7 looking north to the garden", "scope": ["TV + teak console on the W wall", "7\u20324\u2033 sofa on the E wall, 2 poufs, coffee table", "Teak glazed folding doors to the garden", "Double-height garden open to the 5th-floor study above"], "fin": ["Grey Kota stone; pebbles + stepping stones in the garden", "Terracotta-toned feature wall"], "light": ["Linear grille VRV", "Garden uplights", "Surface spots"]}, {"id": "dining", "f": 4, "room": "dining", "cam": [33.8, 18, 180], "name": "Dining", "size": "15\u203210\u2033 \u00d7 10\u20329\u2033", "sub": "Middle bay \u00b7 looking west", "scope": ["8-seat teak table running E\u2013W, cane-back chairs", "Arched niche with brass Ganesha", "Teak + glass crockery unit", "Open to the stair (no door) and the hall (5\u2032 opening)"], "fin": ["Grey Kota stone with red oxide border", "Teak slatted ceiling"], "light": ["Three brass dome pendants over the table", "Recessed downlights", "VRV ducted"]}, {"id": "kitchen", "f": 4, "room": "kitchen", "cam": [32, 29.5, 0], "name": "Kitchen", "size": "15\u203211\u2033 \u00d7 11\u20324\u2033", "sub": "Looking east to the utility", "scope": ["Sink + hob on the S counter under the window", "Fridge + oven tower on the N run", "4-seat breakfast table (W zone)", "Door to the utility at the E end"], "fin": ["Grey Kota stone", "Terracotta handmade tile backsplash", "Sage lacquer + teak shutters, quartz top"], "light": ["Under-cabinet strips", "Surface downlights", "Chimney"]}, {"id": "parents", "f": 4, "room": "parents", "cam": [12.4, 14, 90], "name": "Parents' suite", "size": "12\u20327\u2033 \u00d7 22\u20326\u2033", "sub": "Lounge in front, bed beyond the beam", "scope": ["King bed 6\u20326\u2033\u00d76\u2032, head on the E (stair) wall", "Loveseat, 2 cane chairs, table", "TV on the W wall; walk-in dresser + bath", "Teak rafter ceiling"], "fin": ["Red oxide floor", "Terracotta lime-plaster feature wall"], "light": ["Brass pendants at the bedsides", "Brass wall lights", "VRV ducted"]}, {"id": "guest", "f": 4, "room": "guest", "cam": [12, 11.5, -90], "name": "Guest room", "size": "11\u20326\u2033 \u00d7 11\u20327\u2033", "sub": "Looking north to the window", "scope": ["Queen bed, head on the W wall", "Reading chair + desk by the N window", "6\u2032 wardrobe", "Dress + toilet en-suite"], "fin": ["Red oxide floor", "Block-print accents"], "light": ["Brass bedside wall lamps", "VRV ducted"]}, {"id": "stair", "f": 4, "room": "stair", "cam": [23, 15, 90], "name": "Staircase", "size": "7\u20321\u2033 \u00d7 11\u20324\u2033", "sub": "From the dining \u00b7 no door", "scope": ["Open to the dining, no door", "Teak treads, black metal balusters, teak handrail", "Back wall: terracotta jaali with glass behind", "Pebble garden under the landing"], "fin": ["Teak treads, Kota risers", "Terracotta jaali + glass"], "light": ["Step lights", "Garden uplight"]}, {"id": "lounge", "f": 5, "room": "lounge", "cam": [27, 22.3, -90], "name": "Family lounge (gallery)", "size": "15\u203210\u2033 \u00d7 10\u20329\u2033", "sub": "Looking north \u00b7 open to the hall on the right", "scope": ["Wall-mounted TV on the N wall, teak console", "8\u2032 sofa facing it, accent chair", "Teak baton railing over the double-height hall", "Doors to the master study and kids' suite"], "fin": ["Grey Kota stone", "Teak slatted ceiling"], "light": ["Hall chandelier seen through the railing", "Surface spots", "VRV ducted"]}, {"id": "kids", "f": 5, "room": "kids", "cam": [10, 11.5, -90], "name": "Kids' suite", "size": "11\u20326\u2033 \u00d7 11\u20327\u2033 + study bay 5\u2032 \u00d7 11\u20327\u2033", "sub": "Looking north", "scope": ["Queen bed, window seat", "Study desk + bookshelves in the bay", "Bean bag reading corner", "Dress + toilet en-suite"], "fin": ["Red oxide floor", "Teak slatted ceiling"], "light": ["Brass dome pendants", "Desk lamp", "VRV ducted"]}, {"id": "study", "f": 5, "room": "study", "cam": [29, 11.8, -90], "name": "Master sitting / study", "size": "11\u20327\u2033 \u00d7 8\u20329\u2033 + garden void", "sub": "Desk faces the double-height garden", "scope": ["Desk facing the garden void (fixed glass)", "Full-height teak bookshelves, W wall", "2 cane chairs + side table", "Slider to the N balcony"], "fin": ["Red oxide floor", "Teak shelving + ceiling"], "light": ["Brass desk lamps", "Surface spots", "VRV ducted"]}, {"id": "master", "f": 5, "room": "master", "cam": [12.4, 14, 90], "name": "Master suite", "size": "12\u20327\u2033 \u00d7 22\u20326\u2033", "sub": "Sitting in front, bed beyond the beam", "scope": ["King bed, head on the E (stair) wall", "Loveseat + 2 cane chairs", "Arched niche with brass Ganesha", "TV on the W wall; walk-in + bath"], "fin": ["Red oxide floor", "Terracotta lime-plaster feature wall", "Teak slatted ceiling"], "light": ["Brass dome pendants", "Brass wall lights", "VRV ducted"]}, {"id": "mbath", "f": 5, "room": "mbath", "cam": [3.2, 23, -90], "name": "Master bath", "size": "5\u20320\u2033 \u00d7 10\u20329\u2033", "sub": "Looking north to the shower", "scope": ["Teak vanity with terracotta vessel basin", "Round brass mirror", "Walk-in shower with glass, niche", "Wall-hung WC"], "fin": ["Grey stone tiles, floor + walls", "Lime plaster at the vanity"], "light": ["Brass mirror sconces", "Niche strip light", "Exhaust"]}, {"id": "laundry", "f": 5, "room": "laun", "cam": [37, 27, 0], "name": "Laundry", "size": "10\u20327\u2033 \u00d7 6\u20321\u2033", "sub": "From the lobby door, looking east", "scope": ["Quartz counter with deep utility sink + brass tap (fold area)", "Front-load washer + dryer side by side under the counter", "Sage overhead cabinets, pull-out drying rail", "Glazed teak door to the S balcony (drying rack + 2 AC units)", "Door to the linen closet at the E end"], "fin": ["Grey Kota stone", "Terracotta handmade tile backsplash", "Sage lacquer shutters, teak edges"], "light": ["Under-cabinet LED strip", "Surface downlight", "Exhaust fan"]}]};
+const W=53,H=36.2;let cur=0;
+const $=id=>document.getElementById(id);
+function plan(f,sel,cam,small){
+  const rooms=f==4?DATA.F4:DATA.F5;const has=new Set(DATA.V.filter(v=>v.f==f).map(v=>v.room));
+  let s=`<svg viewBox="0 0 53 36" xmlns="http://www.w3.org/2000/svg"><image href="img/plan_f${f}.png" x="0" y="0" width="53" height="36" preserveAspectRatio="none"/>`;
+  for(const[k,x1,y1,x2,y2,l] of rooms){
+    if(!has.has(k))continue;
+    s+=`<rect class="hot${k==sel?' sel':''}" data-r="${k}" x="${x1}" y="${y1}" width="${x2-x1}" height="${y2-y1}"><title>${l}</title></rect>`;
+  }
+  if(cam){const[x,y,a]=cam;const r=small?8:6,sp=34*Math.PI/180,t=a*Math.PI/180;
+    const p1=[x+r*Math.cos(t-sp),y+r*Math.sin(t-sp)],p2=[x+r*Math.cos(t+sp),y+r*Math.sin(t+sp)];
+    s+=`<g class="cam"><path d="M${x} ${y}L${p1}A${r} ${r} 0 0 1 ${p2}Z"/><circle cx="${x}" cy="${y}" r="${small?1.3:.75}"/></g>`}
+  return s+'</svg>'}
+function fi(v){const t=Math.round(v*12);return `${Math.floor(t/12)}′${t%12?(t%12)+'″':''}`}
+const SIZE={kitchen:'15′11″ × 11′4″',hall:'17′ × 17′4″',living:'11′7″ × 11′7″ incl. garden',dining:'15′10″ × 10′9″',lounge:'15′10″ × 10′9″',study:'11′7″ × 11′7″ incl. void',void:'17′2″ × 17′9″'};
+function sched(f,sel){const rooms=f==4?DATA.F4:DATA.F5;return rooms.filter(r=>!['garden','gvoid','tvunit'].includes(r[0])).map(([k,x1,y1,x2,y2,l])=>`<div class="${k==sel?'on':''}"><span>${l}</span><b>${SIZE[k]||fi(x2-x1)+' × '+fi(y2-y1)}</b></div>`).join('')}
+function show(i){
+  cur=(i+DATA.V.length)%DATA.V.length;const v=DATA.V[cur];
+  $('img').src='img/'+v.id+'.jpg';$('img').alt=v.name;$('tag').textContent=`${String(cur+1).padStart(2,'0')} · Floor ${v.f}`;
+  $('name').textContent=v.name;$('sub').textContent=v.sub;$('size').textContent=v.size;
+  for(const k of['scope','fin','light'])$(k).innerHTML=v[k].map(t=>`<li>${t}</li>`).join('');
+  $('sched').innerHTML=sched(v.f,v.room);$('ptitle').textContent=`Floor ${v.f} ${v.f==4?'· lower level':'· upper level'}`;
+  $('plan').innerHTML=plan(v.f,v.room,v.cam,false);$('key').innerHTML=plan(v.f,v.room,v.cam,true);
+  document.querySelectorAll('.floors button').forEach(b=>b.classList.toggle('on',+b.dataset.f==v.f));
+  document.querySelectorAll('.chip').forEach((c,j)=>c.classList.toggle('on',j==cur));
+  document.querySelector('.chip.on')?.scrollIntoView({block:'nearest',inline:'nearest'});
+  try{history.replaceState(null,'','#'+v.id)}catch(e){}
+}
+$('chips').innerHTML=DATA.V.map((v,i)=>`<button class="chip" data-i="${i}"><span class="n">${String(i+1).padStart(2,'0')}</span>${v.name}</button>`).join('');
+$('chips').onclick=e=>{const b=e.target.closest('.chip');if(b)show(+b.dataset.i)};
+$('plan').onclick=e=>{const r=e.target.dataset&&e.target.dataset.r;if(!r)return;const f=DATA.V[cur].f;const i=DATA.V.findIndex(v=>v.f==f&&v.room==r);if(i>=0)show(i)};
+$('prev').onclick=()=>show(cur-1);$('next').onclick=()=>show(cur+1);
+document.querySelectorAll('.floors button').forEach(b=>b.onclick=()=>show(DATA.V.findIndex(v=>v.f==+b.dataset.f)));
+document.addEventListener('keydown',e=>{if(e.key=='ArrowRight')show(cur+1);if(e.key=='ArrowLeft')show(cur-1)});
+const h=location.hash.slice(1);const hi=DATA.V.findIndex(v=>v.id==h);show(hi>=0?hi:0);
+</script>
+</body>
+</html>
