@@ -152,6 +152,12 @@ export function AlternatesPanel({
                   </span>
                 </div>
                 {a.note && <p className="mt-1 text-[11px] text-muted-foreground">{a.note}</p>}
+                {isPairedAlternate(a) && (
+                  <p className="mt-1 text-[11px] font-semibold text-warning">
+                    Goes with another line's alternate: choose both together. The optimizer leaves
+                    it to you.
+                  </p>
+                )}
                 <div className="mt-auto flex gap-1.5 pt-2">
                   <button
                     type="button"

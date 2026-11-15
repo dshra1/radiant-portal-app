@@ -164,6 +164,13 @@ export function libraryRows(
   return out;
 }
 
+/**
+ * Alternates that only work together with another line's alternate (a floor-mounted
+ * EWC and "no concealed cistern"): offered on the line, never picked by the optimizer.
+ */
+export const isPairedAlternate = (a: Pick<AlternateRow, "label">) =>
+  /only with|with a floor-mounted|take with/i.test(a.label);
+
 export type OptimizerPick = {
   line: AltLine;
   alt: AlternateRow;
@@ -187,6 +194,7 @@ export function optimize(
     const alts = alternatesFor(line, options, flatPkg);
     let best: OptimizerPick | null = null;
     for (const alt of alts) {
+      if (isPairedAlternate(alt)) continue;
       const s = savingOf(line, alt);
       if (s > (opts.minSaving ?? 0) && (!best || s > best.saving)) best = { line, alt, saving: s };
     }

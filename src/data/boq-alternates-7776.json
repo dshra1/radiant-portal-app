@@ -254,7 +254,7 @@
   {
    "pkg": "Sanitary ware",
    "code": "SN02",
-   "label": "No concealed cistern (with a floor-mounted EWC)",
+   "label": "No concealed cistern (only with a floor-mounted EWC)",
    "make": "",
    "rate": 0,
    "how": "",
