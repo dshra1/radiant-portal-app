@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
+import { todayIso } from "@/lib/dates";
 
 export const Route = createFileRoute("/pour-cards")({
   head: () => ({
@@ -74,7 +75,7 @@ function emptyDraft(name: string): Draft {
     level: "",
     grade: "M25",
     quantity_cum: 0,
-    pour_date: new Date().toISOString().slice(0, 10),
+    pour_date: todayIso(),
     slump: "",
     cubes_cast: 0,
     checklist: {},

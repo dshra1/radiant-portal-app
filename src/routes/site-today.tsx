@@ -20,6 +20,7 @@ import { useSessionUser } from "@/lib/access";
 import { fmtDay } from "@/lib/programme-progress";
 import { stageName, useSiteWeek, type PlanStage } from "@/lib/site-week";
 import { uploadStageFiles } from "@/lib/site-week-actions";
+import { todayIso } from "@/lib/dates";
 
 export const Route = createFileRoute("/site-today")({
   head: () => ({
@@ -58,9 +59,7 @@ function Page() {
   const who = { id: user?.id ?? null, name: user?.email ?? "Site team" };
   const w = q.data;
   const today = w
-    ? w.now.filter(
-        (s) => (s.plannedStart ?? "") <= new Date().toISOString().slice(0, 10) || s.actualPct > 0,
-      )
+    ? w.now.filter((s) => (s.plannedStart ?? "") <= todayIso() || s.actualPct > 0)
     : [];
   const list = w ? (today.length ? today : w.now) : [];
 
@@ -160,9 +159,7 @@ function StageCard({
       .update({
         actual_pct: next,
         status: next >= 100 ? "completed" : next > 0 ? "in progress" : "not started",
-        ...(s.actualPct === 0 && next > 0
-          ? { actual_start: new Date().toISOString().slice(0, 10) }
-          : {}),
+        ...(s.actualPct === 0 && next > 0 ? { actual_start: todayIso() } : {}),
       })
       .eq("id", s.id);
     setBusy("");
@@ -339,7 +336,7 @@ function DailyReport({
       return;
     }
     setBusy(true);
-    const date = new Date().toISOString().slice(0, 10);
+    const date = todayIso();
     try {
       if (headcount > 0) {
         const { error } = await supabase.from("labour_entries").insert({

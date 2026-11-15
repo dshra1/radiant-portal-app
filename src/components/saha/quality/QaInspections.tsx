@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
+import { todayIso } from "@/lib/dates";
 
 export type Inspection = {
   id: string;
@@ -51,7 +52,7 @@ const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 function emptyDraft(inspector: string): Draft {
   return {
-    inspected_on: new Date().toISOString().slice(0, 10),
+    inspected_on: todayIso(),
     location_tag: "",
     category: CATEGORIES[0]!,
     code_ref: "",

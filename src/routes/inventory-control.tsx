@@ -8,6 +8,7 @@ import { useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
+import { todayIso } from "@/lib/dates";
 
 export const Route = createFileRoute("/inventory-control")({
   head: () => ({
@@ -119,7 +120,7 @@ function emptyMove(type: string): MoveDraft {
     movement_type: type,
     quantity: 0,
     rate: 0,
-    movement_date: new Date().toISOString().slice(0, 10),
+    movement_date: todayIso(),
     reference: "",
     party: "",
     handled_by: "",

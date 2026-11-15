@@ -12,6 +12,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { arr, fmtDay, n } from "@/lib/programme-progress";
 import { stageBudgets, type BudgetCategory, type StageBudget } from "@/lib/stage-budget";
 import { splitToPayers, type FlatRow, type FlatTypeRow, type Payer } from "@/lib/flats";
+import { todayIso } from "@/lib/dates";
 
 export type Owner = { name: string; role: string; share: number };
 export type Money4 = Record<BudgetCategory, number>;
@@ -174,7 +175,7 @@ export function dueDateFor(stage: {
     ...stage.materials.map((m) => m.orderBy ?? null),
     stage.steel?.orderBy ?? null,
   ].filter((d): d is string => Boolean(d));
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const d = dates.sort()[0] ?? today;
   return d < today ? today : d;
 }
@@ -388,7 +389,7 @@ export async function sendActual(
         owner_role: o.role,
         amount: amt,
         milestone: `${row.stage_code} · actual cost top-up`,
-        entry_date: new Date().toISOString().slice(0, 10),
+        entry_date: todayIso(),
         reference: `STAGE-${row.stage_code}-ACTUAL`,
         mode: "",
         notes: `Actual ${lakhs(row.actual_total)} vs requested ${lakhs(row.call_total)}`,

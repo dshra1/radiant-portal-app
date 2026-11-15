@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 import { useOwnerLiability } from "@/lib/owner-liability";
+import { todayIso } from "@/lib/dates";
 
 export const Route = createFileRoute("/capital-ledger")({
   head: () => ({
@@ -74,7 +75,7 @@ const initials = (name: string) =>
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase())
     .join("") || "—";
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayIso();
 
 const MODES = ["Bank transfer", "Cheque", "UPI", "Cash", "Adjustment"];
 

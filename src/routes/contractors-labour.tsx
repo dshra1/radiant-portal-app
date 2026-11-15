@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { StageSelect } from "@/components/saha/StageSelect";
+import { todayIso } from "@/lib/dates";
 
 export const Route = createFileRoute("/contractors-labour")({
   head: () => ({
@@ -61,7 +62,7 @@ const TRADES = [
   "Helpers",
 ];
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayIso();
 
 function emptyDraft(): Draft {
   return {

@@ -6,6 +6,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { DEFAULT_PO_TERMS } from "@/lib/po";
+import { todayIso } from "@/lib/dates";
 
 export const MIN_QUOTES = 3;
 
@@ -161,7 +162,7 @@ export async function awardTender(opts: {
         vendor_email: vi?.email ?? "",
         vendor_address: vi?.city ?? "",
         quote_reference: `${rfq.rfq_number} · ${rfq.title}`.slice(0, 200),
-        po_date: new Date().toISOString().slice(0, 10),
+        po_date: todayIso(),
         payment_terms: v.bid.payment_terms || "30 days from certified delivery",
         delivery_terms: `Call-off by stage per the programme${v.bid.lead_time ? `; lead time ${v.bid.lead_time}` : ""}`,
         freight_charges: Math.round(freight),

@@ -7,6 +7,7 @@ import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess, useSessionUser } from "@/lib/access";
+import { todayIso } from "@/lib/dates";
 
 export const Route = createFileRoute("/site-media")({
   head: () => ({
@@ -121,7 +122,7 @@ function Page() {
           caption,
           stage,
           category,
-          captured_on: new Date().toISOString().slice(0, 10),
+          captured_on: todayIso(),
           uploaded_by: user?.id ?? null,
           uploaded_by_name: user?.email ?? "",
         });

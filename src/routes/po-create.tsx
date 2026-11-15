@@ -12,6 +12,7 @@ import { StageSelect } from "@/components/saha/StageSelect";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSiteWeek } from "@/lib/site-week";
 import { extraKey, useOwnerExtras } from "@/lib/owner-extras";
+import { todayIso } from "@/lib/dates";
 
 /** `edit` = id or number of an existing draft / pending / rejected PO to edit. */
 /** `extra` = an owner's accepted flat choice (flat_selections id) to order. */
@@ -125,7 +126,7 @@ function Page() {
     quote_reference: "",
   });
   const [meta, setMeta] = useState({
-    po_date: new Date().toISOString().slice(0, 10),
+    po_date: todayIso(),
     delivery_date: "",
     payment_terms: "30 days from certified delivery",
     delivery_terms: "Free delivery at site, unloading in vendor scope",

@@ -107,7 +107,10 @@ function Page() {
         const path = `${project.id}/${drawingFileName(file.name)}`;
         const { error } = await supabase.storage
           .from(BUCKET)
-          .upload(path, file, { upsert: true, contentType: file.type || undefined });
+          .upload(path, file, {
+            upsert: true,
+            contentType: file.type || "application/octet-stream",
+          });
         if (error) throw error;
       }
       return list.length;

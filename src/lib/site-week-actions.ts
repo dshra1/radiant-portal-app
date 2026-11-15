@@ -16,6 +16,7 @@ import {
   type SiteWeek,
   type StageCheck,
 } from "@/lib/site-week";
+import { todayIso } from "@/lib/dates";
 
 /** Team Chat channel the site plan posts its stage instructions to. */
 export const SITE_PLAN_CHANNEL = "Site plan";
@@ -281,7 +282,7 @@ export async function recordCheck(
   notes: string,
   who: Who,
 ) {
-  const on = new Date().toISOString().slice(0, 10);
+  const on = todayIso();
   const ins = await supabase
     .from("qa_inspections")
     .insert({
@@ -350,7 +351,7 @@ export async function uploadStageFiles(
       caption: `${stage.code} ${stageName(stage.name)}`,
       stage: stage.code,
       category,
-      captured_on: new Date().toISOString().slice(0, 10),
+      captured_on: todayIso(),
       uploaded_by: who.id,
       uploaded_by_name: who.name,
     });
@@ -360,7 +361,7 @@ export async function uploadStageFiles(
 
 /** Closes a stage and releases the stages that follow it (tasks + alert). */
 export async function closeStage(projectId: string, stage: PlanStage, all: PlanStage[], who: Who) {
-  const on = new Date().toISOString().slice(0, 10);
+  const on = todayIso();
   const up = await supabase
     .from("site_stages")
     .update({

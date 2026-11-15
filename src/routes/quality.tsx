@@ -19,6 +19,7 @@ import { useSessionUser } from "@/lib/access";
 import { fmtDay } from "@/lib/programme-progress";
 import { useSiteWeek, type StageCheck } from "@/lib/site-week";
 import { groupResults, sampleResult } from "@/lib/cube-acceptance";
+import { todayIso } from "@/lib/dates";
 
 type Tab = "checks" | "inspections" | "cubes" | "ncr" | "itp";
 type Search = { tab?: Tab };
@@ -41,7 +42,7 @@ export const Route = createFileRoute("/quality")({
   component: Page,
 });
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayIso();
 const addDays = (iso: string | null, d: number) =>
   iso ? new Date(Date.parse(`${iso}T00:00:00Z`) + d * 86_400_000).toISOString().slice(0, 10) : null;
 /** IS 456 Table 11 individual criterion for one pour (see src/lib/cube-acceptance.ts). */

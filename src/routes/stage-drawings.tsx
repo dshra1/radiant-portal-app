@@ -11,6 +11,7 @@ import { useSessionUser } from "@/lib/access";
 import { fmtDay } from "@/lib/programme-progress";
 import { sheetsForStage, shortFile, type Sheet } from "@/lib/drawing-sheets";
 import { checkPhotoAgainstDrawing, type DrawingCheck } from "@/lib/drawing-check.functions";
+import { todayIso } from "@/lib/dates";
 
 type Search = { stage?: string; file?: string; page?: number };
 
@@ -130,7 +131,7 @@ function Page() {
         caption: `Photo check against ${shortFile(sheet.file)} p.${sheet.page}`,
         stage: stage.code,
         category: "quality",
-        captured_on: new Date().toISOString().slice(0, 10),
+        captured_on: todayIso(),
         uploaded_by: user?.id ?? null,
         uploaded_by_name: user?.email ?? "",
       });
@@ -149,7 +150,7 @@ function Page() {
       setResult(r);
       await supabase.from("qa_inspections").insert({
         project_id: project.id,
-        inspected_on: new Date().toISOString().slice(0, 10),
+        inspected_on: todayIso(),
         location_tag: `${stage.code}${stage.floor ? ` · ${stage.floor}` : ""}${sheet.room ? ` · Flat-0${sheet.flat} ${sheet.room}` : ""}`,
         category: /Electrical/.test(sheet.file)
           ? "Electrical"

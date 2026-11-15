@@ -3,7 +3,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { inr, inrCompact } from "@/data/saha";
-import { packageOf, savingOf, type AltLine, type AlternateRow } from "@/lib/boq-alternates";
+import {
+  isPairedAlternate,
+  packageOf,
+  savingOf,
+  type AltLine,
+  type AlternateRow,
+} from "@/lib/boq-alternates";
 
 /** Small badge in a BOQ row: how many alternates the line has and the best saving. */
 export function AlternatesBadge({

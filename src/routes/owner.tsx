@@ -35,6 +35,7 @@ import {
   type SelectionRow,
 } from "@/lib/owner-portal";
 import type { FlatLineRow } from "@/lib/flats";
+import { todayIso } from "@/lib/dates";
 
 type Tab = "presentation" | "overview" | "common" | "flat" | "requests" | "options";
 const TABS: Tab[] = ["presentation", "overview", "common", "flat", "requests", "options"];
@@ -782,7 +783,7 @@ function FlatChoices({
                   const locked = s?.status === "accepted";
                   const value = pick[l.code] ?? s?.option_id ?? "";
                   const by = chooseByOf(l.code, projectName);
-                  const late = by && !s && by < new Date().toISOString().slice(0, 10);
+                  const late = by && !s && by < todayIso();
                   return (
                     <Fragment key={l.code}>
                       <tr className="border-t border-border/60 align-top">

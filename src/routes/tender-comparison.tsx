@@ -19,6 +19,7 @@ import {
   quoteCount,
   type ItemAward,
 } from "@/lib/tender-award";
+import { todayIso } from "@/lib/dates";
 
 export const Route = createFileRoute("/tender-comparison")({
   head: () => ({
@@ -1134,7 +1135,7 @@ function TenderOverview({
     },
   });
   if (!rfqs.length) return null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const enquiryOf = (r: Rfq) =>
     r.deadline
       ? new Date(Date.parse(`${r.deadline}T00:00:00Z`) - 14 * 86_400_000).toISOString().slice(0, 10)

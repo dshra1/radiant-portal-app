@@ -9,6 +9,7 @@ import { inrCompact, num } from "@/data/saha";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
 import { DRAWINGS_BUCKET, drawingFileName } from "@/lib/project-import";
+import { todayIso } from "@/lib/dates";
 
 type Tab = "list" | "setup";
 type Search = { tab?: Tab };
@@ -230,7 +231,7 @@ function Projects() {
         .neq("code", "")
         .order("sort", { ascending: true });
       if (error) throw error;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayIso();
       const byProject = new Map<string, Map<string, { done: boolean; active: boolean }>>();
       for (const r of data ?? []) {
         if (!r.project_id) continue;

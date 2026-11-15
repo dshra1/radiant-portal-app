@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fmtDay } from "@/lib/programme-progress";
 import { stageName, type PlanStage } from "@/lib/site-week";
 import { closeStage, closeoutGaps, recordCheck, uploadStageFiles } from "@/lib/site-week-actions";
+import { todayIso } from "@/lib/dates";
 
 const tone: Record<string, string> = {
   H: "bg-red-100 text-red-800 border-red-300",
@@ -77,7 +78,7 @@ export function StageCloseout({
           ...local.evidence,
           checks: {
             ...(local.evidence.checks ?? {}),
-            [id]: { result, by: inspector.trim(), on: new Date().toISOString().slice(0, 10) },
+            [id]: { result, by: inspector.trim(), on: todayIso() },
           },
         },
       });

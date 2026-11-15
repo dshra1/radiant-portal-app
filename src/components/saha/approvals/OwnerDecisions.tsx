@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
+import { todayIso } from "@/lib/dates";
 
 type Owner = { name?: string; role?: string; contact?: string; share_pct?: number | string };
 
@@ -53,7 +54,7 @@ const CATEGORIES = [
   { value: "note", label: "Note / information" },
 ];
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayIso();
 
 const emptyForm = () => ({
   title: "",

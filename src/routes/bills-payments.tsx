@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { StageSelect } from "@/components/saha/StageSelect";
 import { PageTabs } from "@/components/saha/ui";
 import { AllOutflows } from "@/components/saha/finance/AllOutflows";
+import { todayIso } from "@/lib/dates";
 
 type Tab = "bills" | "outflows";
 type Search = { tab?: Tab; bill?: string };
@@ -123,7 +124,7 @@ function billPayable(b: Bill): number {
 function emptyBill(): BillDraft {
   return {
     bill_number: "",
-    bill_date: new Date().toISOString().slice(0, 10),
+    bill_date: todayIso(),
     due_date: null,
     vendor_name: "",
     vendor_gstin: "",
@@ -159,7 +160,7 @@ function BillsRegister({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [payFor, setPayFor] = useState<Bill | null>(null);
   const [payDraft, setPayDraft] = useState({
-    payment_date: new Date().toISOString().slice(0, 10),
+    payment_date: todayIso(),
     amount: 0,
     mode: MODES[0]!,
     reference: "",
@@ -298,7 +299,7 @@ function BillsRegister({
       else toast.success("Payment recorded");
       setPayFor(null);
       setPayDraft({
-        payment_date: new Date().toISOString().slice(0, 10),
+        payment_date: todayIso(),
         amount: 0,
         mode: MODES[0]!,
         reference: "",

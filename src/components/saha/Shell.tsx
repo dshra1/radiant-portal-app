@@ -28,6 +28,7 @@ import {
   ShieldAlert,
   Wifi,
   WifiOff,
+  Boxes,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,13 +64,16 @@ function Backdrop({ onClose }: { onClose: () => void }) {
   );
 }
 
-const quickAdd: { to: string; label: string; icon: typeof Receipt }[] = [
-  { to: "/bills-payments", label: "New bill", icon: Receipt },
+const quickAdd: { to: string; label: string; icon: typeof Receipt; money?: boolean }[] = [
+  { to: "/bills-payments", label: "New bill", icon: Receipt, money: true },
   { to: "/site-today", label: "Daily report", icon: HardHat },
   { to: "/contractors-labour", label: "Labour entry", icon: Users },
   { to: "/po-create", label: "Raise PO", icon: FileSpreadsheet },
-  { to: "/capital-ledger", label: "Record receipt", icon: Wallet },
+  { to: "/capital-ledger", label: "Record receipt", icon: Wallet, money: true },
 ];
+
+/** Roles that may enter money records (the database allows only these). */
+const MONEY_ROLES = ["Admin / Owner", "Project Manager (PM)", "Accounts"];
 
 const mobileNav: NavItem[] = [
   { to: "/", label: "Hub", icon: Home },
@@ -79,6 +83,17 @@ const mobileNav: NavItem[] = [
   { to: "/pour-cards", label: "Pours", icon: ClipboardCheck },
   { to: "/quality", label: "QA", icon: ScanEye },
 ];
+
+/** Site team's phone bar: the pages they use every day (no BOQ / project setup). */
+const siteMobileNav: NavItem[] = [
+  { to: "/site-today", label: "Site Today", icon: LayoutDashboard },
+  { to: "/stage-drawings", label: "Drawings", icon: FileSpreadsheet },
+  { to: "/pour-cards", label: "Pours", icon: ClipboardCheck },
+  { to: "/quality", label: "QA", icon: ScanEye },
+  { to: "/inventory-control", label: "Stock", icon: Boxes },
+  { to: "/messages", label: "Chat", icon: MessagesSquare },
+];
+const SITE_ROLES = ["Site Engineer", "Site Supervisor"];
 
 const groupTones: Record<string, string> = {
   quick: "oklch(0.72 0.17 152)",
@@ -488,17 +503,19 @@ export function Shell({
               {addMenu && <Backdrop onClose={() => setAddMenu(false)} />}
               {addMenu && (
                 <div className="absolute right-0 top-full z-50 mt-2 w-52 rounded-xl border border-border bg-card p-1.5 shadow-lg">
-                  {quickAdd.map((q) => (
-                    <Link
-                      key={q.to}
-                      to={q.to}
-                      onClick={() => setAddMenu(false)}
-                      className="flex items-center gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-secondary"
-                    >
-                      <q.icon className="size-3.5 text-muted-foreground" />
-                      {q.label}
-                    </Link>
-                  ))}
+                  {quickAdd
+                    .filter((q) => !q.money || MONEY_ROLES.includes(role))
+                    .map((q) => (
+                      <Link
+                        key={q.to}
+                        to={q.to}
+                        onClick={() => setAddMenu(false)}
+                        className="flex items-center gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-secondary"
+                      >
+                        <q.icon className="size-3.5 text-muted-foreground" />
+                        {q.label}
+                      </Link>
+                    ))}
                   <Link
                     to="/quality"
                     search={{ tab: "ncr" }}
@@ -628,7 +645,7 @@ export function Shell({
         {bare ? (
           <main className="flex-1">{children}</main>
         ) : (
-          <main className="flex-1 p-4 md:p-6">
+          <main className="flex-1 p-4 pb-28 md:p-6 md:pb-24">
             <div className="mx-auto w-full max-w-none">{children}</div>
           </main>
         )}
@@ -643,7 +660,7 @@ export function Shell({
         </Link>
 
         <nav className="sticky bottom-0 z-20 flex min-h-16 w-full items-center justify-around border-t border-border bg-card px-2 pb-[env(safe-area-inset-bottom)] md:hidden">
-          {mobileNav.map((item) => {
+          {(SITE_ROLES.includes(role) ? siteMobileNav : mobileNav).map((item) => {
             const active = pathname === item.to;
             return (
               <Link

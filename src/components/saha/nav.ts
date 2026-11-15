@@ -40,6 +40,8 @@ export type NavItem = {
   label: string;
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
+  /** Also listed in these groups for roles that do not see this item's own group. */
+  alsoIn?: string[];
 };
 export type NavGroup = { id: string; label: string; items: NavItem[] };
 
@@ -53,16 +55,21 @@ export const navGroups: NavGroup[] = [
       { to: "/messages", label: "Team Chat", icon: MessagesSquare },
       { to: "/ai", label: "Saha AI Assistant", icon: Bot },
       { to: "/notifications", label: "Action Centre", icon: BellRing },
-      { to: "/tasks", label: "Task Tracker", icon: ListChecks },
+      { to: "/tasks", label: "Task Tracker", icon: ListChecks, alsoIn: ["site"] },
       { to: "/projects", label: "Projects", icon: Building2 },
       { to: "/brand-preferences", label: "Brand Preferences", icon: Tags },
       { to: "/boq-engine", label: "BOQ Engine", icon: Calculator },
       { to: "/project-import", label: "Import PMC Workbooks", icon: FileSpreadsheet },
       { to: "/stage-budget", label: "Stage Budget & Owner Payments", icon: IndianRupee },
       { to: "/budget-fit", label: "Budget Fit", icon: IndianRupee },
-      { to: "/drawing-decipher", label: "Drawings & Documents", icon: FileText },
-      { to: "/stage-drawings", label: "Stage Drawings & Photo Check", icon: FileText },
-      { to: "/execution-manual", label: "Execution Manual", icon: BookOpen },
+      { to: "/drawing-decipher", label: "Drawings & Documents", icon: FileText, alsoIn: ["site"] },
+      {
+        to: "/stage-drawings",
+        label: "Stage Drawings & Photo Check",
+        icon: FileText,
+        alsoIn: ["site"],
+      },
+      { to: "/execution-manual", label: "Execution Manual", icon: BookOpen, alsoIn: ["site"] },
       { to: "/access-control", label: "Access & Permissions", icon: ShieldCheck, adminOnly: true },
       { to: "/database-backup", label: "Database Backup", icon: Boxes, adminOnly: true },
     ],
@@ -166,7 +173,12 @@ export function navForRole(role: string, isAdmin = false): NavGroup[] {
   const result: NavGroup[] = [];
   for (const group of navGroups) {
     if (allowed.includes(group.id)) {
-      result.push(strip(group));
+      // Pages of other groups the site team works from (drawings, tasks, manual).
+      const extra = navGroups
+        .filter((g) => !allowed.includes(g.id))
+        .flatMap((g) => strip(g).items.filter((i) => i.alsoIn?.includes(group.id)));
+      const own = strip(group);
+      result.push({ ...own, items: [...own.items, ...extra] });
       continue;
     }
     const items = strip(group).items.filter((i) => alwaysVisible.includes(i.to));
