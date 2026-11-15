@@ -73,7 +73,7 @@ function emptyDraft(name: string): Draft {
     pour_ref: "",
     element: "Slab",
     level: "",
-    grade: "M25",
+    grade: "M30",
     quantity_cum: 0,
     pour_date: todayIso(),
     slump: "",
@@ -123,6 +123,49 @@ function Page() {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["pour_cards", project.id] });
 
+  // The programme's planned pours (cube register from the control workbook): picking
+  // one fills the card, and marking it poured writes the pour date into the register.
+  const { data: planned = [] } = useQuery({
+    queryKey: ["cube_tests", "planned", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cube_tests")
+        .select(
+          "id,stage_code,pour,grade,volume_m3,planned_pour_date,actual_pour_date,samples,cubes",
+        )
+        .eq("project_id", project.id)
+        .order("planned_pour_date", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const plannedRef = (c: { stage_code: string; pour: string }) => `${c.stage_code} · ${c.pour}`;
+  const pickPlanned = (id: string) => {
+    const c = planned.find((x) => x.id === id);
+    if (!c || !draft) return;
+    const el = [
+      "Footing",
+      "Column",
+      "Beam",
+      "Slab",
+      "Shear wall",
+      "Staircase",
+      "Raft",
+      "Retaining wall",
+    ];
+    const element = el.find((e) => c.pour.toLowerCase().includes(e.toLowerCase())) ?? draft.element;
+    setDraft({
+      ...draft,
+      pour_ref: plannedRef(c),
+      element,
+      grade: c.grade || draft.grade,
+      quantity_cum: Math.round(Number(c.volume_m3) * 10) / 10,
+      cubes_cast: Number(c.cubes) || draft.cubes_cast,
+      pour_date: c.planned_pour_date ?? draft.pour_date,
+    });
+  };
+
   const save = useMutation({
     mutationFn: async (p: { draft: Draft; id: string | null }) => {
       const row = { ...p.draft, project_id: project.id, created_by: user?.id ?? null };
@@ -153,9 +196,20 @@ function Page() {
       }
       const { error } = await supabase.from("pour_cards").update(patch).eq("id", p.id);
       if (error) throw error;
+      if (p.status === "poured") {
+        // Same pour in the cube register: record the actual pour date there too.
+        const card = cards.find((c) => c.id === p.id);
+        const reg = card && planned.find((c) => plannedRef(c) === card.pour_ref);
+        if (reg && !reg.actual_pour_date)
+          await supabase
+            .from("cube_tests")
+            .update({ actual_pour_date: card.pour_date || todayIso() })
+            .eq("id", reg.id);
+      }
     },
     onSuccess: () => {
       toast.success("Pour card updated");
+      void queryClient.invalidateQueries({ queryKey: ["cube_tests"] });
       refresh();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -295,6 +349,27 @@ function Page() {
           <section className="rounded-2xl border border-primary/40 bg-card p-5 shadow-sm">
             <h2 className="text-lg font-bold">{editingId ? "Edit pour card" : "New pour card"}</h2>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              {!editingId && planned.length > 0 && (
+                <div className="md:col-span-3">
+                  <Field label="Planned pour (programme · cube register)">
+                    <select
+                      defaultValue=""
+                      onChange={(e) => pickPlanned(e.target.value)}
+                      className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Pick the pour to fill this card…</option>
+                      {planned
+                        .filter((c) => !c.actual_pour_date)
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {plannedRef(c)} · {c.grade} · {Number(c.volume_m3).toFixed(1)} m³
+                            {c.planned_pour_date ? ` · ${c.planned_pour_date}` : ""}
+                          </option>
+                        ))}
+                    </select>
+                  </Field>
+                </div>
+              )}
               <Field label="Pour reference">
                 <input
                   value={draft.pour_ref}

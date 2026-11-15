@@ -12,6 +12,7 @@ import { fmtDay } from "@/lib/programme-progress";
 import { sheetsForStage, shortFile, type Sheet } from "@/lib/drawing-sheets";
 import { checkPhotoAgainstDrawing, type DrawingCheck } from "@/lib/drawing-check.functions";
 import { todayIso } from "@/lib/dates";
+import { PdfPage } from "@/components/saha/PdfPage";
 
 type Search = { stage?: string; file?: string; page?: number };
 
@@ -277,9 +278,9 @@ function Page() {
                   )}
                 </div>
               )}
-              <div className="h-[60vh] overflow-hidden rounded-xl border border-border bg-muted">
+              <div className="h-[70vh] overflow-hidden rounded-xl border border-border bg-muted">
                 {url ? (
-                  <iframe key={url} src={url} title="Drawing sheet" className="h-full w-full" />
+                  <PdfPage key={url} url={url.split("#")[0]!} page={sheet?.page ?? 1} />
                 ) : (
                   <p className="p-4 text-sm text-muted-foreground">
                     Opening the sheet… (if it does not open, the drawing set is not uploaded yet:

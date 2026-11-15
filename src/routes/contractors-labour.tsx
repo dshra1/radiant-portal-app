@@ -240,7 +240,10 @@ function Page() {
             </p>
             <h1 className="text-2xl font-bold text-foreground">Contractors &amp; labour</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Log who worked on site each day, and the man-days and labour cost build up here.
+              Log who worked on site each day, and the man-days and labour cost build up here. Daily
+              reports sent from Site Today are already booked here: add only gangs not reported
+              there. For contract labour (₹/sft, lump sum), enter the headcount with day rate 0 so
+              the cost is not counted twice.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

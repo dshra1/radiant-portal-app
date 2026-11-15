@@ -479,6 +479,11 @@ function DailyReport({
           {busy ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
           Send daily report
         </button>
+        <p className="text-xs text-muted-foreground">
+          The labour you enter here is also booked in Contractors &amp; Labour: do not enter the
+          same gang again there. Send one report per gang / trade. For contract gangs (₹/sft or lump
+          sum) leave the day rate empty, so their cost is not counted twice.
+        </p>
       </div>
       <RecentDailyReports projectId={projectId} />
     </section>

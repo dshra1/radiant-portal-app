@@ -148,6 +148,17 @@ function Page() {
   const [itemDraft, setItemDraft] = useState<ItemDraft | null>(null);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [moveDraft, setMoveDraft] = useState<MoveDraft | null>(null);
+  const [itemFind, setItemFind] = useState("");
+  /** Items matching every typed word (code or name); the chosen one always stays listed. */
+  const findItems = (q: string, keepId?: string | null) => {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return items;
+    return items.filter(
+      (i) =>
+        i.id === keepId ||
+        words.every((w) => `${i.item_code} ${i.description}`.toLowerCase().includes(w)),
+    );
+  };
   const [tab, setTab] = useState<"stock" | "ledger">("stock");
   /** Direction of a stock adjustment: a physical count can correct either way. */
   const [adjustDir, setAdjustDir] = useState<"increase" | "decrease">("increase");
@@ -790,13 +801,23 @@ function Page() {
                 <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
                   Item
                 </span>
+                <input
+                  value={itemFind}
+                  onChange={(e) => setItemFind(e.target.value)}
+                  placeholder="Type to find: cement, 12 mm, AAC…"
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                />
                 <select
                   className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
                   value={moveDraft.item_id ?? ""}
                   onChange={(e) => setMoveDraft(pickItem(moveDraft, e.target.value))}
                 >
-                  <option value="">Select item…</option>
-                  {items.map((i) => (
+                  <option value="">
+                    {itemFind.trim()
+                      ? `Select from ${findItems(itemFind).length} matching items…`
+                      : "Select item…"}
+                  </option>
+                  {findItems(itemFind, moveDraft.item_id).map((i) => (
                     <option key={i.id} value={i.id}>
                       {i.item_code} · {i.description}
                     </option>
