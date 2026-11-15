@@ -402,6 +402,25 @@ function Cubes({ projectId }: { projectId: string }) {
 function Ncrs({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
   const user = useSessionUser();
+  const plan = useSiteWeek(projectId);
+  const stages = plan.data?.stages ?? [];
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [saving, setSaving] = useState(false);
+  const media = useQuery({
+    queryKey: ["ncr_media", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_media")
+        .select("id,title")
+        .eq("project_id", projectId)
+        .eq("category", "quality")
+        .like("title", "NCR-%");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const photoCount = (no: string) =>
+    (media.data ?? []).filter((m) => m.title.startsWith(`${no} `)).length;
   const [draft, setDraft] = useState({
     stage_code: "",
     location: "",
@@ -424,10 +443,22 @@ function Ncrs({ projectId }: { projectId: string }) {
     },
   });
   async function raise() {
+    if (!draft.stage_code) {
+      toast.error("Pick the stage");
+      return;
+    }
     if (!draft.what_wrong.trim()) {
       toast.error("Describe what is wrong");
       return;
     }
+    setSaving(true);
+    try {
+      await raiseNcr();
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function raiseNcr() {
     // next number after the highest existing NCR-### (row count repeats after deletes)
     const { data: existing, error: noErr } = await supabase
       .from("ncrs")
@@ -452,6 +483,32 @@ function Ncrs({ projectId }: { projectId: string }) {
       toast.error(error.message);
       return;
     }
+    const ncrNo = `NCR-${String(n).padStart(3, "0")}`;
+    for (const file of photos) {
+      const safe = file.name.replace(/[^\w.-]+/g, "_");
+      const path = `${projectId}/${draft.stage_code || "NCR"}/${Date.now()}-${safe}`;
+      const up = await supabase.storage.from("site-media").upload(path, file, {
+        upsert: false,
+        contentType: file.type || "application/octet-stream",
+      });
+      if (up.error) {
+        toast.error(`Photo not saved: ${up.error.message}`);
+        continue;
+      }
+      await supabase.from("project_media").insert({
+        project_id: projectId,
+        path,
+        title: `${ncrNo} ${file.name}`,
+        caption: `${ncrNo} · ${draft.what_wrong.slice(0, 80)}`,
+        stage: draft.stage_code,
+        category: "quality",
+        captured_on: todayIso(),
+        uploaded_by: user?.id ?? null,
+        uploaded_by_name: user?.email ?? "",
+      });
+    }
+    setPhotos([]);
+    void qc.invalidateQueries({ queryKey: ["ncr_media", projectId] });
     const { error: noteErr } = await supabase.from("notifications").insert({
       title: `NCR raised${draft.stage_code ? ` on ${draft.stage_code}` : ""}: ${draft.what_wrong.slice(0, 60)}`,
       body: `Correction: ${draft.correction || "to agree"} · close before the next hold point on this area.`,
@@ -488,24 +545,42 @@ function Ncrs({ projectId }: { projectId: string }) {
       <div className="rounded-2xl border border-border bg-card p-3">
         <h3 className="text-sm font-bold">Raise a non-conformance</h3>
         <div className="mt-2 grid gap-2 md:grid-cols-3">
+          <label className="flex flex-col gap-0.5 text-[11px] font-semibold text-muted-foreground">
+            Stage
+            <select
+              className={field}
+              value={draft.stage_code}
+              onChange={(e) => setDraft({ ...draft, stage_code: e.target.value, itp_id: "" })}
+            >
+              <option value="">Pick the stage…</option>
+              {stages.map((s) => (
+                <option key={s.id} value={s.code}>
+                  {s.code} · {s.name.slice(0, 50)}
+                </option>
+              ))}
+            </select>
+          </label>
           <input
-            className={field}
-            placeholder="Stage (e.g. F03)"
-            value={draft.stage_code}
-            onChange={(e) => setDraft({ ...draft, stage_code: e.target.value.toUpperCase() })}
-          />
-          <input
-            className={field}
+            className={`${field} self-end`}
             placeholder="Location (e.g. footing F5)"
             value={draft.location}
             onChange={(e) => setDraft({ ...draft, location: e.target.value })}
           />
-          <input
-            className={field}
-            placeholder="ITP check (e.g. Q03)"
-            value={draft.itp_id}
-            onChange={(e) => setDraft({ ...draft, itp_id: e.target.value.toUpperCase() })}
-          />
+          <label className="flex flex-col gap-0.5 text-[11px] font-semibold text-muted-foreground">
+            ITP check (optional)
+            <select
+              className={field}
+              value={draft.itp_id}
+              onChange={(e) => setDraft({ ...draft, itp_id: e.target.value })}
+            >
+              <option value="">None / not an ITP check</option>
+              {(stages.find((s) => s.code === draft.stage_code)?.checks ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.id} · {c.check.slice(0, 50)}
+                </option>
+              ))}
+            </select>
+          </label>
           <input
             className={`${field} md:col-span-3`}
             placeholder="What is wrong"
@@ -524,19 +599,34 @@ function Ncrs({ projectId }: { projectId: string }) {
             value={draft.correction}
             onChange={(e) => setDraft({ ...draft, correction: e.target.value })}
           />
-          <input
-            className={field}
-            type="date"
-            value={draft.target_date}
-            onChange={(e) => setDraft({ ...draft, target_date: e.target.value })}
-          />
+          <label className="flex flex-col gap-0.5 text-[11px] font-semibold text-muted-foreground">
+            Correct by (target date)
+            <input
+              className={field}
+              type="date"
+              value={draft.target_date}
+              onChange={(e) => setDraft({ ...draft, target_date: e.target.value })}
+            />
+          </label>
+          <label className="flex cursor-pointer flex-col gap-0.5 text-[11px] font-semibold text-muted-foreground md:col-span-2">
+            Photos of the defect ({photos.length})
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              className="text-sm"
+              onChange={(e) => setPhotos(Array.from(e.target.files ?? []))}
+            />
+          </label>
         </div>
         <button
           type="button"
+          disabled={saving}
           onClick={() => void raise()}
-          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
-          <Plus className="size-4" /> Raise NCR
+          <Plus className="size-4" /> {saving ? "Saving…" : "Raise NCR"}
         </button>
       </div>
       <div className="rounded-2xl border border-border bg-card">
@@ -557,6 +647,7 @@ function Ncrs({ projectId }: { projectId: string }) {
                         r.correction && `fix: ${r.correction}`,
                         `raised ${fmtDay(r.raised_on)} by ${r.raised_by}`,
                         r.target_date && `target ${fmtDay(r.target_date)}`,
+                        photoCount(r.ncr_no) && `${photoCount(r.ncr_no)} photo(s) in Site Media`,
                       ]
                         .filter(Boolean)
                         .join(" · ")}

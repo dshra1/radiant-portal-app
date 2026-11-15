@@ -34,7 +34,13 @@ function liveMenu() {
     groups: navGroups.map((g) => ({
       id: g.id,
       label: g.label.replace(/^Main · /, ""),
-      pages: g.items.map((i) => ({ to: i.to, label: i.label, adminOnly: Boolean(i.adminOnly) })),
+      // Pages that also sit in this group's menu (nav.ts alsoIn), e.g. drawings for the site team.
+      pages: [
+        ...g.items,
+        ...navGroups
+          .filter((o) => o.id !== g.id)
+          .flatMap((o) => o.items.filter((i) => i.alsoIn?.includes(g.id))),
+      ].map((i) => ({ to: i.to, label: i.label, adminOnly: Boolean(i.adminOnly) })),
     })),
     sees,
     always: alwaysVisible,

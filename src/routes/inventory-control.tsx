@@ -9,6 +9,10 @@ import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 import { todayIso } from "@/lib/dates";
+import { useSiteWeek } from "@/lib/site-week";
+
+/** Materials whose test certificate / docket must come with the delivery. */
+const NEEDS_CERT = /steel|tmt|\bfe ?5|cement|\bopc\b|\bppc\b|rmc|ready.?mix|concrete|m2[05]|m30/i;
 
 export const Route = createFileRoute("/inventory-control")({
   head: () => ({
@@ -64,6 +68,8 @@ type Movement = {
   remarks: string;
   /** Receipt against this purchase order ('' when not linked). */
   po_number: string;
+  /** Stage the material went to (issues) or came for (receipts). */
+  stage_code: string;
 };
 
 type ItemDraft = Omit<Item, "id" | "project_id">;
@@ -126,6 +132,7 @@ function emptyMove(type: string): MoveDraft {
     handled_by: "",
     remarks: "",
     po_number: "",
+    stage_code: "",
   };
 }
 
@@ -149,6 +156,9 @@ function Page() {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [moveDraft, setMoveDraft] = useState<MoveDraft | null>(null);
   const [itemFind, setItemFind] = useState("");
+  const [cert, setCert] = useState<File[]>([]);
+  const plan = useSiteWeek(project.id);
+  const planStages = plan.data?.stages ?? [];
   /** Items matching every typed word (code or name); the chosen one always stays listed. */
   const findItems = (q: string, keepId?: string | null) => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -197,7 +207,7 @@ function Page() {
       const { data, error } = await supabase
         .from("stock_movements")
         .select(
-          "id,project_id,item_id,item_code,description,unit,movement_type,quantity,rate,movement_date,reference,party,handled_by,remarks,po_number",
+          "id,project_id,item_id,item_code,description,unit,movement_type,quantity,rate,movement_date,reference,party,handled_by,remarks,po_number,stage_code",
         )
         .eq("project_id", project.id)
         .order("movement_date", { ascending: false })
@@ -266,8 +276,37 @@ function Page() {
 
   const saveMove = useMutation({
     mutationFn: async (draft: MoveDraft) => {
+      // Test certificate / RMC docket / challan photo, kept with the stage's documents.
+      const names: string[] = [];
+      for (const file of cert) {
+        const safe = file.name.replace(/[^\w.-]+/g, "_");
+        const folder = draft.stage_code || "STORES";
+        const path = `${project.id}/${folder}/${Date.now()}-${safe}`;
+        const up = await supabase.storage.from("site-media").upload(path, file, {
+          upsert: false,
+          contentType: file.type || "application/octet-stream",
+        });
+        if (up.error) throw up.error;
+        const title = `GRN ${draft.reference || draft.item_code} · ${file.name}`;
+        const ins = await supabase.from("project_media").insert({
+          project_id: project.id,
+          path,
+          title,
+          caption: `${draft.description} · ${draft.quantity} ${draft.unit} · ${draft.party}`,
+          stage: draft.stage_code || "STORES",
+          category: "approval",
+          captured_on: draft.movement_date,
+          uploaded_by: user?.id ?? null,
+          uploaded_by_name: user?.email ?? "",
+        });
+        if (ins.error) throw ins.error;
+        names.push(file.name);
+      }
       const { error } = await supabase.from("stock_movements").insert({
         ...draft,
+        remarks: names.length
+          ? `${draft.remarks}${draft.remarks ? " · " : ""}Docs: ${names.join(", ")}`
+          : draft.remarks,
         project_id: project.id,
         created_by: user?.id ?? null,
       });
@@ -275,6 +314,7 @@ function Page() {
     },
     onSuccess: () => {
       toast.success("Entry recorded");
+      setCert([]);
       setMoveDraft(null);
       refresh();
     },
@@ -943,6 +983,45 @@ function Page() {
                   onChange={(e) => setMoveDraft({ ...moveDraft, handled_by: e.target.value })}
                 />
               </label>
+              <label>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                  {moveDraft.movement_type === "issue"
+                    ? "Issued for stage"
+                    : "For stage (optional)"}
+                </span>
+                <select
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-border bg-background"
+                  value={moveDraft.stage_code}
+                  onChange={(e) => setMoveDraft({ ...moveDraft, stage_code: e.target.value })}
+                >
+                  <option value="">—</option>
+                  {planStages.map((st) => (
+                    <option key={st.id} value={st.code}>
+                      {st.code} · {st.name.slice(0, 45)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {moveDraft.movement_type === "receipt" && (
+                <label>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                    Test certificate / docket / challan ({cert.length})
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    capture="environment"
+                    multiple
+                    className="mt-1 w-full text-sm"
+                    onChange={(e) => setCert(Array.from(e.target.files ?? []))}
+                  />
+                  {NEEDS_CERT.test(`${moveDraft.description} ${moveDraft.item_code}`) && (
+                    <span className="mt-1 block text-[11px] font-semibold text-destructive">
+                      Required: steel MTC / cement test certificate / RMC docket
+                    </span>
+                  )}
+                </label>
+              )}
               <label className="md:col-span-2">
                 <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
                   Remarks
@@ -979,6 +1058,18 @@ function Page() {
                   }
                   if (moveDraft.quantity <= 0) {
                     toast.error("Enter a quantity");
+                    return;
+                  }
+                  if (moveDraft.movement_type === "issue" && !moveDraft.stage_code) {
+                    toast.error("Pick the stage this material is issued for");
+                    return;
+                  }
+                  if (
+                    moveDraft.movement_type === "receipt" &&
+                    NEEDS_CERT.test(`${moveDraft.description} ${moveDraft.item_code}`) &&
+                    !cert.length
+                  ) {
+                    toast.error("Attach the test certificate / RMC docket before receiving");
                     return;
                   }
                   const removes =

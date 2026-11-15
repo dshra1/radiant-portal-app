@@ -6,7 +6,16 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtDay } from "@/lib/programme-progress";
 import { stageName, type PlanStage } from "@/lib/site-week";
-import { closeStage, closeoutGaps, recordCheck, uploadStageFiles } from "@/lib/site-week-actions";
+import {
+  canSignChecks,
+  closeStage,
+  closeoutGaps,
+  needsSe,
+  recordCheck,
+  requestSignoff,
+  uploadStageFiles,
+} from "@/lib/site-week-actions";
+import { useAccess } from "@/lib/access";
 import { todayIso } from "@/lib/dates";
 
 const tone: Record<string, string> = {
@@ -34,8 +43,11 @@ export function StageCloseout({
 }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState("");
-  const [inspector, setInspector] = useState(who.name);
+  const { access } = useAccess();
+  const canSign = Boolean(access?.isAdmin || canSignChecks(access?.roles));
+  const [inspector, setInspector] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [where, setWhere] = useState<Record<string, string>>({});
   const [local, setLocal] = useState(stage);
 
   const media = useQuery({
@@ -53,7 +65,36 @@ export function StageCloseout({
   });
   const photos = (media.data ?? []).filter((m) => m.category !== "approval");
   const docs = (media.data ?? []).filter((m) => m.category === "approval");
-  const gaps = closeoutGaps(local, photos.length);
+  // Concrete in this stage: every pour in the cube register needs an approved pour card.
+  const pours = useQuery({
+    queryKey: ["stage_pours", projectId, stage.code],
+    queryFn: async () => {
+      const [cubes, cards] = await Promise.all([
+        supabase
+          .from("cube_tests")
+          .select("pour")
+          .eq("project_id", projectId)
+          .eq("stage_code", stage.code),
+        supabase
+          .from("pour_cards")
+          .select("pour_ref,status")
+          .eq("project_id", projectId)
+          .like("pour_ref", `${stage.code} · %`),
+      ]);
+      const ok = new Set(
+        (cards.data ?? [])
+          .filter((c) => c.status === "approved" || c.status === "poured")
+          .map((c) => c.pour_ref),
+      );
+      return (cubes.data ?? [])
+        .map((c) => `${stage.code} · ${c.pour}`)
+        .filter((ref) => !ok.has(ref));
+    },
+  });
+  const gaps = closeoutGaps(local, photos.length, {
+    docs: docs.length,
+    poursNotApproved: pours.data ?? [],
+  });
 
   const refresh = async () => {
     await qc.invalidateQueries({ queryKey: ["site_week", projectId] });
@@ -65,25 +106,57 @@ export function StageCloseout({
   async function check(id: string, result: "OK" | "NOT OK") {
     const c = local.checks.find((x) => x.id === id);
     if (!c) return;
-    if (!inspector.trim()) {
-      toast.error("Enter who inspected");
+    const by = inspector.trim() || (canSign ? who.name : "");
+    if (!by) {
+      toast.error("Enter the name of the person who inspected");
+      return;
+    }
+    if (result === "OK" && c.point !== "R" && !canSign) {
+      toast.error("Only the PMC / site engineer can sign this OK. Use 'Ask to sign'.");
       return;
     }
     setBusy(id);
     try {
-      await recordCheck(projectId, local, c, result, inspector.trim(), notes[id] ?? "", who);
+      await recordCheck(
+        projectId,
+        local,
+        c,
+        result,
+        by,
+        notes[id] ?? "",
+        who,
+        (where[id] ?? "").trim(),
+      );
       setLocal({
         ...local,
         evidence: {
           ...local.evidence,
           checks: {
             ...(local.evidence.checks ?? {}),
-            [id]: { result, by: inspector.trim(), on: todayIso() },
+            [id]: {
+              result,
+              by,
+              on: todayIso(),
+              ...((where[id] ?? "").trim() ? { at: (where[id] ?? "").trim() } : {}),
+            },
           },
         },
       });
       toast.success(`${id} recorded ${result} (also in Quality → Inspections)`);
       await refresh();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+    setBusy("");
+  }
+
+  async function ask(id: string) {
+    const c = local.checks.find((x) => x.id === id);
+    if (!c) return;
+    setBusy(id);
+    try {
+      await requestSignoff(projectId, local, c, (where[id] ?? "").trim(), who);
+      toast.success(`Sent to ${c.by || "PMC"}: sign-off needed for ${id}`);
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -149,14 +222,21 @@ export function StageCloseout({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-bold">1 · Checks ({local.checks.length})</h3>
             <label className="flex items-center gap-2 text-xs">
-              Inspected by
+              Inspected by (name)
               <input
                 value={inspector}
+                placeholder={canSign ? who.name : "e.g. Ravi (PMC)"}
                 onChange={(e) => setInspector(e.target.value)}
                 className="h-8 rounded-lg border border-border bg-background px-2 text-sm"
               />
             </label>
           </div>
+          {!canSign && (
+            <p className="mt-1 rounded-lg bg-amber-50 p-2 text-[12px] text-amber-900">
+              Hold and witness points are signed OK by the PMC or site engineer, not by the
+              supervisor. Use <b>Ask to sign</b> when the work is ready; you can record a Not OK.
+            </p>
+          )}
           {local.checks.length === 0 && (
             <p className="mt-1 text-sm text-muted-foreground">
               No inspection checks on this stage.
@@ -190,21 +270,46 @@ export function StageCloseout({
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
+                  {r?.at && <p className="text-[12px]">Checked at: {r.at}</p>}
+                  {needsSe(c) && (
+                    <p className="text-[12px] font-semibold text-red-800">
+                      Structural engineer signs: upload his signed sheet under Approvals and
+                      documents.
+                    </p>
+                  )}
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <input
+                      placeholder="Where (e.g. footings F1–F6)"
+                      aria-label={`Where was ${c.id} checked`}
+                      value={where[c.id] ?? ""}
+                      onChange={(e) => setWhere({ ...where, [c.id]: e.target.value })}
+                      className="h-8 min-w-[160px] flex-1 rounded-lg border border-border bg-background px-2 text-sm"
+                    />
                     <input
                       placeholder="Remarks (optional)"
                       value={notes[c.id] ?? ""}
                       onChange={(e) => setNotes({ ...notes, [c.id]: e.target.value })}
                       className="h-8 min-w-[200px] flex-1 rounded-lg border border-border bg-background px-2 text-sm"
                     />
-                    <button
-                      type="button"
-                      disabled={Boolean(busy)}
-                      onClick={() => void check(c.id, "OK")}
-                      className="h-8 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white disabled:opacity-50"
-                    >
-                      {busy === c.id ? "Saving…" : "OK"}
-                    </button>
+                    {canSign || c.point === "R" ? (
+                      <button
+                        type="button"
+                        disabled={Boolean(busy)}
+                        onClick={() => void check(c.id, "OK")}
+                        className="h-8 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white disabled:opacity-50"
+                      >
+                        {busy === c.id ? "Saving…" : "OK"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={Boolean(busy)}
+                        onClick={() => void ask(c.id)}
+                        className="h-8 rounded-lg bg-amber-600 px-3 text-xs font-semibold text-white disabled:opacity-50"
+                      >
+                        {busy === c.id ? "Sending…" : `Ask ${c.by || "PMC"} to sign`}
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={Boolean(busy)}
@@ -278,15 +383,20 @@ export function StageCloseout({
         <section className="mt-4 rounded-lg border border-border p-3">
           <h3 className="text-sm font-bold">4 · Close and release the next stage</h3>
           <p className="text-[12px] text-muted-foreground">
-            Then enter the stage's actual cost for approval:{" "}
-            <Link
-              to="/stage-budget"
-              search={{ stage: stage.code }}
-              className="text-primary underline"
-            >
-              Stage Budget
-            </Link>{" "}
-            · drawings:{" "}
+            {canSign && (
+              <>
+                Then enter the stage's actual cost for approval:{" "}
+                <Link
+                  to="/stage-budget"
+                  search={{ stage: stage.code }}
+                  className="text-primary underline"
+                >
+                  Stage Budget
+                </Link>{" "}
+                ·{" "}
+              </>
+            )}
+            Drawings:{" "}
             <Link
               to="/stage-drawings"
               search={{ stage: stage.code }}

@@ -372,9 +372,12 @@ function Page() {
                   onChange={(e) => setDraft({ ...draft, status: e.target.value })}
                   className={inputCls}
                 >
-                  {["not started", "in progress", "delayed", "completed"].map((s) => (
-                    <option key={s}>{s}</option>
-                  ))}
+                  {["not started", "in progress", "delayed", "completed"]
+                    // A site stage is completed by its close-out; only the PM can set it here.
+                    .filter((s) => s !== "completed" || canDelete || draft.status === s)
+                    .map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
@@ -503,8 +506,7 @@ function Page() {
                               id: s.id,
                               values: {
                                 actual_pct: v,
-                                status:
-                                  v >= 100 ? "completed" : v > 0 ? "in progress" : "not started",
+                                status: v > 0 ? "in progress" : "not started", // completed only via close-out
                               },
                             });
                         }}

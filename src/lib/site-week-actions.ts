@@ -241,15 +241,22 @@ export async function raiseAlerts(projectId: string, week: SiteWeek, who: Who) {
     ...(await tenderAlerts(projectId, week.today)),
   ];
   if (!alerts.length) return 0;
-  const since = new Date(Date.now() - 14 * 86_400_000).toISOString();
+  const since = Date.now() - 14 * 86_400_000;
   const prev = await supabase
     .from("notifications")
-    .select("title")
+    .select("title,created_at")
     .eq("project_id", projectId)
     .eq("category", "Site plan")
-    .gte("created_at", since);
+    .order("created_at", { ascending: false })
+    .limit(3000);
   if (prev.error) throw prev.error;
-  const seen = new Set((prev.data ?? []).map((r) => r.title));
+  // Hold points and close-outs are raised once per stage; other alerts again after 14 days.
+  const once = /^(Hold point this week|Close out |Starts )/;
+  const seen = new Set(
+    (prev.data ?? [])
+      .filter((r) => once.test(r.title) || new Date(r.created_at).getTime() >= since)
+      .map((r) => r.title),
+  );
   const fresh = alerts.filter((a) => !seen.has(a.title));
   if (!fresh.length) return 0;
   const ins = await supabase.from("notifications").insert(
@@ -281,6 +288,7 @@ export async function recordCheck(
   inspector: string,
   notes: string,
   who: Who,
+  at = "",
 ) {
   const on = todayIso();
   const ins = await supabase
@@ -288,7 +296,7 @@ export async function recordCheck(
     .insert({
       project_id: projectId,
       inspected_on: on,
-      location_tag: `${stage.code}${stage.floor ? ` · ${stage.floor}` : ""}`,
+      location_tag: `${stage.code}${stage.floor ? ` · ${stage.floor}` : ""}${at ? ` · ${at}` : ""}`,
       category: QA_CATEGORY[stage.group] ?? "Housekeeping",
       code_ref: [check.id, check.reference].filter(Boolean).join(" · "),
       severity: check.point === "H" ? "High" : check.point === "W" ? "Medium" : "Low",
@@ -310,7 +318,13 @@ export async function recordCheck(
     .eq("stage_code", stage.code)
     .eq("itp_id", check.id);
   const checks: Record<string, CheckResult> = { ...(stage.evidence.checks ?? {}) };
-  checks[check.id] = { result, by: inspector, on, inspectionId: ins.data.id };
+  checks[check.id] = {
+    result,
+    by: inspector,
+    on,
+    inspectionId: ins.data.id,
+    ...(at ? { at } : {}),
+  };
   const up = await supabase
     .from("site_stages")
     .update({ evidence: { ...stage.evidence, checks } as unknown as Json })
@@ -390,14 +404,50 @@ export async function closeStage(projectId: string, stage: PlanStage, all: PlanS
   return next;
 }
 
+/** Roles that may sign a hold or witness point OK (the PMC side). Site supervisors may not. */
+export const SIGN_ROLES = ["admin", "pm", "site_engineer"] as const;
+export function canSignChecks(roles: readonly string[] | undefined) {
+  return (roles ?? []).some((r) => (SIGN_ROLES as readonly string[]).includes(r));
+}
+/** A check the structural engineer signs: needs his signed sheet uploaded as a document. */
+export const needsSe = (c: StageCheck) => /\bSE\b/.test(c.by ?? "");
+
 /** What is still missing before a stage can be closed. */
-export function closeoutGaps(stage: PlanStage, photos: number) {
+export function closeoutGaps(
+  stage: PlanStage,
+  photos: number,
+  extra: { docs?: number; poursNotApproved?: string[] } = {},
+) {
   const gaps: string[] = [];
   for (const c of stage.checks) {
     const r = stage.evidence.checks?.[c.id];
     if (c.point === "H" && r?.result !== "OK")
       gaps.push(`Hold point ${c.id} ${c.check} not signed OK`);
+    if (c.point === "W" && !r) gaps.push(`Witness point ${c.id} ${c.check} not recorded`);
   }
   if (photos < 1) gaps.push("No photos uploaded for this stage");
+  if (stage.checks.some(needsSe) && (extra.docs ?? 0) < 1)
+    gaps.push("Upload the structural engineer's signed inspection sheet (Approvals and documents)");
+  for (const p of extra.poursNotApproved ?? []) gaps.push(`Pour card for ${p} not approved`);
   return gaps;
+}
+
+/** Asks the PMC to come and sign a hold / witness point. */
+export async function requestSignoff(
+  projectId: string,
+  stage: PlanStage,
+  check: StageCheck,
+  at: string,
+  who: Who,
+) {
+  const { error } = await supabase.from("notifications").insert({
+    title: `Sign-off needed: ${stage.code} ${check.id} ${check.check}`,
+    body: `${who.name} asks for ${check.by || "PMC"} to inspect${at ? ` at ${at}` : ""}. ${check.criterion ?? ""} Work is stopped until it is signed.`,
+    category: "Site plan",
+    priority: "High",
+    link: "/site-today",
+    project_id: projectId,
+    sender_id: who.id,
+  });
+  if (error) throw error;
 }

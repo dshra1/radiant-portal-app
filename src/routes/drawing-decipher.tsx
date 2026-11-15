@@ -80,6 +80,7 @@ function Page() {
   const canEdit = Boolean(
     access?.isAdmin || access?.roles.some((r) => r === "pm" || r === "site_engineer"),
   );
+  const isManager = Boolean(access?.isAdmin || access?.roles.includes("pm"));
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
 
@@ -91,8 +92,38 @@ function Page() {
         .from(BUCKET)
         .list(project.id, { limit: 500, sortBy: { column: "updated_at", order: "desc" } });
       if (error) throw error;
-      return (data ?? []).filter((f) => f.name !== ".emptyFolderPlaceholder");
+      // Folders (no id) such as _pending are not documents.
+      return (data ?? []).filter((f) => f.name !== ".emptyFolderPlaceholder" && f.id);
     },
+  });
+
+  // Revisions uploaded by the site engineer over an existing drawing wait here for the PM.
+  const pendingQuery = useQuery({
+    queryKey: ["project-drawings-pending", project.id],
+    enabled: Boolean(project.id),
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from(BUCKET)
+        .list(`${project.id}/_pending`, { limit: 100 });
+      if (error) return [];
+      return (data ?? []).filter((f) => f.name !== ".emptyFolderPlaceholder" && f.id);
+    },
+  });
+  const acceptMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const current = `${project.id}/${name}`;
+      await supabase.storage.from(BUCKET).remove([current]);
+      const { error } = await supabase.storage
+        .from(BUCKET)
+        .move(`${project.id}/_pending/${name}`, current);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setStatus("Revision accepted: it replaces the earlier upload.");
+      await qc.invalidateQueries({ queryKey: ["project-drawings", project.id] });
+      await qc.invalidateQueries({ queryKey: ["project-drawings-pending", project.id] });
+    },
+    onError: (e: Error) => setStatus(`Could not accept: ${e.message}`),
   });
 
   const files = (filesQuery.data ?? []).filter((f) =>
@@ -101,23 +132,38 @@ function Page() {
 
   const uploadMutation = useMutation({
     mutationFn: async (list: FileList) => {
+      let pending = 0;
+      const existing = new Set((filesQuery.data ?? []).map((f) => f.name));
       for (const file of Array.from(list)) {
         // Same name = new revision of the same document: it replaces the old upload, so
         // the stage drawings, photo checks and owner packs open the current revision.
-        const path = `${project.id}/${drawingFileName(file.name)}`;
-        const { error } = await supabase.storage
-          .from(BUCKET)
-          .upload(path, file, {
-            upsert: true,
-            contentType: file.type || "application/octet-stream",
-          });
+        const name = drawingFileName(file.name);
+        // Only the PM replaces an issued drawing; anyone else's revision waits for acceptance.
+        const replaces = existing.has(name) && !isManager;
+        const path = replaces ? `${project.id}/_pending/${name}` : `${project.id}/${name}`;
+        const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+          upsert: !replaces,
+          contentType: file.type || "application/octet-stream",
+        });
         if (error) throw error;
+        if (replaces) pending++;
       }
+      if (pending)
+        await supabase.from("notifications").insert({
+          title: `Drawing revision to accept: ${pending} file${pending > 1 ? "s" : ""}`,
+          body: "Uploaded over an issued drawing. Accept it in Drawings & Documents to make it current.",
+          category: "Site plan",
+          priority: "High",
+          link: "/drawing-decipher",
+          project_id: project.id,
+          sender_id: access?.userId ?? null,
+        });
       return list.length;
     },
     onSuccess: async (n) => {
       setStatus(`${n} file${n > 1 ? "s" : ""} uploaded to this project.`);
       await qc.invalidateQueries({ queryKey: ["project-drawings", project.id] });
+      await qc.invalidateQueries({ queryKey: ["project-drawings-pending", project.id] });
     },
     onError: (e: Error) => setStatus(`Upload failed: ${e.message}`),
   });
@@ -263,6 +309,34 @@ function Page() {
             </div>
           ))}
         </div>
+
+        {(pendingQuery.data ?? []).length > 0 && (
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm">
+            <h2 className="font-bold text-amber-900">Revisions waiting for the PM</h2>
+            <ul className="mt-2 space-y-1">
+              {(pendingQuery.data ?? []).map((f) => (
+                <li key={f.name} className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{f.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {f.updated_at ? new Date(f.updated_at).toLocaleDateString("en-IN") : ""}
+                  </span>
+                  {isManager ? (
+                    <button
+                      type="button"
+                      disabled={acceptMutation.isPending}
+                      onClick={() => acceptMutation.mutate(f.name)}
+                      className="rounded bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"
+                    >
+                      Accept as current revision
+                    </button>
+                  ) : (
+                    <span className="text-xs text-amber-900">waiting for the PM</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <div className="border-b border-border bg-muted/40 px-4 py-3">

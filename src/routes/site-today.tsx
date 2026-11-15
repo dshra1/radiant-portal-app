@@ -158,7 +158,8 @@ function StageCard({
       .from("site_stages")
       .update({
         actual_pct: next,
-        status: next >= 100 ? "completed" : next > 0 ? "in progress" : "not started",
+        status: next > 0 ? "in progress" : "not started",
+        // 100% stays "in progress" until the close-out closes it
         ...(s.actualPct === 0 && next > 0 ? { actual_start: todayIso() } : {}),
       })
       .eq("id", s.id);
@@ -321,10 +322,12 @@ function DailyReport({
 }) {
   const qc = useQueryClient();
   const [stage, setStage] = useState(stages[0]?.code ?? "");
-  const [contractor, setContractor] = useState("");
-  const [trade, setTrade] = useState(TRADES[0]!);
-  const [headcount, setHeadcount] = useState(0);
-  const [rate, setRate] = useState(0);
+  type Gang = { trade: string; contractor: string; headcount: number; rate: number };
+  const blank = (): Gang => ({ trade: TRADES[0]!, contractor: "", headcount: 0, rate: 0 });
+  const [gangs, setGangs] = useState<Gang[]>([blank()]);
+  const setGang = (i: number, patch: Partial<Gang>) =>
+    setGangs(gangs.map((g, k) => (k === i ? { ...g, ...patch } : g)));
+  const booked = gangs.filter((g) => g.headcount > 0);
   const [done, setDone] = useState("");
   const [issues, setIssues] = useState("");
   const [weather, setWeather] = useState("Clear");
@@ -338,22 +341,24 @@ function DailyReport({
     setBusy(true);
     const date = todayIso();
     try {
-      if (headcount > 0) {
-        const { error } = await supabase.from("labour_entries").insert({
-          project_id: projectId,
-          work_date: date,
-          contractor,
-          trade,
-          headcount,
-          hours: 8,
-          day_rate: rate,
-          work_done: done,
-          area: stage,
-          stage_code: stage,
-          supervisor: who.name,
-          notes: `Weather: ${weather}${issues ? ` · Issues: ${issues}` : ""}`,
-          created_by: who.id,
-        });
+      if (booked.length) {
+        const { error } = await supabase.from("labour_entries").insert(
+          booked.map((g) => ({
+            project_id: projectId,
+            work_date: date,
+            contractor: g.contractor,
+            trade: g.trade,
+            headcount: g.headcount,
+            hours: 8,
+            day_rate: g.rate,
+            work_done: done,
+            area: stage,
+            stage_code: stage,
+            supervisor: who.name,
+            notes: `Weather: ${weather}${issues ? ` · Issues: ${issues}` : ""}`,
+            created_by: who.id,
+          })),
+        );
         if (error) throw error;
       }
       // Always post the report (work done, issues, labour) to the "Daily report" channel —
@@ -365,8 +370,10 @@ function DailyReport({
         body: [
           `Daily report ${date} · stage ${stage || "—"}`,
           `Weather: ${weather}`,
-          headcount
-            ? `Labour: ${headcount} (${trade}${contractor ? `, ${contractor}` : ""})`
+          booked.length
+            ? `Labour: ${booked.reduce((n, g) => n + g.headcount, 0)} · ${booked
+                .map((g) => `${g.trade} ${g.headcount}${g.contractor ? ` (${g.contractor})` : ""}`)
+                .join(", ")}`
             : "Labour: none booked today",
           `Done: ${done.trim()}`,
           issues.trim() ? `Issues / needs: ${issues.trim()}` : "",
@@ -393,7 +400,7 @@ function DailyReport({
       toast.success("Daily report saved");
       setDone("");
       setIssues("");
-      setHeadcount(0);
+      setGangs([blank()]);
       await qc.invalidateQueries({ queryKey: ["labour_entries", projectId] });
       await qc.invalidateQueries({ queryKey: ["team_messages"] });
     } catch (e) {
@@ -408,7 +415,12 @@ function DailyReport({
     <section className="rounded-2xl border border-border bg-card p-4">
       <h2 className="text-lg font-bold">Daily report</h2>
       <div className="mt-2 grid gap-2">
-        <select value={stage} onChange={(e) => setStage(e.target.value)} className={field}>
+        <select
+          value={stage}
+          aria-label="Stage"
+          onChange={(e) => setStage(e.target.value)}
+          className={field}
+        >
           <option value="">Stage…</option>
           {stages.map((s) => (
             <option key={s.id} value={s.code}>
@@ -416,46 +428,77 @@ function DailyReport({
             </option>
           ))}
         </select>
-        <div className="grid grid-cols-2 gap-2">
-          <select value={trade} onChange={(e) => setTrade(e.target.value)} className={field}>
-            {TRADES.map((t) => (
-              <option key={t}>{t}</option>
-            ))}
-          </select>
+        <label className="text-xs text-muted-foreground">
+          Weather
           <select value={weather} onChange={(e) => setWeather(e.target.value)} className={field}>
             {["Clear", "Cloudy", "Light rain", "Heavy rain", "Very hot"].map((t) => (
               <option key={t}>{t}</option>
             ))}
           </select>
-        </div>
-        <input
-          value={contractor}
-          onChange={(e) => setContractor(e.target.value)}
-          placeholder="Contractor"
-          className={field}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs text-muted-foreground">
-            Labour today
-            <input
-              type="number"
-              inputMode="numeric"
-              value={headcount || ""}
-              onChange={(e) => setHeadcount(Number(e.target.value) || 0)}
-              className={field}
-            />
-          </label>
-          <label className="text-xs text-muted-foreground">
-            Day rate ₹
-            <input
-              type="number"
-              inputMode="numeric"
-              value={rate || ""}
-              onChange={(e) => setRate(Number(e.target.value) || 0)}
-              className={field}
-            />
-          </label>
-        </div>
+        </label>
+        <p className="text-xs font-semibold text-muted-foreground">
+          Labour on site today: one row per gang. Leave the day rate empty for contract gangs.
+        </p>
+        {gangs.map((g, i) => (
+          <div key={i} className="grid grid-cols-2 gap-2 rounded-xl border border-border/70 p-2">
+            <label className="text-xs text-muted-foreground">
+              Trade
+              <select
+                value={g.trade}
+                onChange={(e) => setGang(i, { trade: e.target.value })}
+                className={field}
+              >
+                {TRADES.map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs text-muted-foreground">
+              Contractor
+              <input
+                value={g.contractor}
+                onChange={(e) => setGang(i, { contractor: e.target.value })}
+                className={field}
+              />
+            </label>
+            <label className="text-xs text-muted-foreground">
+              Workers
+              <input
+                type="number"
+                inputMode="numeric"
+                value={g.headcount || ""}
+                onChange={(e) => setGang(i, { headcount: Number(e.target.value) || 0 })}
+                className={field}
+              />
+            </label>
+            <label className="text-xs text-muted-foreground">
+              Day rate ₹ (daily-wage only)
+              <input
+                type="number"
+                inputMode="numeric"
+                value={g.rate || ""}
+                onChange={(e) => setGang(i, { rate: Number(e.target.value) || 0 })}
+                className={field}
+              />
+            </label>
+            {gangs.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setGangs(gangs.filter((_, k) => k !== i))}
+                className="col-span-2 text-left text-xs text-destructive underline"
+              >
+                Remove this gang
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setGangs([...gangs, blank()])}
+          className="h-10 rounded-xl border border-dashed border-primary text-sm font-semibold text-primary"
+        >
+          + Add another gang
+        </button>
         <textarea
           value={done}
           onChange={(e) => setDone(e.target.value)}

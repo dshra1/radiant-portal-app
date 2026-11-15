@@ -141,6 +141,13 @@ function Page() {
 
   // Editing an existing PO: load its header and lines once.
   const isManager = Boolean(access && (access.isAdmin || access.roles.includes("pm")));
+  // The site supervisor raises a material request; Purchase picks the vendor and the PM approves.
+  const isRequestOnly = Boolean(
+    access &&
+    !access.isAdmin &&
+    access.roles.length > 0 &&
+    access.roles.every((r) => r === "site_supervisor"),
+  );
   const editQuery = useQuery({
     queryKey: ["purchase_orders", "edit", editKey],
     enabled: Boolean(editKey && access?.userId),
@@ -330,7 +337,8 @@ function Page() {
   const save = useMutation({
     mutationFn: async (status: "draft" | "pending") => {
       const rows = items.filter((it) => it.description.trim() || n(it.quantity) > 0);
-      if (!vendor.vendor_name.trim()) throw new Error("Vendor name is required");
+      if (!vendor.vendor_name.trim() && !isRequestOnly) throw new Error("Vendor name is required");
+      if (isRequestOnly && !poStage) throw new Error("Pick the stage the material is for");
       if (rows.length === 0) throw new Error("Add at least one line item");
       if (editKey && !editing) throw new Error("The purchase order is still loading");
       if (editBlock) throw new Error(editBlock);
@@ -342,6 +350,7 @@ function Page() {
         project_name: project?.name ?? "",
         site_address: project?.location ?? "",
         ...vendor,
+        vendor_name: vendor.vendor_name.trim() || "To be chosen by Purchase",
         po_date: meta.po_date,
         delivery_date: meta.delivery_date || null,
         payment_terms: meta.payment_terms,
@@ -432,11 +441,18 @@ function Page() {
               onClick={() => save.mutate("pending")}
               className="inline-flex items-center gap-2 rounded bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
             >
-              <Send className="size-4" /> Submit for PM approval
+              <Send className="size-4" />{" "}
+              {isRequestOnly ? "Send material request to Purchase" : "Submit for PM approval"}
             </button>
           </div>
         </header>
 
+        {isRequestOnly && (
+          <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Material request: enter the stage, items and quantities. Purchase chooses the vendor and
+            rate, and the PM approves before anything is ordered.
+          </div>
+        )}
         {(editQuery.isError || editBlock) && (
           <div className="rounded border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive">
             {editQuery.isError ? (editQuery.error as Error).message : editBlock}

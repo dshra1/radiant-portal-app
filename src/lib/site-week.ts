@@ -32,6 +32,8 @@ export type CheckResult = {
   by: string;
   on: string;
   inspectionId?: string;
+  /** Where on site the check was made (footings, grid, flat). */
+  at?: string;
 };
 export type Evidence = { checks?: Record<string, CheckResult> };
 
@@ -56,6 +58,10 @@ export type PlanStage = {
   evidence: Evidence;
   closedAt: string | null;
 };
+
+/** A line in a stage's material list that is measured work, not something to buy. */
+export const isWorkQuantity = (what: string) =>
+  /\(work quantity\)|^excavation|^backfill|shuttering area|side shuttering/i.test(what);
 
 export type OrderItem = {
   code: string;
@@ -136,6 +142,8 @@ export function buildWeek(
   for (const s of open) {
     for (const m of s.materials) {
       if (!m.orderBy || toDay(m.orderBy) > anchor + 14) continue;
+      // Work quantities (excavation, backfill, shuttering area) are labour, not material to order.
+      if (isWorkQuantity(m.material)) continue;
       orders.push({
         code: s.code,
         stage: stageName(s.name),
