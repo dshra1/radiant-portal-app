@@ -1,0 +1,715 @@
+{
+ "project": "77:76",
+ "lines": [
+  {
+   "pkg": "Structure",
+   "code": "ST10",
+   "label": "Generic 18 SWG wire + site-cast cover blocks",
+   "make": "Iron & steel wholesaler",
+   "rate": 80,
+   "how": "Buy with the TMT order",
+   "check": "Annealed, soft; 18 SWG",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Structure",
+   "code": "ST07",
+   "label": "Pump for slabs only; columns and stairs by hoist + bucket",
+   "make": "",
+   "rate": 234.28,
+   "how": "Write into the RMC rate contract",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Masonry AAC",
+   "code": "MAA5",
+   "label": "Plant-direct AAC blocks, full trucks",
+   "make": "Biltech / Magicrete / HIL Aerocon",
+   "rate": 56,
+   "how": "Plant-direct, full-truck loads; breakage ≤ 2% written in",
+   "check": "IS 2185-3, density 551–650, ≥ 3.5 N/mm²",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Masonry AAC",
+   "code": "MAA7",
+   "label": "Plant-direct AAC blocks, same truck as the 8″",
+   "make": "Biltech / Magicrete / HIL Aerocon",
+   "rate": 36,
+   "how": "Same order as the 8″ blocks",
+   "check": "IS 2185-3",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Masonry AAC",
+   "code": "MAA8",
+   "label": "Block maker's own thin-bed adhesive",
+   "make": "Same make as the blocks",
+   "rate": 340,
+   "how": "Bundle with the block order",
+   "check": "Within shelf life",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Masonry AAC",
+   "code": "MAC4",
+   "label": "Fly-ash bricks, plastered both faces",
+   "make": "Local fly-ash brick plant",
+   "rate": 5.1,
+   "how": "Plant-direct",
+   "check": "IS 12894, ≥ 7.5 N/mm²",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Masonry AAC",
+   "code": "MAB1",
+   "label": "Bed-joint mesh only at sill / lintel level + every 4th course",
+   "make": "",
+   "rate": 7.5,
+   "how": "",
+   "check": "Structural engineer to agree",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Plaster paint WP",
+   "code": "PPC6",
+   "label": "PU membrane by an approved applicator (3 quotes)",
+   "make": "Dr Fixit / Fosroc / Sika",
+   "rate": 65,
+   "how": "Supply-and-apply with 10-year warranty",
+   "check": "Flood test 48 h",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Plaster paint WP",
+   "code": "PPC1",
+   "label": "Polymer cementitious, 2 coats",
+   "make": "Dr Fixit Pidifin 2K / Fosroc Brushbond RFX",
+   "rate": 36,
+   "how": "Same applicator as the terrace",
+   "check": "Ponding test",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Plaster paint WP",
+   "code": "PPC4",
+   "label": "Polymer cementitious, 2 coats",
+   "make": "Dr Fixit Pidifin 2K / Fosroc Brushbond RFX",
+   "rate": 36,
+   "how": "Same applicator as the terrace",
+   "check": "Ponding test",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Plaster paint WP",
+   "code": "PPB6",
+   "label": "Mid-range exterior emulsion",
+   "make": "Dulux Weathershield / Berger Weathercoat All Guard",
+   "rate": 11,
+   "how": "Depot rate through the painter's dealer",
+   "check": "Same primer, 2 coats",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Plaster paint WP",
+   "code": "PPB1",
+   "label": "Standard interior emulsion",
+   "make": "Berger Silk / Nerolac Impressions class",
+   "rate": 8,
+   "how": "Depot rate",
+   "check": "Primer + 2 coats",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Plaster paint WP",
+   "code": "PPB1",
+   "label": "Economy interior emulsion",
+   "make": "Asian Tractor Emulsion / Nerolac Beauty Smooth",
+   "rate": 5.5,
+   "how": "Depot rate",
+   "check": "Washable grade",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Plaster paint WP",
+   "code": "PPC8",
+   "label": "Keep PU membrane; heat-reflective paint instead of tiles",
+   "make": "",
+   "rate": 25,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Tiles",
+   "code": "TL01",
+   "label": "Factory-direct PGVT 800 × 1600, one batch",
+   "make": "Morbi factory (Asian Granito class)",
+   "rate": 38,
+   "how": "Factory-direct with freight to site",
+   "check": "Same batch, ≤ 0.5% water absorption",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Tiles",
+   "code": "TL08",
+   "label": "Factory-direct GVT / ceramic 600 × 1200",
+   "make": "Morbi factory (Johnson / Kajaria ceramic class)",
+   "rate": 34,
+   "how": "Same truck as the floor tiles",
+   "check": "Calibrated size",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Tiles",
+   "code": "TL14",
+   "label": "Project rate from the distributor",
+   "make": "MYK Laticrete / Ardex / Roff",
+   "rate": 520,
+   "how": "Bulk order direct",
+   "check": "C2TE to IS 15477",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Tiles",
+   "code": "TL14",
+   "label": "Cement bed instead of adhesive",
+   "make": "",
+   "rate": 260,
+   "how": "",
+   "check": "Not for 800 × 1600 slabs on walls",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Tiles",
+   "code": "TL12",
+   "label": "PPC cement for screed",
+   "make": "Dalmia DSP / Shree Rockstrong",
+   "rate": 325,
+   "how": "Stockist, full-truck rate",
+   "check": "IS 1489; ≤ 30 days old",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Tiles",
+   "code": "TL13",
+   "label": "M-sand, crusher-direct",
+   "make": "Local crusher",
+   "rate": 48,
+   "how": "By the tipper",
+   "check": "Washed, IS 383 Zone II",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Granite",
+   "code": "GR01",
+   "label": "Telangana absolute black",
+   "make": "Khammam–Karimnagar quarries",
+   "rate": 180,
+   "how": "Slab lot for all 10 kitchens",
+   "check": "Polished, 18–20 mm",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Terrace",
+   "code": "TR03",
+   "label": "Local black granite strips, machine-cut drip groove",
+   "make": "Granite yard",
+   "rate": 250,
+   "how": "Cut-to-size",
+   "check": "Drip groove; 30 mm",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Sanitary ware",
+   "code": "SN01",
+   "label": "Wall-hung WC (set target ₹8,815 with the cistern)",
+   "make": "Hindware / Parryware",
+   "rate": 5077,
+   "how": "Authorised dealer, project price for 44 sets",
+   "check": "Same rough-in for all",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Sanitary ware",
+   "code": "SN02",
+   "label": "Concealed cistern (set target ₹8,815 with the WC)",
+   "make": "Hindware / Parryware",
+   "rate": 3738,
+   "how": "Same dealer",
+   "check": "10-year cistern warranty",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Sanitary ware",
+   "code": "SN01",
+   "label": "Floor-mounted EWC (take with \"no concealed cistern\")",
+   "make": "Hindware / Parryware",
+   "rate": 8000,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Sanitary ware",
+   "code": "SN02",
+   "label": "No concealed cistern (with a floor-mounted EWC)",
+   "make": "",
+   "rate": 0,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Sanitary ware",
+   "code": "SN03",
+   "label": "Counter-top basin",
+   "make": "Cera / Hindware",
+   "rate": 3200,
+   "how": "Authorised dealer",
+   "check": "Vitreous china",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Sanitary ware",
+   "code": "SN04",
+   "label": "Counter-top basin",
+   "make": "Cera / Hindware",
+   "rate": 3200,
+   "how": "Authorised dealer",
+   "check": "Vitreous china",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Sanitary ware",
+   "code": "SN06",
+   "label": "SS 304 under-mount sink",
+   "make": "Nirali / Futura",
+   "rate": 8000,
+   "how": "Authorised dealer",
+   "check": "SS 304, 1 mm",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Sanitary ware",
+   "code": "SN14",
+   "label": "Basic bath accessory set",
+   "make": "",
+   "rate": 2500,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "CP fittings",
+   "code": "CP01",
+   "label": "Health faucet (≈ 30% less)",
+   "make": "Jaquar Continental",
+   "rate": 1833,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "CP fittings",
+   "code": "CP02",
+   "label": "Tall basin mixer",
+   "make": "Jaquar Continental / Hindware",
+   "rate": 3500,
+   "how": "Same dealer",
+   "check": "Brass body",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "CP fittings",
+   "code": "CP03",
+   "label": "Shower set (overhead + diverter)",
+   "make": "Jaquar Continental / Hindware / Parryware",
+   "rate": 4500,
+   "how": "Authorised dealer, project price",
+   "check": "Brass body, ceramic cartridge",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "CP fittings",
+   "code": "CP04",
+   "label": "Sink mixer with swivel spout",
+   "make": "Jaquar / Hindware",
+   "rate": 5000,
+   "how": "Same dealer",
+   "check": "Brass body",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "CP fittings",
+   "code": "CP05",
+   "label": "Long-body bib cock (≈ 30% less)",
+   "make": "Jaquar Continental",
+   "rate": 1050,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "CP fittings",
+   "code": "CP06",
+   "label": "Towel rod / ring (≈ 30% less)",
+   "make": "Jaquar Continental",
+   "rate": 1260,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "CP fittings",
+   "code": "CP09",
+   "label": "Bib cock with wall flange (≈ 30% less)",
+   "make": "Jaquar Continental",
+   "rate": 1050,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Drainage",
+   "code": "DR05",
+   "label": "SS square anti-cockroach floor trap 6″",
+   "make": "",
+   "rate": 900,
+   "how": "Hardware wholesaler",
+   "check": "SS 304",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Drainage",
+   "code": "DR07",
+   "label": "Generic SS / chrome bottle trap",
+   "make": "",
+   "rate": 700,
+   "how": "Hardware wholesaler",
+   "check": "Brass / SS",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Plumbing internal",
+   "code": "PI02",
+   "label": "CPVC SDR 11, distributor project rate",
+   "make": "Supreme / Astral / Prince",
+   "rate": 17,
+   "how": "One brand for pipe + fittings + solvent",
+   "check": "IS 15778 SDR 11",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "External services",
+   "code": "XS03",
+   "label": "CPVC mains, tender Supreme vs Ashirvad vs Astral",
+   "make": "Supreme / Ashirvad / Astral",
+   "rate": 105,
+   "how": "Project rate",
+   "check": "",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Electrical",
+   "code": "EL03",
+   "label": "FR-LSH copper wire",
+   "make": "KEI / RR Kabel",
+   "rate": 7.05,
+   "how": "Distributor project rate, coils by size",
+   "check": "IS 694, FR-LSH marking",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Electrical",
+   "code": "EL04",
+   "label": "FR-LSH copper wire",
+   "make": "KEI / RR Kabel",
+   "rate": 11.15,
+   "how": "Distributor project rate",
+   "check": "IS 694, FR-LSH marking",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Electrical",
+   "code": "EL05",
+   "label": "FR-LSH copper wire",
+   "make": "KEI / RR Kabel",
+   "rate": 16.31,
+   "how": "Distributor project rate",
+   "check": "IS 694, FR-LSH marking",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Electrical",
+   "code": "EL03",
+   "label": "FR copper wire, same make (≈ 8% less)",
+   "make": "Polycab FR",
+   "rate": 7.64,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Electrical",
+   "code": "EL04",
+   "label": "FR copper wire, same make (≈ 8% less)",
+   "make": "Polycab FR",
+   "rate": 12.07,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Electrical",
+   "code": "EL05",
+   "label": "FR copper wire, same make (≈ 8% less)",
+   "make": "Polycab FR",
+   "rate": 17.66,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Electrical",
+   "code": "EL11",
+   "label": "Modular switch + socket",
+   "make": "Anchor Roma / GM",
+   "rate": 123.58,
+   "how": "Distributor",
+   "check": "IS 3854 / IS 1293",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Electrical",
+   "code": "EL12",
+   "label": "Modular 16 A switch + socket",
+   "make": "Anchor Roma / GM",
+   "rate": 274.06,
+   "how": "Distributor",
+   "check": "IS 3854 / IS 1293",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Ceiling and AC",
+   "code": "CA02",
+   "label": "No cove LED; downlights in living / dining only",
+   "make": "",
+   "rate": 0,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Ceiling and AC",
+   "code": "CA01",
+   "label": "False ceiling in living, dining, foyer + toilets only (≈ half the area)",
+   "make": "Gyproc / USG Boral",
+   "rate": 42.38,
+   "how": "Rate spread over the full area",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Lift",
+   "code": "LF01",
+   "label": "6-person MRL, automatic doors, Hyderabad supplier",
+   "make": "Liftstrade / Johnson Lifts / Omega",
+   "rate": 940000,
+   "how": "3 quotes incl. 2-year AMC; same shaft drawing",
+   "check": "Gearless MRL, ARD, automatic doors",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Lift",
+   "code": "LF01",
+   "label": "MRL 6 persons, same shaft",
+   "make": "",
+   "rate": 1000000,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Railings and MS",
+   "code": "RM01",
+   "label": "MS powder-coated railing with SS top rail",
+   "make": "",
+   "rate": 750,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Railings and MS",
+   "code": "RM04",
+   "label": "Aluminium louvre / cement-board pipe box",
+   "make": "",
+   "rate": 250,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Common areas",
+   "code": "CA27",
+   "label": "Paint the parking soffit and beams (no false ceiling)",
+   "make": "",
+   "rate": 15,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Common areas",
+   "code": "CA08",
+   "label": "MS stair railing with SS handrail",
+   "make": "",
+   "rate": 1200,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Common areas",
+   "code": "CA07",
+   "label": "Texture paint instead of the granite dado",
+   "make": "",
+   "rate": 30,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Common areas",
+   "code": "CA38",
+   "label": "Soil beds with a 9″ brick kerb",
+   "make": "",
+   "rate": 500,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Facade",
+   "code": "FC01",
+   "label": "Texture paint + grooves in the fin zones; keep the portal frames",
+   "make": "",
+   "rate": 90,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Facade",
+   "code": "FC04",
+   "label": "Drop the frame LED; up-lights at the stilt only",
+   "make": "",
+   "rate": 95.95,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Site works",
+   "code": "SW01",
+   "label": "Precast RCC panel compound wall, painted",
+   "make": "Local precast yard",
+   "rate": 1300,
+   "how": "Supply + erect",
+   "check": "Footing per site",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Site works",
+   "code": "SW05",
+   "label": "Lawn + low planting only",
+   "make": "",
+   "rate": 80,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Site works",
+   "code": "SW06",
+   "label": "Watchman cabin in the stilt with 1 toilet",
+   "make": "",
+   "rate": 722.9,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Common electrical",
+   "code": "CE10",
+   "label": "20 kVA acoustic DG",
+   "make": "Kirloskar Green / Mahindra Powerol",
+   "rate": 400000,
+   "how": "OEM dealer, delivered + commissioned",
+   "check": "CPCB-IV+ compliant",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Common electrical",
+   "code": "CE12",
+   "label": "2 MP IP CCTV kit",
+   "make": "CP Plus / Hikvision",
+   "rate": 75000,
+   "how": "Security systems dealer",
+   "check": "PoE, 30-day recording",
+   "source": "Vendor & brand options (Nov 2026): Hyderabad dealer-to-retail (InfraLens, Aug 2026) and IndiaMART listings; target rate to quote against, confirm with 3 dealer quotes"
+  },
+  {
+   "pkg": "Common electrical",
+   "code": "CE13",
+   "label": "No transformer: LT supply from the pole (only if TSSPDCL agrees)",
+   "make": "",
+   "rate": 0,
+   "how": "",
+   "check": "Depends on TSSPDCL",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Provisional",
+   "code": "PV02",
+   "label": "Reuse the footing excavation for fill; buy only the balance",
+   "make": "",
+   "rate": 440,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Site establishment",
+   "code": "SE08",
+   "label": "SAHA PMC team supervises; one supervisor at ₹40k/month",
+   "make": "",
+   "rate": 40000,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Site establishment",
+   "code": "SE01",
+   "label": "Watchman living on site",
+   "make": "",
+   "rate": 15000,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  },
+  {
+   "pkg": "Site establishment",
+   "code": "SE09",
+   "label": "Civil contractor brings mixer, vibrators, hoist (in the ₹220 contract)",
+   "make": "",
+   "rate": 100000,
+   "how": "",
+   "check": "",
+   "source": "Cost-reduction options (D-130): PMC estimate until quoted"
+  }
+ ]
+}

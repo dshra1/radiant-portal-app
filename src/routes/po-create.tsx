@@ -96,10 +96,15 @@ function Page() {
   });
 
   const [projectId, setProjectId] = useState("");
+  // Follow the project open in the header until the user picks another one here
+  // (the header's project resolves a moment after the list, so don't lock in the first).
+  const [pickedHere, setPickedHere] = useState(false);
   useEffect(() => {
-    if (!projectId && projects?.[0])
-      setProjectId(projects.find((p) => p.id === activeProject.id)?.id ?? projects[0].id);
-  }, [projects, projectId, activeProject.id]);
+    if (pickedHere || !projects?.length) return;
+    const want = projects.find((p) => p.id === activeProject.id)?.id;
+    if (want && want !== projectId) setProjectId(want);
+    else if (!projectId && !activeProject.id) setProjectId(projects[0]!.id);
+  }, [projects, projectId, activeProject.id, pickedHere]);
   const project = projects?.find((p) => p.id === projectId) ?? null;
 
   const [poNumber, setPoNumber] = useState("");
@@ -171,6 +176,7 @@ function Page() {
     const d = editQuery.data;
     if (!d || loadedEdit === d.po.id) return;
     const po = d.po;
+    setPickedHere(true);
     setProjectId(po.project_id ?? "");
     setPoNumber(po.po_number);
     setPoStage(po.stage_code ?? "");
@@ -456,7 +462,10 @@ function Page() {
               <select
                 className={field}
                 value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
+                onChange={(e) => {
+                  setPickedHere(true);
+                  setProjectId(e.target.value);
+                }}
               >
                 {(projects ?? []).length === 0 && <option value="">No project yet</option>}
                 {(projects ?? []).map((p) => (

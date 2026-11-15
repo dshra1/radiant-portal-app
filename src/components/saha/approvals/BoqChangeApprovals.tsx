@@ -9,6 +9,7 @@ import {
   rejectChangeRequest,
   useApprovalGate,
   useChangeRequests,
+  useStaleChangeRequests,
   num,
   type ChangeRequest,
 } from "@/lib/approvals";
@@ -60,6 +61,24 @@ export function BoqChangeApprovals() {
 
   const requests = useChangeRequests(activeId, tab);
   const rows = requests.data ?? [];
+  const staleQuery = useStaleChangeRequests(activeId);
+  const stale = staleQuery.data ?? [];
+  const closeStale = useMutation({
+    mutationFn: async () => {
+      for (const r of stale)
+        await rejectChangeRequest(
+          r,
+          decider,
+          "Closed: this BOQ line no longer exists (the BOQ was re-imported or the line removed).",
+        );
+      return stale.length;
+    },
+    onSuccess: async (n) => {
+      setStatus(`${n} out-of-date request(s) closed.`);
+      await refresh();
+    },
+    onError: (e: Error) => setStatus(`Could not close them: ${e.message}`),
+  });
 
   const pendingSaving = useMemo(
     () => rows.filter((r) => r.status === "pending").reduce((s, r) => s + num(r.saving), 0),
@@ -105,6 +124,29 @@ export function BoqChangeApprovals() {
             the BOQ until the admin approves it.
           </p>
         </header>
+
+        {stale.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-warning/40 bg-warning-soft/40 p-4 text-sm">
+            <span>
+              <b>{stale.length}</b> older request(s) point at BOQ lines that no longer exist (the
+              BOQ was re-imported since). They cannot be applied and are not counted above.
+            </span>
+            {canDecide ? (
+              <button
+                type="button"
+                disabled={closeStale.isPending}
+                onClick={() => closeStale.mutate()}
+                className="ml-auto h-9 rounded border border-warning px-3 text-xs font-semibold text-foreground disabled:opacity-50"
+              >
+                {closeStale.isPending ? "Closing…" : "Close them"}
+              </button>
+            ) : (
+              <span className="ml-auto text-xs text-muted-foreground">
+                The admin can close them.
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

@@ -10,7 +10,7 @@ from pypdf import PdfReader
 
 folder = sys.argv[1] if len(sys.argv) > 1 else "."
 out = []
-for path in sorted(glob.glob(os.path.join(folder, "Cyber-Enclave-*.pdf"))):
+for path in sorted(glob.glob(os.path.join(folder, "Cyber-Enclave-*.pdf")) + glob.glob(os.path.join(folder, "77-76-*.pdf"))):
     name = re.sub(r"_\d+(\.pdf)$", r"\1", os.path.basename(path))
     if name != os.path.basename(path) and os.path.exists(os.path.join(folder, name)):
         continue  # keep the newest copy only

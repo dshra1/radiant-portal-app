@@ -193,14 +193,20 @@ function Page() {
     {
       label: "Material, machinery & misc (incl. GST)",
       value: crore(material),
-      sub: sft > 0 ? `${(material / sft).toFixed(0)} /sft` : "—",
+      sub:
+        sft > 0
+          ? `₹${(material / sft).toLocaleString("en-IN", { maximumFractionDigits: 0 })}/sft`
+          : "—",
       icon: PieChart,
       tone: "border-sky-500/40 bg-sky-500/5",
     },
     {
       label: "Labour (incl. GST)",
       value: crore(labour),
-      sub: sft > 0 ? `${(labour / sft).toFixed(0)} /sft` : "—",
+      sub:
+        sft > 0
+          ? `₹${(labour / sft).toLocaleString("en-IN", { maximumFractionDigits: 0 })}/sft`
+          : "—",
       icon: HardHat,
       tone: "border-amber-500/40 bg-amber-500/5",
     },
@@ -221,7 +227,7 @@ function Page() {
     {
       label: "Total project cost (incl. PMC fee)",
       value: crore(projectCost),
-      sub: `BOQ incl. GST + contingency + PMC fee${sft > 0 ? ` · ${(projectCost / sft).toFixed(0)} /sft` : ""}`,
+      sub: `BOQ incl. GST + contingency + PMC fee${sft > 0 ? ` · ₹${(projectCost / sft).toLocaleString("en-IN", { maximumFractionDigits: 0 })}/sft` : ""}`,
       icon: IndianRupee,
       tone: "border-primary/40 bg-primary/5",
     },
@@ -409,7 +415,9 @@ function Page() {
                     {inr(Number(value))}
                   </td>
                   <td className="px-4 py-3 text-right text-xs text-muted-foreground">
-                    {sft > 0 ? `${(Number(value) / sft).toFixed(0)} /sft` : "—"}
+                    {sft > 0
+                      ? `₹${(Number(value) / sft).toLocaleString("en-IN", { maximumFractionDigits: 0 })}/sft`
+                      : "—"}
                   </td>
                   <td className="px-4 py-3 text-right text-xs text-muted-foreground">
                     {projectCost > 0 ? `${((Number(value) / projectCost) * 100).toFixed(1)}%` : "—"}

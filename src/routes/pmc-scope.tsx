@@ -289,7 +289,7 @@ function Page() {
             {
               label: pmcFeeLabel(feePct, !feeSaved),
               value: inr(pmcFee),
-              sub: `on ${crore(inScopeCost)} excl. GST${sft > 0 ? ` · ${(pmcFee / sft).toFixed(2)} /sft` : ""}`,
+              sub: `on ${crore(inScopeCost)} excl. GST${sft > 0 ? ` · ₹${(pmcFee / sft).toLocaleString("en-IN", { maximumFractionDigits: 2 })}/sft` : ""}`,
             },
             {
               label: COMMITTED_LABEL,

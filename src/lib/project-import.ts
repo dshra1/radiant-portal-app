@@ -54,6 +54,36 @@ function fmtDate(iso: string | null) {
 // ---------- BOQ ----------
 
 export async function importBoq(projectId: string, rows: AppBoqRow[], log: Log) {
+  // Pending change requests point at line ids that the re-import replaces: remember
+  // each one's line (package, code, scope) so it can follow the new line.
+  const pend = await supabase
+    .from("boq_change_requests")
+    .select("id,boq_item_id")
+    .eq("project_id", projectId)
+    .eq("status", "pending");
+  const oldIds = [
+    ...new Set((pend.data ?? []).map((r) => r.boq_item_id).filter(Boolean)),
+  ] as string[];
+  const oldLines = oldIds.length
+    ? await supabase
+        .from("boq_items")
+        .select("id,package,item_code,work_scope,source")
+        .in("id", oldIds)
+    : {
+        data: [] as {
+          id: string;
+          package: string | null;
+          item_code: string;
+          work_scope: string | null;
+          source: string;
+        }[],
+      };
+  const lineKey = (l: { package?: string | null; item_code: string; work_scope?: string | null }) =>
+    `${l.package ?? ""}|${l.item_code}|${l.work_scope ?? ""}`;
+  const keyOfOld = new Map(
+    (oldLines.data ?? []).filter((l) => l.source === IMPORT_SOURCE).map((l) => [l.id, lineKey(l)]),
+  );
+
   const del = await supabase
     .from("boq_items")
     .delete()
@@ -88,6 +118,27 @@ export async function importBoq(projectId: string, rows: AppBoqRow[], log: Log) 
     n += part.length;
   }
   log(`BOQ: ${n} lines imported into the BOQ Engine.`);
+
+  if (keyOfOld.size) {
+    const fresh = await supabase
+      .from("boq_items")
+      .select("id,package,item_code,work_scope")
+      .eq("project_id", projectId)
+      .eq("source", IMPORT_SOURCE);
+    const newIdOf = new Map((fresh.data ?? []).map((l) => [lineKey(l), l.id]));
+    let moved = 0;
+    for (const r of pend.data ?? []) {
+      const k = r.boq_item_id ? keyOfOld.get(r.boq_item_id) : undefined;
+      const to = k ? newIdOf.get(k) : undefined;
+      if (!to) continue;
+      const up = await supabase
+        .from("boq_change_requests")
+        .update({ boq_item_id: to })
+        .eq("id", r.id);
+      if (!up.error) moved++;
+    }
+    if (moved) log(`Approvals: ${moved} pending request(s) moved to the re-imported lines.`);
+  }
 }
 
 // ---------- programme ----------

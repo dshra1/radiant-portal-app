@@ -429,7 +429,9 @@ function Page() {
               </div>
               <p className="mt-1 text-xl font-bold text-foreground">{inr(c.value)}</p>
               <p className="text-xs text-muted-foreground">
-                {sft > 0 ? `${(c.value / sft).toFixed(1)} /sft` : "—"}
+                {sft > 0
+                  ? `₹${(c.value / sft).toLocaleString("en-IN", { maximumFractionDigits: 1 })}/sft`
+                  : "—"}
               </p>
             </div>
           ))}

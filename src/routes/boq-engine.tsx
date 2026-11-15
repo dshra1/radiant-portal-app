@@ -10,7 +10,16 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { useSessionUser } from "@/lib/access";
+import { useAccess, useSessionUser } from "@/lib/access";
+import { useAiConfigured, AI_OFF_REASON } from "@/hooks/useAiStatus";
+import {
+  alternatesFor,
+  useAlternates,
+  type AlternateRow,
+  type OptimizerPick,
+} from "@/lib/boq-alternates";
+import { AlternatesBadge, AlternatesPanel } from "@/components/saha/boq/BoqAlternates";
+import { BoqOptimizer } from "@/components/saha/boq/BoqOptimizer";
 import {
   BOQ_TRADES,
   BOQ_SECTIONS,
@@ -37,6 +46,8 @@ import {
   Trash2,
   Upload,
   ShieldCheck,
+  Gauge,
+  ChevronDown,
 } from "lucide-react";
 
 function BrandMark({ brand }: { brand: string }) {
@@ -318,6 +329,13 @@ function Page() {
   const [imageBusyId, setImageBusyId] = useState<string>("");
   const [convertingUnits, setConvertingUnits] = useState(false);
   const { gateOn, canDecide, setApprovalMode, decider } = useApprovalGate();
+  const { access } = useAccess();
+  const canEditBoq = Boolean(access?.isAdmin || access?.roles.includes("pm"));
+  const aiOn = useAiConfigured();
+  const aiOff = aiOn === false;
+  const [openAlt, setOpenAlt] = useState<string>("");
+  const [showOptimizer, setShowOptimizer] = useState(false);
+  const [showMore, setShowMore] = useState(false);
 
   const suggestMutation = useMutation({
     mutationFn: async (itemIds: string[]) => {
@@ -427,6 +445,10 @@ function Page() {
   });
 
   const items = itemsQuery.data ?? [];
+  const altQuery = useAlternates(activeId);
+  const altOptions = altQuery.data?.options ?? [];
+  const flatPkg = altQuery.data?.flatPkg ?? {};
+  const altsOf = (it: BoqRow) => alternatesFor(it, altOptions, flatPkg);
 
   const refresh = async () => {
     await qc.invalidateQueries({ queryKey: ["boq_items", activeId] });
@@ -525,6 +547,48 @@ function Page() {
     },
     onError: (e: Error) => setStatus(`Save failed: ${e.message}`),
   });
+
+  /** Price a line at a saved alternate (through partner approval when it is on). */
+  const pickAlternate = async (item: BoqRow, alt: AlternateRow) => {
+    setApplyingAlternativeId(item.id);
+    try {
+      const result = await updateMutation.mutateAsync({
+        id: item.id,
+        patch: { rate: Number(alt.rate), brand: alt.make || item.brand },
+        source: "boq-alternate",
+        note: `Alternate: ${alt.label}${alt.make ? ` (${alt.make})` : ""}`,
+      });
+      setStatus(
+        result === "saved"
+          ? `${item.item_code}: “${alt.label}” saved at ${inr(Number(alt.rate))} / ${item.unit}.`
+          : `${item.item_code}: “${alt.label}” sent for approval — the BOQ line stays unchanged until it is approved.`,
+      );
+      if (result === "saved") setOpenAlt("");
+    } catch (e) {
+      setStatus(`Could not use the alternate: ${(e as Error).message}`);
+    } finally {
+      setApplyingAlternativeId("");
+    }
+  };
+
+  /** Optimizer: send or apply every ticked pick, one line at a time. */
+  const applyPicks = async (picks: OptimizerPick[]) => {
+    for (const p of picks) {
+      const row = items.find((x) => x.id === p.line.id);
+      if (!row) continue;
+      await updateMutation.mutateAsync({
+        id: row.id,
+        patch: { rate: Number(p.alt.rate), brand: p.alt.make || row.brand },
+        source: "boq-optimizer",
+        note: `Optimizer: ${p.alt.label}${p.alt.make ? ` (${p.alt.make})` : ""}`,
+      });
+    }
+    setStatus(
+      gateOn
+        ? `${picks.length} optimizer change(s) sent for approval.`
+        : `${picks.length} optimizer change(s) applied.`,
+    );
+  };
 
   const applyAlternative = async (item: BoqRow, option: BrandSuggestion["options"][number]) => {
     if (applyingAlternativeId) return;
@@ -974,10 +1038,9 @@ function Page() {
             BOQ Master Engine
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Pre-drawing AI cost estimation across all 25 construction trades — preliminaries and
-            earthwork through services, external development and handover — generated from the
-            project inputs you saved. Every line item is editable, deletable and exportable, and you
-            can upload your own complete trade list at any time.
+            {fromReport
+              ? "The project's bill of quantities from the PMC workbooks, package by package. Edit a line in place, compare its alternates, or open the optimizer to bring the total to the budget. Re-import the workbooks (Import PMC Workbooks) when they are revised."
+              : "Pre-drawing cost estimate across all 25 construction trades, generated from the project inputs you saved or uploaded as a CSV. Every line is editable, and each can carry alternates for the optimizer."}
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary-soft/40 px-3 py-2">
@@ -1032,49 +1095,40 @@ function Page() {
             </select>
 
             <button
-              disabled={!activeId || generateMutation.isPending || fromReport}
-              title={
-                fromReport
-                  ? "This project's BOQ comes from the PMC report workbooks. Re-import the workbooks to change it."
-                  : undefined
-              }
-              onClick={() => {
-                setStatus("Generating full stage-wise estimate with Saha AI…");
-                generateMutation.mutate();
-              }}
+              type="button"
+              disabled={items.length === 0}
+              onClick={() => setShowOptimizer((v) => !v)}
               className="inline-flex h-9 items-center gap-2 rounded bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
             >
-              <Sparkles className="size-4" />
-              {generateMutation.isPending
-                ? "Generating…"
-                : fromReport
-                  ? "Report BOQ loaded"
-                  : "Generate AI estimate"}
+              <Gauge className="size-4" />
+              {showOptimizer ? "Hide optimizer" : "Optimizer & alternates"}
             </button>
-
             <button
-              disabled={items.length === 0 || suggestMutation.isPending}
-              onClick={() => {
-                const top = [...items]
-                  .sort((a, b) => lineTotal(b) - lineTotal(a))
-                  .slice(0, 8)
-                  .map((it) => it.id);
-                setStatus("Scanning the highest-cost items for cheaper brand options…");
-                suggestMutation.mutate(top);
-              }}
-              className="inline-flex h-9 items-center gap-2 rounded border border-primary bg-primary-soft px-3 text-sm font-semibold text-primary disabled:opacity-50"
-            >
-              <Lightbulb className="size-4" />
-              {suggestMutation.isPending ? "Scanning…" : "Value-engineering scan"}
-            </button>
-
-            <button
-              disabled={!activeId}
-              onClick={() => fileRef.current?.click()}
+              disabled={items.length === 0}
+              onClick={() => exportCsv("all")}
               className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
             >
-              <Upload className="size-4" />
-              {uploadMutation.isPending ? "Uploading…" : "Upload BOQ (CSV)"}
+              <Download className="size-4" />
+              Export all
+            </button>
+            <button
+              disabled={!activeId}
+              onClick={() => addMutation.mutate()}
+              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+            >
+              <Plus className="size-4" />
+              Add line item
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMore((v) => !v)}
+              aria-expanded={showMore}
+              className="inline-flex h-9 items-center gap-1.5 rounded border border-input bg-background px-3 text-sm font-medium"
+            >
+              More
+              <ChevronDown
+                className={`size-4 transition-transform ${showMore ? "rotate-180" : ""}`}
+              />
             </button>
             <input
               ref={imageInputRef}
@@ -1098,71 +1152,113 @@ function Page() {
                 e.target.value = "";
               }}
             />
-
-            <button
-              onClick={() => download("saha-boq-template.csv", CSV_HEADERS.join(",") + "\n")}
-              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium"
-            >
-              <Download className="size-4" />
-              CSV template
-            </button>
-
-            <button
-              disabled={items.length === 0}
-              onClick={() => exportCsv("all")}
-              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
-            >
-              <Download className="size-4" />
-              Export all
-            </button>
-            <button
-              disabled={visible.length === 0}
-              onClick={() => exportCsv("view")}
-              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
-            >
-              <Download className="size-4" />
-              Export view
-            </button>
-            <button
-              disabled={!activeId}
-              onClick={() => addMutation.mutate()}
-              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
-            >
-              <Plus className="size-4" />
-              Add line item
-            </button>
-            <button
-              disabled={!activeId || labourRatesMutation.isPending}
-              onClick={() => labourRatesMutation.mutate()}
-              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
-            >
-              <Sparkles className="size-4" />
-              {labourRatesMutation.isPending ? "Pricing labour…" : "Labour market rates"}
-            </button>
-            <button
-              disabled={!activeId}
-              onClick={() => addLabourMutation.mutate()}
-              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
-            >
-              <Plus className="size-4" />
-              Add labour vendor
-            </button>
-            <button
-              onClick={refresh}
-              className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium"
-            >
-              <RefreshCw className="size-4" />
-              Refresh
-            </button>
           </div>
 
-          <textarea
-            value={brief}
-            onChange={(e) => setBrief(e.target.value)}
-            rows={2}
-            placeholder="Optional estimating instructions for the AI — e.g. include lift & DG set, exclude external compound wall, premium bathroom fittings…"
-            className="mt-3 w-full rounded border border-input bg-background p-2 text-sm"
-          />
+          {showMore && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-secondary/40 p-2">
+              {!fromReport && (
+                <button
+                  disabled={!activeId || generateMutation.isPending || aiOff}
+                  title={aiOff ? AI_OFF_REASON : undefined}
+                  onClick={() => {
+                    setStatus("Generating full stage-wise estimate with Saha AI…");
+                    generateMutation.mutate();
+                  }}
+                  className="inline-flex h-9 items-center gap-2 rounded border border-primary bg-primary-soft px-3 text-sm font-semibold text-primary disabled:opacity-50"
+                >
+                  <Sparkles className="size-4" />
+                  {generateMutation.isPending ? "Generating…" : "Generate AI estimate"}
+                </button>
+              )}
+              <button
+                disabled={items.length === 0 || suggestMutation.isPending || aiOff}
+                title={
+                  aiOff ? AI_OFF_REASON : "Ask the AI for brand ideas on the 8 highest-cost lines"
+                }
+                onClick={() => {
+                  const top = [...items]
+                    .sort((a, b) => lineTotal(b) - lineTotal(a))
+                    .slice(0, 8)
+                    .map((it) => it.id);
+                  setStatus("Scanning the highest-cost items for cheaper brand options…");
+                  suggestMutation.mutate(top);
+                }}
+                className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+              >
+                <Lightbulb className="size-4" />
+                {suggestMutation.isPending ? "Scanning…" : "AI brand ideas (top 8 lines)"}
+              </button>
+              <button
+                disabled={!activeId}
+                onClick={() => fileRef.current?.click()}
+                className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+              >
+                <Upload className="size-4" />
+                {uploadMutation.isPending ? "Uploading…" : "Upload BOQ (CSV)"}
+              </button>
+              <button
+                onClick={() => download("saha-boq-template.csv", CSV_HEADERS.join(",") + "\n")}
+                className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium"
+              >
+                <Download className="size-4" />
+                CSV template
+              </button>
+              <button
+                disabled={visible.length === 0}
+                onClick={() => exportCsv("view")}
+                className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+              >
+                <Download className="size-4" />
+                Export this view
+              </button>
+              <button
+                disabled={!activeId || labourRatesMutation.isPending || aiOff}
+                title={aiOff ? AI_OFF_REASON : undefined}
+                onClick={() => labourRatesMutation.mutate()}
+                className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+              >
+                <Sparkles className="size-4" />
+                {labourRatesMutation.isPending ? "Pricing labour…" : "Labour market rates (AI)"}
+              </button>
+              <button
+                disabled={!activeId}
+                onClick={() => addLabourMutation.mutate()}
+                className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-50"
+              >
+                <Plus className="size-4" />
+                Add labour vendor
+              </button>
+              <button
+                type="button"
+                disabled={metricRows.length === 0 || convertingUnits}
+                onClick={convertSqmToSft}
+                className="inline-flex h-9 items-center rounded border border-input bg-background px-3 text-sm font-medium disabled:opacity-40"
+                title="Converts quantity and rate together so each line amount stays exactly the same"
+              >
+                {convertingUnits
+                  ? "Converting…"
+                  : `Convert SQM → SFT${metricRows.length ? ` (${metricRows.length})` : ""}`}
+              </button>
+              <button
+                onClick={refresh}
+                className="inline-flex h-9 items-center gap-2 rounded border border-input bg-background px-3 text-sm font-medium"
+              >
+                <RefreshCw className="size-4" />
+                Refresh
+              </button>
+              {aiOff && <p className="w-full text-[12px] text-muted-foreground">{AI_OFF_REASON}</p>}
+            </div>
+          )}
+
+          {!fromReport && !aiOff && (
+            <textarea
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+              rows={2}
+              placeholder="Optional estimating instructions for the AI — e.g. include lift & DG set, exclude external compound wall, premium bathroom fittings…"
+              className="mt-3 w-full rounded border border-input bg-background p-2 text-sm"
+            />
+          )}
 
           {status && <p className="mt-2 text-sm font-medium text-primary">{status}</p>}
           {labourPreview && (
@@ -1279,6 +1375,23 @@ function Page() {
           />
         )}
 
+        {showOptimizer && activeId && (
+          <BoqOptimizer
+            projectId={activeId}
+            projectName={activeProject?.name ?? ""}
+            lines={items}
+            options={altOptions}
+            flatPkg={flatPkg}
+            currentIncl={projectCost}
+            budget={budget}
+            contingencyPct={contingencyPct}
+            canEdit={canEditBoq}
+            gateOn={gateOn}
+            onApply={applyPicks}
+            onClose={() => setShowOptimizer(false)}
+          />
+        )}
+
         <div className="rounded-xl border border-border bg-card p-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="label-caps text-muted-foreground">Works split</span>
@@ -1351,32 +1464,16 @@ function Page() {
               {stage === "ALL" ? "All line items" : stage} — {visible.length} shown
             </h2>
             <button
-              disabled={visible.length === 0 || suggestMutation.isPending}
+              type="button"
+              disabled={items.length === 0}
               onClick={() => {
-                const ids = [...visible]
-                  .sort((a, b) => lineTotal(b) - lineTotal(a))
-                  .slice(0, 10)
-                  .map((it) => it.id);
-                setStatus(
-                  `Price optimizer — finding cheaper brand options for ${stage === "ALL" ? "the highest-cost items" : stage}…`,
-                );
-                suggestMutation.mutate(ids);
+                setShowOptimizer(true);
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               className="ml-auto inline-flex h-8 items-center gap-1.5 rounded border border-primary bg-primary-soft px-3 text-[12px] font-semibold text-primary disabled:opacity-50"
             >
-              <Lightbulb className="size-3.5" />
-              {suggestMutation.isPending ? "Optimizing…" : "Price optimizer"}
-            </button>
-            <button
-              type="button"
-              disabled={metricRows.length === 0 || convertingUnits}
-              onClick={convertSqmToSft}
-              className="inline-flex h-8 items-center rounded border border-primary/40 bg-primary-soft px-3 text-[12px] font-semibold text-primary disabled:opacity-40"
-              title="Converts quantity and rate together so each line amount stays exactly the same"
-            >
-              {convertingUnits
-                ? "Converting…"
-                : `Convert SQM → SFT${metricRows.length ? ` (${metricRows.length})` : ""}`}
+              <Gauge className="size-3.5" />
+              Optimizer
             </button>
             <div className="text-right">
               <span className="text-sm font-semibold text-primary">{inr(viewTotal)}</span>
@@ -1558,14 +1655,24 @@ function Page() {
                               />
                             </div>
                           </div>
-                          <button
-                            onClick={() => suggestMutation.mutate([it.id])}
-                            disabled={suggestMutation.isPending}
-                            className="mt-1.5 inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold text-primary disabled:opacity-50"
-                          >
-                            <Lightbulb className="size-3" />
-                            {pendingIds.includes(it.id) ? "Finding…" : "Brand options"}
-                          </button>
+                          <div className="flex flex-wrap gap-1">
+                            <AlternatesBadge
+                              line={it}
+                              alts={altsOf(it)}
+                              open={openAlt === it.id}
+                              onToggle={() => setOpenAlt(openAlt === it.id ? "" : it.id)}
+                            />
+                            {aiOn && (
+                              <button
+                                onClick={() => suggestMutation.mutate([it.id])}
+                                disabled={suggestMutation.isPending}
+                                className="mt-1.5 inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[11px] font-semibold text-primary disabled:opacity-50"
+                              >
+                                <Lightbulb className="size-3" />
+                                {pendingIds.includes(it.id) ? "Finding…" : "AI ideas"}
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="px-2 py-2 text-xs text-muted-foreground">
                           <div className="max-w-[220px]">{it.notes}</div>
@@ -1613,6 +1720,22 @@ function Page() {
                           )}
                         </td>
                       </tr>
+                      {openAlt === it.id && (
+                        <tr className="border-t border-dashed border-primary/30 bg-primary-soft/20">
+                          <td colSpan={9} className="px-3 py-3">
+                            <AlternatesPanel
+                              projectId={activeId}
+                              line={it}
+                              alts={altsOf(it)}
+                              canEdit={canEditBoq}
+                              gateOn={gateOn}
+                              busy={Boolean(applyingAlternativeId)}
+                              onUse={(alt) => void pickAlternate(it, alt)}
+                              onClose={() => setOpenAlt("")}
+                            />
+                          </td>
+                        </tr>
+                      )}
                       {suggestions[it.id] && (
                         <tr className="border-t border-dashed border-primary/30 bg-primary-soft/30">
                           <td colSpan={9} className="px-3 py-3">

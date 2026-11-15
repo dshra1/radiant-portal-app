@@ -10,6 +10,11 @@ import { raiseChangeRequest, useApprovalGate } from "@/lib/approvals";
 import { useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
 import { boqTotals } from "@/lib/boq-totals";
+import { optimize, useAlternates } from "@/lib/boq-alternates";
+import { useAiConfigured } from "@/hooks/useAiStatus";
+
+/** A suggestion with the GST of its line, so the saving moves the incl.-GST total correctly. */
+type Swap = BudgetSwap & { gstPct?: number; source?: "alternate" | "ai" };
 
 export const Route = createFileRoute("/budget-fit")({
   head: () => ({
@@ -78,7 +83,9 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("boq_items")
-        .select("id,quantity,rate,gst_pct,item_code,package,package_no,work_scope")
+        .select(
+          "id,quantity,rate,gst_pct,item_code,package,package_no,work_scope,stage,description,unit,brand,supplier",
+        )
         .eq("project_id", activeId);
       if (error) throw error;
       return data ?? [];
@@ -100,18 +107,69 @@ function Page() {
   const sft = toNum(project?.saleable_sft) || toNum(project?.total_built_up_sft);
   const gap = budget > 0 ? liveTotal - budget : 0;
 
-  const [swaps, setSwaps] = useState<BudgetSwap[]>([]);
+  const [swaps, setSwaps] = useState<Swap[]>([]);
+  const alternates = useAlternates(activeId);
+  const aiOn = useAiConfigured();
+  const contingency =
+    project?.contingency_pct === undefined || project?.contingency_pct === null
+      ? 5
+      : toNum(project.contingency_pct);
+
+  /** Suggestions from the alternates saved on the BOQ lines (no AI needed). */
+  const fromAlternates = (): Swap[] => {
+    const lines = boqQuery.data ?? [];
+    const { ready } = optimize(
+      lines.map((l) => ({ ...l, stage: l.stage ?? "", description: l.description ?? "" })),
+      alternates.data?.options ?? [],
+      alternates.data?.flatPkg ?? {},
+      { currentIncl: liveTotal, target: 0, contingencyPct: contingency },
+    );
+    return ready.map((p) => {
+      const q = toNum(p.line.quantity);
+      const cur = toNum(p.line.rate);
+      const alt = toNum(p.alt.rate);
+      return {
+        itemId: p.line.id,
+        trade: p.line.package || p.line.stage,
+        description: `${p.line.item_code} · ${p.line.description}`,
+        unit: p.line.unit,
+        quantity: q,
+        currentBrand: p.line.brand,
+        currentRate: cur,
+        currentAmount: q * cur,
+        suggestedBrand: p.alt.make || p.alt.label,
+        suggestedSupplier: "",
+        suggestedRate: alt,
+        suggestedAmount: q * alt,
+        saving: q * (cur - alt),
+        tier: "Saved alternate",
+        why: p.alt.label + (p.alt.note ? ` — ${p.alt.note}` : ""),
+        gstPct:
+          p.line.gst_pct === null || p.line.gst_pct === undefined ? 18 : toNum(p.line.gst_pct),
+        source: "alternate",
+      };
+    });
+  };
 
   const scan = useMutation({
-    mutationFn: async () => runSuggest({ data: { projectId: activeId } }),
+    mutationFn: async () => {
+      const saved = fromAlternates();
+      if (!aiOn) return { swaps: saved, ai: false };
+      const res = await runSuggest({ data: { projectId: activeId } });
+      const have = new Set(saved.map((s) => s.itemId));
+      const ai: Swap[] = res.swaps
+        .filter((s) => !have.has(s.itemId))
+        .map((s) => ({ ...s, source: "ai" as const }));
+      return { swaps: [...saved, ...ai].sort((a, b) => b.saving - a.saving), ai: true };
+    },
     onMutate: () => setStatus("Looking for cheaper options across your biggest cost lines…"),
     onSuccess: (res) => {
       setSwaps(res.swaps);
       setPicked([]);
       setStatus(
         res.swaps.length === 0
-          ? "No credible cheaper option found for the biggest lines — rates already look tight."
-          : `${res.swaps.length} suggestions found. Nothing is changed until you apply.`,
+          ? "No cheaper option saved yet. Add alternates on the BOQ lines (BOQ Engine → Optimizer & alternates → Load them)."
+          : `${res.swaps.length} suggestions found${res.ai ? "" : " from the saved alternates"}. Nothing is changed until you apply.`,
       );
     },
     onError: (e: Error) => setStatus(`Could not get suggestions: ${e.message}`),
@@ -174,10 +232,12 @@ function Page() {
     onError: (e: Error) => setStatus(`Could not apply: ${e.message}`),
   });
 
+  // Savings on the same basis as the totals: incl. GST and contingency.
+  const inclOf = (s: Swap) => s.saving * (1 + (s.gstPct ?? 18) / 100) * (1 + contingency / 100);
   const pickedSaving = swaps
     .filter((s) => picked.includes(s.itemId))
-    .reduce((sum, s) => sum + s.saving, 0);
-  const allSaving = swaps.reduce((sum, s) => sum + s.saving, 0);
+    .reduce((sum, s) => sum + inclOf(s), 0);
+  const allSaving = swaps.reduce((sum, s) => sum + inclOf(s), 0);
   const projected = liveTotal - pickedSaving;
 
   return (
@@ -192,9 +252,9 @@ function Page() {
             Stay Within Budget
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            The app suggests cheaper but buildable items and brands for your highest-cost lines.
-            These are suggestions only — your entered quantities, units and rates stay untouched
-            until your partners approve the ones you send for sign-off.
+            Cheaper items and brands for your BOQ lines: first the alternates saved on the lines
+            (PMC vendor and cost-reduction options, dealer quotes you added), then AI ideas when AI
+            is switched on. Nothing changes until the ones you send are approved.
           </p>
         </header>
 
@@ -247,7 +307,9 @@ function Page() {
             </p>
             <p className="mt-1 text-xl font-bold text-foreground">{crore(liveTotal)}</p>
             <p className="text-xs text-muted-foreground">
-              {sft > 0 ? `${(liveTotal / sft).toFixed(0)} /sft` : "—"}
+              {sft > 0
+                ? `₹${(liveTotal / sft).toLocaleString("en-IN", { maximumFractionDigits: 0 })}/sft`
+                : "—"}
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-card p-4">
@@ -343,7 +405,7 @@ function Page() {
                     <th className="px-4 py-2">Suggested</th>
                     <th className="px-4 py-2 text-right">Rate now</th>
                     <th className="px-4 py-2 text-right">New rate</th>
-                    <th className="px-4 py-2 text-right">Saving</th>
+                    <th className="px-4 py-2 text-right">Saving incl. GST + cont.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -395,7 +457,7 @@ function Page() {
                           {inr(s.suggestedRate)}
                         </td>
                         <td className="px-4 py-3 text-right font-bold text-emerald-700">
-                          {inr(s.saving)}
+                          {inr(inclOf(s))}
                         </td>
                       </tr>
                     );

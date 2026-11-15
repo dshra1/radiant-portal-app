@@ -539,6 +539,11 @@
    ============================================================ */
 @media print {
   .no-print, aside, header nav { display: none !important; }
+  /* A page with a printable document prints only the document (no app chrome,
+     floating buttons or the on-screen list behind it). */
+  body:has(.po-print) * { visibility: hidden; }
+  body:has(.po-print) .po-print,
+  body:has(.po-print) .po-print * { visibility: visible; }
   .po-print { display: block !important; position: absolute; inset: 0; margin: 0; max-width: none; padding: 0; }
   .po-print .panel { border: none; box-shadow: none; }
   body { background: #fff; }

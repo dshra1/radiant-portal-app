@@ -6,6 +6,38 @@ import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess } from "@/lib/access";
+import { drawingFileName } from "@/lib/project-import";
+
+/**
+ * Documents known to be superseded or to have a later issue that is not in the
+ * register yet. Shown next to the file so nobody works from an old figure.
+ */
+const REVISION_NOTES: Record<string, { tone: "old" | "pending"; text: string }> = {
+  "Cyber-Enclave-Common-vs-Individual.pdf": {
+    tone: "old",
+    text: "Superseded: figures from before D-130. The current common / individual split is in Flats & Individual Works and the BOQ Engine.",
+  },
+  "Cyber-Enclave-Common-vs-Individual-VE.pdf": {
+    tone: "old",
+    text: "Superseded: figures from before D-130.",
+  },
+  "Cyber-Enclave-Plumbing-Drawings-4BHK-Floors-1-2.pdf": {
+    tone: "pending",
+    text: "D-132 redraw of P-05 / P-06 (tanks on 10 ft staging, no boosters) is not uploaded yet.",
+  },
+  "Cyber-Enclave-Plumbing-Drawings-3BHK-Floors-3-5.pdf": {
+    tone: "pending",
+    text: "D-132 redraw of P-05 / P-06 (tanks on 10 ft staging, no boosters) is not uploaded yet.",
+  },
+  "Cyber-Enclave-Owners-Handover-Pack.pdf": {
+    tone: "pending",
+    text: "The D-132 re-issue (OH-01 to OH-21, current cost pages) is not uploaded yet.",
+  },
+  "Cyber-Enclave-Programme-and-Flow.pdf": {
+    tone: "pending",
+    text: "The D-132 re-print (PR-01 to PR-09) is not uploaded yet; the programme in the app is current.",
+  },
+};
 
 export const Route = createFileRoute("/drawing-decipher")({
   head: () => ({
@@ -57,7 +89,7 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase.storage
         .from(BUCKET)
-        .list(project.id, { limit: 200, sortBy: { column: "created_at", order: "desc" } });
+        .list(project.id, { limit: 500, sortBy: { column: "updated_at", order: "desc" } });
       if (error) throw error;
       return (data ?? []).filter((f) => f.name !== ".emptyFolderPlaceholder");
     },
@@ -70,8 +102,12 @@ function Page() {
   const uploadMutation = useMutation({
     mutationFn: async (list: FileList) => {
       for (const file of Array.from(list)) {
-        const path = `${project.id}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
-        const { error } = await supabase.storage.from(BUCKET).upload(path, file);
+        // Same name = new revision of the same document: it replaces the old upload, so
+        // the stage drawings, photo checks and owner packs open the current revision.
+        const path = `${project.id}/${drawingFileName(file.name)}`;
+        const { error } = await supabase.storage
+          .from(BUCKET)
+          .upload(path, file, { upsert: true, contentType: file.type || undefined });
         if (error) throw error;
       }
       return list.length;
@@ -112,12 +148,15 @@ function Page() {
       return;
     }
     const csv = [
-      ["File", "Size", "Uploaded", "Type"].map(esc).join(","),
+      ["File", "Size", "Uploaded", "Revision note", "Type"].map(esc).join(","),
       ...files.map((f) =>
         [
           f.name,
           fmtSize(Number(f.metadata?.["size"] ?? 0)),
-          f.created_at ? new Date(f.created_at).toLocaleString("en-IN") : "—",
+          (f.updated_at ?? f.created_at)
+            ? new Date((f.updated_at ?? f.created_at)!).toLocaleString("en-IN")
+            : "—",
+          REVISION_NOTES[f.name]?.text ?? "",
           String(f.metadata?.["mimetype"] ?? "—"),
         ]
           .map(esc)
@@ -202,9 +241,12 @@ function Page() {
             },
             {
               label: "Latest upload",
-              value: filesQuery.data?.[0]?.created_at
-                ? new Date(filesQuery.data[0].created_at!).toLocaleDateString("en-IN")
-                : "—",
+              value:
+                (filesQuery.data?.[0]?.updated_at ?? filesQuery.data?.[0]?.created_at)
+                  ? new Date(
+                      (filesQuery.data?.[0]?.updated_at ?? filesQuery.data?.[0]?.created_at)!,
+                    ).toLocaleDateString("en-IN")
+                  : "—",
             },
           ].map((c) => (
             <div
@@ -253,10 +295,24 @@ function Page() {
                     <tr key={f.name} className="border-b border-border/60">
                       <td className="px-4 py-2 font-medium text-foreground">
                         {f.name.replace(/^\d+-/, "")}
+                        {REVISION_NOTES[f.name] && (
+                          <div
+                            className={`mt-0.5 text-[11px] font-semibold ${REVISION_NOTES[f.name]!.tone === "old" ? "text-destructive" : "text-warning"}`}
+                          >
+                            {REVISION_NOTES[f.name]!.tone === "old"
+                              ? "Superseded · "
+                              : "Later issue pending · "}
+                            <span className="font-normal text-muted-foreground">
+                              {REVISION_NOTES[f.name]!.text}
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-2">{fmtSize(Number(f.metadata?.["size"] ?? 0))}</td>
                       <td className="px-4 py-2">
-                        {f.created_at ? new Date(f.created_at).toLocaleString("en-IN") : "—"}
+                        {(f.updated_at ?? f.created_at)
+                          ? new Date((f.updated_at ?? f.created_at)!).toLocaleString("en-IN")
+                          : "—"}
                       </td>
                       <td className="px-4 py-2">
                         <div className="flex justify-end gap-2">

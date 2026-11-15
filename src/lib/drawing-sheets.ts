@@ -43,6 +43,20 @@ const PLAN = (bhk: 4 | 3) =>
 const STRUCT = "Cyber-Enclave-Stage-Reinforcement-Material-Drawings.pdf";
 const FACADE = "Cyber-Enclave-Facade-Design-D128.pdf";
 const HANDOVER = "Cyber-Enclave-Owners-Handover-Pack.pdf";
+const SUMP = "77-76-Sump-Drawings-SU.pdf";
+const SE_HANDOVER = (bhk: 4 | 3) =>
+  bhk === 4
+    ? "Cyber-Enclave-Structural-Engineer-Handover-4BHK-Floors-1-2.pdf"
+    : "Cyber-Enclave-Structural-Engineer-Handover-3BHK-Floors-3-5.pdf";
+const STEEL_ORDER = "Cyber-Enclave-Steel-Order-Schedule.pdf";
+const OVERLAY = "Cyber-Enclave-3BHK-over-4BHK-Overlay.pdf";
+const SCHEDULES = "Cyber-Enclave-Project-Schedules-D118.pdf";
+const PAINT = "Cyber-Enclave-Paint-Schedule-by-Flat.pdf";
+const COMMON_AREAS = "Cyber-Enclave-Common-Areas.pdf";
+const COMMON_AREAS_CA01 = "Cyber-Enclave-Common-Areas-CA01.pdf";
+const TERRACE = "Cyber-Enclave-Terrace-Drainage.pdf";
+const FACADE_BASE = "Cyber-Enclave-Facade-Base-Drawings.pdf";
+const SECURITY = "Cyber-Enclave-Security-Access-Options.pdf";
 
 export function shortFile(file: string) {
   return file
@@ -127,6 +141,18 @@ export function sheetsForStage(
   );
   const structural = ["F", "C", "S", "T", "G", "M"].includes(prefix);
   if (structural) add("Structure and material (stage sheets)", named);
+  const n = Number(/\d+/.exec(code)?.[0] ?? 0);
+  const hasSteel = ["C", "S", "T", "G"].includes(prefix) || (prefix === "F" && n >= 3 && n <= 6);
+  if (hasSteel) add("Steel order schedule (bars to order by stage)", inFile(STEEL_ORDER));
+  if (["C", "S"].includes(prefix)) {
+    // Slabs and columns of a floor: that floor type's structural-engineer pack.
+    const seBhk = Number.isFinite(fl) && fl >= 3 ? 3 : 4;
+    add(
+      `Structural engineer's handover (sleeves, new loads) · ${seBhk === 4 ? "4BHK floors 1–2" : "3BHK floors 3–5"}`,
+      inFile(SE_HANDOVER(seBhk)),
+    );
+  }
+  if (code === "F06") add("Underground sump SU-00 … SU-09 (Rev P1, preliminary)", inFile(SUMP));
 
   if (["EA", "EW", "ES", "EF"].includes(prefix)) {
     const f = ELEC(bhk);
@@ -161,7 +187,27 @@ export function sheetsForStage(
   if (["M", "DF", "WN", "PL", "TL", "FC", "PU", "PR", "FP", "DS", "SN"].includes(prefix)) {
     add(`Floor plan · ${floorLabel}`, inFile(PLAN(bhk)));
   }
-  if (prefix === "FA") add("Facade design (D-128)", inFile(FACADE));
+  if (prefix === "M" && bhk === 3) add("3BHK walls over the 4BHK structure", inFile(OVERLAY));
+  if (["M", "DF", "WN", "DS"].includes(prefix))
+    add(
+      "Room, door and window schedules (D-118)",
+      titled(SCHEDULES, new RegExp(`Room schedule · ${bhk}BHK|Doors and windows`, "i")),
+    );
+  if (["PU", "PR", "FP"].includes(prefix)) add("Paint schedule by flat", inFile(PAINT));
+  if (["PA", "PS", "PC"].includes(prefix))
+    add("Toilet fittings schedule (D-118)", titled(SCHEDULES, /Toilets/i));
+  if (prefix === "FA") {
+    add("Facade design (D-128)", inFile(FACADE));
+    add("Facade base drawings and measurements", inFile(FACADE_BASE));
+  }
+  if (prefix === "TR") add("Terrace drainage and falls", inFile(TERRACE));
+  if (prefix === "CO") {
+    add("Common areas: core plans and quantities", inFile(COMMON_AREAS));
+    add("Common areas: core dimensions and take-off (CA01)", inFile(COMMON_AREAS_CA01));
+  }
+  if (prefix === "SW") add("Security and access arrangement", inFile(SECURITY));
+  if (prefix === "LF")
+    add("Lift wall elevation and stair section", titled(COMMON_AREAS, /LIFT WALL/));
   if (code === "WS1") add("Water system", titled(PLUMB(4), /WATER SYSTEM/));
   if (["EX", "SW"].includes(prefix)) {
     add("External and common electrical", titled(ELEC(4), /EXTERNAL AND COMMON/));

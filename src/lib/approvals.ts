@@ -153,25 +153,65 @@ export async function rejectChangeRequest(
   if (error) throw error;
 }
 
-/** Loads change requests for a project, newest first. */
+/**
+ * Loads change requests for a project, newest first. Pending requests whose BOQ line
+ * no longer exists (the BOQ was re-imported or the line deleted) are left out: they
+ * can never be applied, so they must not count as waiting or as savings. They are
+ * listed by useStaleChangeRequests so the admin can close them.
+ */
 export function useChangeRequests(projectId: string, status?: "pending" | "decided") {
   return useQuery({
     queryKey: ["boq_change_requests", projectId, status ?? "all"],
     enabled: Boolean(projectId),
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      let q = supabase
-        .from("boq_change_requests")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false });
-      if (status === "pending") q = q.eq("status", "pending");
-      if (status === "decided") q = q.neq("status", "pending");
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as unknown as ChangeRequest[];
+      const all = await loadRequests(projectId, status);
+      if (status !== "pending") return all;
+      const live = await liveItemIds(projectId);
+      return all.filter((r) => !r.boq_item_id || live.has(r.boq_item_id));
     },
   });
+}
+
+/** Pending requests that point at a BOQ line that no longer exists. */
+export function useStaleChangeRequests(projectId: string) {
+  return useQuery({
+    queryKey: ["boq_change_requests", projectId, "stale"],
+    enabled: Boolean(projectId),
+    queryFn: async () => {
+      const all = await loadRequests(projectId, "pending");
+      const live = await liveItemIds(projectId);
+      return all.filter((r) => r.boq_item_id && !live.has(r.boq_item_id));
+    },
+  });
+}
+
+async function loadRequests(projectId: string, status?: "pending" | "decided") {
+  let q = supabase
+    .from("boq_change_requests")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+  if (status === "pending") q = q.eq("status", "pending");
+  if (status === "decided") q = q.neq("status", "pending");
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as unknown as ChangeRequest[];
+}
+
+async function liveItemIds(projectId: string) {
+  const ids = new Set<string>();
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from("boq_items")
+      .select("id")
+      .eq("project_id", projectId)
+      .range(from, from + 999);
+    if (error) throw error;
+    for (const r of data ?? []) ids.add(r.id);
+    if ((data ?? []).length < 1000) break;
+  }
+  return ids;
 }
 
 const STORAGE_KEY = "saha.boq.approvalMode";

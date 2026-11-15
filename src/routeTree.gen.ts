@@ -35,6 +35,7 @@ import { Route as FieldConsoleRouteImport } from './routes/field-console'
 import { Route as FinancialForecastRouteImport } from './routes/financial-forecast'
 import { Route as FinancialIngestionRouteImport } from './routes/financial-ingestion'
 import { Route as FlatsRouteImport } from './routes/flats'
+import { Route as InstallRouteImport } from './routes/install'
 import { Route as InventoryControlRouteImport } from './routes/inventory-control'
 import { Route as LandownersInvestmentRouteImport } from './routes/landowners-investment'
 import { Route as ManualRouteImport } from './routes/manual'
@@ -60,7 +61,6 @@ import { Route as QaInspectionRouteImport } from './routes/qa-inspection'
 import { Route as QualityRouteImport } from './routes/quality'
 import { Route as ReplanRouteImport } from './routes/replan'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as InstallRouteImport } from './routes/install'
 import { Route as RolesAccessRouteImport } from './routes/roles-access'
 import { Route as ScopeBriefRouteImport } from './routes/scope-brief'
 import { Route as SiteExecutionRouteImport } from './routes/site-execution'
@@ -208,6 +208,11 @@ const FlatsRoute = FlatsRouteImport.update({
   path: '/flats',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InstallRoute = InstallRouteImport.update({
+  id: '/install',
+  path: '/install',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InventoryControlRoute = InventoryControlRouteImport.update({
   id: '/inventory-control',
   path: '/inventory-control',
@@ -333,11 +338,6 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InstallRoute = InstallRouteImport.update({
-  id: '/install',
-  path: '/install',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RolesAccessRoute = RolesAccessRouteImport.update({
   id: '/roles-access',
   path: '/roles-access',
@@ -446,6 +446,7 @@ export interface FileRoutesByFullPath {
   '/financial-forecast': typeof FinancialForecastRoute
   '/financial-ingestion': typeof FinancialIngestionRoute
   '/flats': typeof FlatsRoute
+  '/install': typeof InstallRoute
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/manual': typeof ManualRoute
@@ -471,7 +472,6 @@ export interface FileRoutesByFullPath {
   '/quality': typeof QualityRoute
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/install': typeof InstallRoute
   '/roles-access': typeof RolesAccessRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
@@ -516,6 +516,7 @@ export interface FileRoutesByTo {
   '/financial-forecast': typeof FinancialForecastRoute
   '/financial-ingestion': typeof FinancialIngestionRoute
   '/flats': typeof FlatsRoute
+  '/install': typeof InstallRoute
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/manual': typeof ManualRoute
@@ -541,7 +542,6 @@ export interface FileRoutesByTo {
   '/quality': typeof QualityRoute
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/install': typeof InstallRoute
   '/roles-access': typeof RolesAccessRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
@@ -587,6 +587,7 @@ export interface FileRoutesById {
   '/financial-forecast': typeof FinancialForecastRoute
   '/financial-ingestion': typeof FinancialIngestionRoute
   '/flats': typeof FlatsRoute
+  '/install': typeof InstallRoute
   '/inventory-control': typeof InventoryControlRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/manual': typeof ManualRoute
@@ -612,7 +613,6 @@ export interface FileRoutesById {
   '/quality': typeof QualityRoute
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/install': typeof InstallRoute
   '/roles-access': typeof RolesAccessRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
@@ -659,6 +659,7 @@ export interface FileRouteTypes {
     | '/financial-forecast'
     | '/financial-ingestion'
     | '/flats'
+    | '/install'
     | '/inventory-control'
     | '/landowners-investment'
     | '/manual'
@@ -684,7 +685,6 @@ export interface FileRouteTypes {
     | '/quality'
     | '/replan'
     | '/reset-password'
-    | '/install'
     | '/roles-access'
     | '/scope-brief'
     | '/site-execution'
@@ -729,6 +729,7 @@ export interface FileRouteTypes {
     | '/financial-forecast'
     | '/financial-ingestion'
     | '/flats'
+    | '/install'
     | '/inventory-control'
     | '/landowners-investment'
     | '/manual'
@@ -754,7 +755,6 @@ export interface FileRouteTypes {
     | '/quality'
     | '/replan'
     | '/reset-password'
-    | '/install'
     | '/roles-access'
     | '/scope-brief'
     | '/site-execution'
@@ -799,6 +799,7 @@ export interface FileRouteTypes {
     | '/financial-forecast'
     | '/financial-ingestion'
     | '/flats'
+    | '/install'
     | '/inventory-control'
     | '/landowners-investment'
     | '/manual'
@@ -824,7 +825,6 @@ export interface FileRouteTypes {
     | '/quality'
     | '/replan'
     | '/reset-password'
-    | '/install'
     | '/roles-access'
     | '/scope-brief'
     | '/site-execution'
@@ -870,6 +870,7 @@ export interface RootRouteChildren {
   FinancialForecastRoute: typeof FinancialForecastRoute
   FinancialIngestionRoute: typeof FinancialIngestionRoute
   FlatsRoute: typeof FlatsRoute
+  InstallRoute: typeof InstallRoute
   InventoryControlRoute: typeof InventoryControlRoute
   LandownersInvestmentRoute: typeof LandownersInvestmentRoute
   ManualRoute: typeof ManualRoute
@@ -895,7 +896,6 @@ export interface RootRouteChildren {
   QualityRoute: typeof QualityRoute
   ReplanRoute: typeof ReplanRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  InstallRoute: typeof InstallRoute
   RolesAccessRoute: typeof RolesAccessRoute
   ScopeBriefRoute: typeof ScopeBriefRoute
   SiteExecutionRoute: typeof SiteExecutionRoute
@@ -1098,6 +1098,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FlatsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/install': {
+      id: '/install'
+      path: '/install'
+      fullPath: '/install'
+      preLoaderRoute: typeof InstallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inventory-control': {
       id: '/inventory-control'
       path: '/inventory-control'
@@ -1273,13 +1280,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/install': {
-      id: '/install'
-      path: '/install'
-      fullPath: '/install'
-      preLoaderRoute: typeof InstallRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/roles-access': {
       id: '/roles-access'
       path: '/roles-access'
@@ -1422,6 +1422,7 @@ const rootRouteChildren: RootRouteChildren = {
   FinancialForecastRoute: FinancialForecastRoute,
   FinancialIngestionRoute: FinancialIngestionRoute,
   FlatsRoute: FlatsRoute,
+  InstallRoute: InstallRoute,
   InventoryControlRoute: InventoryControlRoute,
   LandownersInvestmentRoute: LandownersInvestmentRoute,
   ManualRoute: ManualRoute,
@@ -1447,7 +1448,6 @@ const rootRouteChildren: RootRouteChildren = {
   QualityRoute: QualityRoute,
   ReplanRoute: ReplanRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  InstallRoute: InstallRoute,
   RolesAccessRoute: RolesAccessRoute,
   ScopeBriefRoute: ScopeBriefRoute,
   SiteExecutionRoute: SiteExecutionRoute,
@@ -1468,3 +1468,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
