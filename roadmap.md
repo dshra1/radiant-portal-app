@@ -77,7 +77,7 @@
   - [x] Manual upload fallback into the private `boq-images` bucket + "Search online" link
 
 - [ ] BOQ: order trades in construction stage sequence (not alphabetical)
-- [ ] BOQ: per-trade Price optimizer button on every trade view
+- [x] BOQ: optimizer (saved alternates, target budget, per package / works scope) — works without AI (2026-11-16)
 
 ## Brands (Sep 5)
 - [x] Brand Preferences page before BOQ (/brand-preferences): per-material make/series/supplier/notes saved on the project, fed as mandatory brands into the AI estimate
@@ -145,3 +145,14 @@
 - [x] Typecheck clean, build OK; published to https://radiant-portal-app.lovable.app (2026-09-21)
 
 - [ ] Import uploaded steel/plumbing/electrical details into BOQ (waiting on user files)
+
+## 2026-11-16 — Page check and corrections
+- [x] 77:76 data re-imported at D-132 (BOQ ₹7.51 Cr incl. GST + 5%; common ₹5.16 Cr; per flat ₹24.74 / 25.16 / 22.31 / 22.72 L) + 15 newer PDFs
+- [x] BOQ alternates per line (flat_options; individual ones also offered in the Owner's Portal) + 71 PMC alternates loaded for 77:76
+- [x] Budget Fit uses saved alternates when AI is off; AI buttons explain the missing Gemini key
+- [x] Stale approval requests (deleted lines) no longer counted; admin can close them
+- [x] Drawing register: same-name upload replaces the revision; superseded / pending-revision notes; new PDFs linked to stages
+- [ ] Set GOOGLE_GENERATIVE_AI_API_KEY in the Cloudflare worker (AI features off until then)
+- [ ] Upload the D-132 plumbing redraw, owners' handover pack and programme re-print when available
+- [ ] Department tenders (src/data/department-tenders.json) still pre-D-130 (gypsum plaster, boosters)
+- [ ] Project settings: 77:76 slab 24,188 sft, ₹220 labour basis, brand list (punning, no boosters); 78:93 cellar + stilt, AAC, slab 30,545 sft

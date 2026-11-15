@@ -15,11 +15,11 @@ import { drawingFileName } from "@/lib/project-import";
 const REVISION_NOTES: Record<string, { tone: "old" | "pending"; text: string }> = {
   "Cyber-Enclave-Common-vs-Individual.pdf": {
     tone: "old",
-    text: "Superseded: figures from before D-130. The current common / individual split is in Flats & Individual Works and the BOQ Engine.",
+    text: "Figures from before D-130. The current common / individual split is in Flats & Individual Works and the BOQ Engine.",
   },
   "Cyber-Enclave-Common-vs-Individual-VE.pdf": {
     tone: "old",
-    text: "Superseded: figures from before D-130.",
+    text: "Figures from before D-130.",
   },
   "Cyber-Enclave-Plumbing-Drawings-4BHK-Floors-1-2.pdf": {
     tone: "pending",
