@@ -115,14 +115,17 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
 /** Count of notifications unread for this user (own addressed items + team-wide not yet read). */
 export async function countUnreadNotifications(
   userId: string,
-  opts: { categories?: string[]; addressedOnly?: boolean } = {},
+  opts: { categories?: string[]; addressedOnly?: boolean; projectId?: string | undefined } = {},
 ): Promise<number> {
+  // Only the open project's notices (and workspace-wide ones without a project).
+  const inProject = opts.projectId ? `project_id.eq.${opts.projectId},project_id.is.null` : "";
   let own = supabase
     .from("notifications")
     .select("id", { count: "exact", head: true })
     .eq("recipient_id", userId)
     .eq("is_read", false);
   if (opts.categories) own = own.in("category", opts.categories);
+  if (inProject) own = own.or(inProject);
   const { count: ownCount, error } = await own;
   if (error) throw error;
   if (opts.addressedOnly) return ownCount ?? 0;
@@ -134,6 +137,7 @@ export async function countUnreadNotifications(
     .order("created_at", { ascending: false })
     .limit(TEAM_WIDE_WINDOW);
   if (opts.categories) team = team.in("category", opts.categories);
+  if (inProject) team = team.or(inProject);
   const [{ data: teamRows, error: tErr }, readIds] = await Promise.all([
     team,
     fetchReadIds(userId),
@@ -159,7 +163,7 @@ export function useNotificationReadIds(userId: string | null | undefined) {
  */
 export function useUnreadNotificationCount(
   userId: string | null | undefined,
-  opts: { categories?: string[]; addressedOnly?: boolean } = {},
+  opts: { categories?: string[]; addressedOnly?: boolean; projectId?: string | undefined } = {},
 ) {
   return useQuery({
     queryKey: [
@@ -168,6 +172,7 @@ export function useUnreadNotificationCount(
       userId,
       opts.categories?.join(",") ?? "",
       Boolean(opts.addressedOnly),
+      opts.projectId ?? "",
     ],
     enabled: Boolean(userId),
     queryFn: () => countUnreadNotifications(userId!, opts),

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Check, CheckCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
+import { useActiveProject } from "@/hooks/useActiveProject";
 import { cn } from "@/lib/utils";
 import {
   isUnreadFor,
@@ -23,6 +24,7 @@ type Note = {
   is_read: boolean;
   created_at: string;
   recipient_id: string | null;
+  project_id: string | null;
 };
 
 function timeAgo(iso: string) {
@@ -58,26 +60,32 @@ export function NotificationBell({
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
+  const project = useActiveProject();
   const { data: notes = [] } = useQuery({
-    queryKey: ["notifications", "bell-recent", user?.id],
+    queryKey: ["notifications", "bell-recent", user?.id, project.id],
     enabled: Boolean(user?.id),
     queryFn: async () => {
       let q = supabase
         .from("notifications")
-        .select("id,title,body,category,priority,link,is_read,created_at,recipient_id")
+        .select("id,title,body,category,priority,link,is_read,created_at,recipient_id,project_id")
         .order("created_at", { ascending: false })
-        .limit(12);
+        .limit(60);
       if (user?.id) q = q.or(`recipient_id.eq.${user.id},recipient_id.is.null`);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as Note[];
+      // Only the open project's notices (and ones not tied to a project).
+      return ((data ?? []) as Note[])
+        .filter((n) => !project.id || !n.project_id || n.project_id === project.id)
+        .slice(0, 12);
     },
     refetchInterval: 6000,
     refetchOnWindowFocus: true,
   });
 
   const { data: readIds = new Set<string>() } = useNotificationReadIds(user?.id);
-  const { data: unread = 0 } = useUnreadNotificationCount(user?.id);
+  const { data: unread = 0 } = useUnreadNotificationCount(user?.id, {
+    projectId: project.id || undefined,
+  });
   const unreadFor = (n: Note) => isUnreadFor(n, readIds);
   const invalidate = () => void qc.invalidateQueries({ queryKey: ["notifications"] });
 

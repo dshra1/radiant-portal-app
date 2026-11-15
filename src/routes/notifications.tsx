@@ -5,6 +5,7 @@ import { BellRing, Check, CheckCheck, Plus, Trash2, X, User } from "lucide-react
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionUser } from "@/lib/access";
+import { useActiveProject } from "@/hooks/useActiveProject";
 import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 import {
   isUnreadFor,
@@ -44,6 +45,7 @@ type Note = {
   is_read: boolean;
   created_at: string;
   recipient_id: string | null;
+  project_id?: string | null;
 };
 
 type Member = {
@@ -85,7 +87,8 @@ function Notifications() {
     },
   });
 
-  const { data = [], isLoading } = useQuery({
+  const project = useActiveProject();
+  const { data: all = [], isLoading } = useQuery({
     queryKey: ["notifications", user?.id],
     queryFn: async () => {
       let q = supabase.from("notifications").select("*").order("created_at", { ascending: false });
@@ -99,6 +102,8 @@ function Notifications() {
     refetchInterval: 15000,
   });
 
+  // Only the open project's notices (and ones not tied to a project).
+  const data = all.filter((n) => !project.id || !n.project_id || n.project_id === project.id);
   const { data: readIds = new Set<string>() } = useNotificationReadIds(user?.id);
   const unreadFor = (n: Note) => isUnreadFor(n, readIds);
   // only the recipient (or anyone, for team-wide notices) can change their own read state

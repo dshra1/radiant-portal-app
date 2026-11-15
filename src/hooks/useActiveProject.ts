@@ -51,6 +51,8 @@ export function useActiveProject(): ActiveProject {
     };
   }, []);
 
+  // While the list is still loading, say so (not "No project yet", which reads as lost data).
+  if (!data && user?.id) return { ...FALLBACK, name: "Loading project…", location: "" };
   const row = data?.find((r) => r.id === storedId) ?? data?.[0];
   if (!row) return FALLBACK;
   return {
