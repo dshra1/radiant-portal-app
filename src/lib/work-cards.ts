@@ -133,7 +133,6 @@ export const TRADES: Trade[] = [
         key: "pressure",
         label: "Test pressure (1.5 × working)",
         unit: "kg/cm²",
-        min: 0.1,
         hint: "hydraulic pump gauge",
       },
       { key: "hours", label: "Held for", unit: "hours", min: 2, hint: "start → end time" },
