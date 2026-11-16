@@ -157,7 +157,7 @@ function Page() {
             projectName={project.name}
             onGo={go}
             actions={
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="mt-3 flex gap-2 [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0">
                 <label className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
                   {busy ? (
                     <Loader2 className="size-5 animate-spin" />
@@ -338,6 +338,10 @@ function Job({
   });
   const d = data.data;
 
+  // Before the stage is near, missing items are "to do", not faults.
+  const soon = s.actualPct > 0 || !s.plannedStart || toDay(s.plannedStart) <= todayDay() + 7;
+  const missTone: Tone = soon ? "bad" : "warn";
+
   // Material: each line against the store balance, what is issued to this stage, and POs.
   const material = useMemo(() => {
     if (!d) return [];
@@ -376,7 +380,8 @@ function Job({
             tone = "ok";
             state = `In store: ${fmtQty(b.balance)} ${m.unit}`;
           } else {
-            tone = po ? "warn" : "bad";
+            const lateOrder = !m.orderBy || toDay(m.orderBy) < todayDay();
+            tone = po ? "warn" : lateOrder || soon ? "bad" : "warn";
             state = `Short ${fmtQty(stillNeeded - Math.max(0, b.balance))} ${m.unit} (store ${fmtQty(b.balance)})`;
           }
         }
@@ -386,10 +391,14 @@ function Job({
         return { ...m, issued, state, tone, itemId: it?.id };
       });
     return lines;
-  }, [d, s.materials, s.code]);
+  }, [d, s.materials, s.code, soon]);
   const workQty = s.materials.filter((m) => isWorkQuantity(m.material));
   const short = material.filter((m) => m.tone === "bad").length;
   const pending = material.filter((m) => m.tone === "warn" || m.tone === "info").length;
+  const firstOrderBy = material
+    .filter((m) => m.tone !== "ok" && m.orderBy)
+    .map((m) => m.orderBy as string)
+    .sort()[0];
 
   // Cards for this stage: trade work cards, or concrete pour cards.
   const workCards = (d?.cards ?? []).filter((c) => c.element.startsWith(TRADE_PREFIX));
@@ -428,8 +437,8 @@ function Job({
           }
         : {
             label: "Previous stage",
-            detail: `${predsOpen.map((p) => `${p.code} ${isClosed(p) ? "" : p.actualPct >= 100 ? "(close-out due)" : `(${p.actualPct}%)`}`).join(", ")} not closed`,
-            tone: "bad",
+            detail: `${predsOpen.map((p) => `${p.code} ${p.actualPct >= 100 ? "(close-out due)" : `(${p.actualPct}%)`}`).join(", ")} not closed yet`,
+            tone: missTone,
           },
   );
   ready.push(
@@ -440,11 +449,11 @@ function Job({
   if (material.length)
     ready.push(
       short
-        ? { label: "Material", detail: `${short} item(s) short, not ordered`, tone: "bad" }
+        ? { label: "Material", detail: `${short} item(s) short and not on a PO`, tone: "bad" }
         : pending
           ? {
               label: "Material",
-              detail: `${pending} item(s) to check (on PO / not in register)`,
+              detail: `${pending} item(s) to order or receive${firstOrderBy ? ` · first by ${fmtDay(firstOrderBy)}` : ""}`,
               tone: "warn",
             }
           : { label: "Material", detail: "All in store or issued", tone: "ok" },
@@ -460,7 +469,7 @@ function Job({
           : {
               label: "Work card",
               detail: "Not raised yet — fill checks and readings",
-              tone: "bad",
+              tone: missTone,
             },
     );
   }
@@ -483,9 +492,14 @@ function Job({
           detail: `${openHolds.length} to be signed before work goes on`,
           tone: "warn",
         }
-      : { label: "Hold points", detail: s.checks.length ? "All signed" : "None", tone: "ok" },
+      : {
+          label: "Hold points",
+          detail: s.checks.some((c) => c.point === "H") ? "All signed" : "None in this stage",
+          tone: "ok",
+        },
   );
   const bad = ready.filter((r) => r.tone === "bad").length;
+  const warns = ready.filter((r) => r.tone === "warn").length;
   const st = statusOf(s);
   const late =
     !isClosed(s) && s.plannedEnd && toDay(s.plannedEnd) < todayDay() && s.actualPct < 100;
@@ -513,12 +527,14 @@ function Job({
           <div className="min-w-0">
             <h1 className="text-lg font-extrabold leading-tight">{stageName(s.name)}</h1>
             <p className="text-sm text-muted-foreground">
-              {s.floor ? `${s.floor} · ` : ""}
+              {s.floor && !s.name.toLowerCase().startsWith(s.floor.toLowerCase())
+                ? `${s.floor} · `
+                : ""}
               {guide?.label ?? s.group}
             </p>
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
+        <div className="mt-3 flex gap-2 text-center text-sm [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0">
           <div className="rounded-xl bg-muted/50 p-2">
             <p className="text-xs text-muted-foreground">Plan</p>
             <p className="font-semibold">
@@ -560,9 +576,9 @@ function Job({
             <Loader2 className="size-4 animate-spin" />
           ) : (
             <span
-              className={`rounded-full px-2 py-0.5 text-xs font-bold ${bad ? "bg-red-100 text-red-800" : "bg-emerald-100 text-emerald-800"}`}
+              className={`rounded-full px-2 py-0.5 text-xs font-bold ${bad ? "bg-red-100 text-red-800" : warns ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-800"}`}
             >
-              {bad ? `${bad} to fix` : "Ready"}
+              {bad ? `${bad} to fix` : warns ? `${warns} to do` : "Ready"}
             </span>
           )
         }
@@ -859,16 +875,19 @@ function Job({
         {sheets.length === 0 && (
           <p className="text-sm text-muted-foreground">No drawing sheets linked to this stage.</p>
         )}
-        {sheets.map((g) => (
-          <div key={g.label} className="mb-2">
-            <p className="text-sm font-semibold text-muted-foreground">{g.label}</p>
+        {sheets.map((g, gi) => (
+          <details key={g.label} open={gi === 0} className="border-b border-border/60 py-1.5">
+            <summary className="cursor-pointer text-sm font-semibold">
+              {g.label}{" "}
+              <span className="font-normal text-muted-foreground">({g.sheets.length})</span>
+            </summary>
             <ul>
-              {g.sheets.slice(0, 8).map((sh) => (
+              {g.sheets.map((sh) => (
                 <li key={`${sh.file}-${sh.page}`}>
                   <Link
                     to="/stage-drawings"
                     search={{ stage: s.code, file: sh.file, page: sh.page }}
-                    className="flex justify-between gap-2 py-1 text-primary"
+                    className="flex justify-between gap-2 py-1 text-sm text-primary"
                   >
                     <span>{sh.title}</span>
                     <span className="whitespace-nowrap text-xs text-muted-foreground">
@@ -877,11 +896,8 @@ function Job({
                   </Link>
                 </li>
               ))}
-              {g.sheets.length > 8 && (
-                <li className="text-sm text-muted-foreground">+{g.sheets.length - 8} more</li>
-              )}
             </ul>
-          </div>
+          </details>
         ))}
         <div className="mt-2 flex flex-wrap gap-3 text-sm font-semibold text-primary">
           <Link to="/stage-drawings" search={{ stage: s.code }}>
