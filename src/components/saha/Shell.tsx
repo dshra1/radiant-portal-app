@@ -10,6 +10,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   MessagesSquare,
+  ShoppingCart,
   Home,
   ChevronRight,
   ChevronDown,
@@ -96,6 +97,33 @@ const siteMobileNav: NavItem[] = [
   { to: "/messages", label: "Chat", icon: MessagesSquare },
 ];
 const SITE_ROLES = ["Site Engineer", "Site Supervisor"];
+
+/** Accounts' phone bar: buying, stock, bills and owners' money (no site or BOQ pages). */
+const accountsMobileNav: NavItem[] = [
+  { to: "/", label: "Hub", icon: Home },
+  { to: "/procurement", label: "Buy", icon: ShoppingCart },
+  { to: "/inventory-control", label: "Stock", icon: Boxes },
+  { to: "/bills-payments", label: "Bills", icon: Receipt },
+  { to: "/capital-ledger", label: "Owners", icon: Wallet },
+  { to: "/messages", label: "Chat", icon: MessagesSquare },
+];
+
+/** Purchase / Stores phone bar: orders, POs, stock and bills. */
+const purchaseMobileNav: NavItem[] = [
+  { to: "/", label: "Hub", icon: Home },
+  { to: "/procurement", label: "Buy", icon: ShoppingCart },
+  { to: "/purchase-orders", label: "POs", icon: FileSpreadsheet },
+  { to: "/inventory-control", label: "Stock", icon: Boxes },
+  { to: "/bills-payments", label: "Bills", icon: Receipt },
+  { to: "/messages", label: "Chat", icon: MessagesSquare },
+];
+
+function phoneBarFor(role: string): NavItem[] {
+  if (SITE_ROLES.includes(role)) return siteMobileNav;
+  if (role === "Accounts") return accountsMobileNav;
+  if (role === "Purchase / Stores") return purchaseMobileNav;
+  return mobileNav;
+}
 
 const groupTones: Record<string, string> = {
   quick: "oklch(0.72 0.17 152)",
@@ -662,7 +690,7 @@ export function Shell({
         </Link>
 
         <nav className="sticky bottom-0 z-20 flex min-h-16 w-full items-center justify-around border-t border-border bg-card px-2 pb-[env(safe-area-inset-bottom)] md:hidden">
-          {(SITE_ROLES.includes(role) ? siteMobileNav : mobileNav).map((item) => {
+          {phoneBarFor(role).map((item) => {
             const active = pathname === item.to;
             return (
               <Link

@@ -265,40 +265,42 @@ export function SiteWeekPanel({
               <p className="text-[13px] text-muted-foreground">Nothing due to order.</p>
             ) : (
               <>
-                <table className="w-full text-[12px]">
-                  <tbody>
-                    {w.orders.slice(0, focus === "materials" ? 60 : 10).map((o, i) => (
-                      <tr
-                        key={i}
-                        className={`border-t border-border/50 align-top ${o.po ? "text-muted-foreground" : ""}`}
+                {/* Rows, not a table: the phone layout scrolls tables sideways and
+                    hides the quantity and PO columns. */}
+                <ul className="text-[12px]">
+                  {w.orders.slice(0, focus === "materials" ? 60 : 10).map((o, i) => (
+                    <li
+                      key={i}
+                      className={`flex items-start gap-2 border-t border-border/50 py-1.5 ${o.po ? "text-muted-foreground" : ""}`}
+                    >
+                      <span
+                        className={`w-[4.6rem] shrink-0 font-semibold ${o.overdue ? "text-destructive" : ""}`}
                       >
-                        <td
-                          className={`whitespace-nowrap pr-2 font-semibold ${o.overdue ? "text-destructive" : ""}`}
-                        >
-                          {fmtDay(o.orderBy)}
-                        </td>
-                        <td className="pr-2">{o.code}</td>
-                        <td className="pr-2">{o.steel ? "TMT steel (all sizes)" : o.what}</td>
-                        <td className="whitespace-nowrap text-right">
+                        {fmtDay(o.orderBy)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <b className="mr-1">{o.code}</b>
+                        {o.steel ? "TMT steel (all sizes)" : o.what}
+                        <span className="block text-muted-foreground">
                           {o.qty.toLocaleString("en-IN")} {o.unit}
-                        </td>
-                        <td className="whitespace-nowrap pl-2 text-right">
-                          {o.po ? (
-                            <span className="font-semibold text-emerald-700">{o.po}</span>
-                          ) : (
-                            <Link
-                              to="/po-create"
-                              search={{ stage: o.code }}
-                              className="font-semibold text-primary underline"
-                            >
-                              PO
-                            </Link>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-right">
+                        {o.po ? (
+                          <span className="font-semibold text-emerald-700">{o.po}</span>
+                        ) : (
+                          <Link
+                            to="/po-create"
+                            search={{ stage: o.code }}
+                            className="font-semibold text-primary underline"
+                          >
+                            PO
+                          </Link>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
                 <div className="mt-2 flex gap-2">
                   {w.orders.find((o) => !o.po) && (
                     <Link
