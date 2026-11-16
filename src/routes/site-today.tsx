@@ -230,22 +230,22 @@ function StageCard({
         </button>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Link
-          to="/job"
-          search={{ stage: s.code }}
-          className="flex h-14 items-center justify-center gap-2 rounded-xl border border-border text-[15px] font-semibold"
-        >
-          <ClipboardCheck className="size-5" /> Open job
-        </Link>
+      <Link
+        to="/job"
+        search={{ stage: s.code }}
+        className="mt-3 flex h-14 items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground"
+      >
+        <ClipboardCheck className="size-5" /> Open job: steps, safety, material, labour
+      </Link>
+      <div className="mt-2 flex gap-2 [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-0">
         <Link
           to="/stage-drawings"
           search={{ stage: s.code }}
-          className="flex h-14 items-center justify-center gap-2 rounded-xl border border-border text-[15px] font-semibold"
+          className="flex h-14 items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-semibold"
         >
           <FileText className="size-5" /> Drawings
         </Link>
-        <label className="flex h-14 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground">
+        <label className="flex h-14 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-semibold">
           {busy === "photo" ? (
             <Loader2 className="size-5 animate-spin" />
           ) : (
@@ -267,7 +267,7 @@ function StageCard({
         <button
           type="button"
           onClick={onCloseout}
-          className="flex h-14 items-center justify-center gap-2 rounded-xl border border-primary text-[15px] font-semibold text-primary"
+          className="flex h-14 items-center justify-center gap-1.5 rounded-xl border border-primary text-sm font-semibold text-primary"
         >
           <CheckCircle2 className="size-5" /> Checks
         </button>
