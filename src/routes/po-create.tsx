@@ -684,7 +684,83 @@ function Page() {
             </div>
           )}
 
-          <div className="overflow-x-auto">
+          {/* Phone: one card per line, every field visible. */}
+          <ul className="space-y-3 md:hidden">
+            {items.map((it, i) => {
+              const l = lineTotals(it);
+              const lab = "text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
+              return (
+                <li key={it.id} className="rounded-xl border border-border p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm font-bold">Line {i + 1}</span>
+                    <span className="flex items-center gap-2">
+                      <b className="tnum">{inr(l.total)}</b>
+                      <button
+                        type="button"
+                        onClick={() => setItems((p) => p.filter((x) => x.id !== it.id))}
+                        className="rounded p-1.5 text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
+                        aria-label="Remove line"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </span>
+                  </div>
+                  <label className="block">
+                    <span className={lab}>Description</span>
+                    <textarea
+                      rows={2}
+                      className={field}
+                      value={it.description}
+                      onChange={(e) => setItem(it.id, { description: e.target.value })}
+                    />
+                  </label>
+                  <div className="mt-2 flex gap-2 [&>*]:min-w-0 [&>*]:flex-1">
+                    <label>
+                      <span className={lab}>Brand / make</span>
+                      <input
+                        className={field}
+                        value={it.brand}
+                        onChange={(e) => setItem(it.id, { brand: e.target.value })}
+                      />
+                    </label>
+                    <label className="!flex-none basis-20">
+                      <span className={lab}>Unit</span>
+                      <input
+                        className={field}
+                        value={it.unit}
+                        onChange={(e) => setItem(it.id, { unit: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <div className="mt-2 flex gap-2 [&>*]:min-w-0 [&>*]:flex-1">
+                    {(
+                      [
+                        ["quantity", "Qty"],
+                        ["rate", "Rate"],
+                        ["discount_pct", "Disc %"],
+                        ["gst_pct", "GST %"],
+                      ] as const
+                    ).map(([k, t]) => (
+                      <label key={k}>
+                        <span className={lab}>{t}</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          className={`${field} text-right`}
+                          value={String(it[k])}
+                          onChange={(e) =>
+                            setItem(it.id, { [k]: e.target.value } as Partial<PoItem>)
+                          }
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[980px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left label-caps text-muted-foreground">
