@@ -714,8 +714,8 @@ function Page() {
                       onChange={(e) => setItem(it.id, { description: e.target.value })}
                     />
                   </label>
-                  <div className="mt-2 flex gap-2 [&>*]:min-w-0 [&>*]:flex-1">
-                    <label>
+                  <div className="mt-2 flex gap-2">
+                    <label className="min-w-0 flex-[2]">
                       <span className={lab}>Brand / make</span>
                       <input
                         className={field}
@@ -723,7 +723,7 @@ function Page() {
                         onChange={(e) => setItem(it.id, { brand: e.target.value })}
                       />
                     </label>
-                    <label className="!flex-none basis-20">
+                    <label className="min-w-0 flex-1">
                       <span className={lab}>Unit</span>
                       <input
                         className={field}
@@ -732,29 +732,35 @@ function Page() {
                       />
                     </label>
                   </div>
-                  <div className="mt-2 flex gap-2 [&>*]:min-w-0 [&>*]:flex-1">
-                    {(
+                  {(
+                    [
                       [
                         ["quantity", "Qty"],
-                        ["rate", "Rate"],
+                        ["rate", "Rate (₹)"],
+                      ],
+                      [
                         ["discount_pct", "Disc %"],
                         ["gst_pct", "GST %"],
-                      ] as const
-                    ).map(([k, t]) => (
-                      <label key={k}>
-                        <span className={lab}>{t}</span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          className={`${field} text-right`}
-                          value={String(it[k])}
-                          onChange={(e) =>
-                            setItem(it.id, { [k]: e.target.value } as Partial<PoItem>)
-                          }
-                        />
-                      </label>
-                    ))}
-                  </div>
+                      ],
+                    ] as const
+                  ).map((pair) => (
+                    <div key={pair[0][0]} className="mt-2 flex gap-2">
+                      {pair.map(([k, t]) => (
+                        <label key={k} className="min-w-0 flex-1">
+                          <span className={lab}>{t}</span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            className={`${field} text-right`}
+                            value={String(it[k])}
+                            onChange={(e) =>
+                              setItem(it.id, { [k]: e.target.value } as Partial<PoItem>)
+                            }
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  ))}
                 </li>
               );
             })}
