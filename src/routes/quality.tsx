@@ -555,7 +555,7 @@ function Ncrs({ projectId }: { projectId: string }) {
               <option value="">Pick the stage…</option>
               {stages.map((s) => (
                 <option key={s.id} value={s.code}>
-                  {s.code} · {s.name.slice(0, 50)}
+                  {s.code} · {s.name.replace(/^\S+ · /, "").slice(0, 50)}
                 </option>
               ))}
             </select>

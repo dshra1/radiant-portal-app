@@ -997,7 +997,7 @@ function Page() {
                   <option value="">—</option>
                   {planStages.map((st) => (
                     <option key={st.id} value={st.code}>
-                      {st.code} · {st.name.slice(0, 45)}
+                      {st.code} · {st.name.replace(/^\S+ · /, "").slice(0, 45)}
                     </option>
                   ))}
                 </select>

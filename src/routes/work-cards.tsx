@@ -244,7 +244,7 @@ function Page() {
                     .filter((s) => tradeOfStage(s.code, s.name))
                     .map((s) => (
                       <option key={s.id} value={s.code}>
-                        {s.code} · {s.name.slice(0, 50)}
+                        {s.code} · {s.name.replace(/^\S+ · /, "").slice(0, 50)}
                       </option>
                     ))}
                 </select>
