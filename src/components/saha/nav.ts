@@ -79,6 +79,7 @@ export const navGroups: NavGroup[] = [
     label: "Site Supervision",
     items: [
       { to: "/site-today", label: "Site Today (phone)", icon: HardHat },
+      { to: "/job", label: "Job Page (one stage, everything)", icon: ClipboardCheck },
       { to: "/site-execution", label: "Site Execution", icon: HardHat },
       { to: "/replan", label: "Programme Re-plan (forecast)", icon: CalendarClock },
       { to: "/pour-cards", label: "Pour Cards", icon: ClipboardCheck },

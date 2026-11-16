@@ -203,6 +203,15 @@ function Page() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 self-start">
+            {search.stage && (
+              <Link
+                to="/job"
+                search={{ stage: search.stage }}
+                className="inline-flex items-center gap-2 rounded-xl border border-primary px-4 py-2 text-sm font-semibold text-primary"
+              >
+                ← {search.stage} job page
+              </Link>
+            )}
             <Link
               to="/pour-cards"
               className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold"

@@ -37,6 +37,7 @@ import { Route as FinancialIngestionRouteImport } from './routes/financial-inges
 import { Route as FlatsRouteImport } from './routes/flats'
 import { Route as InstallRouteImport } from './routes/install'
 import { Route as InventoryControlRouteImport } from './routes/inventory-control'
+import { Route as JobRouteImport } from './routes/job'
 import { Route as LandownersInvestmentRouteImport } from './routes/landowners-investment'
 import { Route as ManualRouteImport } from './routes/manual'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
@@ -217,6 +218,11 @@ const InstallRoute = InstallRouteImport.update({
 const InventoryControlRoute = InventoryControlRouteImport.update({
   id: '/inventory-control',
   path: '/inventory-control',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobRoute = JobRouteImport.update({
+  id: '/job',
+  path: '/job',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LandownersInvestmentRoute = LandownersInvestmentRouteImport.update({
@@ -454,6 +460,7 @@ export interface FileRoutesByFullPath {
   '/flats': typeof FlatsRoute
   '/install': typeof InstallRoute
   '/inventory-control': typeof InventoryControlRoute
+  '/job': typeof JobRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
@@ -525,6 +532,7 @@ export interface FileRoutesByTo {
   '/flats': typeof FlatsRoute
   '/install': typeof InstallRoute
   '/inventory-control': typeof InventoryControlRoute
+  '/job': typeof JobRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
@@ -597,6 +605,7 @@ export interface FileRoutesById {
   '/flats': typeof FlatsRoute
   '/install': typeof InstallRoute
   '/inventory-control': typeof InventoryControlRoute
+  '/job': typeof JobRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
   '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
@@ -670,6 +679,7 @@ export interface FileRouteTypes {
     | '/flats'
     | '/install'
     | '/inventory-control'
+    | '/job'
     | '/landowners-investment'
     | '/manual'
     | '/media-upload-studio'
@@ -741,6 +751,7 @@ export interface FileRouteTypes {
     | '/flats'
     | '/install'
     | '/inventory-control'
+    | '/job'
     | '/landowners-investment'
     | '/manual'
     | '/media-upload-studio'
@@ -812,6 +823,7 @@ export interface FileRouteTypes {
     | '/flats'
     | '/install'
     | '/inventory-control'
+    | '/job'
     | '/landowners-investment'
     | '/manual'
     | '/media-upload-studio'
@@ -884,6 +896,7 @@ export interface RootRouteChildren {
   FlatsRoute: typeof FlatsRoute
   InstallRoute: typeof InstallRoute
   InventoryControlRoute: typeof InventoryControlRoute
+  JobRoute: typeof JobRoute
   LandownersInvestmentRoute: typeof LandownersInvestmentRoute
   ManualRoute: typeof ManualRoute
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
@@ -1123,6 +1136,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory-control'
       fullPath: '/inventory-control'
       preLoaderRoute: typeof InventoryControlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/job': {
+      id: '/job'
+      path: '/job'
+      fullPath: '/job'
+      preLoaderRoute: typeof JobRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/landowners-investment': {
@@ -1444,6 +1464,7 @@ const rootRouteChildren: RootRouteChildren = {
   FlatsRoute: FlatsRoute,
   InstallRoute: InstallRoute,
   InventoryControlRoute: InventoryControlRoute,
+  JobRoute: JobRoute,
   LandownersInvestmentRoute: LandownersInvestmentRoute,
   ManualRoute: ManualRoute,
   MediaUploadStudioRoute: MediaUploadStudioRoute,

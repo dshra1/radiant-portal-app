@@ -146,7 +146,6 @@ function StageCard({
   onCloseout: () => void;
   onChanged: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState("");
   const [pct, setPct] = useState(s.actualPct);
 
@@ -183,7 +182,6 @@ function StageCard({
     setBusy("");
   }
 
-  const holds = s.checks.filter((c) => c.point === "H");
   return (
     <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-start gap-2">
@@ -193,7 +191,11 @@ function StageCard({
           {s.code}
         </span>
         <div>
-          <h2 className="text-lg font-bold leading-tight">{stageName(s.name)}</h2>
+          <Link to="/job" search={{ stage: s.code }}>
+            <h2 className="text-lg font-bold leading-tight underline-offset-2 hover:underline">
+              {stageName(s.name)}
+            </h2>
+          </Link>
           <p className="text-sm text-muted-foreground">
             {fmtDay(s.plannedStart)} → {fmtDay(s.plannedEnd)}
             {s.floor ? ` · ${s.floor}` : ""}
@@ -229,13 +231,13 @@ function StageCard({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
+        <Link
+          to="/job"
+          search={{ stage: s.code }}
           className="flex h-14 items-center justify-center gap-2 rounded-xl border border-border text-[15px] font-semibold"
         >
-          <ClipboardCheck className="size-5" /> {open ? "Hide steps" : "How to do it"}
-        </button>
+          <ClipboardCheck className="size-5" /> Open job
+        </Link>
         <Link
           to="/stage-drawings"
           search={{ stage: s.code }}
@@ -270,43 +272,6 @@ function StageCard({
           <CheckCircle2 className="size-5" /> Checks
         </button>
       </div>
-
-      {open && (
-        <div className="mt-3 space-y-2 text-[15px]">
-          {s.directions.map((d) => (
-            <div key={d.title}>
-              <p className="font-semibold">{d.title}</p>
-              <ol className="mt-1 space-y-1">
-                {d.steps.map((t) => (
-                  <li key={t} className={/HOLD/.test(t) ? "font-semibold text-red-800" : ""}>
-                    {t}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ))}
-          {holds.map((c) => (
-            <p key={c.id} className="rounded-lg bg-red-50 p-2 text-red-900">
-              <b>HOLD {c.check}:</b> {c.criterion}
-            </p>
-          ))}
-          {s.materials.length > 0 && (
-            <div>
-              <p className="font-semibold">Material for this stage</p>
-              <ul className="text-sm">
-                {s.materials.map((m, i) => (
-                  <li key={i} className="flex justify-between border-b border-border/50 py-1">
-                    <span>{m.material}</span>
-                    <span className="whitespace-nowrap pl-2 font-semibold">
-                      {m.qty.toLocaleString("en-IN")} {m.unit}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
     </section>
   );
 }
@@ -412,7 +377,7 @@ function DailyReport({
 
   const field = "h-12 w-full rounded-xl border border-border bg-background px-3 text-[15px]";
   return (
-    <section className="rounded-2xl border border-border bg-card p-4">
+    <section id="report" className="scroll-mt-20 rounded-2xl border border-border bg-card p-4">
       <h2 className="text-lg font-bold">Daily report</h2>
       <div className="mt-2 grid gap-2">
         <select

@@ -87,7 +87,8 @@ const mobileNav: NavItem[] = [
 /** Site team's phone bar: the pages they use every day (no BOQ / project setup). */
 const siteMobileNav: NavItem[] = [
   { to: "/site-today", label: "Site Today", icon: LayoutDashboard },
-  { to: "/stage-drawings", label: "Drawings", icon: FileSpreadsheet },
+  // One stage with everything for it: readiness, method, safety, material, labour, drawings.
+  { to: "/job", label: "Job", icon: HardHat },
   // Work cards for every trade; concrete pours are one tap from there.
   { to: "/work-cards", label: "Cards", icon: ClipboardCheck },
   { to: "/quality", label: "QA", icon: ScanEye },

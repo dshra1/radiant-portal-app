@@ -192,6 +192,15 @@ function Page() {
                 ? `${stage.code} · ${stage.name.replace(/^[A-Z0-9]+ · /, "")}`
                 : "Stage drawings"}
             </h1>
+            {stage && (
+              <Link
+                to="/job"
+                search={{ stage: stage.code }}
+                className="rounded-lg border border-primary px-3 py-1.5 text-sm font-semibold text-primary"
+              >
+                Job page
+              </Link>
+            )}
             <select
               value={stage?.code ?? ""}
               onChange={(e) => go({ stage: e.target.value })}
