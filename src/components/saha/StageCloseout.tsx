@@ -16,6 +16,7 @@ import {
   uploadStageFiles,
 } from "@/lib/site-week-actions";
 import { useAccess } from "@/lib/access";
+import { TRADE_PREFIX, tradeOfStage } from "@/lib/work-cards";
 import { todayIso } from "@/lib/dates";
 
 const tone: Record<string, string> = {
@@ -91,9 +92,33 @@ export function StageCloseout({
         .filter((ref) => !ok.has(ref));
     },
   });
+  // Other trades: the stage needs an approved work card (checks + test readings).
+  const trade = tradeOfStage(stage.code, stage.name);
+  const work = useQuery({
+    queryKey: ["stage_work_cards", projectId, stage.code],
+    enabled: Boolean(trade),
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("pour_cards")
+        .select("status,pour_ref")
+        .eq("project_id", projectId)
+        .like("element", `${TRADE_PREFIX}%`)
+        .like("pour_ref", `${stage.code} · %`);
+      return data ?? [];
+    },
+  });
+  const workOk = (work.data ?? []).filter((c) => c.status === "approved" || c.status === "done");
+  const workOpen = (work.data ?? []).filter((c) => c.status === "pending" || c.status === "draft");
   const gaps = closeoutGaps(local, photos.length, {
     docs: docs.length,
     poursNotApproved: pours.data ?? [],
+    workCard: !trade
+      ? undefined
+      : workOk.length === 0
+        ? `No approved ${trade.label.toLowerCase()} work card (checks${trade.tests.length ? " and test readings" : ""}) for this stage`
+        : workOpen.length
+          ? `${workOpen.length} work card(s) still awaiting approval`
+          : undefined,
   });
 
   const refresh = async () => {
@@ -392,6 +417,19 @@ export function StageCloseout({
                   className="text-primary underline"
                 >
                   Stage Budget
+                </Link>{" "}
+                ·{" "}
+              </>
+            )}
+            {trade && (
+              <>
+                Work card:{" "}
+                <Link
+                  to="/work-cards"
+                  search={{ stage: stage.code }}
+                  className="text-primary underline"
+                >
+                  {trade.label}
                 </Link>{" "}
                 ·{" "}
               </>

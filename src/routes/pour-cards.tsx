@@ -110,6 +110,8 @@ function Page() {
           "id,pour_ref,element,level,grade,quantity_cum,pour_date,slump,cubes_cast,checklist,status,requested_by_name,approved_by_name,approved_at,remarks",
         )
         .eq("project_id", project.id)
+        // Other trades' work cards share this table (element "trade:…"); not pours.
+        .not("element", "like", "trade:%")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []).map((r) => ({
@@ -296,6 +298,12 @@ function Page() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Link
+              to="/work-cards"
+              className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted"
+            >
+              Other trades: work cards
+            </Link>
             <button
               onClick={exportCsv}
               className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold hover:bg-muted"

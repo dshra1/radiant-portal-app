@@ -416,7 +416,7 @@ export const needsSe = (c: StageCheck) => /\bSE\b/.test(c.by ?? "");
 export function closeoutGaps(
   stage: PlanStage,
   photos: number,
-  extra: { docs?: number; poursNotApproved?: string[] } = {},
+  extra: { docs?: number; poursNotApproved?: string[]; workCard?: string | undefined } = {},
 ) {
   const gaps: string[] = [];
   for (const c of stage.checks) {
@@ -429,6 +429,7 @@ export function closeoutGaps(
   if (stage.checks.some(needsSe) && (extra.docs ?? 0) < 1)
     gaps.push("Upload the structural engineer's signed inspection sheet (Approvals and documents)");
   for (const p of extra.poursNotApproved ?? []) gaps.push(`Pour card for ${p} not approved`);
+  if (extra.workCard) gaps.push(extra.workCard);
   return gaps;
 }
 

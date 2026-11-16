@@ -74,6 +74,7 @@ import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as TenderComparisonRouteImport } from './routes/tender-comparison'
 import { Route as VendorDirectoryRouteImport } from './routes/vendor-directory'
 import { Route as VendorLifecycleRouteImport } from './routes/vendor-lifecycle'
+import { Route as WorkCardsRouteImport } from './routes/work-cards'
 import { Route as AiIndexRouteImport } from './routes/ai.index'
 import { Route as AiThreadIdRouteImport } from './routes/ai.$threadId'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
@@ -403,6 +404,11 @@ const VendorLifecycleRoute = VendorLifecycleRouteImport.update({
   path: '/vendor-lifecycle',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkCardsRoute = WorkCardsRouteImport.update({
+  id: '/work-cards',
+  path: '/work-cards',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AiIndexRoute = AiIndexRouteImport.update({
   id: '/ai/',
   path: '/ai/',
@@ -485,6 +491,7 @@ export interface FileRoutesByFullPath {
   '/tender-comparison': typeof TenderComparisonRoute
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
+  '/work-cards': typeof WorkCardsRoute
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/chat': typeof ApiChatRoute
   '/ai/': typeof AiIndexRoute
@@ -555,6 +562,7 @@ export interface FileRoutesByTo {
   '/tender-comparison': typeof TenderComparisonRoute
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
+  '/work-cards': typeof WorkCardsRoute
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/chat': typeof ApiChatRoute
   '/ai': typeof AiIndexRoute
@@ -626,6 +634,7 @@ export interface FileRoutesById {
   '/tender-comparison': typeof TenderComparisonRoute
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
+  '/work-cards': typeof WorkCardsRoute
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/chat': typeof ApiChatRoute
   '/ai/': typeof AiIndexRoute
@@ -698,6 +707,7 @@ export interface FileRouteTypes {
     | '/tender-comparison'
     | '/vendor-directory'
     | '/vendor-lifecycle'
+    | '/work-cards'
     | '/ai/$threadId'
     | '/api/chat'
     | '/ai/'
@@ -768,6 +778,7 @@ export interface FileRouteTypes {
     | '/tender-comparison'
     | '/vendor-directory'
     | '/vendor-lifecycle'
+    | '/work-cards'
     | '/ai/$threadId'
     | '/api/chat'
     | '/ai'
@@ -838,6 +849,7 @@ export interface FileRouteTypes {
     | '/tender-comparison'
     | '/vendor-directory'
     | '/vendor-lifecycle'
+    | '/work-cards'
     | '/ai/$threadId'
     | '/api/chat'
     | '/ai/'
@@ -909,6 +921,7 @@ export interface RootRouteChildren {
   TenderComparisonRoute: typeof TenderComparisonRoute
   VendorDirectoryRoute: typeof VendorDirectoryRoute
   VendorLifecycleRoute: typeof VendorLifecycleRoute
+  WorkCardsRoute: typeof WorkCardsRoute
   AiThreadIdRoute: typeof AiThreadIdRoute
   ApiChatRoute: typeof ApiChatRoute
   AiIndexRoute: typeof AiIndexRoute
@@ -1371,6 +1384,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VendorLifecycleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/work-cards': {
+      id: '/work-cards'
+      path: '/work-cards'
+      fullPath: '/work-cards'
+      preLoaderRoute: typeof WorkCardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ai/': {
       id: '/ai/'
       path: '/ai'
@@ -1461,6 +1481,7 @@ const rootRouteChildren: RootRouteChildren = {
   TenderComparisonRoute: TenderComparisonRoute,
   VendorDirectoryRoute: VendorDirectoryRoute,
   VendorLifecycleRoute: VendorLifecycleRoute,
+  WorkCardsRoute: WorkCardsRoute,
   AiThreadIdRoute: AiThreadIdRoute,
   ApiChatRoute: ApiChatRoute,
   AiIndexRoute: AiIndexRoute,

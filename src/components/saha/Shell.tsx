@@ -88,7 +88,8 @@ const mobileNav: NavItem[] = [
 const siteMobileNav: NavItem[] = [
   { to: "/site-today", label: "Site Today", icon: LayoutDashboard },
   { to: "/stage-drawings", label: "Drawings", icon: FileSpreadsheet },
-  { to: "/pour-cards", label: "Pours", icon: ClipboardCheck },
+  // Work cards for every trade; concrete pours are one tap from there.
+  { to: "/work-cards", label: "Cards", icon: ClipboardCheck },
   { to: "/quality", label: "QA", icon: ScanEye },
   { to: "/inventory-control", label: "Stock", icon: Boxes },
   { to: "/messages", label: "Chat", icon: MessagesSquare },
