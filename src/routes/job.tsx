@@ -380,7 +380,7 @@ function Job({
             tone = "ok";
             state = `In store: ${fmtQty(b.balance)} ${m.unit}`;
           } else {
-            const lateOrder = !m.orderBy || toDay(m.orderBy) < todayDay();
+            const lateOrder = Boolean(m.orderBy) && toDay(m.orderBy as string) < todayDay();
             tone = po ? "warn" : lateOrder || soon ? "bad" : "warn";
             state = `Short ${fmtQty(stillNeeded - Math.max(0, b.balance))} ${m.unit} (store ${fmtQty(b.balance)})`;
           }
@@ -481,7 +481,7 @@ function Job({
           ? {
               label: "Pour card",
               detail: `${poursMissing.length} pour(s) not approved: ${poursMissing.join(", ")}`,
-              tone: "bad",
+              tone: missTone,
             }
           : { label: "Pour card", detail: "All pours approved", tone: "ok" },
     );
