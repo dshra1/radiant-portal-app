@@ -51,7 +51,7 @@ export function TrendPill({
         tone === "good" && "bg-primary-soft text-primary",
         tone === "bad" && "bg-destructive-soft text-destructive",
         tone === "warn" && "bg-warning-soft text-warning",
-        tone === "neutral" && "bg-secondary text-muted-foreground",
+        tone === "neutral" && "bg-muted text-foreground/70",
       )}
     >
       <Icon className="size-3" />
