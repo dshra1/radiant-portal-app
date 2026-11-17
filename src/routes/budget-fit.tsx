@@ -19,7 +19,7 @@ type Swap = BudgetSwap & { gstPct?: number; source?: "alternate" | "ai" };
 export const Route = createFileRoute("/budget-fit")({
   head: () => ({
     meta: [
-      { title: "Budget Fit — Suggested Brands to Stay Within Budget | SiteSutra" },
+      { title: "Budget Fit — Suggested Brands to Stay Within Budget | SiteYantra" },
       {
         name: "description",
         content:

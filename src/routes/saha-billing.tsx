@@ -9,7 +9,7 @@ import { AI_FEATURES, type AiFeatureKey } from "@/lib/ai-plans";
 import { sahaDashboard, sahaFirmAction } from "@/lib/billing/dashboard.functions";
 
 export const Route = createFileRoute("/saha-billing")({
-  head: () => ({ meta: [{ title: "Billing dashboard (SAHA) | SiteSutra" }] }),
+  head: () => ({ meta: [{ title: "Billing dashboard (SAHA) | SiteYantra" }] }),
   component: Page,
 });
 

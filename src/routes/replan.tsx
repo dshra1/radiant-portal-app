@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/replan")({
   head: () => ({
     meta: [
-      { title: "Programme Re-plan | SiteSutra" },
+      { title: "Programme Re-plan | SiteYantra" },
       {
         name: "description",
         content:

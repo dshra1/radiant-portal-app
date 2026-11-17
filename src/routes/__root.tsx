@@ -81,16 +81,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SiteSutra Construction Manager (SCM) — Civil Project Lifecycle Suite" },
+      { title: "SiteYantra (Construction · Interiors) — Civil Project Lifecycle Suite" },
       {
         name: "description",
         content:
-          "SiteSutra: BOQ engine, stage-wise execution, QA/QC audits and procurement intelligence for civil construction projects.",
+          "SiteYantra: BOQ engine, stage-wise execution, QA/QC audits and procurement intelligence for civil construction projects.",
       },
       { name: "author", content: "Saha Developers" },
       {
         property: "og:title",
-        content: "SiteSutra Construction Manager (SCM) — Civil Project Lifecycle Suite",
+        content: "SiteYantra (Construction · Interiors) — Civil Project Lifecycle Suite",
       },
       {
         property: "og:description",
@@ -102,7 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "theme-color", content: "#14532D" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-title", content: "SiteSutra" },
+      { name: "apple-mobile-web-app-title", content: "SiteYantra" },
     ],
     links: [
       {

@@ -6,16 +6,16 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/ai/")({
   head: () => ({
     meta: [
-      { title: "SiteSutra AI Assistant — SiteSutra" },
+      { title: "SiteYantra AI Assistant — SiteYantra" },
       {
         name: "description",
         content:
-          "Ask the SiteSutra AI Assistant about live projects, budgets, site alerts and team activity across SiteSutra.",
+          "Ask the SiteYantra AI Assistant about live projects, budgets, site alerts and team activity across SiteYantra.",
       },
-      { property: "og:title", content: "SiteSutra AI Assistant — SiteSutra" },
+      { property: "og:title", content: "SiteYantra AI Assistant — SiteYantra" },
       {
         property: "og:description",
-        content: "AI assistant grounded in your live SiteSutra project data.",
+        content: "AI assistant grounded in your live SiteYantra project data.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -65,7 +65,7 @@ function AiIndex() {
 
   return (
     <Shell
-      title="SiteSutra AI Assistant"
+      title="SiteYantra AI Assistant"
       subtitle={error ? "Could not open a conversation" : "Opening your conversation…"}
     >
       {error ? (

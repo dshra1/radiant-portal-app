@@ -12,13 +12,13 @@ import { todayIso } from "@/lib/dates";
 export const Route = createFileRoute("/site-media")({
   head: () => ({
     meta: [
-      { title: "Site Photos | SiteSutra" },
+      { title: "Site Photos | SiteYantra" },
       {
         name: "description",
         content:
           "Project photo and video record: upload dated site progress, quality and safety media with captions and download them any time.",
       },
-      { property: "og:title", content: "Site Photos | SiteSutra" },
+      { property: "og:title", content: "Site Photos | SiteYantra" },
       {
         property: "og:description",
         content: "Dated site progress, quality and safety photo record for the project.",

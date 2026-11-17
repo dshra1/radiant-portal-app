@@ -16,13 +16,13 @@ import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 export const Route = createFileRoute("/site-execution")({
   head: () => ({
     meta: [
-      { title: "Site Execution | SiteSutra" },
+      { title: "Site Execution | SiteYantra" },
       {
         name: "description",
         content:
           "Stage-wise execution progress with planned vs actual percentages, labour deployed, concrete poured and open quality issues.",
       },
-      { property: "og:title", content: "Site Execution | SiteSutra" },
+      { property: "og:title", content: "Site Execution | SiteYantra" },
       {
         property: "og:description",
         content:

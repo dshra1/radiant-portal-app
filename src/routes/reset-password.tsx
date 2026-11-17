@@ -6,8 +6,8 @@ export const Route = createFileRoute("/reset-password")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Set a new password — SiteSutra" },
-      { name: "description", content: "Choose a new password for your SiteSutra account." },
+      { title: "Set a new password — SiteYantra" },
+      { name: "description", content: "Choose a new password for your SiteYantra account." },
     ],
   }),
   component: ResetPasswordPage,
@@ -95,7 +95,7 @@ function ResetPasswordPage() {
               disabled={busy}
               className="w-full rounded-lg bg-[#22C55E] px-4 py-2.5 text-sm font-bold text-[#0C1F17] disabled:opacity-60"
             >
-              {busy ? "Saving…" : "Save and open SiteSutra"}
+              {busy ? "Saving…" : "Save and open SiteYantra"}
             </button>
           </form>
         )}

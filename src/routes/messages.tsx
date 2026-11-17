@@ -24,13 +24,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/messages")({
   head: () => ({
     meta: [
-      { title: "Team Chat — SiteSutra" },
+      { title: "Team Chat — SiteYantra" },
       {
         name: "description",
         content:
-          "Internal site chat for the SiteSutra crew: message people directly, use groups, share files and assign tasks.",
+          "Internal site chat for the SiteYantra crew: message people directly, use groups, share files and assign tasks.",
       },
-      { property: "og:title", content: "Team Chat — SiteSutra" },
+      { property: "og:title", content: "Team Chat — SiteYantra" },
       {
         property: "og:description",
         content:

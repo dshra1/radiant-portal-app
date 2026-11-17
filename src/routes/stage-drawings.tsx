@@ -27,7 +27,7 @@ export const Route = createFileRoute("/stage-drawings")({
   },
   head: () => ({
     meta: [
-      { title: "Stage Drawings | SiteSutra" },
+      { title: "Stage Drawings | SiteYantra" },
       {
         name: "description",
         content:

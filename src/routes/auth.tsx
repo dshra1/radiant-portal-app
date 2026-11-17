@@ -1,22 +1,21 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Sign in — SiteSutra" },
+      { title: "Sign in — SiteYantra" },
       {
         name: "description",
         content:
-          "Sign in to SiteSutra to access projects, BOQ, site execution, QA/QC and procurement data.",
+          "Sign in to SiteYantra to access projects, BOQ, site execution, QA/QC and procurement data.",
       },
-      { property: "og:title", content: "Sign in — SiteSutra" },
+      { property: "og:title", content: "Sign in — SiteYantra" },
       {
         property: "og:description",
-        content: "Secure access to your SiteSutra civil project workspace.",
+        content: "Secure access to your SiteYantra civil project workspace.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -116,20 +115,13 @@ function AuthPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0C1F17] px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl backdrop-blur sm:p-8">
-        <div className="flex items-center gap-3">
+        <div>
           <img
-            src={sahaLogo.url}
-            onError={(e) => {
-              const img = e.currentTarget;
-              if (!img.src.endsWith("/app-icon-192.png")) img.src = "/app-icon-192.png";
-            }}
-            alt="Saha Developers"
-            className="h-11 w-11 rounded-lg bg-white object-contain p-1"
+            src="/siteyantra-logo-horizontal-white.png"
+            alt="SiteYantra — Construction · Interiors"
+            className="h-auto w-full max-w-[280px]"
           />
-          <div>
-            <h1 className="text-lg font-extrabold uppercase tracking-wide text-white">SiteSutra</h1>
-            <p className="text-xs font-medium text-white/60">Enterprise civil suite</p>
-          </div>
+          <h1 className="sr-only">SiteYantra</h1>
         </div>
 
         <h2 className="mt-6 text-xl font-bold text-white">

@@ -42,13 +42,13 @@ const REVISION_NOTES: Record<string, { tone: "old" | "pending"; text: string }> 
 export const Route = createFileRoute("/drawing-decipher")({
   head: () => ({
     meta: [
-      { title: "Drawings & Documents Register — SiteSutra" },
+      { title: "Drawings & Documents Register — SiteYantra" },
       {
         name: "description",
         content:
           "Upload drawing revisions, open and delete project documents and export the drawing register for your project.",
       },
-      { property: "og:title", content: "Drawings & Documents Register — SiteSutra" },
+      { property: "og:title", content: "Drawings & Documents Register — SiteYantra" },
       {
         property: "og:description",
         content:

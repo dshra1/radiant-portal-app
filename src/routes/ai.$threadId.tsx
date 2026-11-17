@@ -25,16 +25,16 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/ai/$threadId")({
   head: () => ({
     meta: [
-      { title: "SiteSutra AI Assistant — SiteSutra" },
+      { title: "SiteYantra AI Assistant — SiteYantra" },
       {
         name: "description",
         content:
-          "Chat with the SiteSutra AI Assistant about live projects, budgets, site alerts and team activity.",
+          "Chat with the SiteYantra AI Assistant about live projects, budgets, site alerts and team activity.",
       },
-      { property: "og:title", content: "SiteSutra AI Assistant — SiteSutra" },
+      { property: "og:title", content: "SiteYantra AI Assistant — SiteYantra" },
       {
         property: "og:description",
-        content: "AI assistant grounded in your live SiteSutra project data.",
+        content: "AI assistant grounded in your live SiteYantra project data.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -127,7 +127,7 @@ function AiThread() {
 
   return (
     <Shell
-      title="SiteSutra AI Assistant"
+      title="SiteYantra AI Assistant"
       subtitle="Grounded in your live projects, budgets, alerts and team chat"
       actions={
         <button

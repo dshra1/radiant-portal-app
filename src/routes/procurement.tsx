@@ -31,13 +31,13 @@ export const Route = createFileRoute("/procurement")({
   }),
   head: () => ({
     meta: [
-      { title: "Procurement & Vendor Commitments | SiteSutra" },
+      { title: "Procurement & Vendor Commitments | SiteYantra" },
       {
         name: "description",
         content:
           "Live procurement view: purchase orders raised on the project, value committed to each vendor, approvals pending and delivery dates.",
       },
-      { property: "og:title", content: "Procurement & Vendor Commitments | SiteSutra" },
+      { property: "og:title", content: "Procurement & Vendor Commitments | SiteYantra" },
       {
         property: "og:description",
         content:

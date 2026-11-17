@@ -24,12 +24,12 @@ import { todayIso } from "@/lib/dates";
 export const Route = createFileRoute("/tender-comparison")({
   head: () => ({
     meta: [
-      { title: "Tender Comparison — L1/L2/L3 Vendor Quotes | SiteSutra" },
+      { title: "Tender Comparison — L1/L2/L3 Vendor Quotes | SiteYantra" },
       {
         name: "description",
         content: "Compare vendor quotations line by line, rank L1/L2/L3 and award the tender.",
       },
-      { property: "og:title", content: "Tender Comparison — L1/L2/L3 Vendor Quotes | SiteSutra" },
+      { property: "og:title", content: "Tender Comparison — L1/L2/L3 Vendor Quotes | SiteYantra" },
       {
         property: "og:description",
         content: "Compare vendor quotations line by line, rank L1/L2/L3 and award the tender.",

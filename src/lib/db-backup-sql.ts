@@ -59,7 +59,7 @@ export function buildRestoreSql(
   const out: string[] = [];
   const stamp = new Date().toISOString();
   out.push(
-    "-- SiteSutra (radiant-portal-app) full backup",
+    "-- SiteYantra (radiant-portal-app) full backup",
     `-- Taken ${stamp} from ${opts.sourceUrl}`,
     "-- Restore: paste into the SQL Editor of a NEW, EMPTY Supabase project and press Run.",
     "-- Users get their accounts back without passwords: each one uses 'Forgot password' once.",

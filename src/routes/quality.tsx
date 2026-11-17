@@ -31,7 +31,7 @@ export const Route = createFileRoute("/quality")({
       : {},
   head: () => ({
     meta: [
-      { title: "Quality Control | SiteSutra" },
+      { title: "Quality Control | SiteYantra" },
       {
         name: "description",
         content:

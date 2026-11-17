@@ -18,7 +18,7 @@ import {
 export const Route = createFileRoute("/database-backup")({
   head: () => ({
     meta: [
-      { title: "Database Backup — SiteSutra" },
+      { title: "Database Backup — SiteYantra" },
       {
         name: "description",
         content:

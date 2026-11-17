@@ -75,7 +75,7 @@ export function AppUpdater() {
         return;
       }
       if (tried === latest) return;
-      toast("A new version of SiteSutra is ready", {
+      toast("A new version of SiteYantra is ready", {
         description: "Save what you are typing, then update.",
         duration: Infinity,
         action: { label: "Update now", onClick: () => window.location.reload() },

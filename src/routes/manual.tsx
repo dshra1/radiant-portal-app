@@ -7,11 +7,11 @@ import manualHtml from "../manual/staff-manual.html?raw";
 export const Route = createFileRoute("/manual")({
   head: () => ({
     meta: [
-      { title: "Staff Manual | SiteSutra" },
+      { title: "Staff Manual | SiteYantra" },
       {
         name: "description",
         content:
-          "How to use SiteSutra by role: briefing, guided tour, weekly stage cycle, page map and who can do what.",
+          "How to use SiteYantra by role: briefing, guided tour, weekly stage cycle, page map and who can do what.",
       },
     ],
   }),
@@ -100,7 +100,7 @@ function Page() {
       {doc ? (
         <iframe
           ref={frame}
-          title="SiteSutra Staff Manual"
+          title="SiteYantra Staff Manual"
           srcDoc={doc}
           className="block w-full border-0"
           style={{ height: height ? `${height}px` : "calc(100dvh - 180px)" }}

@@ -46,7 +46,7 @@ import {
 export const Route = createFileRoute("/price-database")({
   head: () => ({
     meta: [
-      { title: "Price Database | SiteSutra" },
+      { title: "Price Database | SiteYantra" },
       {
         name: "description",
         content:

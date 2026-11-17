@@ -17,7 +17,7 @@ export const Route = createFileRoute("/vendor-directory")({
     s["tab"] === "spend" ? { tab: "spend" } : {},
   head: () => ({
     meta: [
-      { title: "Vendor Directory — Categorized Vendor Database | SiteSutra" },
+      { title: "Vendor Directory — Categorized Vendor Database | SiteYantra" },
       {
         name: "description",
         content:
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/vendor-directory")({
       },
       {
         property: "og:title",
-        content: "Vendor Directory — Categorized Vendor Database | SiteSutra",
+        content: "Vendor Directory — Categorized Vendor Database | SiteYantra",
       },
       {
         property: "og:description",

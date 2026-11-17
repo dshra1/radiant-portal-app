@@ -33,7 +33,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import sahaLogo from "@/assets/saha-logo.jpeg.asset.json";
 import { navForRole, roles, type NavItem } from "@/components/saha/nav";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
@@ -276,21 +275,17 @@ export function Shell({
       >
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-4">
           <img
-            src={sahaLogo.url}
-            onError={(e) => {
-              const img = e.currentTarget;
-              if (!img.src.endsWith("/app-icon-192.png")) img.src = "/app-icon-192.png";
-            }}
-            alt="Saha Developers"
-            className="size-8 shrink-0 rounded bg-white object-contain p-0.5"
+            src="/siteyantra-emblem.png"
+            alt="SiteYantra"
+            className="size-9 shrink-0 rounded-full object-contain"
           />
           {expanded && (
             <div className="flex min-w-0 flex-col">
               <span className="truncate text-sm font-bold tracking-tight text-sidebar-accent-foreground">
-                SiteSutra
+                SiteYantra
               </span>
               <span className="label-caps truncate text-sidebar-foreground/70">
-                Construction Manager · SCM
+                Construction · Interiors
               </span>
             </div>
           )}
@@ -388,7 +383,7 @@ export function Shell({
                 className="mb-1 flex items-center gap-3 rounded px-3 py-2 text-[13px] font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
               >
                 <LifeBuoy className="size-4" />
-                <span>How to use SiteSutra</span>
+                <span>How to use SiteYantra</span>
               </Link>
               <div className="flex items-center justify-between px-2.5 label-caps text-sidebar-foreground/60">
                 <span>by SAHA Developers</span>
@@ -682,11 +677,11 @@ export function Shell({
 
         <Link
           to="/ai"
-          aria-label="SiteSutra AI Assistant"
+          aria-label="SiteYantra AI Assistant"
           className="fixed bottom-20 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover md:bottom-[4.5rem]"
         >
           <Bot className="size-4" />
-          <span className="hidden sm:inline">SiteSutra AI Assistant</span>
+          <span className="hidden sm:inline">SiteYantra AI Assistant</span>
         </Link>
 
         <nav className="sticky bottom-0 z-20 flex min-h-16 w-full items-center justify-around border-t border-border bg-card px-2 pb-[env(safe-area-inset-bottom)] md:hidden">

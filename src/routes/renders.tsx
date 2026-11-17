@@ -15,7 +15,7 @@ import { generateRender, type RenderKind } from "@/lib/render.functions";
 export const Route = createFileRoute("/renders")({
   head: () => ({
     meta: [
-      { title: "Renders | SiteSutra" },
+      { title: "Renders | SiteYantra" },
       {
         name: "description",
         content:

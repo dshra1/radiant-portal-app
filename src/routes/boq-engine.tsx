@@ -75,13 +75,13 @@ function BrandMark({ brand }: { brand: string }) {
 export const Route = createFileRoute("/boq-engine")({
   head: () => ({
     meta: [
-      { title: "BOQ Master Engine — AI Project Estimate | SiteSutra" },
+      { title: "BOQ Master Engine — AI Project Estimate | SiteYantra" },
       {
         name: "description",
         content:
           "Generate a complete stage-wise BOQ estimate from project inputs before drawings arrive, then upload, edit and export every trade line item.",
       },
-      { property: "og:title", content: "BOQ Master Engine — AI Project Estimate | SiteSutra" },
+      { property: "og:title", content: "BOQ Master Engine — AI Project Estimate | SiteYantra" },
       {
         property: "og:description",
         content:

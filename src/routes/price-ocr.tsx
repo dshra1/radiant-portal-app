@@ -18,7 +18,7 @@ import { Loader2, ScanText, Trash2, Upload, Download, Plus } from "lucide-react"
 export const Route = createFileRoute("/price-ocr")({
   head: () => ({
     meta: [
-      { title: "Price OCR — Proforma Scanning & Price Database | SiteSutra" },
+      { title: "Price OCR — Proforma Scanning & Price Database | SiteYantra" },
       {
         name: "description",
         content:
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/price-ocr")({
       },
       {
         property: "og:title",
-        content: "Price OCR — Proforma Scanning & Price Database | SiteSutra",
+        content: "Price OCR — Proforma Scanning & Price Database | SiteYantra",
       },
       {
         property: "og:description",

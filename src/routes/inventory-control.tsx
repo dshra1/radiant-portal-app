@@ -17,13 +17,13 @@ const NEEDS_CERT = /steel|tmt|\bfe ?5|cement|\bopc\b|\bppc\b|rmc|ready.?mix|conc
 export const Route = createFileRoute("/inventory-control")({
   head: () => ({
     meta: [
-      { title: "Stock & Inventory Control | SiteSutra" },
+      { title: "Stock & Inventory Control | SiteYantra" },
       {
         name: "description",
         content:
           "Site stock register with material receipts, issues, live balances, reorder alerts and Excel import or export.",
       },
-      { property: "og:title", content: "Stock & Inventory Control | SiteSutra" },
+      { property: "og:title", content: "Stock & Inventory Control | SiteYantra" },
       {
         property: "og:description",
         content:

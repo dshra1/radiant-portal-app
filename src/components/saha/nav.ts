@@ -50,10 +50,10 @@ export const navGroups: NavGroup[] = [
     id: "planning",
     label: "Main · Planning & Master Database",
     items: [
-      { to: "/", label: "SiteSutra Hub", icon: Home },
+      { to: "/", label: "SiteYantra Hub", icon: Home },
       { to: "/manual", label: "Staff Manual (how to use)", icon: LifeBuoy },
       { to: "/messages", label: "Team Chat", icon: MessagesSquare },
-      { to: "/ai", label: "SiteSutra AI Assistant", icon: Bot },
+      { to: "/ai", label: "SiteYantra AI Assistant", icon: Bot },
       { to: "/notifications", label: "Action Centre", icon: BellRing },
       { to: "/tasks", label: "Task Tracker", icon: ListChecks, alsoIn: ["site"] },
       { to: "/projects", label: "Projects", icon: Building2 },

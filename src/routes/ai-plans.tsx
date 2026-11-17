@@ -30,11 +30,11 @@ import { confirmTopUp, createTopUp, getCredits, getInvoiceLink } from "@/lib/ai-
 export const Route = createFileRoute("/ai-plans")({
   head: () => ({
     meta: [
-      { title: "AI Features & Plans | SiteSutra" },
+      { title: "AI Features & Plans | SiteYantra" },
       {
         name: "description",
         content:
-          "Every AI feature in SiteSutra and its price per use; prepaid AI credits, top-ups, usage, and the firm's billing details.",
+          "Every AI feature in SiteYantra and its price per use; prepaid AI credits, top-ups, usage, and the firm's billing details.",
       },
     ],
   }),
@@ -149,7 +149,7 @@ function Page() {
           order_id: o.orderId,
           amount: o.amount,
           currency: "INR",
-          name: "SiteSutra",
+          name: "SiteYantra",
           description: `AI credits · ${o.pack.label} · ${o.pack.credits.toLocaleString("en-IN")} credits`,
           prefill: {
             name: plan.billing.contact,
@@ -207,12 +207,12 @@ function Page() {
     <Shell title="AI Features & Plans">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
         <header className="rounded-2xl border border-border bg-card p-5">
-          <p className="label-caps text-primary">Your SiteSutra plan</p>
+          <p className="label-caps text-primary">Your SiteYantra plan</p>
           <h1 className="text-2xl font-extrabold">AI features and credits</h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            AI in SiteSutra runs on prepaid credits (1 credit = ₹1). Each AI use takes a fixed
+            AI in SiteYantra runs on prepaid credits (1 credit = ₹1). Each AI use takes a fixed
             number of credits, only when it succeeds. Switch off any feature your firm doesn't want.
-            Everything else in SiteSutra works without credits.
+            Everything else in SiteYantra works without credits.
           </p>
           {ai === false && (
             <p className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">

@@ -17,13 +17,13 @@ import {
 export const Route = createFileRoute("/pmc-scope")({
   head: () => ({
     meta: [
-      { title: "PMC Appointment Scope & Investment — SiteSutra" },
+      { title: "PMC Appointment Scope & Investment — SiteYantra" },
       {
         name: "description",
         content:
           "Pick the work packages your PMC handles, set the fee and see allocated, committed and balance cost against your live BOQ.",
       },
-      { property: "og:title", content: "PMC Appointment Scope & Investment — SiteSutra" },
+      { property: "og:title", content: "PMC Appointment Scope & Investment — SiteYantra" },
       {
         property: "og:description",
         content: "Live PMC scope, fee and cost allocation driven by your project BOQ.",

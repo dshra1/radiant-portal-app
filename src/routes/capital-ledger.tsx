@@ -14,17 +14,17 @@ import { todayIso } from "@/lib/dates";
 export const Route = createFileRoute("/capital-ledger")({
   head: () => ({
     meta: [
-      { title: "Capital Ledger & Landowner Contributions — SiteSutra" },
+      { title: "Capital Ledger & Landowner Contributions — SiteYantra" },
       {
         name: "description",
         content:
           "Record owner capital calls and money received, with share-wise liability, paid-to-date and pending dues per landowner.",
       },
-      { property: "og:title", content: "Capital Ledger & Landowner Contributions — SiteSutra" },
+      { property: "og:title", content: "Capital Ledger & Landowner Contributions — SiteYantra" },
       {
         property: "og:description",
         content:
-          "Owner-wise capital calls, receipts, liability and pending dues for every project in SiteSutra.",
+          "Owner-wise capital calls, receipts, liability and pending dues for every project in SiteYantra.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

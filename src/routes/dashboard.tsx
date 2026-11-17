@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-// Merged into the SiteSutra Hub (review notes, 14 Oct): one home page.
+// Merged into the SiteYantra Hub (review notes, 14 Oct): one home page.
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: () => {
     throw redirect({ to: "/" });

@@ -19,13 +19,13 @@ import { useAccess, useSessionUser } from "@/lib/access";
 export const Route = createFileRoute("/financial-ingestion")({
   head: () => ({
     meta: [
-      { title: "Cash Ledger — Owner Funding, Vendor & Statutory Payments | SiteSutra" },
+      { title: "Cash Ledger — Owner Funding, Vendor & Statutory Payments | SiteYantra" },
       {
         name: "description",
         content:
           "The project's cash ledger of owner money received, vendor payments and statutory charges paid, with a store for bank statements and vouchers.",
       },
-      { property: "og:title", content: "Cash Ledger — SiteSutra" },
+      { property: "og:title", content: "Cash Ledger — SiteYantra" },
       {
         property: "og:description",
         content:

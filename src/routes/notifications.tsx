@@ -17,13 +17,13 @@ import {
 export const Route = createFileRoute("/notifications")({
   head: () => ({
     meta: [
-      { title: "Action Centre — SiteSutra" },
+      { title: "Action Centre — SiteYantra" },
       {
         name: "description",
         content:
-          "Notification and action centre for approvals, rate alerts, purchase releases and payout reminders across every SiteSutra site.",
+          "Notification and action centre for approvals, rate alerts, purchase releases and payout reminders across every SiteYantra site.",
       },
-      { property: "og:title", content: "Action Centre — SiteSutra" },
+      { property: "og:title", content: "Action Centre — SiteYantra" },
       {
         property: "og:description",
         content: "Approvals, alerts and payment reminders in one shared action centre.",

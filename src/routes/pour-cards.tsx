@@ -14,13 +14,13 @@ import { todayIso } from "@/lib/dates";
 export const Route = createFileRoute("/pour-cards")({
   head: () => ({
     meta: [
-      { title: "Pour Cards | SiteSutra" },
+      { title: "Pour Cards | SiteYantra" },
       {
         name: "description",
         content:
           "Raise concrete pour cards with pre-pour checklist, grade, volume and cube details, and get engineer approval before every pour.",
       },
-      { property: "og:title", content: "Pour Cards | SiteSutra" },
+      { property: "og:title", content: "Pour Cards | SiteYantra" },
       {
         property: "og:description",
         content: "Pre-pour checklist and approval record for every concrete pour on site.",

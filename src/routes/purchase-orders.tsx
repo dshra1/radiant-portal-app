@@ -25,13 +25,13 @@ export const Route = createFileRoute("/purchase-orders")({
   }),
   head: () => ({
     meta: [
-      { title: "Purchase Order Register | SiteSutra" },
+      { title: "Purchase Order Register | SiteYantra" },
       {
         name: "description",
         content:
           "Live purchase order register with draft, PM approval and approved states, printable GST-format POs and vendor details.",
       },
-      { property: "og:title", content: "Purchase Order Register | SiteSutra" },
+      { property: "og:title", content: "Purchase Order Register | SiteYantra" },
       {
         property: "og:description",
         content: "Track, approve and print every purchase order raised on your project.",

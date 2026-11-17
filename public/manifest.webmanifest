@@ -1,13 +1,13 @@
 {
-  "name": "SiteSutra Construction Manager (SCM)",
-  "short_name": "SiteSutra",
+  "name": "SiteYantra — Construction · Interiors",
+  "short_name": "SiteYantra",
   "description": "BOQ engine, stage-wise execution, QA/QC audits and procurement intelligence for civil construction projects.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0C1F17",
-  "theme_color": "#14532D",
+  "background_color": "#2f3a2c",
+  "theme_color": "#2f3a2c",
   "icons": [
     {
       "src": "/app-icon-192.png",
@@ -22,7 +22,7 @@
       "purpose": "any"
     },
     {
-      "src": "/app-icon-512.png",
+      "src": "/app-icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
