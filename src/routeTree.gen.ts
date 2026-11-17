@@ -18,6 +18,7 @@ import { Route as BillingExpenditureRouteImport } from './routes/billing-expendi
 import { Route as BillsPaymentsRouteImport } from './routes/bills-payments'
 import { Route as BoqRouteImport } from './routes/boq'
 import { Route as BoqEngineRouteImport } from './routes/boq-engine'
+import { Route as BoqFromDrawingsRouteImport } from './routes/boq-from-drawings'
 import { Route as BoqUploadRouteImport } from './routes/boq-upload'
 import { Route as BrandBenchmarkRouteImport } from './routes/brand-benchmark'
 import { Route as BrandPreferencesRouteImport } from './routes/brand-preferences'
@@ -123,6 +124,11 @@ const BoqRoute = BoqRouteImport.update({
 const BoqEngineRoute = BoqEngineRouteImport.update({
   id: '/boq-engine',
   path: '/boq-engine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BoqFromDrawingsRoute = BoqFromDrawingsRouteImport.update({
+  id: '/boq-from-drawings',
+  path: '/boq-from-drawings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BoqUploadRoute = BoqUploadRouteImport.update({
@@ -441,6 +447,7 @@ export interface FileRoutesByFullPath {
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
+  '/boq-from-drawings': typeof BoqFromDrawingsRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
   '/brand-preferences': typeof BrandPreferencesRoute
@@ -513,6 +520,7 @@ export interface FileRoutesByTo {
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
+  '/boq-from-drawings': typeof BoqFromDrawingsRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
   '/brand-preferences': typeof BrandPreferencesRoute
@@ -586,6 +594,7 @@ export interface FileRoutesById {
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
   '/boq-engine': typeof BoqEngineRoute
+  '/boq-from-drawings': typeof BoqFromDrawingsRoute
   '/boq-upload': typeof BoqUploadRoute
   '/brand-benchmark': typeof BrandBenchmarkRoute
   '/brand-preferences': typeof BrandPreferencesRoute
@@ -660,6 +669,7 @@ export interface FileRouteTypes {
     | '/bills-payments'
     | '/boq'
     | '/boq-engine'
+    | '/boq-from-drawings'
     | '/boq-upload'
     | '/brand-benchmark'
     | '/brand-preferences'
@@ -732,6 +742,7 @@ export interface FileRouteTypes {
     | '/bills-payments'
     | '/boq'
     | '/boq-engine'
+    | '/boq-from-drawings'
     | '/boq-upload'
     | '/brand-benchmark'
     | '/brand-preferences'
@@ -804,6 +815,7 @@ export interface FileRouteTypes {
     | '/bills-payments'
     | '/boq'
     | '/boq-engine'
+    | '/boq-from-drawings'
     | '/boq-upload'
     | '/brand-benchmark'
     | '/brand-preferences'
@@ -877,6 +889,7 @@ export interface RootRouteChildren {
   BillsPaymentsRoute: typeof BillsPaymentsRoute
   BoqRoute: typeof BoqRoute
   BoqEngineRoute: typeof BoqEngineRoute
+  BoqFromDrawingsRoute: typeof BoqFromDrawingsRoute
   BoqUploadRoute: typeof BoqUploadRoute
   BrandBenchmarkRoute: typeof BrandBenchmarkRoute
   BrandPreferencesRoute: typeof BrandPreferencesRoute
@@ -1003,6 +1016,13 @@ declare module '@tanstack/react-router' {
       path: '/boq-engine'
       fullPath: '/boq-engine'
       preLoaderRoute: typeof BoqEngineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/boq-from-drawings': {
+      id: '/boq-from-drawings'
+      path: '/boq-from-drawings'
+      fullPath: '/boq-from-drawings'
+      preLoaderRoute: typeof BoqFromDrawingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/boq-upload': {
@@ -1445,6 +1465,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillsPaymentsRoute: BillsPaymentsRoute,
   BoqRoute: BoqRoute,
   BoqEngineRoute: BoqEngineRoute,
+  BoqFromDrawingsRoute: BoqFromDrawingsRoute,
   BoqUploadRoute: BoqUploadRoute,
   BrandBenchmarkRoute: BrandBenchmarkRoute,
   BrandPreferencesRoute: BrandPreferencesRoute,
