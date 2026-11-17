@@ -66,6 +66,7 @@ import { Route as QualityRouteImport } from './routes/quality'
 import { Route as ReplanRouteImport } from './routes/replan'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RolesAccessRouteImport } from './routes/roles-access'
+import { Route as SahaBillingRouteImport } from './routes/saha-billing'
 import { Route as ScopeBriefRouteImport } from './routes/scope-brief'
 import { Route as SiteExecutionRouteImport } from './routes/site-execution'
 import { Route as SiteMaterialGuideRouteImport } from './routes/site-material-guide'
@@ -82,6 +83,7 @@ import { Route as WorkCardsRouteImport } from './routes/work-cards'
 import { Route as AiIndexRouteImport } from './routes/ai.index'
 import { Route as AiThreadIdRouteImport } from './routes/ai.$threadId'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiBillingActionRouteImport } from './routes/api/billing.$action'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -368,6 +370,11 @@ const RolesAccessRoute = RolesAccessRouteImport.update({
   path: '/roles-access',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SahaBillingRoute = SahaBillingRouteImport.update({
+  id: '/saha-billing',
+  path: '/saha-billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScopeBriefRoute = ScopeBriefRouteImport.update({
   id: '/scope-brief',
   path: '/scope-brief',
@@ -448,6 +455,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBillingActionRoute = ApiBillingActionRouteImport.update({
+  id: '/api/billing/$action',
+  path: '/api/billing/$action',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -507,6 +519,7 @@ export interface FileRoutesByFullPath {
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
   '/roles-access': typeof RolesAccessRoute
+  '/saha-billing': typeof SahaBillingRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
   '/site-material-guide': typeof SiteMaterialGuideRoute
@@ -523,6 +536,7 @@ export interface FileRoutesByFullPath {
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/chat': typeof ApiChatRoute
   '/ai/': typeof AiIndexRoute
+  '/api/billing/$action': typeof ApiBillingActionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -582,6 +596,7 @@ export interface FileRoutesByTo {
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
   '/roles-access': typeof RolesAccessRoute
+  '/saha-billing': typeof SahaBillingRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
   '/site-material-guide': typeof SiteMaterialGuideRoute
@@ -598,6 +613,7 @@ export interface FileRoutesByTo {
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/chat': typeof ApiChatRoute
   '/ai': typeof AiIndexRoute
+  '/api/billing/$action': typeof ApiBillingActionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -658,6 +674,7 @@ export interface FileRoutesById {
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
   '/roles-access': typeof RolesAccessRoute
+  '/saha-billing': typeof SahaBillingRoute
   '/scope-brief': typeof ScopeBriefRoute
   '/site-execution': typeof SiteExecutionRoute
   '/site-material-guide': typeof SiteMaterialGuideRoute
@@ -674,6 +691,7 @@ export interface FileRoutesById {
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/chat': typeof ApiChatRoute
   '/ai/': typeof AiIndexRoute
+  '/api/billing/$action': typeof ApiBillingActionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -735,6 +753,7 @@ export interface FileRouteTypes {
     | '/replan'
     | '/reset-password'
     | '/roles-access'
+    | '/saha-billing'
     | '/scope-brief'
     | '/site-execution'
     | '/site-material-guide'
@@ -751,6 +770,7 @@ export interface FileRouteTypes {
     | '/ai/$threadId'
     | '/api/chat'
     | '/ai/'
+    | '/api/billing/$action'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -810,6 +830,7 @@ export interface FileRouteTypes {
     | '/replan'
     | '/reset-password'
     | '/roles-access'
+    | '/saha-billing'
     | '/scope-brief'
     | '/site-execution'
     | '/site-material-guide'
@@ -826,6 +847,7 @@ export interface FileRouteTypes {
     | '/ai/$threadId'
     | '/api/chat'
     | '/ai'
+    | '/api/billing/$action'
   id:
     | '__root__'
     | '/'
@@ -885,6 +907,7 @@ export interface FileRouteTypes {
     | '/replan'
     | '/reset-password'
     | '/roles-access'
+    | '/saha-billing'
     | '/scope-brief'
     | '/site-execution'
     | '/site-material-guide'
@@ -901,6 +924,7 @@ export interface FileRouteTypes {
     | '/ai/$threadId'
     | '/api/chat'
     | '/ai/'
+    | '/api/billing/$action'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -961,6 +985,7 @@ export interface RootRouteChildren {
   ReplanRoute: typeof ReplanRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RolesAccessRoute: typeof RolesAccessRoute
+  SahaBillingRoute: typeof SahaBillingRoute
   ScopeBriefRoute: typeof ScopeBriefRoute
   SiteExecutionRoute: typeof SiteExecutionRoute
   SiteMaterialGuideRoute: typeof SiteMaterialGuideRoute
@@ -977,6 +1002,7 @@ export interface RootRouteChildren {
   AiThreadIdRoute: typeof AiThreadIdRoute
   ApiChatRoute: typeof ApiChatRoute
   AiIndexRoute: typeof AiIndexRoute
+  ApiBillingActionRoute: typeof ApiBillingActionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1380,6 +1406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RolesAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/saha-billing': {
+      id: '/saha-billing'
+      path: '/saha-billing'
+      fullPath: '/saha-billing'
+      preLoaderRoute: typeof SahaBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scope-brief': {
       id: '/scope-brief'
       path: '/scope-brief'
@@ -1492,6 +1525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/billing/$action': {
+      id: '/api/billing/$action'
+      path: '/api/billing/$action'
+      fullPath: '/api/billing/$action'
+      preLoaderRoute: typeof ApiBillingActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1553,6 +1593,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReplanRoute: ReplanRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RolesAccessRoute: RolesAccessRoute,
+  SahaBillingRoute: SahaBillingRoute,
   ScopeBriefRoute: ScopeBriefRoute,
   SiteExecutionRoute: SiteExecutionRoute,
   SiteMaterialGuideRoute: SiteMaterialGuideRoute,
@@ -1569,6 +1610,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiThreadIdRoute: AiThreadIdRoute,
   ApiChatRoute: ApiChatRoute,
   AiIndexRoute: AiIndexRoute,
+  ApiBillingActionRoute: ApiBillingActionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

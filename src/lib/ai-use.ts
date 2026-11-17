@@ -4,17 +4,23 @@ import type { AiFeatureKey } from "@/lib/ai-plans";
 
 /**
  * Middleware for every AI server function: signed-in approved user, feature in the firm's
- * plan, enough prepaid credits; the price is deducted only when the AI run succeeds.
+ * plan, credits reserved with SAHA's central billing before the run; kept if the run succeeds,
+ * refunded if it fails.
  */
 export const aiUse = (key: AiFeatureKey) =>
   createMiddleware({ type: "function" })
     .middleware([requireSupabaseAuth])
     .server(async ({ next, context }) => {
       const { assertAiFeature } = await import("@/lib/ai-plans.server");
-      const { checkAiUse, chargeAiUse } = await import("@/lib/ai-credits.server");
+      const { reserveAi, settleAi, releaseAi } = await import("@/lib/ai-credits.server");
       await assertAiFeature(context.supabase as never, key);
-      await checkAiUse(key);
-      const result = await next();
-      await chargeAiUse(key, context.userId);
-      return result;
+      const reservation = await reserveAi(key, context.userId);
+      try {
+        const result = await next();
+        await settleAi(reservation);
+        return result;
+      } catch (e) {
+        await releaseAi(reservation);
+        throw e;
+      }
     });

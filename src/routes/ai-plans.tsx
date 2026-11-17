@@ -25,7 +25,7 @@ import {
   type Plan,
 } from "@/lib/ai-plans";
 import { GST_PCT, LOW_BALANCE, PRICE_PER_USE, TOP_UP_PACKS } from "@/lib/ai-credits";
-import { adjustCredits, confirmTopUp, createTopUp, getCredits } from "@/lib/ai-credits.functions";
+import { confirmTopUp, createTopUp, getCredits, getInvoiceLink } from "@/lib/ai-credits.functions";
 
 export const Route = createFileRoute("/ai-plans")({
   head: () => ({
@@ -76,7 +76,7 @@ function Page() {
   const credits = useServerFn(getCredits);
   const topUp = useServerFn(createTopUp);
   const confirm = useServerFn(confirmTopUp);
-  const adjust = useServerFn(adjustCredits);
+  const invoiceLink = useServerFn(getInvoiceLink);
 
   const planQ = useQuery({
     queryKey: ["ai-plan"],
@@ -96,7 +96,6 @@ function Page() {
   const [features, setFeatures] = useState<Partial<Record<AiFeatureKey, boolean>> | null>(null);
   const [usage, setUsage] = useState<Partial<Record<AiFeatureKey, number>> | null>(null);
   const [billing, setBilling] = useState<Billing | null>(null);
-  const [adj, setAdj] = useState({ credits: "", note: "" });
   const F = features ?? Object.fromEntries(AI_FEATURES.map((f) => [f.key, isOn(plan, f.key)]));
   const U = usage ?? plan?.usage ?? {};
   const B = billing ?? { ...emptyBilling(), ...(plan?.billing ?? {}) };
@@ -105,10 +104,9 @@ function Page() {
   const estMonthly = chosen.reduce((s, f) => s + PRICE_PER_USE[f.key] * uses(f.key), 0);
 
   const c = cq.data;
-  const w = c?.wallet;
-  const month = new Date().toISOString().slice(0, 7);
-  const thisMonth = w?.months[month] ?? {};
-  const spentThisMonth = Object.values(thisMonth).reduce((s, r) => s + (r?.credits ?? 0), 0);
+  const w = c?.billing ? c : null;
+  const thisMonth = c?.byFeature ?? {};
+  const spentThisMonth = c?.used ?? 0;
 
   const savePlan = useMutation({
     mutationFn: async () => {
@@ -174,7 +172,7 @@ function Page() {
                 },
               });
               resolve(
-                `${o.pack.credits.toLocaleString("en-IN")} credits added. Balance ${inr(res.wallet.balance)}.`,
+                `${o.pack.credits.toLocaleString("en-IN")} credits added${res.invoiceNo ? ` · GST invoice ${res.invoiceNo}` : ""}.`,
               );
             } catch (e) {
               reject(e);
@@ -195,13 +193,9 @@ function Page() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const doAdjust = useMutation({
-    mutationFn: () => adjust({ data: { credits: Number(adj.credits), note: adj.note } }),
-    onSuccess: (r) => {
-      toast.success(`Done. Balance ${inr(r.wallet.balance)}`);
-      setAdj({ credits: "", note: "" });
-      qc.invalidateQueries({ queryKey: ["ai-credits"] });
-    },
+  const openInvoice = useMutation({
+    mutationFn: (invoiceNo: string) => invoiceLink({ data: { invoiceNo } }),
+    onSuccess: (r) => window.open(r.url, "_blank", "noopener"),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -306,7 +300,7 @@ function Page() {
                 </summary>
                 <div className="mt-1 flex flex-col divide-y divide-border rounded-lg border border-border">
                   {w.recent.map((e) => (
-                    <div key={e.id} className="flex justify-between gap-3 p-2">
+                    <div key={`${e.id}-${e.at}`} className="flex justify-between gap-3 p-2">
                       <span>
                         {new Date(e.at).toLocaleString("en-IN", {
                           day: "numeric",
@@ -316,10 +310,12 @@ function Page() {
                         })}{" "}
                         ·{" "}
                         {e.type === "use"
-                          ? FEATURE_NAME[e.key!]
+                          ? (FEATURE_NAME[e.feature as AiFeatureKey] ?? e.feature)
                           : e.type === "topup"
                             ? "Top-up"
-                            : "Adjustment"}
+                            : e.type === "refund"
+                              ? "Refund (AI run failed)"
+                              : "Adjustment"}
                         {e.ref && <span className="text-muted-foreground"> · {e.ref}</span>}
                       </span>
                       <span className={`tnum ${e.credits > 0 ? "text-emerald-700" : ""}`}>
@@ -331,36 +327,25 @@ function Page() {
                 </div>
               </details>
             )}
-            {c.sahaAdmin && (
-              <div className="mt-4 flex flex-wrap items-end gap-2 rounded-lg bg-muted/50 p-3 [&>label]:min-w-[8rem] [&>label]:flex-1">
-                <p className="w-full text-xs font-semibold">
-                  SAHA staff: add or remove credits (bank transfer, correction)
-                </p>
-                <label>
-                  <span className="text-xs text-muted-foreground">Credits (− to remove)</span>
-                  <input
-                    type="number"
-                    className={input}
-                    value={adj.credits}
-                    onChange={(e) => setAdj({ ...adj, credits: e.target.value })}
-                  />
-                </label>
-                <label className="!flex-[2]">
-                  <span className="text-xs text-muted-foreground">Note / reference</span>
-                  <input
-                    className={input}
-                    value={adj.note}
-                    onChange={(e) => setAdj({ ...adj, note: e.target.value })}
-                  />
-                </label>
-                <button
-                  type="button"
-                  disabled={doAdjust.isPending}
-                  onClick={() => doAdjust.mutate()}
-                  className="rounded-lg border border-primary px-3 py-1.5 text-sm font-semibold text-primary"
-                >
-                  Apply
-                </button>
+            {c.invoices.length > 0 && (
+              <div className="mt-3 text-sm">
+                <p className="label-caps text-muted-foreground">GST invoices</p>
+                <div className="mt-1 flex flex-col divide-y divide-border rounded-lg border border-border">
+                  {c.invoices.map((v) => (
+                    <button
+                      key={v.invoice_no}
+                      type="button"
+                      onClick={() => openInvoice.mutate(v.invoice_no)}
+                      className="flex justify-between gap-3 p-2 text-left hover:bg-muted/50"
+                    >
+                      <span className="text-primary underline">{v.invoice_no}</span>
+                      <span className="tnum">
+                        {new Date(v.created_at).toLocaleDateString("en-IN")} ·{" "}
+                        {inr(Number(v.total), 2)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </section>

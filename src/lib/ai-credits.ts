@@ -27,32 +27,21 @@ export const GST_PCT = 18;
 export const LOW_BALANCE = 200;
 
 export type CreditEvent = {
-  id: string;
-  type: "use" | "topup" | "adjust";
-  credits: number; // + for top-up/adjust in, − for use
-  key?: AiFeatureKey;
-  by: string; // user id or email
+  id?: number;
+  type: "use" | "refund" | "topup" | "adjust";
+  feature?: string | null;
+  credits: number; // + in, − out
+  balance_after?: number;
+  ref?: string | null;
   at: string;
-  ref?: string; // payment id, note
 };
-export type Wallet = {
-  balance: number;
-  topupTotal: number;
-  spentTotal: number;
-  months: Record<string, Partial<Record<AiFeatureKey, { uses: number; credits: number }>>>;
-  recent: CreditEvent[];
-  updatedAt: string;
-};
-export const emptyWallet = (): Wallet => ({
-  balance: 0,
-  topupTotal: 0,
-  spentTotal: 0,
-  months: {},
-  recent: [],
-  updatedAt: "",
-});
 export type CreditsSummary = {
   billing: boolean; // credits switched on for this app
   payments: boolean; // online top-up available
-  wallet: Wallet;
+  balance: number;
+  used: number; // this month
+  topupTotal: number;
+  byFeature: Record<string, { uses: number; credits: number }>;
+  recent: CreditEvent[];
+  invoices: { invoice_no: string; total: number; created_at: string }[];
 };

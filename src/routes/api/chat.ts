@@ -166,15 +166,13 @@ export const Route = createFileRoute("/api/chat")({
         if (!key) return new Response("AI is not configured", { status: 500 });
         const off = await aiFeatureOffWithToken(accessToken, "assistant");
         if (off) return new Response(off, { status: 403 });
-        {
-          // Prepaid AI credits: a chat answer is charged when it starts streaming.
-          const { checkAiUse, chargeAiUse } = await import("@/lib/ai-credits.server");
-          try {
-            await checkAiUse("assistant");
-          } catch (e) {
-            return new Response((e as Error).message, { status: 402 });
-          }
-          await chargeAiUse("assistant", authUser.id ?? "");
+        // Prepaid AI credits: reserve the price now; keep it when the answer finishes, refund on error.
+        const credits = await import("@/lib/ai-credits.server");
+        let reservation: string | null = null;
+        try {
+          reservation = await credits.reserveAi("assistant", authUser.id ?? "");
+        } catch (e) {
+          return new Response((e as Error).message, { status: 402 });
         }
 
         const uiMessages = messages as UIMessage[];
@@ -191,7 +189,11 @@ export const Route = createFileRoute("/api/chat")({
             context,
           ].join("\n\n"),
           messages: await convertToModelMessages(uiMessages),
+          onError: async () => {
+            await credits.releaseAi(reservation);
+          },
           onFinish: async ({ text }) => {
+            await credits.settleAi(reservation);
             if (!threadId) return;
             const sb = serverSupabase(accessToken);
             const last = uiMessages[uiMessages.length - 1];

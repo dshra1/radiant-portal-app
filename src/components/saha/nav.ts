@@ -72,6 +72,7 @@ export const navGroups: NavGroup[] = [
       },
       { to: "/execution-manual", label: "Execution Manual", icon: BookOpen, alsoIn: ["site"] },
       { to: "/ai-plans", label: "AI Features & Plans", icon: Sparkles, adminOnly: true },
+      { to: "/saha-billing", label: "Billing dashboard (SAHA)", icon: Wallet, adminOnly: true },
       { to: "/access-control", label: "Access & Permissions", icon: ShieldCheck, adminOnly: true },
       { to: "/database-backup", label: "Database Backup", icon: Boxes, adminOnly: true },
     ],
