@@ -75,7 +75,16 @@ export async function reserve(firm: Firm, feature: AiFeatureKey, user: string) {
     p_credits: price,
     p_user: user,
   });
-  if (error) throw new Error(friendly(error.message, feature, firm));
+  if (error) {
+    const { data: now } = await sb
+      .from("billing_firms")
+      .select("balance")
+      .eq("id", firm.id)
+      .maybeSingle();
+    throw new Error(
+      friendly(error.message, feature, { ...firm, balance: Number(now?.balance ?? firm.balance) }),
+    );
+  }
   return String(data);
 }
 export async function settle(id: string) {

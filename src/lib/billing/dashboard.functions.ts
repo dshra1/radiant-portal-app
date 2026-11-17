@@ -2,12 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /** SAHA staff only: their sign-in email must be in SAHA_ADMIN_EMAILS. */
+const normEmail = (e: string) =>
+  e
+    .trim()
+    .toLowerCase()
+    .replace(/@googlemail\.com$/, "@gmail.com");
 function assertSaha(claims: unknown) {
-  const email = String((claims as { email?: string }).email ?? "").toLowerCase();
-  const list = (process.env["SAHA_ADMIN_EMAILS"] ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
+  const email = normEmail(String((claims as { email?: string }).email ?? ""));
+  const list = (process.env["SAHA_ADMIN_EMAILS"] ?? "").split(",").map(normEmail).filter(Boolean);
   if (!list.includes(email)) throw new Error("Only SAHA staff can open the billing dashboard");
   return email;
 }
