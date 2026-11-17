@@ -1,13 +1,12 @@
 /**
  * AI features of Saha OS, their running cost, and the firm's plan.
  *
- * Each firm's app keeps one plan: which AI features are on, the firm's billing details,
- * and the prices (set by the admin). AI server functions refuse a feature that is off.
- * Stored in site-media/_library/BILLING/ (pricing.json, plan.json).
+ * Each firm's app keeps one plan: which AI features are on and the firm's billing details
+ * (site-media/_library/BILLING/plan.json). AI server functions refuse a feature that is off.
+ * Prices per use and the credit balance are in ai-credits.ts / ai-credits.server.ts.
  */
 export const BILLING_DIR = "_library/BILLING";
 export const PLAN_FILE = `${BILLING_DIR}/plan.json`;
-export const PRICING_FILE = `${BILLING_DIR}/pricing.json`;
 
 export type AiFeatureKey =
   | "drawing-reader"
@@ -110,25 +109,6 @@ export const AI_FEATURES: AiFeature[] = [
 export const RATE_IN = 1.5;
 export const RATE_OUT = 7.5;
 
-export type Pricing = {
-  currency: "INR";
-  usdInr: number;
-  baseFee: number; // platform fee per month (non-AI modules)
-  annualDiscountPct: number;
-  prices: Partial<Record<AiFeatureKey, number>>; // per month
-  usage: Partial<Record<AiFeatureKey, number>>; // assumed uses per month
-  updatedAt: string;
-};
-export const defaultPricing = (): Pricing => ({
-  currency: "INR",
-  usdInr: 88,
-  baseFee: 0,
-  annualDiscountPct: 0,
-  prices: {},
-  usage: {},
-  updatedAt: "",
-});
-
 export type Billing = {
   firm: string;
   gstin: string;
@@ -139,7 +119,6 @@ export type Billing = {
   contact: string;
   email: string;
   phone: string;
-  cycle: "monthly" | "annual";
   poRef: string;
 };
 export const emptyBilling = (): Billing => ({
@@ -152,14 +131,13 @@ export const emptyBilling = (): Billing => ({
   contact: "",
   email: "",
   phone: "",
-  cycle: "monthly",
   poRef: "",
 });
 
 export type Plan = {
   features: Partial<Record<AiFeatureKey, boolean>>;
+  usage?: Partial<Record<AiFeatureKey, number>>; // the firm's own estimate of uses per month
   billing: Billing;
-  quote: { monthly: number; gst: number; total: number; cycle: "monthly" | "annual" };
   savedAt: string;
   savedBy: string;
 };

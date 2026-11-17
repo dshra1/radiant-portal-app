@@ -1,7 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Save, Sparkles } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CreditCard,
+  Sparkles,
+  Wallet as WalletIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Shell } from "@/components/saha/Shell";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,18 +18,14 @@ import {
   AI_FEATURES,
   GSTIN_RE,
   PLAN_FILE,
-  PRICING_FILE,
-  RATE_IN,
-  RATE_OUT,
-  costPerUse,
-  defaultPricing,
   emptyBilling,
   isOn,
   type AiFeatureKey,
   type Billing,
   type Plan,
-  type Pricing,
 } from "@/lib/ai-plans";
+import { GST_PCT, LOW_BALANCE, PRICE_PER_USE, TOP_UP_PACKS } from "@/lib/ai-credits";
+import { adjustCredits, confirmTopUp, createTopUp, getCredits } from "@/lib/ai-credits.functions";
 
 export const Route = createFileRoute("/ai-plans")({
   head: () => ({
@@ -31,7 +34,7 @@ export const Route = createFileRoute("/ai-plans")({
       {
         name: "description",
         content:
-          "Every AI feature in Saha OS with what it does, its running cost and its price; choose the features for your firm's app and enter your billing details.",
+          "Every AI feature in Saha OS and its price per use; prepaid AI credits, top-ups, usage, and the firm's billing details.",
       },
     ],
   }),
@@ -41,21 +44,28 @@ export const Route = createFileRoute("/ai-plans")({
 const BUCKET = "site-media";
 const inr = (n: number, d = 0) =>
   `₹${n.toLocaleString("en-IN", { maximumFractionDigits: d, minimumFractionDigits: d })}`;
-async function readJson<T>(path: string): Promise<T | null> {
-  const dl = await supabase.storage.from(BUCKET).download(path);
-  if (!dl.data) return null;
-  try {
-    return JSON.parse(await dl.data.text()) as T;
-  } catch {
-    return null;
+const FEATURE_NAME = Object.fromEntries(AI_FEATURES.map((f) => [f.key, f.name])) as Record<
+  AiFeatureKey,
+  string
+>;
+
+declare global {
+  interface Window {
+    Razorpay?: new (o: Record<string, unknown>) => {
+      open: () => void;
+      on: (ev: string, fn: (r: unknown) => void) => void;
+    };
   }
 }
-async function putJson(path: string, body: unknown) {
-  const blob = new Blob([JSON.stringify(body, null, 1)], { type: "application/json" });
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, blob, { upsert: true, contentType: "application/json" });
-  if (error) throw error;
+function loadRazorpay() {
+  return new Promise<void>((resolve, reject) => {
+    if (window.Razorpay) return resolve();
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("Could not load the payment window"));
+    document.body.appendChild(s);
+  });
 }
 
 function Page() {
@@ -63,42 +73,42 @@ function Page() {
   const isAdmin = Boolean(access.access?.isAdmin);
   const ai = useAiConfigured();
   const qc = useQueryClient();
-  const saved = useQuery({
+  const credits = useServerFn(getCredits);
+  const topUp = useServerFn(createTopUp);
+  const confirm = useServerFn(confirmTopUp);
+  const adjust = useServerFn(adjustCredits);
+
+  const planQ = useQuery({
     queryKey: ["ai-plan"],
-    queryFn: async () => ({
-      pricing: { ...defaultPricing(), ...((await readJson<Pricing>(PRICING_FILE)) ?? {}) },
-      plan: await readJson<Plan>(PLAN_FILE),
-    }),
-  });
-  const [pricing, setPricing] = useState<Pricing | null>(null);
-  const [features, setFeatures] = useState<Partial<Record<AiFeatureKey, boolean>> | null>(null);
-  const [billing, setBilling] = useState<Billing | null>(null);
-
-  const P = pricing ?? saved.data?.pricing ?? defaultPricing();
-  const plan = saved.data?.plan ?? null;
-  const F = features ?? Object.fromEntries(AI_FEATURES.map((f) => [f.key, isOn(plan, f.key)]));
-  const B = billing ?? { ...emptyBilling(), ...(plan?.billing ?? {}) };
-
-  const uses = (k: AiFeatureKey) =>
-    P.usage[k] ?? AI_FEATURES.find((f) => f.key === k)!.usesPerMonth;
-  const chosen = AI_FEATURES.filter((f) => F[f.key]);
-  const monthly = P.baseFee + chosen.reduce((s, f) => s + (P.prices[f.key] ?? 0), 0);
-  const running = chosen.reduce((s, f) => s + costPerUse(f, P.usdInr) * uses(f.key), 0);
-  const cycleMonths = B.cycle === "annual" ? 12 : 1;
-  const beforeGst =
-    monthly * cycleMonths * (B.cycle === "annual" ? 1 - P.annualDiscountPct / 100 : 1);
-  const gst = beforeGst * 0.18;
-  const unpriced = chosen.filter((f) => !(P.prices[f.key]! > 0));
-
-  const savePricing = useMutation({
-    mutationFn: () => putJson(PRICING_FILE, { ...P, updatedAt: new Date().toISOString() }),
-    onSuccess: () => {
-      toast.success("Prices saved");
-      setPricing(null);
-      qc.invalidateQueries({ queryKey: ["ai-plan"] });
+    queryFn: async () => {
+      const dl = await supabase.storage.from(BUCKET).download(PLAN_FILE);
+      if (!dl.data) return null;
+      try {
+        return JSON.parse(await dl.data.text()) as Plan;
+      } catch {
+        return null;
+      }
     },
-    onError: (e: Error) => toast.error(e.message),
   });
+  const cq = useQuery({ queryKey: ["ai-credits"], queryFn: () => credits(), retry: false });
+
+  const plan = planQ.data ?? null;
+  const [features, setFeatures] = useState<Partial<Record<AiFeatureKey, boolean>> | null>(null);
+  const [usage, setUsage] = useState<Partial<Record<AiFeatureKey, number>> | null>(null);
+  const [billing, setBilling] = useState<Billing | null>(null);
+  const [adj, setAdj] = useState({ credits: "", note: "" });
+  const F = features ?? Object.fromEntries(AI_FEATURES.map((f) => [f.key, isOn(plan, f.key)]));
+  const U = usage ?? plan?.usage ?? {};
+  const B = billing ?? { ...emptyBilling(), ...(plan?.billing ?? {}) };
+  const uses = (k: AiFeatureKey) => U[k] ?? AI_FEATURES.find((f) => f.key === k)!.usesPerMonth;
+  const chosen = AI_FEATURES.filter((f) => F[f.key]);
+  const estMonthly = chosen.reduce((s, f) => s + PRICE_PER_USE[f.key] * uses(f.key), 0);
+
+  const c = cq.data;
+  const w = c?.wallet;
+  const month = new Date().toISOString().slice(0, 7);
+  const thisMonth = w?.months[month] ?? {};
+  const spentThisMonth = Object.values(thisMonth).reduce((s, r) => s + (r?.credits ?? 0), 0);
 
   const savePlan = useMutation({
     mutationFn: async () => {
@@ -108,23 +118,89 @@ function Page() {
       if (!/^\S+@\S+\.\S+$/.test(B.email)) throw new Error("Enter a billing email");
       const body: Plan = {
         features: F,
+        usage: U,
         billing: { ...B, gstin: B.gstin.toUpperCase(), pan: B.pan.toUpperCase() },
-        quote: {
-          monthly,
-          gst: Math.round(gst),
-          total: Math.round(beforeGst + gst),
-          cycle: B.cycle,
-        },
         savedAt: new Date().toISOString(),
         savedBy: access.access?.email ?? "",
       };
-      await putJson(PLAN_FILE, body);
+      const blob = new Blob([JSON.stringify(body, null, 1)], { type: "application/json" });
+      const { error } = await supabase.storage
+        .from(BUCKET)
+        .upload(PLAN_FILE, blob, { upsert: true, contentType: "application/json" });
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Plan saved. Features you left out are now switched off in this app.");
+      toast.success("Saved. Features you left out are now switched off in this app.");
       setFeatures(null);
+      setUsage(null);
       setBilling(null);
       qc.invalidateQueries({ queryKey: ["ai-plan"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const buy = useMutation({
+    mutationFn: async (packId: string) => {
+      if (!plan?.billing?.firm)
+        throw new Error("Save the firm's billing details first (they go on the GST invoice)");
+      const o = await topUp({ data: { packId } });
+      await loadRazorpay();
+      return new Promise<string>((resolve, reject) => {
+        const rz = new window.Razorpay!({
+          key: o.keyId,
+          order_id: o.orderId,
+          amount: o.amount,
+          currency: "INR",
+          name: "SAHA OS",
+          description: `AI credits · ${o.pack.label} · ${o.pack.credits.toLocaleString("en-IN")} credits`,
+          prefill: {
+            name: plan.billing.contact,
+            email: plan.billing.email,
+            contact: plan.billing.phone,
+          },
+          notes: { firm: plan.billing.firm, gstin: plan.billing.gstin },
+          theme: { color: "#1f3a2e" },
+          handler: async (r: {
+            razorpay_order_id: string;
+            razorpay_payment_id: string;
+            razorpay_signature: string;
+          }) => {
+            try {
+              const res = await confirm({
+                data: {
+                  orderId: r.razorpay_order_id,
+                  paymentId: r.razorpay_payment_id,
+                  signature: r.razorpay_signature,
+                },
+              });
+              resolve(
+                `${o.pack.credits.toLocaleString("en-IN")} credits added. Balance ${inr(res.wallet.balance)}.`,
+              );
+            } catch (e) {
+              reject(e);
+            }
+          },
+          modal: { ondismiss: () => reject(new Error("Payment cancelled")) },
+        });
+        rz.on("payment.failed", () =>
+          reject(new Error("The payment failed. No credits were added.")),
+        );
+        rz.open();
+      });
+    },
+    onSuccess: (m) => {
+      toast.success(m);
+      qc.invalidateQueries({ queryKey: ["ai-credits"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const doAdjust = useMutation({
+    mutationFn: () => adjust({ data: { credits: Number(adj.credits), note: adj.note } }),
+    onSuccess: (r) => {
+      toast.success(`Done. Balance ${inr(r.wallet.balance)}`);
+      setAdj({ credits: "", note: "" });
+      qc.invalidateQueries({ queryKey: ["ai-credits"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -132,37 +208,166 @@ function Page() {
   const input =
     "w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm disabled:opacity-60";
   const setB = (patch: Partial<Billing>) => setBilling({ ...B, ...patch });
-  const setP = (patch: Partial<Pricing>) => setPricing({ ...P, ...patch });
 
   return (
     <Shell title="AI Features & Plans">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
         <header className="rounded-2xl border border-border bg-card p-5">
           <p className="label-caps text-primary">Your Saha OS plan</p>
-          <h1 className="text-2xl font-extrabold">AI features and plans</h1>
+          <h1 className="text-2xl font-extrabold">AI features and credits</h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Choose the AI features your firm wants. Features you leave out are switched off in your
-            app; everything else in Saha OS (BOQ, site, stock, QA, accounts, team chat) works the
-            same. The running cost is Google's AI charge for typical use; the price is what your
-            plan costs.
+            AI in Saha OS runs on prepaid credits (1 credit = ₹1). Each AI use takes a fixed number
+            of credits, only when it succeeds. Switch off any feature your firm doesn't want.
+            Everything else in Saha OS works without credits.
           </p>
-          {plan && (
-            <p className="mt-2 text-sm">
-              Current plan: <span className="font-semibold">{plan.billing.firm}</span> ·{" "}
-              {AI_FEATURES.filter((f) => isOn(plan, f.key)).length} of {AI_FEATURES.length} AI
-              features · saved {new Date(plan.savedAt).toLocaleDateString("en-IN")}
-            </p>
-          )}
           {ai === false && (
             <p className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" /> {AI_OFF_REASON}
             </p>
           )}
+          {c && !c.billing && (
+            <p className="mt-3 rounded-lg bg-muted p-3 text-sm">
+              Credits are not in use on this app: AI is not charged here. Firms' apps run with
+              credits switched on.
+            </p>
+          )}
         </header>
+
+        {c?.billing && w && (
+          <section className="rounded-2xl border border-primary/40 bg-card p-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="label-caps text-muted-foreground">AI credit balance</p>
+                <p
+                  className={`text-3xl font-extrabold tnum ${w.balance < LOW_BALANCE ? "text-amber-700" : ""}`}
+                >
+                  <WalletIcon className="mr-1 inline size-6" /> {inr(w.balance)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Used this month {inr(spentThisMonth)} · bought to date {inr(w.topupTotal)}
+                </p>
+              </div>
+              {w.balance < LOW_BALANCE && (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  Low balance: AI features stop when credits run out.
+                </p>
+              )}
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {TOP_UP_PACKS.map((p) => (
+                <div key={p.id} className="rounded-xl border border-border p-3">
+                  <p className="font-semibold">{p.label}</p>
+                  <p className="text-sm">{p.credits.toLocaleString("en-IN")} credits</p>
+                  <p className="text-xs text-muted-foreground">
+                    {inr(p.pay)} + {GST_PCT}% GST = {inr(p.pay * (1 + GST_PCT / 100), 2)}
+                  </p>
+                  {c.payments ? (
+                    <button
+                      type="button"
+                      disabled={!isAdmin || buy.isPending}
+                      onClick={() => buy.mutate(p.id)}
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                    >
+                      <CreditCard className="size-4" />{" "}
+                      {buy.isPending ? "Opening…" : `Pay ${inr(p.pay * (1 + GST_PCT / 100))}`}
+                    </button>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Online payment coming soon. Contact SAHA to top up by bank transfer.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {!isAdmin && (
+              <p className="mt-2 text-xs text-muted-foreground">Only an admin can buy credits.</p>
+            )}
+
+            {Object.keys(thisMonth).length > 0 && (
+              <div className="mt-4">
+                <p className="label-caps text-muted-foreground">This month by feature</p>
+                <div className="mt-1 flex flex-col divide-y divide-border rounded-lg border border-border text-sm">
+                  {Object.entries(thisMonth).map(([k, r]) => (
+                    <div key={k} className="flex justify-between gap-3 p-2">
+                      <span>{FEATURE_NAME[k as AiFeatureKey] ?? k}</span>
+                      <span className="tnum">
+                        {r?.uses} uses · {inr(r?.credits ?? 0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {w.recent.length > 0 && (
+              <details className="mt-3 text-sm">
+                <summary className="cursor-pointer text-muted-foreground">
+                  Recent credit activity
+                </summary>
+                <div className="mt-1 flex flex-col divide-y divide-border rounded-lg border border-border">
+                  {w.recent.map((e) => (
+                    <div key={e.id} className="flex justify-between gap-3 p-2">
+                      <span>
+                        {new Date(e.at).toLocaleString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        ·{" "}
+                        {e.type === "use"
+                          ? FEATURE_NAME[e.key!]
+                          : e.type === "topup"
+                            ? "Top-up"
+                            : "Adjustment"}
+                        {e.ref && <span className="text-muted-foreground"> · {e.ref}</span>}
+                      </span>
+                      <span className={`tnum ${e.credits > 0 ? "text-emerald-700" : ""}`}>
+                        {e.credits > 0 ? "+" : ""}
+                        {inr(e.credits)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+            {c.sahaAdmin && (
+              <div className="mt-4 flex flex-wrap items-end gap-2 rounded-lg bg-muted/50 p-3 [&>label]:min-w-[8rem] [&>label]:flex-1">
+                <p className="w-full text-xs font-semibold">
+                  SAHA staff: add or remove credits (bank transfer, correction)
+                </p>
+                <label>
+                  <span className="text-xs text-muted-foreground">Credits (− to remove)</span>
+                  <input
+                    type="number"
+                    className={input}
+                    value={adj.credits}
+                    onChange={(e) => setAdj({ ...adj, credits: e.target.value })}
+                  />
+                </label>
+                <label className="!flex-[2]">
+                  <span className="text-xs text-muted-foreground">Note / reference</span>
+                  <input
+                    className={input}
+                    value={adj.note}
+                    onChange={(e) => setAdj({ ...adj, note: e.target.value })}
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={doAdjust.isPending}
+                  onClick={() => doAdjust.mutate()}
+                  className="rounded-lg border border-primary px-3 py-1.5 text-sm font-semibold text-primary"
+                >
+                  Apply
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="flex flex-col gap-3">
           {AI_FEATURES.map((f) => {
-            const per = costPerUse(f, P.usdInr);
             const on = Boolean(F[f.key]);
             return (
               <div
@@ -179,124 +384,61 @@ function Page() {
                     aria-label={`Include ${f.name}`}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1.5 font-semibold">
-                      <Sparkles className="size-4 text-primary" /> {f.name}
-                    </p>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="flex items-center gap-1.5 font-semibold">
+                        <Sparkles className="size-4 text-primary" /> {f.name}
+                      </p>
+                      <p className="text-sm font-semibold tnum">
+                        {inr(PRICE_PER_USE[f.key])}{" "}
+                        <span className="font-normal text-muted-foreground">per {f.per}</span>
+                      </p>
+                    </div>
                     <p className="mt-0.5 text-sm text-muted-foreground">{f.does}</p>
-                    <p className="mt-1 text-xs">
-                      In the app:{" "}
-                      {f.where.map((w, i) => (
-                        <span key={w.to}>
-                          {i > 0 && ", "}
-                          <Link to={w.to} className="text-primary underline">
-                            {w.label}
-                          </Link>
-                        </span>
-                      ))}
-                    </p>
+                    <div className="mt-2 flex flex-wrap items-end gap-3 text-sm">
+                      <p className="text-xs">
+                        In the app:{" "}
+                        {f.where.map((x, i) => (
+                          <span key={x.to}>
+                            {i > 0 && ", "}
+                            <Link to={x.to} className="text-primary underline">
+                              {x.label}
+                            </Link>
+                          </span>
+                        ))}
+                      </p>
+                      <label className="ml-auto w-28">
+                        <span className="text-xs text-muted-foreground">Uses / month</span>
+                        <input
+                          type="number"
+                          className={input}
+                          value={uses(f.key)}
+                          disabled={!isAdmin}
+                          onChange={(e) => setUsage({ ...U, [f.key]: Number(e.target.value) || 0 })}
+                        />
+                      </label>
+                      <p className="w-28 text-right">
+                        <span className="block text-xs text-muted-foreground">≈ per month</span>
+                        <span className="tnum">{inr(PRICE_PER_USE[f.key] * uses(f.key))}</span>
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 flex flex-wrap items-end gap-3 pl-7 text-sm">
-                  <div className="min-w-[9rem]">
-                    <p className="text-xs text-muted-foreground">Running cost</p>
-                    <p className="tnum">
-                      {inr(per, 2)} per {f.per}
-                    </p>
-                  </div>
-                  <label className="w-32">
-                    <span className="text-xs text-muted-foreground">Uses / month</span>
-                    <input
-                      type="number"
-                      className={input}
-                      value={uses(f.key)}
-                      disabled={!isAdmin}
-                      onChange={(e) =>
-                        setP({ usage: { ...P.usage, [f.key]: Number(e.target.value) || 0 } })
-                      }
-                    />
-                  </label>
-                  <div className="min-w-[8rem]">
-                    <p className="text-xs text-muted-foreground">≈ running / month</p>
-                    <p className="tnum">{inr(per * uses(f.key))}</p>
-                  </div>
-                  <label className="w-40">
-                    <span className="text-xs text-muted-foreground">Price / month</span>
-                    <input
-                      type="number"
-                      className={input}
-                      placeholder="Set price"
-                      value={P.prices[f.key] || ""}
-                      disabled={!isAdmin}
-                      onChange={(e) =>
-                        setP({ prices: { ...P.prices, [f.key]: Number(e.target.value) || 0 } })
-                      }
-                    />
-                  </label>
                 </div>
               </div>
             );
           })}
-        </section>
-
-        <section className="rounded-2xl border border-border bg-card p-4">
-          <p className="label-caps text-muted-foreground">Plan settings (admin)</p>
-          <div className="mt-2 flex flex-wrap gap-3 [&>label]:min-w-[10rem] [&>label]:flex-1 text-sm">
-            <label>
-              <span className="text-xs text-muted-foreground">
-                Platform fee / month (non-AI modules)
-              </span>
-              <input
-                type="number"
-                className={input}
-                value={P.baseFee || ""}
-                disabled={!isAdmin}
-                onChange={(e) => setP({ baseFee: Number(e.target.value) || 0 })}
-              />
-            </label>
-            <label>
-              <span className="text-xs text-muted-foreground">Annual plan discount %</span>
-              <input
-                type="number"
-                className={input}
-                value={P.annualDiscountPct || ""}
-                disabled={!isAdmin}
-                onChange={(e) => setP({ annualDiscountPct: Number(e.target.value) || 0 })}
-              />
-            </label>
-            <label>
-              <span className="text-xs text-muted-foreground">USD → INR for running cost</span>
-              <input
-                type="number"
-                className={input}
-                value={P.usdInr}
-                disabled={!isAdmin}
-                onChange={(e) => setP({ usdInr: Number(e.target.value) || 0 })}
-              />
-            </label>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Running cost uses Google's Gemini 3.7 Flash rates from 1 Jan 2027 (${RATE_IN} per
-            million input tokens, ${RATE_OUT} per million output) and typical document sizes; actual
-            cost depends on how big the drawings and lists are.
+          <p className="px-1 text-sm">
+            Estimated AI spend for the features ticked:{" "}
+            <span className="font-semibold tnum">{inr(estMonthly)}</span> a month (+ {GST_PCT}% GST
+            on top-ups).
           </p>
-          {isAdmin && (
-            <button
-              type="button"
-              disabled={pricing === null || savePricing.isPending}
-              onClick={() => savePricing.mutate()}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-primary px-3 py-1.5 text-sm font-semibold text-primary disabled:opacity-50"
-            >
-              <Save className="size-4" /> Save prices and usage
-            </button>
-          )}
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-4">
-          <p className="label-caps text-muted-foreground">Billing details</p>
+          <p className="label-caps text-muted-foreground">Billing details (for GST invoices)</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            For invoices only. No card or bank details are taken in the app.
+            No card or bank details are stored in the app; payments go through the payment gateway.
           </p>
-          <div className="mt-3 grid gap-3 md:grid-cols-2 text-sm">
+          <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
             {(
               [
                 ["firm", "Firm / company name"],
@@ -314,26 +456,12 @@ function Page() {
                 <span className="text-xs text-muted-foreground">{label}</span>
                 <input
                   className={input}
-                  value={B[k] as string}
+                  value={B[k]}
                   disabled={!isAdmin}
                   onChange={(e) => setB({ [k]: e.target.value } as Partial<Billing>)}
                 />
               </label>
             ))}
-            <label>
-              <span className="text-xs text-muted-foreground">Billing cycle</span>
-              <select
-                className={input}
-                value={B.cycle}
-                disabled={!isAdmin}
-                onChange={(e) => setB({ cycle: e.target.value as Billing["cycle"] })}
-              >
-                <option value="monthly">Monthly</option>
-                <option value="annual">
-                  Annual{P.annualDiscountPct ? ` (−${P.annualDiscountPct}%)` : ""}
-                </option>
-              </select>
-            </label>
             <label className="md:col-span-2">
               <span className="text-xs text-muted-foreground">Billing address</span>
               <textarea
@@ -345,40 +473,6 @@ function Page() {
               />
             </label>
           </div>
-        </section>
-
-        <section className="rounded-2xl border border-primary/40 bg-card p-4">
-          <p className="label-caps text-primary">Your plan</p>
-          <div className="mt-2 grid gap-2 text-sm md:grid-cols-2">
-            <p>
-              AI features chosen:{" "}
-              <span className="font-semibold">
-                {chosen.length} of {AI_FEATURES.length}
-              </span>
-            </p>
-            <p>
-              Plan per month: <span className="font-semibold tnum">{inr(monthly)}</span>
-            </p>
-            <p>
-              {B.cycle === "annual" ? "Annual" : "Monthly"} amount before GST:{" "}
-              <span className="font-semibold tnum">{inr(beforeGst)}</span>
-            </p>
-            <p>
-              GST 18%: <span className="tnum">{inr(gst)}</span> · Total{" "}
-              <span className="font-semibold tnum">{inr(beforeGst + gst)}</span>
-            </p>
-            {isAdmin && (
-              <p className="text-muted-foreground">
-                AI running cost at the usage above ≈ <span className="tnum">{inr(running)}</span> /
-                month
-              </p>
-            )}
-          </div>
-          {unpriced.length > 0 && (
-            <p className="mt-2 text-xs text-amber-800">
-              No price set yet for: {unpriced.map((f) => f.name).join(", ")}.
-            </p>
-          )}
           {isAdmin ? (
             <button
               type="button"
@@ -387,7 +481,7 @@ function Page() {
               className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
             >
               <CheckCircle2 className="size-4" />{" "}
-              {savePlan.isPending ? "Saving…" : "Save plan and switch features"}
+              {savePlan.isPending ? "Saving…" : "Save features and billing details"}
             </button>
           ) : (
             <p className="mt-3 text-xs text-muted-foreground">Only an admin can change the plan.</p>

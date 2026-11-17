@@ -166,6 +166,16 @@ export const Route = createFileRoute("/api/chat")({
         if (!key) return new Response("AI is not configured", { status: 500 });
         const off = await aiFeatureOffWithToken(accessToken, "assistant");
         if (off) return new Response(off, { status: 403 });
+        {
+          // Prepaid AI credits: a chat answer is charged when it starts streaming.
+          const { checkAiUse, chargeAiUse } = await import("@/lib/ai-credits.server");
+          try {
+            await checkAiUse("assistant");
+          } catch (e) {
+            return new Response((e as Error).message, { status: 402 });
+          }
+          await chargeAiUse("assistant", authUser.id ?? "");
+        }
 
         const uiMessages = messages as UIMessage[];
         const context = await buildLiveContext(accessToken);

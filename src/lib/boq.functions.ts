@@ -1,6 +1,5 @@
-import { assertAiFeature } from "@/lib/ai-plans.server";
+import { aiUse } from "@/lib/ai-use";
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { streamText } from "ai";
 
 // The 25 construction trade categories every AI estimate must cover.
@@ -139,10 +138,9 @@ function extractJsonArray(text: string): RawItem[] {
 }
 
 export const generateBoqEstimate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([aiUse("boq-ai")])
   .inputValidator((input: { projectId: string; extraBrief?: string }) => input)
   .handler(async ({ data, context }) => {
-    await assertAiFeature(context.supabase as never, "boq-ai");
     const { supabase } = context;
 
     const { data: project, error } = await supabase
@@ -340,10 +338,9 @@ export type BrandSuggestion = {
  * the owner can compare and apply a substitution.
  */
 export const suggestBrandOptions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([aiUse("boq-ai")])
   .inputValidator((input: { itemIds: string[] }) => input)
   .handler(async ({ data, context }) => {
-    await assertAiFeature(context.supabase as never, "boq-ai");
     const { supabase } = context;
     const ids = (data.itemIds ?? []).slice(0, 15);
     if (ids.length === 0) return { suggestions: [] as BrandSuggestion[] };
@@ -443,10 +440,9 @@ export const suggestBrandOptions = createServerFn({ method: "POST" })
  * Returns found:false when nothing verifies, so the UI can ask for an upload.
  */
 export const findProductImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([aiUse("boq-ai")])
   .inputValidator((input: { itemId: string; query?: string }) => input)
   .handler(async ({ data, context }) => {
-    await assertAiFeature(context.supabase as never, "boq-ai");
     const { supabase } = context;
 
     const { data: item, error } = await supabase
@@ -512,10 +508,9 @@ export const findProductImage = createServerFn({ method: "POST" })
  * Manually entered labour rows (source = "manual") are never touched.
  */
 export const generateLabourRates = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([aiUse("boq-ai")])
   .inputValidator((input: { projectId: string }) => input)
   .handler(async ({ data, context }) => {
-    await assertAiFeature(context.supabase as never, "boq-ai");
     const { supabase } = context;
 
     const { data: project, error } = await supabase

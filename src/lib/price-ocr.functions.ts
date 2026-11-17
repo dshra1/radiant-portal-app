@@ -1,7 +1,6 @@
-import { assertAiFeature } from "@/lib/ai-plans.server";
+import { aiUse } from "@/lib/ai-use";
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type ExtractedQuoteItem = {
   item_code: string;
@@ -47,10 +46,9 @@ const SYSTEM = [
 
 /** Reads a proforma / quotation (image or PDF) already uploaded to storage and returns structured price lines. */
 export const extractQuoteFromFile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([aiUse("price-reader")])
   .inputValidator((input: { fileName: string; mediaType: string; storagePath: string }) => input)
   .handler(async ({ data, context }): Promise<ExtractedQuote> => {
-    await assertAiFeature(context.supabase as never, "price-reader");
     const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
 

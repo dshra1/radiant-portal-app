@@ -1,7 +1,6 @@
-import { assertAiFeature } from "@/lib/ai-plans.server";
+import { aiUse } from "@/lib/ai-use";
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { cleanSlot, SLOT_PROMPTS, type SlotKey, type Takeoff } from "@/lib/takeoff";
 
 const SYSTEM = [
@@ -16,12 +15,11 @@ export type ReadDrawingResult = { data: Partial<Takeoff>; notes: string[] };
 
 /** Reads one uploaded drawing (PDF or image in site-media) for one checklist slot. */
 export const readDrawing = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([aiUse("drawing-reader")])
   .inputValidator(
     (input: { slot: SlotKey; fileName: string; mediaType: string; storagePath: string }) => input,
   )
   .handler(async ({ data, context }): Promise<ReadDrawingResult> => {
-    await assertAiFeature(context.supabase as never, "drawing-reader");
     const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key)
       throw new Error(

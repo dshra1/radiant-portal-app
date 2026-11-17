@@ -1,7 +1,6 @@
-import { assertAiFeature } from "@/lib/ai-plans.server";
+import { aiUse } from "@/lib/ai-use";
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type DrawingCheck = {
   verdict: "in sync" | "partly" | "not in sync" | "cannot tell";
@@ -25,7 +24,7 @@ const list = (v: unknown) => (Array.isArray(v) ? v.map(str).filter(Boolean).slic
 
 /** Compares a site photo (site-media bucket) with one page of a drawing set (project-drawings bucket). */
 export const checkPhotoAgainstDrawing = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([aiUse("photo-check")])
   .inputValidator(
     (input: {
       projectId: string;
@@ -39,7 +38,6 @@ export const checkPhotoAgainstDrawing = createServerFn({ method: "POST" })
     }) => input,
   )
   .handler(async ({ data, context }): Promise<DrawingCheck> => {
-    await assertAiFeature(context.supabase as never, "photo-check");
     const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key)
       throw new Error(

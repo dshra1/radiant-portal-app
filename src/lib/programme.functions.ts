@@ -1,6 +1,5 @@
-import { assertAiFeature } from "@/lib/ai-plans.server";
+import { aiUse } from "@/lib/ai-use";
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { streamText } from "ai";
 
 export type ProgrammeTask = {
@@ -87,10 +86,9 @@ function iso(d: Date) {
 }
 
 export const generateProgramme = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([aiUse("planning-ai")])
   .inputValidator((input: ProgrammeInput) => input)
   .handler(async ({ data, context }) => {
-    await assertAiFeature(context.supabase as never, "planning-ai");
     const { supabase } = context;
 
     const { data: project, error } = await supabase

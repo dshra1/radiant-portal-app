@@ -1,6 +1,5 @@
-import { assertAiFeature } from "@/lib/ai-plans.server";
+import { aiUse } from "@/lib/ai-use";
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { streamText } from "ai";
 
 export type BudgetSwap = {
@@ -72,10 +71,9 @@ function extractJsonArray(text: string): Record<string, unknown>[] {
  * Read-only — nothing is written until the owner applies a swap.
  */
 export const suggestBudgetFit = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([aiUse("optimiser")])
   .inputValidator((input: { projectId: string; maxItems?: number }) => input)
   .handler(async ({ data, context }) => {
-    await assertAiFeature(context.supabase as never, "optimiser");
     const { supabase } = context;
 
     const { data: project, error } = await supabase

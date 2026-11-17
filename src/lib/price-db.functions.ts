@@ -1,7 +1,6 @@
-import { assertAiFeature } from "@/lib/ai-plans.server";
+import { aiUse } from "@/lib/ai-use";
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { GstBasis, PriceLine } from "@/lib/price-db";
 
 export type ReadList = {
@@ -54,7 +53,7 @@ function htmlToText(html: string) {
  * uploaded to the price-proformas bucket. Returns the list header and MRP lines.
  */
 export const readPriceList = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([aiUse("price-reader")])
   .inputValidator(
     (input: {
       url?: string;
@@ -65,7 +64,6 @@ export const readPriceList = createServerFn({ method: "POST" })
     }) => input,
   )
   .handler(async ({ data, context }): Promise<ReadList> => {
-    await assertAiFeature(context.supabase as never, "price-reader");
     const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
 
