@@ -15,7 +15,8 @@ export type AiFeatureKey =
   | "optimiser"
   | "photo-check"
   | "planning-ai"
-  | "assistant";
+  | "assistant"
+  | "render";
 
 export type AiFeature = {
   key: AiFeatureKey;
@@ -102,6 +103,16 @@ export const AI_FEATURES: AiFeature[] = [
     outTok: 800,
     per: "question answered",
     usesPerMonth: 300,
+  },
+  {
+    key: "render",
+    name: "Renders: bathrooms and electrical walls",
+    does: "Turns a toilet's plumbing sheet into a photo-real bathroom render with your tiles and fittings, or a room's electrical sheet into the finished wall (or the conduit layout before plaster), when the client or site needs to see it.",
+    where: [{ to: "/renders", label: "Renders" }],
+    inTok: 3000,
+    outTok: 1300,
+    per: "render",
+    usesPerMonth: 20,
   },
 ];
 

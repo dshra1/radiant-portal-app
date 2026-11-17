@@ -14,6 +14,7 @@ export const PRICE_PER_USE: Record<AiFeatureKey, number> = {
   "planning-ai": 30,
   "price-reader": 40,
   "boq-ai": 50,
+  render: 25,
 };
 
 export type TopUpPack = { id: string; pay: number; credits: number; label: string };

@@ -64,6 +64,7 @@ export const navGroups: NavGroup[] = [
       { to: "/stage-budget", label: "Stage Budget & Owner Payments", icon: IndianRupee },
       { to: "/budget-fit", label: "Budget Fit", icon: IndianRupee },
       { to: "/drawing-decipher", label: "Drawings & Documents", icon: FileText, alsoIn: ["site"] },
+      { to: "/renders", label: "Renders (bathrooms, walls)", icon: Sparkles, alsoIn: ["site"] },
       {
         to: "/stage-drawings",
         label: "Stage Drawings & Photo Check",

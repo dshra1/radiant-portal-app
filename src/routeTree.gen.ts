@@ -63,6 +63,7 @@ import { Route as PurchasingCenterRouteImport } from './routes/purchasing-center
 import { Route as QaRouteImport } from './routes/qa'
 import { Route as QaInspectionRouteImport } from './routes/qa-inspection'
 import { Route as QualityRouteImport } from './routes/quality'
+import { Route as RendersRouteImport } from './routes/renders'
 import { Route as ReplanRouteImport } from './routes/replan'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RolesAccessRouteImport } from './routes/roles-access'
@@ -355,6 +356,11 @@ const QualityRoute = QualityRouteImport.update({
   path: '/quality',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RendersRoute = RendersRouteImport.update({
+  id: '/renders',
+  path: '/renders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReplanRoute = ReplanRouteImport.update({
   id: '/replan',
   path: '/replan',
@@ -516,6 +522,7 @@ export interface FileRoutesByFullPath {
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
   '/quality': typeof QualityRoute
+  '/renders': typeof RendersRoute
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
   '/roles-access': typeof RolesAccessRoute
@@ -593,6 +600,7 @@ export interface FileRoutesByTo {
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
   '/quality': typeof QualityRoute
+  '/renders': typeof RendersRoute
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
   '/roles-access': typeof RolesAccessRoute
@@ -671,6 +679,7 @@ export interface FileRoutesById {
   '/qa': typeof QaRoute
   '/qa-inspection': typeof QaInspectionRoute
   '/quality': typeof QualityRoute
+  '/renders': typeof RendersRoute
   '/replan': typeof ReplanRoute
   '/reset-password': typeof ResetPasswordRoute
   '/roles-access': typeof RolesAccessRoute
@@ -750,6 +759,7 @@ export interface FileRouteTypes {
     | '/qa'
     | '/qa-inspection'
     | '/quality'
+    | '/renders'
     | '/replan'
     | '/reset-password'
     | '/roles-access'
@@ -827,6 +837,7 @@ export interface FileRouteTypes {
     | '/qa'
     | '/qa-inspection'
     | '/quality'
+    | '/renders'
     | '/replan'
     | '/reset-password'
     | '/roles-access'
@@ -904,6 +915,7 @@ export interface FileRouteTypes {
     | '/qa'
     | '/qa-inspection'
     | '/quality'
+    | '/renders'
     | '/replan'
     | '/reset-password'
     | '/roles-access'
@@ -982,6 +994,7 @@ export interface RootRouteChildren {
   QaRoute: typeof QaRoute
   QaInspectionRoute: typeof QaInspectionRoute
   QualityRoute: typeof QualityRoute
+  RendersRoute: typeof RendersRoute
   ReplanRoute: typeof ReplanRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RolesAccessRoute: typeof RolesAccessRoute
@@ -1385,6 +1398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QualityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/renders': {
+      id: '/renders'
+      path: '/renders'
+      fullPath: '/renders'
+      preLoaderRoute: typeof RendersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/replan': {
       id: '/replan'
       path: '/replan'
@@ -1590,6 +1610,7 @@ const rootRouteChildren: RootRouteChildren = {
   QaRoute: QaRoute,
   QaInspectionRoute: QaInspectionRoute,
   QualityRoute: QualityRoute,
+  RendersRoute: RendersRoute,
   ReplanRoute: ReplanRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RolesAccessRoute: RolesAccessRoute,
