@@ -37,7 +37,7 @@ import { readDrawing } from "@/lib/takeoff.functions";
 export const Route = createFileRoute("/boq-from-drawings")({
   head: () => ({
     meta: [
-      { title: "BOQ from Drawings | Saha OS" },
+      { title: "BOQ from Drawings | SiteSutra" },
       {
         name: "description",
         content:

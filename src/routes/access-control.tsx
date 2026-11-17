@@ -8,16 +8,16 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/access-control")({
   head: () => ({
     meta: [
-      { title: "Access & Permissions · Saha OS" },
+      { title: "Access & Permissions · SiteSutra" },
       {
         name: "description",
         content:
-          "Admin control centre to approve new sign-ins and assign role-based viewing permissions across Saha OS.",
+          "Admin control centre to approve new sign-ins and assign role-based viewing permissions across SiteSutra.",
       },
-      { property: "og:title", content: "Access & Permissions · Saha OS" },
+      { property: "og:title", content: "Access & Permissions · SiteSutra" },
       {
         property: "og:description",
-        content: "Approve members and assign role-based viewing permissions in Saha OS.",
+        content: "Approve members and assign role-based viewing permissions in SiteSutra.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

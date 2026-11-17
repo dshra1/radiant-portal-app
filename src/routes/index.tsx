@@ -24,17 +24,17 @@ import { SiteWeekPanel } from "@/components/saha/SiteWeekPanel";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Saha OS — Action Centre" },
+      { title: "SiteSutra — Action Centre" },
       {
         name: "description",
         content:
-          "Project-specific action centre for Saha OS: notifications, approvals, live project metrics and quick workspace access.",
+          "Project-specific action centre for SiteSutra: notifications, approvals, live project metrics and quick workspace access.",
       },
-      { property: "og:title", content: "Saha OS — Action Centre" },
+      { property: "og:title", content: "SiteSutra — Action Centre" },
       {
         property: "og:description",
         content:
-          "Project-specific action centre for Saha OS: notifications, approvals, live project metrics and quick workspace access.",
+          "Project-specific action centre for SiteSutra: notifications, approvals, live project metrics and quick workspace access.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -193,7 +193,7 @@ function Index() {
 
   return (
     <Shell
-      title="Saha OS Hub"
+      title="SiteSutra Hub"
       subtitle={`${greeting}, ${firstName} · ${
         unreadCount > 0
           ? `${unreadCount} notification${unreadCount === 1 ? "" : "s"} need attention`

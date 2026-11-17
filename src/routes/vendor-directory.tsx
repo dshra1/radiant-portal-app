@@ -17,13 +17,16 @@ export const Route = createFileRoute("/vendor-directory")({
     s["tab"] === "spend" ? { tab: "spend" } : {},
   head: () => ({
     meta: [
-      { title: "Vendor Directory — Categorized Vendor Database | Saha OS" },
+      { title: "Vendor Directory — Categorized Vendor Database | SiteSutra" },
       {
         name: "description",
         content:
           "Categorized vendor database and procurement directory with trade-wise filters, bulk Excel ingestion and vendor performance ratings.",
       },
-      { property: "og:title", content: "Vendor Directory — Categorized Vendor Database | Saha OS" },
+      {
+        property: "og:title",
+        content: "Vendor Directory — Categorized Vendor Database | SiteSutra",
+      },
       {
         property: "og:description",
         content:

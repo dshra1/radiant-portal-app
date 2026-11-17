@@ -7,16 +7,16 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Sign in — Saha OS" },
+      { title: "Sign in — SiteSutra" },
       {
         name: "description",
         content:
-          "Sign in to Saha OS to access projects, BOQ, site execution, QA/QC and procurement data.",
+          "Sign in to SiteSutra to access projects, BOQ, site execution, QA/QC and procurement data.",
       },
-      { property: "og:title", content: "Sign in — Saha OS" },
+      { property: "og:title", content: "Sign in — SiteSutra" },
       {
         property: "og:description",
-        content: "Secure access to your Saha OS civil project workspace.",
+        content: "Secure access to your SiteSutra civil project workspace.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -127,7 +127,7 @@ function AuthPage() {
             className="h-11 w-11 rounded-lg bg-white object-contain p-1"
           />
           <div>
-            <h1 className="text-lg font-extrabold uppercase tracking-wide text-white">Saha OS</h1>
+            <h1 className="text-lg font-extrabold uppercase tracking-wide text-white">SiteSutra</h1>
             <p className="text-xs font-medium text-white/60">Enterprise civil suite</p>
           </div>
         </div>

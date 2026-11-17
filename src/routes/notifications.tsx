@@ -17,13 +17,13 @@ import {
 export const Route = createFileRoute("/notifications")({
   head: () => ({
     meta: [
-      { title: "Action Centre — Saha OS" },
+      { title: "Action Centre — SiteSutra" },
       {
         name: "description",
         content:
-          "Notification and action centre for approvals, rate alerts, purchase releases and payout reminders across every Saha OS site.",
+          "Notification and action centre for approvals, rate alerts, purchase releases and payout reminders across every SiteSutra site.",
       },
-      { property: "og:title", content: "Action Centre — Saha OS" },
+      { property: "og:title", content: "Action Centre — SiteSutra" },
       {
         property: "og:description",
         content: "Approvals, alerts and payment reminders in one shared action centre.",

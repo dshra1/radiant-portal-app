@@ -26,16 +26,16 @@ export const Route = createFileRoute("/po-create")({
   }),
   head: () => ({
     meta: [
-      { title: "Raise Purchase Order | Saha OS" },
+      { title: "Raise Purchase Order | SiteSutra" },
       {
         name: "description",
         content:
           "Raise a GST-compliant purchase order against your project BOQ with vendor details, terms and PM approval routing.",
       },
-      { property: "og:title", content: "Raise Purchase Order | Saha OS" },
+      { property: "og:title", content: "Raise Purchase Order | SiteSutra" },
       {
         property: "og:description",
-        content: "Create, price and route a purchase order for PM approval in Saha OS.",
+        content: "Create, price and route a purchase order for PM approval in SiteSutra.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

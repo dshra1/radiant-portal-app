@@ -49,7 +49,7 @@ export const Route = createFileRoute("/owner")({
   },
   head: () => ({
     meta: [
-      { title: "Owner's Portal | Saha OS" },
+      { title: "Owner's Portal | SiteSutra" },
       {
         name: "description",
         content:

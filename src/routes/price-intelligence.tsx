@@ -19,14 +19,14 @@ export const Route = createFileRoute("/price-intelligence")({
     s["tab"] === "brands" ? { tab: "brands" } : {},
   head: () => ({
     meta: [
-      { title: "Price Intelligence — Scanned Quotes vs BOQ Rates | Saha OS" },
+      { title: "Price Intelligence — Scanned Quotes vs BOQ Rates | SiteSutra" },
       {
         name: "description",
         content: "Live material rates from scanned vendor quotes compared against your BOQ rates.",
       },
       {
         property: "og:title",
-        content: "Price Intelligence — Scanned Quotes vs BOQ Rates | Saha OS",
+        content: "Price Intelligence — Scanned Quotes vs BOQ Rates | SiteSutra",
       },
       {
         property: "og:description",

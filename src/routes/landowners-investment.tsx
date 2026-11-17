@@ -13,13 +13,13 @@ import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProje
 export const Route = createFileRoute("/landowners-investment")({
   head: () => ({
     meta: [
-      { title: "Landowners & Investment Hub — Saha OS" },
+      { title: "Landowners & Investment Hub — SiteSutra" },
       {
         name: "description",
         content:
           "Owner scope, investment responsibility, stage-wise payment schedules and funding progress visibility.",
       },
-      { property: "og:title", content: "Landowners & Investment Hub — Saha OS" },
+      { property: "og:title", content: "Landowners & Investment Hub — SiteSutra" },
       {
         property: "og:description",
         content:

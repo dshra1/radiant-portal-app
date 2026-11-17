@@ -46,7 +46,7 @@ import {
 export const Route = createFileRoute("/price-database")({
   head: () => ({
     meta: [
-      { title: "Price Database | Saha OS" },
+      { title: "Price Database | SiteSutra" },
       {
         name: "description",
         content:

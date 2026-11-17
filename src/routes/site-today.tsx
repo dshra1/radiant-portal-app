@@ -25,7 +25,7 @@ import { todayIso } from "@/lib/dates";
 export const Route = createFileRoute("/site-today")({
   head: () => ({
     meta: [
-      { title: "Site Today | Saha OS" },
+      { title: "Site Today | SiteSutra" },
       {
         name: "description",
         content:

@@ -22,13 +22,13 @@ export const Route = createFileRoute("/bills-payments")({
   }),
   head: () => ({
     meta: [
-      { title: "Bills & Payments | Saha OS" },
+      { title: "Bills & Payments | SiteSutra" },
       {
         name: "description",
         content:
           "Log vendor bills, verify and approve them, record payments against each bill and track outstanding dues per project.",
       },
-      { property: "og:title", content: "Bills & Payments | Saha OS" },
+      { property: "og:title", content: "Bills & Payments | SiteSutra" },
       {
         property: "og:description",
         content:

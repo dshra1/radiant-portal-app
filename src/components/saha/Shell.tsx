@@ -287,10 +287,10 @@ export function Shell({
           {expanded && (
             <div className="flex min-w-0 flex-col">
               <span className="truncate text-sm font-bold tracking-tight text-sidebar-accent-foreground">
-                Saha OS
+                SiteSutra
               </span>
               <span className="label-caps truncate text-sidebar-foreground/70">
-                Enterprise Civil Suite
+                Construction Manager · SCM
               </span>
             </div>
           )}
@@ -388,10 +388,10 @@ export function Shell({
                 className="mb-1 flex items-center gap-3 rounded px-3 py-2 text-[13px] font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
               >
                 <LifeBuoy className="size-4" />
-                <span>How to use Saha OS</span>
+                <span>How to use SiteSutra</span>
               </Link>
               <div className="flex items-center justify-between px-2.5 label-caps text-sidebar-foreground/60">
-                <span>SAHA Developers · PMC</span>
+                <span>by SAHA Developers</span>
               </div>
             </>
           )}
@@ -682,11 +682,11 @@ export function Shell({
 
         <Link
           to="/ai"
-          aria-label="Saha AI Assistant"
+          aria-label="SiteSutra AI Assistant"
           className="fixed bottom-20 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover md:bottom-[4.5rem]"
         >
           <Bot className="size-4" />
-          <span className="hidden sm:inline">Saha AI Assistant</span>
+          <span className="hidden sm:inline">SiteSutra AI Assistant</span>
         </Link>
 
         <nav className="sticky bottom-0 z-20 flex min-h-16 w-full items-center justify-around border-t border-border bg-card px-2 pb-[env(safe-area-inset-bottom)] md:hidden">

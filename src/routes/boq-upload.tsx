@@ -6,12 +6,12 @@ export const Route = createFileRoute("/boq-upload")({
   },
   head: () => ({
     meta: [
-      { title: "BOQ Engine — Saha OS Next" },
+      { title: "BOQ Engine — SiteSutra Construction Manager" },
       {
         name: "description",
         content: "Upload, edit and export your project BOQ inside the live BOQ Engine.",
       },
-      { property: "og:title", content: "BOQ Engine — Saha OS Next" },
+      { property: "og:title", content: "BOQ Engine — SiteSutra Construction Manager" },
       {
         property: "og:description",
         content: "Upload, edit and export your project BOQ inside the live BOQ Engine.",

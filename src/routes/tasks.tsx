@@ -12,17 +12,17 @@ import { ActiveSiteWeek } from "@/components/saha/SiteWeekPanel";
 export const Route = createFileRoute("/tasks")({
   head: () => ({
     meta: [
-      { title: "Task Tracker — Saha OS" },
+      { title: "Task Tracker — SiteSutra" },
       {
         name: "description",
         content:
           "Track every active site task in one list: who it is assigned to, when it is due, how far it has progressed and its current status.",
       },
-      { property: "og:title", content: "Task Tracker — Saha OS" },
+      { property: "og:title", content: "Task Tracker — SiteSutra" },
       {
         property: "og:description",
         content:
-          "Assignees, due dates, progress bars and status updates for all active Saha OS tasks.",
+          "Assignees, due dates, progress bars and status updates for all active SiteSutra tasks.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

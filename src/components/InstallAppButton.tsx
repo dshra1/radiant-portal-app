@@ -61,7 +61,7 @@ export function InstallAppButton() {
       <button
         type="button"
         onClick={handleClick}
-        aria-label="Download / install Saha OS app"
+        aria-label="Download / install SiteSutra app"
         title="Download / install app"
         className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-lg backdrop-blur transition-transform hover:scale-105"
       >

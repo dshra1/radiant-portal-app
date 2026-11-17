@@ -287,7 +287,7 @@ export async function makeInvoicePdf(d: InvoiceData): Promise<Uint8Array> {
   y -= 40;
   text("Notes", L, y, 8, bold, grey);
   wrap(
-    "Prepaid AI credits for Saha OS (1 credit = Rs. 1 before GST), used against AI features at the published price per use. Credits do not expire while the account is active. Tax is not payable on reverse charge.",
+    "Prepaid AI credits for SiteSutra (1 credit = Rs. 1 before GST), used against AI features at the published price per use. Credits do not expire while the account is active. Tax is not payable on reverse charge.",
     L,
     y - 13,
     R - L,

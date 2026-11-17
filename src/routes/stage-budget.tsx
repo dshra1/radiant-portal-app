@@ -31,7 +31,7 @@ export const Route = createFileRoute("/stage-budget")({
     typeof s["stage"] === "string" ? { stage: s["stage"] } : {},
   head: () => ({
     meta: [
-      { title: "Stage Budget & Owner Payments | Saha OS" },
+      { title: "Stage Budget & Owner Payments | SiteSutra" },
       {
         name: "description",
         content:

@@ -22,7 +22,7 @@ import {
 export const Route = createFileRoute("/cost-dashboard")({
   head: () => ({
     meta: [
-      { title: "Cost Dashboard — BOQ, PMC Fee, Labour & Remaining Budget | Saha OS" },
+      { title: "Cost Dashboard — BOQ, PMC Fee, Labour & Remaining Budget | SiteSutra" },
       {
         name: "description",
         content:

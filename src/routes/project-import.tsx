@@ -52,13 +52,13 @@ import {
 export const Route = createFileRoute("/project-import")({
   head: () => ({
     meta: [
-      { title: "Import PMC Workbooks — Saha OS" },
+      { title: "Import PMC Workbooks — SiteSutra" },
       {
         name: "description",
         content:
           "Bring the PMC master BOQ, common vs individual split, programme, material plan, quotation packages and drawing sets into the project.",
       },
-      { property: "og:title", content: "Import PMC Workbooks — Saha OS" },
+      { property: "og:title", content: "Import PMC Workbooks — SiteSutra" },
       {
         property: "og:description",
         content:

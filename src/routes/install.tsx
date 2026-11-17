@@ -11,13 +11,13 @@ export const Route = createFileRoute("/install")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Download Saha OS — Android and iPhone" },
+      { title: "Download SiteSutra — Android and iPhone" },
       {
         name: "description",
-        content: "Install the Saha OS app on Android or iPhone from one link.",
+        content: "Install the SiteSutra app on Android or iPhone from one link.",
       },
-      { property: "og:title", content: "Download Saha OS" },
-      { property: "og:description", content: "Install the Saha OS app on Android or iPhone." },
+      { property: "og:title", content: "Download SiteSutra" },
+      { property: "og:description", content: "Install the SiteSutra app on Android or iPhone." },
       { property: "og:image", content: "/app-icon-512.png" },
     ],
   }),
@@ -100,7 +100,7 @@ function InstallPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
               Saha Developers
             </p>
-            <h1 className="text-2xl font-extrabold tracking-tight">Download Saha OS</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight">Download SiteSutra</h1>
             <p className="text-sm text-white/70">Android · iPhone · iPad</p>
           </div>
         </div>
@@ -179,7 +179,7 @@ function Android({ canInstall, onInstall }: { canInstall: boolean; onInstall: ()
             Tap <b>Install app</b> (or <b>Add to Home screen</b>).
           </Step>
           <Step n={3}>
-            Open <b>Saha OS</b> from the home screen and sign in.
+            Open <b>SiteSutra</b> from the home screen and sign in.
           </Step>
         </ol>
       )}
@@ -197,7 +197,7 @@ function IOS() {
         Scroll down and tap <b>Add to Home Screen</b>.
       </Step>
       <Step n={3}>
-        Tap <b>Add</b>. <b>Saha OS</b> is now on the home screen; open it and sign in.
+        Tap <b>Add</b>. <b>SiteSutra</b> is now on the home screen; open it and sign in.
       </Step>
     </ol>
   );
@@ -227,7 +227,7 @@ function Desktop({ onCopy, copied }: { onCopy: () => void; copied: boolean }) {
       <p className="text-[15px] text-white/90">Scan with the phone camera to download the app.</p>
       <img
         src="/install-qr.svg"
-        alt="QR code for the Saha OS download link"
+        alt="QR code for the SiteSutra download link"
         width={220}
         height={220}
         className="mx-auto h-56 w-56 rounded-xl bg-white p-2"
@@ -247,7 +247,7 @@ function Desktop({ onCopy, copied }: { onCopy: () => void; copied: boolean }) {
 function Done() {
   return (
     <div className="space-y-4 text-center">
-      <p className="text-lg font-bold">Saha OS is installed.</p>
+      <p className="text-lg font-bold">SiteSutra is installed.</p>
       <a
         href="/"
         className="inline-block w-full rounded-xl bg-emerald-500 px-4 py-3 text-base font-bold text-[#0C1F17]"

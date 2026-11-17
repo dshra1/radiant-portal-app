@@ -1,4 +1,4 @@
-<title>Saha OS Staff Manual</title>
+<title>SiteSutra Staff Manual</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -170,8 +170,8 @@ details p{margin-top:8px;color:var(--muted)}
   <header class="top">
     <div>
       <p class="eyebrow">SAHA Developers · PMC · Staff briefing</p>
-      <h1>Saha OS Staff Manual</h1>
-      <p class="lede">How the team runs 77:76 Cyber Enclave in Saha OS. Pick your role below: the briefing, the guided tour, the weekly cycle and the page map all change to show your part of the work. The app is at <span class="mono">radiant-portal-app.dshra1.workers.dev</span>; this manual is also inside it under <b>How to use Saha OS</b>.<span id="syncNote"></span></p>
+      <h1>SiteSutra Staff Manual</h1>
+      <p class="lede">How the team runs 77:76 Cyber Enclave in SiteSutra. Pick your role below: the briefing, the guided tour, the weekly cycle and the page map all change to show your part of the work. The app is at <span class="mono">radiant-portal-app.dshra1.workers.dev</span>; this manual is also inside it under <b>How to use SiteSutra</b>.<span id="syncNote"></span></p>
     </div>
     <div class="facts tnum" aria-label="Project at a glance">
       <div class="fact"><b>Stilt + 5 · 10 flats</b><span>4 × 4BHK (floors 1–2), 6 × 3BHK (3–5)</span></div>
@@ -271,10 +271,10 @@ const ALWAYS = ["/","/manual","/messages","/notifications","/ai"];
 
 const GROUPS = [
  {id:"planning", label:"Planning & master database", pages:[
-  ["/","Saha OS Hub","daily","Start of every day. This week's stages and the next ones, orders due, hold points and close-outs waiting, with live project figures.",["Read the Site Week panel at the top: stages now, next, and what is late.","Click a stage card for its material, directions and checks.","Use the Drawings and Budget links on a stage card to jump to that stage."]],
-  ["/manual","Staff Manual","","This manual, inside the app. It opens on your role. Every role has it in the menu and at the bottom of the sidebar (How to use Saha OS).",["Use it to brief new staff on their first day."]],
+  ["/","SiteSutra Hub","daily","Start of every day. This week's stages and the next ones, orders due, hold points and close-outs waiting, with live project figures.",["Read the Site Week panel at the top: stages now, next, and what is late.","Click a stage card for its material, directions and checks.","Use the Drawings and Budget links on a stage card to jump to that stage."]],
+  ["/manual","Staff Manual","","This manual, inside the app. It opens on your role. Every role has it in the menu and at the bottom of the sidebar (How to use SiteSutra).",["Use it to brief new staff on their first day."]],
   ["/messages","Team Chat","daily","Crew chat: direct messages, groups and files. Stage tasks pushed by the PM arrive in the \"Site plan\" channel and the daily report posts here.",["Open the Site plan channel each morning.","Reply in the thread for the stage you are working on."]],
-  ["/ai","Saha AI Assistant","","Ask questions about the project in plain words. It reads the live BOQ by package, the programme (now and next), stock order-by dates and tenders.",["Ask things like \"what steel do I need for C2 columns\" or \"which orders are due this week\".","Check figures it gives against the page it names before acting."]],
+  ["/ai","SiteSutra AI Assistant","","Ask questions about the project in plain words. It reads the live BOQ by package, the programme (now and next), stock order-by dates and tenders.",["Ask things like \"what steel do I need for C2 columns\" or \"which orders are due this week\".","Check figures it gives against the page it names before acting."]],
   ["/notifications","Action Centre","daily","All alerts in one place: orders to place, stages starting, hold points, behind-plan stages, cubes due, NCRs overdue, payment requests.",["Work the High items first.","Each alert links to the page where you act on it."]],
   ["/tasks","Task Tracker","daily","Every site task with owner, due date, progress and status. Stage tasks are created when the PM pushes a stage.",["Update your progress % at the end of the day.","Mark done only after the check is recorded."]],
   ["/projects","Projects","","Two tabs. Projects: the project record (geometry, timeline drivers, specifications, staffing, landowners and banking); settings for 77:76 match the report. Setup & programme: floor geometry and the civil quantities it gives, RMC and steel from the stages, the stage summary and the construction flow with each stage's material and directions.",["Change project figures here only when the report changes.","Floor geometry has one editor: Edit geometry on the Setup & programme tab opens the project form.","Use the construction flow (Setup & programme tab) to read each stage's directions and material.","Only an admin can delete a project."]],
@@ -503,7 +503,7 @@ function renderRoles(){
 function pageBtn(to){const p=PAGES[to];if(!p)return "";return `<button type="button" data-to="${to}">${p.label}</button>`}
 function renderBrief(){
   const b=BRIEF[role], r=ROLES.find(x=>x.id===role);
-  $("who").innerHTML=`<p class="eyebrow">${r.label}</p><h3>Your job in Saha OS</h3><p class="mission">${b.mission}</p>
+  $("who").innerHTML=`<p class="eyebrow">${r.label}</p><h3>Your job in SiteSutra</h3><p class="mission">${b.mission}</p>
    <div><p class="eyebrow" style="margin-bottom:6px">Your main pages</p><div class="pages">${b.pages.map(pageBtn).join("")}</div></div>
    <div class="limits">${b.cannot.length?`<span class="pill no">You cannot</span><ul>${b.cannot.map(x=>`<li>${x}</li>`).join("")}</ul>`:`<span class="pill">Full access to every page</span>`}</div>`;
   $("routine").innerHTML=`<h3><span class="pill">Every day</span></h3><ol>${b.day.map(x=>`<li>${x}</li>`).join("")}</ol><h3><span class="pill warn">Every week</span></h3><ol>${b.week.map(x=>`<li>${x}</li>`).join("")}</ol>`;
@@ -526,7 +526,7 @@ function openPage(to){
   d.innerHTML=`<button type="button" class="close" id="dclose">Close</button><p class="eyebrow">${p.glabel}</p><h2>${p.label}</h2><p class="mono">${to}</p>
    <p>${see?`<span class="pill">In your menu</span>`:`<span class="pill no">Not in your menu as ${ROLES.find(r=>r.id===role).label}</span>`}</p><p>${p.what}</p>
    ${p.how.length?`<h3>How to use it</h3><ol>${p.how.map(x=>`<li>${x}</li>`).join("")}</ol>`:""}
-   <a class="open" href="${APP}${to}" target="${LINK_TARGET}" rel="noopener">Open in Saha OS</a>`;
+   <a class="open" href="${APP}${to}" target="${LINK_TARGET}" rel="noopener">Open in SiteSutra</a>`;
   d.hidden=false; $("dclose").onclick=()=>{d.hidden=true}; $("dclose").focus();
 }
 document.addEventListener("keydown",e=>{if(e.key==="Escape")$("detail").hidden=true});
@@ -552,7 +552,7 @@ function frameHTML(s){
     return "";
   }).join("");
   return `<div class="${s.frame==="phone"?"phone":""}"><div class="screen" id="scr">
-    <div class="side"><span class="logo">Saha OS</span>${sideGroups.map(g=>`<span class="${map[grp]===g?"on":""}">${g}</span>`).join("")}</div>
+    <div class="side"><span class="logo">SiteSutra</span>${sideGroups.map(g=>`<span class="${map[grp]===g?"on":""}">${g}</span>`).join("")}</div>
     <div class="main"><span class="crumb">77:76 Cyber Enclave · ${PAGES[s.route]?.glabel||""}</span><span class="ttl">${PAGES[s.route]?.label||""}</span>${blocks}</div>
     <span class="cursor" id="cur"></span></div></div>`;
 }

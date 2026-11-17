@@ -1,5 +1,5 @@
 /**
- * AI features of Saha OS, their running cost, and the firm's plan.
+ * AI features of SiteSutra, their running cost, and the firm's plan.
  *
  * Each firm's app keeps one plan: which AI features are on and the firm's billing details
  * (site-media/_library/BILLING/plan.json). AI server functions refuse a feature that is off.
@@ -96,9 +96,9 @@ export const AI_FEATURES: AiFeature[] = [
   },
   {
     key: "assistant",
-    name: "Saha AI Assistant",
+    name: "SiteSutra AI Assistant",
     does: "Answers questions about the live project: BOQ, stock, pours, QA, purchases, bills and progress, for every role.",
-    where: [{ to: "/ai", label: "Saha AI Assistant" }],
+    where: [{ to: "/ai", label: "SiteSutra AI Assistant" }],
     inTok: 6000,
     outTok: 800,
     per: "question answered",

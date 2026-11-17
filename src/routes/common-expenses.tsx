@@ -11,13 +11,13 @@ import { APPROVALS_NOTE, approvalsBudget } from "@/lib/money";
 export const Route = createFileRoute("/common-expenses")({
   head: () => ({
     meta: [
-      { title: "Common & Statutory Expenses — Permissions, LRS, HMWSSB | Saha OS" },
+      { title: "Common & Statutory Expenses — Permissions, LRS, HMWSSB | SiteSutra" },
       {
         name: "description",
         content:
           "Statutory charges are budgeted in the BOQ Approvals package; record what has been paid against it — permissions, LRS, electrical connection, HMWSSB and architect fees.",
       },
-      { property: "og:title", content: "Common & Statutory Expenses — Saha OS" },
+      { property: "og:title", content: "Common & Statutory Expenses — SiteSutra" },
       {
         property: "og:description",
         content:

@@ -251,7 +251,7 @@ async function issueInvoice(
     },
     buyer,
     line: {
-      description: `Saha OS prepaid AI credits (${credits.toLocaleString("en-IN")} credits)`,
+      description: `SiteSutra prepaid AI credits (${credits.toLocaleString("en-IN")} credits)`,
       sac: process.env["SAHA_SAC"] || "9983",
       taxable,
     },

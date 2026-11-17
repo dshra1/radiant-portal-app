@@ -27,7 +27,7 @@ export const Route = createFileRoute("/stage-drawings")({
   },
   head: () => ({
     meta: [
-      { title: "Stage Drawings | Saha OS" },
+      { title: "Stage Drawings | SiteSutra" },
       {
         name: "description",
         content:

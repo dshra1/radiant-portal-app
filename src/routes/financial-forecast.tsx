@@ -19,13 +19,13 @@ import {
 export const Route = createFileRoute("/financial-forecast")({
   head: () => ({
     meta: [
-      { title: "Financial Forecast — Cash Runway & Cost to Complete | Saha OS" },
+      { title: "Financial Forecast — Cash Runway & Cost to Complete | SiteSutra" },
       {
         name: "description",
         content:
           "Live cash-flow forecast for the project: funds in hand, monthly burn, cost to complete, funding gap and projected finish date.",
       },
-      { property: "og:title", content: "Financial Forecast — Saha OS" },
+      { property: "og:title", content: "Financial Forecast — SiteSutra" },
       {
         property: "og:description",
         content:

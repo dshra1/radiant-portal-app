@@ -14,7 +14,7 @@ export const Route = createFileRoute("/approvals")({
     s["tab"] === "boq" || s["tab"] === "owner" ? { tab: s["tab"] } : {},
   head: () => ({
     meta: [
-      { title: "Approvals — BOQ Changes and Owner Decisions | Saha OS" },
+      { title: "Approvals — BOQ Changes and Owner Decisions | SiteSutra" },
       {
         name: "description",
         content:

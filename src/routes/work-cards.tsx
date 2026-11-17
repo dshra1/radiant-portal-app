@@ -28,7 +28,7 @@ export const Route = createFileRoute("/work-cards")({
   },
   head: () => ({
     meta: [
-      { title: "Work Cards & Tests | Saha OS" },
+      { title: "Work Cards & Tests | SiteSutra" },
       {
         name: "description",
         content:

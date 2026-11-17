@@ -14,7 +14,7 @@ import { useFlats, type FlatLineRow, type FlatRow, type FlatTypeRow } from "@/li
 export const Route = createFileRoute("/flats")({
   head: () => ({
     meta: [
-      { title: "Flats & Individual Works | Saha OS" },
+      { title: "Flats & Individual Works | SiteSutra" },
       {
         name: "description",
         content:

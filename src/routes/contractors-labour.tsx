@@ -13,13 +13,13 @@ import { todayIso } from "@/lib/dates";
 export const Route = createFileRoute("/contractors-labour")({
   head: () => ({
     meta: [
-      { title: "Contractors & Labour | Saha OS" },
+      { title: "Contractors & Labour | SiteSutra" },
       {
         name: "description",
         content:
           "Daily labour log per contractor and trade with headcount, man-days, day rates and labour cost for the selected project.",
       },
-      { property: "og:title", content: "Contractors & Labour | Saha OS" },
+      { property: "og:title", content: "Contractors & Labour | SiteSutra" },
       {
         property: "og:description",
         content:

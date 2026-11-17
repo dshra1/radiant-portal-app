@@ -11,13 +11,13 @@ import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProje
 export const Route = createFileRoute("/brand-preferences")({
   head: () => ({
     meta: [
-      { title: "Brand Preferences — Saha OS Next" },
+      { title: "Brand Preferences — SiteSutra Construction Manager" },
       {
         name: "description",
         content:
           "Lock the makes you actually buy — cement, steel, CP & sanitaryware, CPVC, paint, wiring, switches — before the BOQ is estimated.",
       },
-      { property: "og:title", content: "Brand Preferences — Saha OS Next" },
+      { property: "og:title", content: "Brand Preferences — SiteSutra Construction Manager" },
       {
         property: "og:description",
         content: "Set your preferred brands per material before generating the BOQ.",

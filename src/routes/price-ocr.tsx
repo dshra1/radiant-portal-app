@@ -18,13 +18,16 @@ import { Loader2, ScanText, Trash2, Upload, Download, Plus } from "lucide-react"
 export const Route = createFileRoute("/price-ocr")({
   head: () => ({
     meta: [
-      { title: "Price OCR — Proforma Scanning & Price Database | Saha OS" },
+      { title: "Price OCR — Proforma Scanning & Price Database | SiteSutra" },
       {
         name: "description",
         content:
           "Upload vendor proformas and quotations, auto-extract item, brand, unit and rate lines, and build a searchable construction price database.",
       },
-      { property: "og:title", content: "Price OCR — Proforma Scanning & Price Database | Saha OS" },
+      {
+        property: "og:title",
+        content: "Price OCR — Proforma Scanning & Price Database | SiteSutra",
+      },
       {
         property: "og:description",
         content:

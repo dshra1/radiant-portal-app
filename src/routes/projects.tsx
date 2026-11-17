@@ -19,13 +19,13 @@ export const Route = createFileRoute("/projects")({
     s["tab"] === "setup" ? { tab: "setup" } : {},
   head: () => ({
     meta: [
-      { title: "Projects — Saha OS Next" },
+      { title: "Projects — SiteSutra Construction Manager" },
       {
         name: "description",
         content:
           "Project setup and portfolio view: capture geometry, timeline drivers, material specifications, staffing, owner and banking details for every construction site.",
       },
-      { property: "og:title", content: "Projects — Saha OS Next" },
+      { property: "og:title", content: "Projects — SiteSutra Construction Manager" },
       {
         property: "og:description",
         content:

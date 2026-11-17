@@ -27,13 +27,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/execution-manual")({
   head: () => ({
     meta: [
-      { title: "Execution Manual | Saha OS" },
+      { title: "Execution Manual | SiteSutra" },
       {
         name: "description",
         content:
           "How each programme stage is built: directions, material, steel and the inspection checks / hold points, from the project's own PMC programme.",
       },
-      { property: "og:title", content: "Execution Manual | Saha OS" },
+      { property: "og:title", content: "Execution Manual | SiteSutra" },
       { property: "og:type", content: "website" },
     ],
   }),

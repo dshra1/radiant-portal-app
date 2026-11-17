@@ -49,7 +49,7 @@ export const Route = createFileRoute("/job")({
   },
   head: () => ({
     meta: [
-      { title: "Job | Saha OS" },
+      { title: "Job | SiteSutra" },
       {
         name: "description",
         content:
