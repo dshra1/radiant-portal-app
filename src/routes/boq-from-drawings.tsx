@@ -831,8 +831,8 @@ function Page() {
                               </span>
                             )}
                           </p>
-                          <p className="whitespace-nowrap font-semibold tnum">
-                            {l.amount ? inrShort(l.amount) : "—"}
+                          <p className="shrink-0 font-semibold tnum">
+                            {l.amount ? inrShort(l.amount).replace(" ", "\u00a0") : "—"}
                           </p>
                         </div>
                         <p className="font-semibold tnum text-primary">
