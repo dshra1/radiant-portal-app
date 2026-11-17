@@ -371,6 +371,17 @@ export function sampleTakeoff(): Takeoff {
   ];
   t.site = { compound_wall_rft: 353, paving_sft: 1469 };
   t.finishes = { ...t.finishes, concrete_grade: "M30" };
+  const src = { file: "Sample building", read_at: "", notes: [] as string[] };
+  t.sources = {
+    plans: src,
+    sections: src,
+    schedule: src,
+    footings: src,
+    columns: src,
+    beams: src,
+    slabs: src,
+    site: src,
+  };
   return t;
 }
 

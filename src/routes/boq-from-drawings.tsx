@@ -816,7 +816,37 @@ function Page() {
                     <span>{stage}</span>
                     <span className="tnum">{inrShort(sum)}</span>
                   </summary>
-                  <div className="overflow-x-auto">
+                  <ul className="divide-y divide-border/60 md:hidden">
+                    {ls.map((l, i) => (
+                      <li key={i} className="p-3 text-sm">
+                        <div className="flex justify-between gap-2">
+                          <p className="font-medium">
+                            {l.lockBeforeStart && (
+                              <Lock className="mr-1 inline size-3.5 text-primary" />
+                            )}
+                            {l.item}
+                            {l.assumed && (
+                              <span className="ml-1 rounded bg-amber-100 px-1 text-[11px] text-amber-900">
+                                assumed
+                              </span>
+                            )}
+                          </p>
+                          <p className="whitespace-nowrap font-semibold tnum">
+                            {l.amount ? inrShort(l.amount) : "—"}
+                          </p>
+                        </div>
+                        <p className="font-semibold tnum text-primary">
+                          {fmtN(l.qty)} {l.unit}
+                          <span className="font-normal text-muted-foreground">
+                            {" "}
+                            × {l.rate ? `₹${fmtN(l.rate)} (${l.rateSource})` : "in labour contract"}
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">{l.basis}</p>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="hidden overflow-x-auto md:block">
                     <table className="w-full min-w-[760px] text-sm">
                       <thead>
                         <tr className="border-y border-border text-left text-xs text-muted-foreground">
