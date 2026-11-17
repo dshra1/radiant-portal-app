@@ -43,6 +43,7 @@ import { Route as LandownersInvestmentRouteImport } from './routes/landowners-in
 import { Route as ManualRouteImport } from './routes/manual'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
 import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as MrpRatesRouteImport } from './routes/mrp-rates'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as OwnerApprovalsRouteImport } from './routes/owner-approvals'
@@ -249,6 +250,11 @@ const MediaUploadStudioRoute = MediaUploadStudioRouteImport.update({
 const MessagesRoute = MessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MrpRatesRoute = MrpRatesRouteImport.update({
+  id: '/mrp-rates',
+  path: '/mrp-rates',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -472,6 +478,7 @@ export interface FileRoutesByFullPath {
   '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
+  '/mrp-rates': typeof MrpRatesRoute
   '/notifications': typeof NotificationsRoute
   '/owner': typeof OwnerRoute
   '/owner-approvals': typeof OwnerApprovalsRoute
@@ -545,6 +552,7 @@ export interface FileRoutesByTo {
   '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
+  '/mrp-rates': typeof MrpRatesRoute
   '/notifications': typeof NotificationsRoute
   '/owner': typeof OwnerRoute
   '/owner-approvals': typeof OwnerApprovalsRoute
@@ -619,6 +627,7 @@ export interface FileRoutesById {
   '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
+  '/mrp-rates': typeof MrpRatesRoute
   '/notifications': typeof NotificationsRoute
   '/owner': typeof OwnerRoute
   '/owner-approvals': typeof OwnerApprovalsRoute
@@ -694,6 +703,7 @@ export interface FileRouteTypes {
     | '/manual'
     | '/media-upload-studio'
     | '/messages'
+    | '/mrp-rates'
     | '/notifications'
     | '/owner'
     | '/owner-approvals'
@@ -767,6 +777,7 @@ export interface FileRouteTypes {
     | '/manual'
     | '/media-upload-studio'
     | '/messages'
+    | '/mrp-rates'
     | '/notifications'
     | '/owner'
     | '/owner-approvals'
@@ -840,6 +851,7 @@ export interface FileRouteTypes {
     | '/manual'
     | '/media-upload-studio'
     | '/messages'
+    | '/mrp-rates'
     | '/notifications'
     | '/owner'
     | '/owner-approvals'
@@ -914,6 +926,7 @@ export interface RootRouteChildren {
   ManualRoute: typeof ManualRoute
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
   MessagesRoute: typeof MessagesRoute
+  MrpRatesRoute: typeof MrpRatesRoute
   NotificationsRoute: typeof NotificationsRoute
   OwnerRoute: typeof OwnerRoute
   OwnerApprovalsRoute: typeof OwnerApprovalsRoute
@@ -1191,6 +1204,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/messages'
       preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mrp-rates': {
+      id: '/mrp-rates'
+      path: '/mrp-rates'
+      fullPath: '/mrp-rates'
+      preLoaderRoute: typeof MrpRatesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -1490,6 +1510,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManualRoute: ManualRoute,
   MediaUploadStudioRoute: MediaUploadStudioRoute,
   MessagesRoute: MessagesRoute,
+  MrpRatesRoute: MrpRatesRoute,
   NotificationsRoute: NotificationsRoute,
   OwnerRoute: OwnerRoute,
   OwnerApprovalsRoute: OwnerApprovalsRoute,
