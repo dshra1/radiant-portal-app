@@ -43,13 +43,13 @@ import { Route as LandownersInvestmentRouteImport } from './routes/landowners-in
 import { Route as ManualRouteImport } from './routes/manual'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
 import { Route as MessagesRouteImport } from './routes/messages'
-import { Route as MrpRatesRouteImport } from './routes/mrp-rates'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as OwnerApprovalsRouteImport } from './routes/owner-approvals'
 import { Route as PmcScopeRouteImport } from './routes/pmc-scope'
 import { Route as PoCreateRouteImport } from './routes/po-create'
 import { Route as PourCardsRouteImport } from './routes/pour-cards'
+import { Route as PriceDatabaseRouteImport } from './routes/price-database'
 import { Route as PriceIntelligenceRouteImport } from './routes/price-intelligence'
 import { Route as PriceOcrRouteImport } from './routes/price-ocr'
 import { Route as ProcurementRouteImport } from './routes/procurement'
@@ -252,11 +252,6 @@ const MessagesRoute = MessagesRouteImport.update({
   path: '/messages',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MrpRatesRoute = MrpRatesRouteImport.update({
-  id: '/mrp-rates',
-  path: '/mrp-rates',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -285,6 +280,11 @@ const PoCreateRoute = PoCreateRouteImport.update({
 const PourCardsRoute = PourCardsRouteImport.update({
   id: '/pour-cards',
   path: '/pour-cards',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PriceDatabaseRoute = PriceDatabaseRouteImport.update({
+  id: '/price-database',
+  path: '/price-database',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PriceIntelligenceRoute = PriceIntelligenceRouteImport.update({
@@ -478,13 +478,13 @@ export interface FileRoutesByFullPath {
   '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
-  '/mrp-rates': typeof MrpRatesRoute
   '/notifications': typeof NotificationsRoute
   '/owner': typeof OwnerRoute
   '/owner-approvals': typeof OwnerApprovalsRoute
   '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
+  '/price-database': typeof PriceDatabaseRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
   '/price-ocr': typeof PriceOcrRoute
   '/procurement': typeof ProcurementRoute
@@ -552,13 +552,13 @@ export interface FileRoutesByTo {
   '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
-  '/mrp-rates': typeof MrpRatesRoute
   '/notifications': typeof NotificationsRoute
   '/owner': typeof OwnerRoute
   '/owner-approvals': typeof OwnerApprovalsRoute
   '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
+  '/price-database': typeof PriceDatabaseRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
   '/price-ocr': typeof PriceOcrRoute
   '/procurement': typeof ProcurementRoute
@@ -627,13 +627,13 @@ export interface FileRoutesById {
   '/manual': typeof ManualRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
-  '/mrp-rates': typeof MrpRatesRoute
   '/notifications': typeof NotificationsRoute
   '/owner': typeof OwnerRoute
   '/owner-approvals': typeof OwnerApprovalsRoute
   '/pmc-scope': typeof PmcScopeRoute
   '/po-create': typeof PoCreateRoute
   '/pour-cards': typeof PourCardsRoute
+  '/price-database': typeof PriceDatabaseRoute
   '/price-intelligence': typeof PriceIntelligenceRoute
   '/price-ocr': typeof PriceOcrRoute
   '/procurement': typeof ProcurementRoute
@@ -703,13 +703,13 @@ export interface FileRouteTypes {
     | '/manual'
     | '/media-upload-studio'
     | '/messages'
-    | '/mrp-rates'
     | '/notifications'
     | '/owner'
     | '/owner-approvals'
     | '/pmc-scope'
     | '/po-create'
     | '/pour-cards'
+    | '/price-database'
     | '/price-intelligence'
     | '/price-ocr'
     | '/procurement'
@@ -777,13 +777,13 @@ export interface FileRouteTypes {
     | '/manual'
     | '/media-upload-studio'
     | '/messages'
-    | '/mrp-rates'
     | '/notifications'
     | '/owner'
     | '/owner-approvals'
     | '/pmc-scope'
     | '/po-create'
     | '/pour-cards'
+    | '/price-database'
     | '/price-intelligence'
     | '/price-ocr'
     | '/procurement'
@@ -851,13 +851,13 @@ export interface FileRouteTypes {
     | '/manual'
     | '/media-upload-studio'
     | '/messages'
-    | '/mrp-rates'
     | '/notifications'
     | '/owner'
     | '/owner-approvals'
     | '/pmc-scope'
     | '/po-create'
     | '/pour-cards'
+    | '/price-database'
     | '/price-intelligence'
     | '/price-ocr'
     | '/procurement'
@@ -926,13 +926,13 @@ export interface RootRouteChildren {
   ManualRoute: typeof ManualRoute
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
   MessagesRoute: typeof MessagesRoute
-  MrpRatesRoute: typeof MrpRatesRoute
   NotificationsRoute: typeof NotificationsRoute
   OwnerRoute: typeof OwnerRoute
   OwnerApprovalsRoute: typeof OwnerApprovalsRoute
   PmcScopeRoute: typeof PmcScopeRoute
   PoCreateRoute: typeof PoCreateRoute
   PourCardsRoute: typeof PourCardsRoute
+  PriceDatabaseRoute: typeof PriceDatabaseRoute
   PriceIntelligenceRoute: typeof PriceIntelligenceRoute
   PriceOcrRoute: typeof PriceOcrRoute
   ProcurementRoute: typeof ProcurementRoute
@@ -1206,13 +1206,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MessagesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mrp-rates': {
-      id: '/mrp-rates'
-      path: '/mrp-rates'
-      fullPath: '/mrp-rates'
-      preLoaderRoute: typeof MrpRatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/notifications': {
       id: '/notifications'
       path: '/notifications'
@@ -1253,6 +1246,13 @@ declare module '@tanstack/react-router' {
       path: '/pour-cards'
       fullPath: '/pour-cards'
       preLoaderRoute: typeof PourCardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/price-database': {
+      id: '/price-database'
+      path: '/price-database'
+      fullPath: '/price-database'
+      preLoaderRoute: typeof PriceDatabaseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/price-intelligence': {
@@ -1510,13 +1510,13 @@ const rootRouteChildren: RootRouteChildren = {
   ManualRoute: ManualRoute,
   MediaUploadStudioRoute: MediaUploadStudioRoute,
   MessagesRoute: MessagesRoute,
-  MrpRatesRoute: MrpRatesRoute,
   NotificationsRoute: NotificationsRoute,
   OwnerRoute: OwnerRoute,
   OwnerApprovalsRoute: OwnerApprovalsRoute,
   PmcScopeRoute: PmcScopeRoute,
   PoCreateRoute: PoCreateRoute,
   PourCardsRoute: PourCardsRoute,
+  PriceDatabaseRoute: PriceDatabaseRoute,
   PriceIntelligenceRoute: PriceIntelligenceRoute,
   PriceOcrRoute: PriceOcrRoute,
   ProcurementRoute: ProcurementRoute,
