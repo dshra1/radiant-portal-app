@@ -24,6 +24,7 @@ import {
   computeBoq,
   DRAWING_SLOTS,
   emptyTakeoff,
+  sampleTakeoff,
   SLOT_FIELDS,
   STAGES,
   type Opening,
@@ -308,6 +309,16 @@ function Page() {
             wires, pipes, paint. Lock the rates for everything marked{" "}
             <Lock className="inline size-3.5" /> before the site starts.
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(sampleTakeoff());
+              toast.success("Sample building loaded (not saved). See step 3.");
+            }}
+            className="mt-3 rounded-lg border border-primary px-3 py-1.5 text-sm font-semibold text-primary"
+          >
+            Try a sample building (stilt + 5, 10 flats)
+          </button>
           {ai === false && (
             <p className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" /> {AI_OFF_REASON} You can still

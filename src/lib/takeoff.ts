@@ -286,6 +286,94 @@ export function emptyTakeoff(): Takeoff {
   };
 }
 
+/** A sample building (stilt + 5, two 4BHK flats a floor, 113′ × 36′) to try the page without drawings. */
+export function sampleTakeoff(): Takeoff {
+  const t = emptyTakeoff();
+  const rooms: Room[] = [
+    { name: "Toilet", type: "toilet", length_ft: 5.94, width_ft: 12.5, count: 2 },
+    { name: "Bedroom-03", type: "bed", length_ft: 11.87, width_ft: 12.5, count: 2 },
+    { name: "Toilet", type: "toilet", length_ft: 5.38, width_ft: 12.5, count: 2 },
+    { name: "Bedroom-02", type: "bed", length_ft: 11.87, width_ft: 12.5, count: 2 },
+    { name: "Balcony", type: "balcony", length_ft: 17.94, width_ft: 5.0, count: 2 },
+    { name: "Drawing", type: "living", length_ft: 17.94, width_ft: 10.0, count: 2 },
+    { name: "Balcony", type: "balcony", length_ft: 13.5, width_ft: 7.5, count: 2 },
+    { name: "Passage", type: "passage", length_ft: 4.31, width_ft: 11.0, count: 2 },
+    { name: "Living", type: "living", length_ft: 17.25, width_ft: 11.0, count: 2 },
+    { name: "Dining", type: "living", length_ft: 11.94, width_ft: 8.5, count: 2 },
+    { name: "Foyer", type: "passage", length_ft: 6, width_ft: 8.5, count: 2 },
+    { name: "M.Bedroom", type: "bed", length_ft: 13.5, width_ft: 16, count: 2 },
+    { name: "Toilet", type: "toilet", length_ft: 5.38, width_ft: 12.5, count: 2 },
+    { name: "Bedroom-01", type: "bed", length_ft: 11.87, width_ft: 12.5, count: 2 },
+    { name: "P.Room", type: "toilet", length_ft: 5.37, width_ft: 4.06, count: 2 },
+    { name: "Toilet", type: "toilet", length_ft: 5.37, width_ft: 8.44, count: 2 },
+    { name: "Kitchen", type: "kitchen", length_ft: 10.88, width_ft: 12.5, count: 2 },
+    { name: "Store", type: "store", length_ft: 6, width_ft: 5.5, count: 2 },
+    { name: "Utility", type: "utility", length_ft: 6, width_ft: 7, count: 2 },
+    { name: "Lift", type: "lift", length_ft: 7, width_ft: 7, count: 1 },
+  ] as Room[];
+  t.floors = [
+    {
+      name: "Stilt (parking)",
+      repeat: 1,
+      kind: "stilt",
+      built_up_sft: 4068,
+      external_perimeter_ft: 0,
+      rooms: [],
+    },
+    {
+      name: "Typical floor (1st–5th)",
+      repeat: 5,
+      kind: "typical",
+      built_up_sft: 4068,
+      external_perimeter_ft: 298,
+      rooms,
+    },
+    {
+      name: "Terrace",
+      repeat: 1,
+      kind: "terrace",
+      built_up_sft: 4068,
+      external_perimeter_ft: 0,
+      rooms: [],
+    },
+  ];
+  t.heights = {
+    floor_to_floor_ft: 10,
+    slab_in: 6,
+    beam_depth_in: 24,
+    plinth_ft: 2,
+    parapet_ft: 3.5,
+    founding_depth_ft: 6,
+  };
+  t.footings = [
+    { mark: "F1", length_ft: 7, width_ft: 7, depth_ft: 2, count: 10 },
+    { mark: "F2", length_ft: 8, width_ft: 8, depth_ft: 2.25, count: 12 },
+    { mark: "F3", length_ft: 9, width_ft: 9, depth_ft: 2.5, count: 8 },
+  ];
+  t.columns = [
+    { mark: "C1", b_in: 12, d_in: 24, count: 24, levels: 6 },
+    { mark: "C2", b_in: 12, d_in: 30, count: 6, levels: 6 },
+  ];
+  t.beams = [
+    { level: "Plinth", b_in: 12, d_in: 24, length_ft: 650, repeat: 1 },
+    { level: "Floors 1–5 + terrace", b_in: 9, d_in: 24, length_ft: 700, repeat: 6 },
+  ];
+  t.slabs = [{ level: "Floors 1–5 + terrace", area_sft: 4068, thickness_in: 6, repeat: 6 }];
+  t.staircase_m3 = 18;
+  t.openings = [
+    { mark: "W1", kind: "window", width_ft: 5, height_ft: 5.5, count: 50 },
+    { mark: "KW", kind: "window", width_ft: 4, height_ft: 4.5, count: 10 },
+    { mark: "V1", kind: "ventilator", width_ft: 2, height_ft: 3, count: 40 },
+    { mark: "SD", kind: "slider", width_ft: 6, height_ft: 8, count: 20 },
+    { mark: "MD", kind: "main-door", width_ft: 3.5, height_ft: 7, count: 10 },
+    { mark: "D1", kind: "door", width_ft: 3, height_ft: 7, count: 40 },
+    { mark: "D2", kind: "toilet-door", width_ft: 2.5, height_ft: 7, count: 50 },
+  ];
+  t.site = { compound_wall_rft: 353, paving_sft: 1469 };
+  t.finishes = { ...t.finishes, concrete_grade: "M30" };
+  return t;
+}
+
 /** Which parts of the takeoff each slot fills (a new reading of that slot replaces them). */
 export const SLOT_FIELDS: Record<SlotKey, (keyof Takeoff)[]> = {
   plans: ["floors"],
