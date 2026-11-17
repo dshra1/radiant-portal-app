@@ -1,3 +1,4 @@
+import { assertAiFeature } from "@/lib/ai-plans.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { streamText } from "ai";
@@ -64,8 +65,29 @@ const RFT_PER_M = 3.28084;
  */
 function toSiteUnits(unit: string, quantity: number, rate: number) {
   const u = unit.toLowerCase().replace(/[\s.]/g, "");
-  const area = ["sqm", "sqmt", "sqmts", "sqmtr", "sqmtrs", "m2", "sqmeter", "sqmetre", "squaremetre", "squaremeter"];
-  const length = ["m", "mtr", "mtrs", "rm", "rmt", "meter", "metre", "runningmetre", "runningmeter"];
+  const area = [
+    "sqm",
+    "sqmt",
+    "sqmts",
+    "sqmtr",
+    "sqmtrs",
+    "m2",
+    "sqmeter",
+    "sqmetre",
+    "squaremetre",
+    "squaremeter",
+  ];
+  const length = [
+    "m",
+    "mtr",
+    "mtrs",
+    "rm",
+    "rmt",
+    "meter",
+    "metre",
+    "runningmetre",
+    "runningmeter",
+  ];
   if (area.includes(u)) {
     return { unit: "SFT", quantity: quantity * SFT_PER_SQM, rate: rate / SFT_PER_SQM };
   }
@@ -75,9 +97,11 @@ function toSiteUnits(unit: string, quantity: number, rate: number) {
   return { unit, quantity, rate };
 }
 
-
 function extractJsonArray(text: string): RawItem[] {
-  const cleaned = text.replace(/```json/gi, "```").split("```").join("\n");
+  const cleaned = text
+    .replace(/```json/gi, "```")
+    .split("```")
+    .join("\n");
   const start = cleaned.indexOf("[");
   if (start === -1) return [];
   // Walk to the matching bracket so trailing prose does not break parsing.
@@ -118,6 +142,7 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { projectId: string; extraBrief?: string }) => input)
   .handler(async ({ data, context }) => {
+    await assertAiFeature(context.supabase as never, "boq-ai");
     const { supabase } = context;
 
     const { data: project, error } = await supabase
@@ -198,10 +223,10 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
       "You are a senior Indian quantity surveyor preparing a pre-drawing concept BOQ / budget estimate for a Hyderabad (Telangana) building project. Architectural drawings are NOT available yet, so derive everything from standard thumb rules, IS codes, CPWD norms and current Hyderabad market rates in INR.",
       "Return ONLY a JSON array — no prose, no markdown fences. Each element must be an object with exactly these keys:",
       '{"trade":string,"description":string,"unit":string,"quantity":number,"rate":number,"brand":string,"supplier":string,"notes":string}',
-      "quantity and rate are plain numbers (rate = per-unit rate in INR, no symbols or commas). notes holds the short derivation thumb rule. brand/supplier use realistic Indian brands and supply channels; use \"\" where not applicable.",
+      'quantity and rate are plain numbers (rate = per-unit rate in INR, no symbols or commas). notes holds the short derivation thumb rule. brand/supplier use realistic Indian brands and supply channels; use "" where not applicable.',
       "Quantities MUST be derived from the given geometry (built-up sft, slab sft, floor counts) and be internally consistent with the specified material grades and quality tiers.",
       "UNITS: use Indian site units only — areas in SFT (never SQM / sq mt / m2), lengths in RFT, concrete in CUM, steel in KG or MT, counts in NOS, cement in BAGS. Flooring, wall tiling, granite, plastering, painting, waterproofing and false ceiling MUST be quoted in SFT with a per-SFT rate.",
-      "AREA DETAIL: for every finishing trade (Flooring, Wall Tiling, Granite Works, False Ceiling, Painting, Waterproofing, Sanitaryware, CP Fittings) the description MUST name the room/location it applies to, e.g. \"Vitrified tile flooring 800x800 — living & dining\", \"Anti-skid flooring — bathroom floor\", \"Ceramic dado up to 7ft — bathroom wall\", \"Granite — kitchen platform\", \"Flooring — bedrooms\", \"Flooring — balcony\", \"Flooring — staircase & lobby\", \"Flooring — utility\". Split each finishing trade into separate line items per area instead of one lumped item.",
+      'AREA DETAIL: for every finishing trade (Flooring, Wall Tiling, Granite Works, False Ceiling, Painting, Waterproofing, Sanitaryware, CP Fittings) the description MUST name the room/location it applies to, e.g. "Vitrified tile flooring 800x800 — living & dining", "Anti-skid flooring — bathroom floor", "Ceramic dado up to 7ft — bathroom wall", "Granite — kitchen platform", "Flooring — bedrooms", "Flooring — balcony", "Flooring — staircase & lobby", "Flooring — utility". Split each finishing trade into separate line items per area instead of one lumped item.',
       prefLines
         ? [
             "OWNER'S APPROVED BRANDS — these are mandatory. For any item belonging to one of these materials you MUST set \"brand\" to exactly the make named below (append the series/grade when given) and price the item at that brand's realistic Hyderabad rate. Never substitute a different make for these, and never leave the brand blank for them. Copy the supplier when one is given.",
@@ -212,7 +237,6 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
     ]
       .filter(Boolean)
       .join("\n");
-
 
     const batches: (typeof BOQ_TRADES)[number][][] = [];
     for (let i = 0; i < BOQ_TRADES.length; i += 5) {
@@ -277,7 +301,6 @@ export const generateBoqEstimate = createServerFn({ method: "POST" })
       };
     });
 
-
     const chunk = 300;
     for (let i = 0; i < rows.length; i += chunk) {
       const insert = await supabase.from("boq_items").insert(rows.slice(i, i + chunk));
@@ -320,6 +343,7 @@ export const suggestBrandOptions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { itemIds: string[] }) => input)
   .handler(async ({ data, context }) => {
+    await assertAiFeature(context.supabase as never, "boq-ai");
     const { supabase } = context;
     const ids = (data.itemIds ?? []).slice(0, 15);
     if (ids.length === 0) return { suggestions: [] as BrandSuggestion[] };
@@ -411,7 +435,6 @@ export const suggestBrandOptions = createServerFn({ method: "POST" })
     return { suggestions };
   });
 
-
 /**
  * Tries to find a real product image on the internet for a BOQ line item
  * (e.g. "Kohler July series diverter/spout"). The model proposes candidate
@@ -423,6 +446,7 @@ export const findProductImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { itemId: string; query?: string }) => input)
   .handler(async ({ data, context }) => {
+    await assertAiFeature(context.supabase as never, "boq-ai");
     const { supabase } = context;
 
     const { data: item, error } = await supabase
@@ -433,8 +457,7 @@ export const findProductImage = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!item) throw new Error("Line item not found");
 
-    const searchText =
-      (data.query ?? "").trim() || `${item.brand} ${item.description}`.trim();
+    const searchText = (data.query ?? "").trim() || `${item.brand} ${item.description}`.trim();
     if (!searchText) return { found: false as const, searchText: "" };
 
     const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
@@ -492,6 +515,7 @@ export const generateLabourRates = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { projectId: string }) => input)
   .handler(async ({ data, context }) => {
+    await assertAiFeature(context.supabase as never, "boq-ai");
     const { supabase } = context;
 
     const { data: project, error } = await supabase
@@ -518,8 +542,8 @@ export const generateLabourRates = createServerFn({ method: "POST" })
         "One element per labour package: Excavation & earthwork, Barbending / steel fixing, Shuttering / centering (carpentry), Concreting / mason gang, Block masonry, Internal plastering, External plastering, Waterproofing applicator, Flooring & tiling (incl. dado), Granite fixing, Painting, Plumbing (sanitary + CPVC), Electrical wiring, Carpentry & door fixing, False ceiling, Fabrication & railing, Housekeeping / helpers, Site supervision gang.",
         "unit: use prevailing Indian labour contract units only — SFT for area-based packages, RFT for lengths, KG or MT for barbending, CUM for excavation/concrete, NOS for counts, MONTH for supervision/housekeeping.",
         "rate = realistic CURRENT Hyderabad labour-only contract rate in INR per that unit (plain number, no symbols). quantity = derived from the given geometry using standard thumb rules.",
-        "supplier = a generic vendor label such as \"Labour contractor — to be finalised\" (never invent a real company name).",
-        "notes = the rate basis in max 80 chars, e.g. \"Hyd market 2026, labour only, owner supplies material\".",
+        'supplier = a generic vendor label such as "Labour contractor — to be finalised" (never invent a real company name).',
+        'notes = the rate basis in max 80 chars, e.g. "Hyd market 2026, labour only, owner supplies material".',
       ].join("\n"),
       prompt: [
         `PROJECT BRIEF (JSON): ${JSON.stringify(project)}`,
@@ -545,7 +569,10 @@ export const generateLabourRates = createServerFn({ method: "POST" })
       category: String(item.trade ?? "Labour contract").trim() || "Labour contract",
       item_code: `LAB-AI-${String(index + 1).padStart(3, "0")}`,
       description: String(item.description ?? "").trim(),
-      unit: String(item.unit ?? "SFT").trim().toUpperCase() || "SFT",
+      unit:
+        String(item.unit ?? "SFT")
+          .trim()
+          .toUpperCase() || "SFT",
       quantity: Math.round(toNum(item.quantity) * 100) / 100,
       rate: Math.round(toNum(item.rate) * 100) / 100,
       brand: "",

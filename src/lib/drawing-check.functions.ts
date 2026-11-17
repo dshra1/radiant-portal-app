@@ -1,3 +1,4 @@
+import { assertAiFeature } from "@/lib/ai-plans.server";
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -38,6 +39,7 @@ export const checkPhotoAgainstDrawing = createServerFn({ method: "POST" })
     }) => input,
   )
   .handler(async ({ data, context }): Promise<DrawingCheck> => {
+    await assertAiFeature(context.supabase as never, "photo-check");
     const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key)
       throw new Error(

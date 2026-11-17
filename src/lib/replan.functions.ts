@@ -1,3 +1,4 @@
+import { assertAiFeature } from "@/lib/ai-plans.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateText } from "ai";
@@ -26,6 +27,7 @@ export const suggestRecovery = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: RecoveryInput) => input)
   .handler(async ({ data, context }) => {
+    await assertAiFeature(context.supabase as never, "planning-ai");
     const { supabase } = context;
     const { data: project, error } = await supabase
       .from("site_projects")

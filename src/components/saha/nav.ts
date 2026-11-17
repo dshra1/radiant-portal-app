@@ -71,6 +71,7 @@ export const navGroups: NavGroup[] = [
         alsoIn: ["site"],
       },
       { to: "/execution-manual", label: "Execution Manual", icon: BookOpen, alsoIn: ["site"] },
+      { to: "/ai-plans", label: "AI Features & Plans", icon: Sparkles, adminOnly: true },
       { to: "/access-control", label: "Access & Permissions", icon: ShieldCheck, adminOnly: true },
       { to: "/database-backup", label: "Database Backup", icon: Boxes, adminOnly: true },
     ],

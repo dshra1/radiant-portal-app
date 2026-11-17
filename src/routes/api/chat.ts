@@ -1,3 +1,4 @@
+import { aiFeatureOffWithToken } from "@/lib/ai-plans.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { createClient } from "@supabase/supabase-js";
@@ -163,6 +164,8 @@ export const Route = createFileRoute("/api/chat")({
 
         const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
         if (!key) return new Response("AI is not configured", { status: 500 });
+        const off = await aiFeatureOffWithToken(accessToken, "assistant");
+        if (off) return new Response(off, { status: 403 });
 
         const uiMessages = messages as UIMessage[];
         const context = await buildLiveContext(accessToken);

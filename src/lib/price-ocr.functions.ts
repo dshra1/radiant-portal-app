@@ -1,7 +1,7 @@
+import { assertAiFeature } from "@/lib/ai-plans.server";
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
 
 export type ExtractedQuoteItem = {
   item_code: string;
@@ -50,6 +50,7 @@ export const extractQuoteFromFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { fileName: string; mediaType: string; storagePath: string }) => input)
   .handler(async ({ data, context }): Promise<ExtractedQuote> => {
+    await assertAiFeature(context.supabase as never, "price-reader");
     const key = process.env["GOOGLE_GENERATIVE_AI_API_KEY"];
     if (!key) throw new Error("AI is not configured for this workspace");
 
@@ -89,15 +90,18 @@ export const extractQuoteFromFile = createServerFn({ method: "POST" })
       text = result.text;
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      if (/429/.test(message)) throw new Error("The document reader is busy right now — please try again in a minute");
-      if (/402|quota|billing/i.test(message)) throw new Error("AI credits are exhausted for this workspace — please check your Gemini API billing");
+      if (/429/.test(message))
+        throw new Error("The document reader is busy right now — please try again in a minute");
+      if (/402|quota|billing/i.test(message))
+        throw new Error(
+          "AI credits are exhausted for this workspace — please check your Gemini API billing",
+        );
       throw new Error(`Document reading failed: ${message.slice(0, 200)}`);
     }
 
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");
     if (start < 0 || end <= start) throw new Error("Could not read any price data from this file");
-
 
     let parsed: Record<string, unknown>;
     try {

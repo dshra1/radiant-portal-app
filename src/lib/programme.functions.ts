@@ -1,3 +1,4 @@
+import { assertAiFeature } from "@/lib/ai-plans.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { streamText } from "ai";
@@ -33,7 +34,10 @@ function toNum(v: unknown) {
 }
 
 function extractJsonArray(text: string): Record<string, unknown>[] {
-  const cleaned = text.replace(/```json/gi, "```").split("```").join("\n");
+  const cleaned = text
+    .replace(/```json/gi, "```")
+    .split("```")
+    .join("\n");
   const start = cleaned.indexOf("[");
   if (start === -1) return [];
   let depth = 0;
@@ -86,6 +90,7 @@ export const generateProgramme = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: ProgrammeInput) => input)
   .handler(async ({ data, context }) => {
+    await assertAiFeature(context.supabase as never, "planning-ai");
     const { supabase } = context;
 
     const { data: project, error } = await supabase

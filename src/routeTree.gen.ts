@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccessControlRouteImport } from './routes/access-control'
+import { Route as AiPlansRouteImport } from './routes/ai-plans'
 import { Route as AiProgrammeRouteImport } from './routes/ai-programme'
 import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -90,6 +91,11 @@ const IndexRoute = IndexRouteImport.update({
 const AccessControlRoute = AccessControlRouteImport.update({
   id: '/access-control',
   path: '/access-control',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiPlansRoute = AiPlansRouteImport.update({
+  id: '/ai-plans',
+  path: '/ai-plans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiProgrammeRoute = AiProgrammeRouteImport.update({
@@ -446,6 +452,7 @@ const ApiChatRoute = ApiChatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/ai-plans': typeof AiPlansRoute
   '/ai-programme': typeof AiProgrammeRoute
   '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
@@ -520,6 +527,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/ai-plans': typeof AiPlansRoute
   '/ai-programme': typeof AiProgrammeRoute
   '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
@@ -595,6 +603,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/ai-plans': typeof AiPlansRoute
   '/ai-programme': typeof AiProgrammeRoute
   '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
@@ -671,6 +680,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/access-control'
+    | '/ai-plans'
     | '/ai-programme'
     | '/approvals'
     | '/auth'
@@ -745,6 +755,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/access-control'
+    | '/ai-plans'
     | '/ai-programme'
     | '/approvals'
     | '/auth'
@@ -819,6 +830,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/access-control'
+    | '/ai-plans'
     | '/ai-programme'
     | '/approvals'
     | '/auth'
@@ -894,6 +906,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccessControlRoute: typeof AccessControlRoute
+  AiPlansRoute: typeof AiPlansRoute
   AiProgrammeRoute: typeof AiProgrammeRoute
   ApprovalsRoute: typeof ApprovalsRoute
   AuthRoute: typeof AuthRoute
@@ -980,6 +993,13 @@ declare module '@tanstack/react-router' {
       path: '/access-control'
       fullPath: '/access-control'
       preLoaderRoute: typeof AccessControlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-plans': {
+      id: '/ai-plans'
+      path: '/ai-plans'
+      fullPath: '/ai-plans'
+      preLoaderRoute: typeof AiPlansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ai-programme': {
@@ -1478,6 +1498,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccessControlRoute: AccessControlRoute,
+  AiPlansRoute: AiPlansRoute,
   AiProgrammeRoute: AiProgrammeRoute,
   ApprovalsRoute: ApprovalsRoute,
   AuthRoute: AuthRoute,

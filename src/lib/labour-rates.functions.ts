@@ -1,3 +1,4 @@
+import { assertAiFeature } from "@/lib/ai-plans.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { streamText } from "ai";
@@ -68,6 +69,7 @@ export const previewLabourRates = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { projectId: string }) => input)
   .handler(async ({ data, context }): Promise<{ rows: LabourEstimate[] }> => {
+    await assertAiFeature(context.supabase as never, "boq-ai");
     const { supabase } = context;
     const { data: project, error } = await supabase
       .from("site_projects")
