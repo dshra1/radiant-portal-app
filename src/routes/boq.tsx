@@ -6,13 +6,13 @@ export const Route = createFileRoute("/boq")({
   },
   head: () => ({
     meta: [
-      { title: "BOQ Engine — SiteYantra Construction Manager" },
+      { title: "BOQ Engine — SiteYantra Construction Management App" },
       {
         name: "description",
         content:
           "Project-specific bill of quantities with AI estimates, price optimizer and live rate intelligence.",
       },
-      { property: "og:title", content: "BOQ Engine — SiteYantra Construction Manager" },
+      { property: "og:title", content: "BOQ Engine — SiteYantra Construction Management App" },
       {
         property: "og:description",
         content: "Project-specific BOQ with AI estimates and price optimizer.",

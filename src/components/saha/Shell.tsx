@@ -285,7 +285,7 @@ export function Shell({
                 SiteYantra
               </span>
               <span className="label-caps truncate text-sidebar-foreground/70">
-                Construction
+                Construction Management App
               </span>
             </div>
           )}
