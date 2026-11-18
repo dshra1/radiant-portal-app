@@ -287,6 +287,9 @@ export function Shell({
               <span className="label-caps truncate text-sidebar-foreground/70">
                 Construction Management App
               </span>
+              <span className="truncate text-[10px] text-sidebar-foreground/60">
+                Developed by Saha Projects
+              </span>
             </div>
           )}
         </div>

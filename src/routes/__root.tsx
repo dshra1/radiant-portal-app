@@ -85,9 +85,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "SiteYantra: BOQ engine, stage-wise execution, QA/QC audits and procurement intelligence for civil construction projects.",
+          "SiteYantra Construction Management App, developed by Saha Projects: BOQ engine, stage-wise execution, QA/QC audits and procurement intelligence for civil construction projects.",
       },
-      { name: "author", content: "Saha Developers" },
+      { name: "author", content: "Saha Projects" },
       {
         property: "og:title",
         content: "SiteYantra — Construction Management App · Civil Project Lifecycle Suite",
@@ -95,7 +95,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:description",
         content:
-          "BOQ engine, stage-wise execution, QA/QC audits and procurement intelligence for civil construction projects.",
+          "Developed by Saha Projects. BOQ engine, stage-wise execution, QA/QC audits and procurement intelligence for civil construction projects.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

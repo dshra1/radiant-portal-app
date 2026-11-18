@@ -122,6 +122,7 @@ function AuthPage() {
             className="h-auto w-full max-w-[280px]"
           />
           <h1 className="sr-only">SiteYantra Construction Management App</h1>
+          <p data-testid="developed-by" className="mt-2 text-xs tracking-wide text-white/60">Developed by Saha Projects</p>
         </div>
 
         <h2 className="mt-6 text-xl font-bold text-white">
