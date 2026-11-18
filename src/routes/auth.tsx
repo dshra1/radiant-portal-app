@@ -118,10 +118,10 @@ function AuthPage() {
         <div>
           <img
             src="/siteyantra-logo-horizontal-white.png"
-            alt="SiteYantra — Construction · Interiors"
+            alt="SiteYantra Construction"
             className="h-auto w-full max-w-[280px]"
           />
-          <h1 className="sr-only">SiteYantra</h1>
+          <h1 className="sr-only">SiteYantra Construction</h1>
         </div>
 
         <h2 className="mt-6 text-xl font-bold text-white">

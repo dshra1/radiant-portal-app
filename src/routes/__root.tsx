@@ -81,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SiteYantra (Construction · Interiors) — Civil Project Lifecycle Suite" },
+      { title: "SiteYantra Construction — Civil Project Lifecycle Suite" },
       {
         name: "description",
         content:
@@ -90,7 +90,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "author", content: "Saha Developers" },
       {
         property: "og:title",
-        content: "SiteYantra (Construction · Interiors) — Civil Project Lifecycle Suite",
+        content: "SiteYantra Construction — Civil Project Lifecycle Suite",
       },
       {
         property: "og:description",
