@@ -16,7 +16,6 @@ import {
   ChevronDown,
   Plus,
   UnfoldVertical,
-  Bot,
   LogOut,
   LifeBuoy,
   KeyRound,
@@ -680,14 +679,6 @@ export function Shell({
         )}
 
         <AskPanel />
-        <Link
-          to="/ai"
-          aria-label="SiteYantra AI Assistant"
-          className="fixed bottom-20 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-[13px] font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover md:bottom-[4.5rem]"
-        >
-          <Bot className="size-4" />
-          <span className="hidden sm:inline">SiteYantra AI Assistant</span>
-        </Link>
 
         <nav className="sticky bottom-0 z-20 flex min-h-16 w-full items-center justify-around border-t border-border bg-card px-2 pb-[env(safe-area-inset-bottom)] md:hidden">
           {phoneBarFor(role).map((item) => {

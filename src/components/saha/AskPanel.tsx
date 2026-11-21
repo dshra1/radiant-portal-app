@@ -6,16 +6,55 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { cn } from "@/lib/utils";
 
 type Table = { title: string; columns: string[]; rows: (string | number)[][]; note?: string };
-type Intent = { kind: "stock" | "low" | "stage" | "upcoming" | "now" | "boq" | "pos"; q?: string; days?: number };
-type Msg = { role: "user" | "assistant"; text: string; tables?: Table[] | undefined; error?: boolean };
-type Mode = null | "stock" | "stage" | "boq";
+type Intent = {
+  kind: "stock" | "low" | "stage" | "upcoming" | "now" | "boq" | "pos" | "verify";
+  q?: string;
+  days?: number;
+};
+type Proposal = {
+  action: Record<string, unknown>;
+  title: string;
+  lines: [string, string][];
+  warnings: string[];
+  blocked?: string;
+};
+type Msg = {
+  role: "user" | "assistant";
+  text: string;
+  tables?: Table[] | undefined;
+  proposals?: Proposal[] | undefined;
+  error?: boolean;
+  done?: string;
+};
+type Mode = null | "stock" | "stage" | "boq" | "receipt" | "issue" | "progress" | "labour";
 
 const QUICK: { label: string; intent?: Intent; mode?: Mode; hint?: string }[] = [
+  { label: "Check entries (last 7 days)", intent: { kind: "verify", days: 7 } },
+  {
+    label: "Record a receipt…",
+    mode: "receipt",
+    hint: "e.g. 200 bags cement from Ultratech, PO-45",
+  },
+  { label: "Record an issue…", mode: "issue", hint: "e.g. 80 bags cement to 4th floor slab" },
+  { label: "Update stage progress…", mode: "progress", hint: "e.g. 4th floor slab 60%" },
+  {
+    label: "Log labour…",
+    mode: "labour",
+    hint: "e.g. 12 masons, Ramesh contractor, block work 3rd floor",
+  },
   { label: "What's low in stock?", intent: { kind: "low" } },
   { label: "Material needed in the next 2 weeks", intent: { kind: "upcoming", days: 14 } },
   { label: "What's on site now?", intent: { kind: "now" } },
-  { label: "Stock of a material…", mode: "stock", hint: "Type a material, e.g. cement, 12 mm steel" },
-  { label: "Material for an activity…", mode: "stage", hint: "Type a stage or activity, e.g. 3rd floor slab, plastering" },
+  {
+    label: "Stock of a material…",
+    mode: "stock",
+    hint: "Type a material, e.g. cement, 12 mm steel",
+  },
+  {
+    label: "Material for an activity…",
+    mode: "stage",
+    hint: "Type a stage or activity, e.g. 3rd floor slab, plastering",
+  },
   { label: "BOQ quantity of an item…", mode: "boq", hint: "Type a BOQ item, e.g. M25 concrete" },
   { label: "POs awaiting approval or delivery", intent: { kind: "pos" } },
 ];
@@ -41,8 +80,13 @@ export function AskPanel() {
       },
       body: JSON.stringify({ projectId: project.id, ...body }),
     });
-    const j = (await r.json().catch(() => ({}))) as { text?: string; tables?: Table[]; error?: string };
-    if (!r.ok || j.error) throw Object.assign(new Error(j.error || "Something went wrong"), { tables: j.tables });
+    const j = (await r.json().catch(() => ({}))) as {
+      text?: string;
+      tables?: Table[];
+      error?: string;
+    };
+    if (!r.ok || j.error)
+      throw Object.assign(new Error(j.error || "Something went wrong"), { tables: j.tables });
     return j;
   }
 
@@ -50,10 +94,30 @@ export function AskPanel() {
     setMsgs((m) => [...m, { role: "user", text: label }]);
     setBusy(true);
     try {
-      const j = await call(payload);
-      setMsgs((m) => [...m, { role: "assistant", text: j.text || "", tables: j.tables ?? [] }]);
+      const j = (await call(payload)) as {
+        text?: string;
+        tables?: Table[];
+        proposals?: Proposal[];
+      };
+      setMsgs((m) => [
+        ...m,
+        {
+          role: "assistant",
+          text: j.text || "",
+          tables: j.tables ?? [],
+          proposals: j.proposals ?? [],
+        },
+      ]);
     } catch (e) {
-      setMsgs((m) => [...m, { role: "assistant", text: (e as Error).message, tables: (e as { tables?: Table[] }).tables, error: true }]);
+      setMsgs((m) => [
+        ...m,
+        {
+          role: "assistant",
+          text: (e as Error).message,
+          tables: (e as { tables?: Table[] }).tables,
+          error: true,
+        },
+      ]);
     } finally {
       setBusy(false);
     }
@@ -63,13 +127,43 @@ export function AskPanel() {
     const v = text.trim();
     if (!v || busy) return;
     setText("");
-    if (mode) {
+    const PREFIX: Partial<Record<NonNullable<Mode>, string>> = {
+      receipt: "Record a stock receipt: ",
+      issue: "Record a stock issue: ",
+      progress: "Update stage progress: ",
+      labour: "Log today's labour: ",
+    };
+    if (mode && PREFIX[mode]) {
       const m = mode;
+      setMode(null);
+      const history = msgs
+        .filter((x) => x.text && !x.error)
+        .slice(-6)
+        .map((x) => ({ role: x.role, text: x.text }));
+      return ask(v, { question: PREFIX[m] + v, history });
+    }
+    if (mode) {
+      const m = mode as "stock" | "stage" | "boq";
       setMode(null);
       return ask(v, { intent: { kind: m, q: v } });
     }
-    const history = msgs.filter((m) => m.text && !m.error).slice(-8).map((m) => ({ role: m.role, text: m.text }));
+    const history = msgs
+      .filter((m) => m.text && !m.error)
+      .slice(-8)
+      .map((m) => ({ role: m.role, text: m.text }));
     return ask(v, { question: v, history });
+  }
+
+  async function confirm(mi: number, pi: number, p: Proposal) {
+    setBusy(true);
+    try {
+      const j = await call({ confirm: p.action });
+      setMsgs((m) => m.map((x, i) => (i === mi ? { ...x, done: `${pi}:${j.text}` } : x)));
+    } catch (e) {
+      setMsgs((m) => [...m, { role: "assistant", text: (e as Error).message, error: true }]);
+    } finally {
+      setBusy(false);
+    }
   }
 
   const hint = QUICK.find((q) => q.mode && q.mode === mode)?.hint;
@@ -80,7 +174,7 @@ export function AskPanel() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Ask about stock, material and site"
-        className="fixed bottom-36 right-4 z-30 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card px-4 py-3 text-[13px] font-semibold text-foreground shadow-lg transition-colors hover:bg-secondary md:bottom-[8.5rem]"
+        className="fixed bottom-20 right-4 z-30 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card px-4 py-3 text-[13px] font-semibold text-foreground shadow-lg transition-colors hover:bg-secondary md:bottom-6"
       >
         <MessageCircleQuestion className="size-4 text-primary" />
         <span className="hidden sm:inline">Ask</span>
@@ -90,26 +184,92 @@ export function AskPanel() {
           <SheetHeader className="border-b border-border px-4 py-3 text-left">
             <SheetTitle className="text-base">Ask</SheetTitle>
             <p className="text-[12px] text-muted-foreground">
-              {project.name} · stock, material per activity, BOQ, site and POs
+              {project.name} · ask, record and check
             </p>
           </SheetHeader>
 
           <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
             {msgs.length === 0 && (
               <p className="text-[13px] text-muted-foreground">
-                Tap a question for an instant answer from this project's data, or type your own below.
+                Tap a question for an instant answer from this project's data, or type your own
+                below.
               </p>
             )}
             {msgs.map((m, i) => (
-              <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+              <div
+                key={i}
+                className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}
+              >
                 <div
                   className={cn(
                     "max-w-[95%] rounded-2xl px-3 py-2 text-[13px]",
-                    m.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground",
+                    m.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-foreground",
                     m.error && "border border-destructive/40",
                   )}
                 >
                   {m.text && <p className="whitespace-pre-wrap">{m.text}</p>}
+                  {(m.proposals ?? []).map((p, k) => {
+                    const done = m.done?.startsWith(`${k}:`)
+                      ? m.done.slice(String(k).length + 1)
+                      : "";
+                    return (
+                      <div
+                        key={`p${k}`}
+                        className="mt-2 rounded-xl border border-primary/30 bg-card p-3"
+                      >
+                        <p className="mb-1 text-[12px] font-semibold">{p.title}</p>
+                        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[12px]">
+                          {p.lines.map(([a, b]) => (
+                            <div key={a} className="contents">
+                              <dt className="text-muted-foreground">{a}</dt>
+                              <dd className="min-w-0 break-words">{b}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                        {p.warnings.map((w) => (
+                          <p key={w} className="mt-1 text-[12px] font-medium text-amber-700">
+                            ⚠ {w}
+                          </p>
+                        ))}
+                        {p.blocked ? (
+                          <p className="mt-1 text-[12px] font-medium text-destructive">
+                            {p.blocked}
+                          </p>
+                        ) : done ? (
+                          <p className="mt-2 text-[12px] font-semibold text-emerald-700">
+                            ✓ {done}
+                          </p>
+                        ) : (
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void confirm(i, k, p)}
+                              className="h-10 flex-1 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
+                            >
+                              Confirm and save
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                setMsgs((ms) =>
+                                  ms.map((x, xi) =>
+                                    xi === i ? { ...x, done: `${k}:Cancelled, nothing saved.` } : x,
+                                  ),
+                                )
+                              }
+                              className="h-10 rounded-full border border-border px-4 text-[13px]"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   {(m.tables ?? []).map((t, k) => (
                     <div key={k} className="mt-2 first:mt-0">
                       <p className="mb-1 text-[12px] font-semibold">{t.title}</p>
@@ -119,7 +279,10 @@ export function AskPanel() {
                             <thead>
                               <tr className="bg-muted/60">
                                 {t.columns.map((c) => (
-                                  <th key={c} className="whitespace-nowrap px-2 py-1.5 text-left font-medium">
+                                  <th
+                                    key={c}
+                                    className="whitespace-nowrap px-2 py-1.5 text-left font-medium"
+                                  >
                                     {c}
                                   </th>
                                 ))}
@@ -133,9 +296,15 @@ export function AskPanel() {
                                       key={ci}
                                       className={cn(
                                         "px-2 py-1.5",
-                                        ci > 0 && typeof c === "string" && /^[\d,.]+$/.test(c) && "text-right tabular-nums",
+                                        ci > 0 &&
+                                          typeof c === "string" &&
+                                          /^[\d,.]+$/.test(c) &&
+                                          "text-right tabular-nums",
                                         c === "enough" && "text-emerald-600",
-                                        t.columns[ci] === "Short by" && c !== "enough" && c !== "—" && "font-semibold text-destructive",
+                                        t.columns[ci] === "Short by" &&
+                                          c !== "enough" &&
+                                          c !== "—" &&
+                                          "font-semibold text-destructive",
                                       )}
                                     >
                                       {c}
@@ -162,15 +331,17 @@ export function AskPanel() {
           </div>
 
           <div className="border-t border-border px-4 py-3">
-            <div className="mb-2 flex flex-wrap gap-1.5">
+            <div className="-mx-4 mb-2 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
               {QUICK.map((q) => (
                 <button
                   key={q.label}
                   type="button"
                   disabled={busy || !project.id}
-                  onClick={() => (q.intent ? ask(q.label, { intent: q.intent }) : setMode(q.mode ?? null))}
+                  onClick={() =>
+                    q.intent ? ask(q.label, { intent: q.intent }) : setMode(q.mode ?? null)
+                  }
                   className={cn(
-                    "rounded-full border border-border px-3 py-1.5 text-[12px] transition-colors hover:bg-secondary disabled:opacity-50",
+                    "shrink-0 whitespace-nowrap rounded-full border border-border px-3 py-2 text-[12px] transition-colors hover:bg-secondary disabled:opacity-50",
                     q.mode && q.mode === mode && "border-primary bg-primary/10",
                   )}
                 >
@@ -188,12 +359,20 @@ export function AskPanel() {
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder={hint ?? "Ask anything: how much cement is in stock? what does the 4th floor slab need?"}
+                placeholder={
+                  hint ??
+                  "Ask anything: how much cement is in stock? what does the 4th floor slab need?"
+                }
                 className="h-11 flex-1 rounded-full border border-border bg-background px-4 text-[14px] outline-none focus:border-primary"
                 aria-label="Your question"
               />
               {mode && (
-                <button type="button" onClick={() => setMode(null)} aria-label="Cancel" className="rounded-full p-2 hover:bg-secondary">
+                <button
+                  type="button"
+                  onClick={() => setMode(null)}
+                  aria-label="Cancel"
+                  className="rounded-full p-2 hover:bg-secondary"
+                >
                   <X className="size-4" />
                 </button>
               )}
