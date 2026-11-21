@@ -283,7 +283,7 @@ function Page() {
             Live L1/L2/L3 ranking of vendor quotations for {project.name}.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={exportCsv}
             disabled={!rfq || !bids.length}

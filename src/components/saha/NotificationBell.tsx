@@ -119,15 +119,15 @@ export function NotificationBell({
           "relative inline-flex shrink-0 items-center",
           lg
             ? "rounded-full bg-secondary p-2.5 text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
-            : "text-muted-foreground hover:text-foreground",
+            : "size-10 justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground md:size-8",
         )}
       >
-        <Bell className={lg ? "size-5" : "size-4"} />
+        <Bell className={lg ? "size-5" : "size-5 md:size-4"} />
         {unread > 0 && (
           <span
             className={cn(
               "absolute grid place-items-center rounded-full bg-destructive font-bold text-destructive-foreground",
-              lg ? "-right-1 -top-1 size-4 text-[9px]" : "-right-1.5 -top-1.5 size-3.5 text-[8px]",
+              lg ? "-right-1 -top-1 size-4 text-[9px]" : "right-0 top-0 h-4 min-w-4 px-0.5 text-[10px]",
             )}
           >
             {unread > 9 ? "9+" : unread}

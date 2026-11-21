@@ -555,3 +555,12 @@
 @media (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px !important; }
 }
+
+/* Phones (owner, 22 Nov 2026: most staff use the app only on a phone). Found by checking every page at 375px:
+   9-10px labels and 28px-tall icon buttons across the app. Raise the floor on phones only. */
+@media (max-width: 640px) {
+  main .text-\[9px\], main .text-\[10px\] { font-size: 11px; }
+  main .label-caps { font-size: 11px; }
+  main button { min-height: 32px; }
+  main button:has(> svg:only-child) { min-height: 36px; min-width: 36px; }
+}

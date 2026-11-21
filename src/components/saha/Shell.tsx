@@ -408,7 +408,7 @@ export function Shell({
           <Link
             to="/"
             aria-label="Go home"
-            className="inline-flex shrink-0 items-center justify-center rounded-md bg-primary/10 p-2 text-primary transition-colors hover:bg-primary/20"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors hover:bg-primary/20 md:size-8"
           >
             <Home className="size-4" />
           </Link>
@@ -506,13 +506,13 @@ export function Shell({
             )}
             <Link
               to="/messages"
-              className="relative inline-flex shrink-0 items-center"
+              className="relative inline-flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-secondary md:size-8"
               aria-label="Team chat"
               title="Team chat"
             >
-              <MessagesSquare className="size-4 text-muted-foreground hover:text-foreground" />
+              <MessagesSquare className="size-5 text-muted-foreground hover:text-foreground md:size-4" />
               {unreadChats > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-destructive text-[8px] font-bold text-destructive-foreground">
+                <span className="absolute right-0 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-destructive px-0.5 text-[10px] font-bold text-destructive-foreground">
                   {unreadChats > 9 ? "9+" : unreadChats}
                 </span>
               )}
@@ -689,7 +689,7 @@ export function Shell({
                 to={item.to}
                 aria-label={item.label}
                 className={cn(
-                  "flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-medium transition-colors",
+                  "flex min-h-12 flex-1 flex-col items-center justify-center gap-1 py-1 text-[11px] font-medium transition-colors",
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >

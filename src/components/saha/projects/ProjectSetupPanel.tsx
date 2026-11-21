@@ -119,12 +119,12 @@ export function ProjectSetupPanel({
     <div className="flex flex-col gap-4">
       <section className="panel p-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <label className="flex flex-col gap-1 text-sm">
+          <label className="flex w-full min-w-0 flex-col gap-1 text-sm sm:w-auto">
             <span className="label-caps text-muted-foreground">Project</span>
             <select
               value={project.id}
               onChange={(e) => setSelectedId(e.target.value)}
-              className="h-9 min-w-[240px] rounded border border-input bg-card px-2 text-sm"
+              className="h-9 w-full max-w-full rounded sm:w-auto sm:min-w-[240px] border border-input bg-card px-2 text-sm"
             >
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
