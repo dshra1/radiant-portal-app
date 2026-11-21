@@ -83,6 +83,7 @@ import { Route as VendorLifecycleRouteImport } from './routes/vendor-lifecycle'
 import { Route as WorkCardsRouteImport } from './routes/work-cards'
 import { Route as AiIndexRouteImport } from './routes/ai.index'
 import { Route as AiThreadIdRouteImport } from './routes/ai.$threadId'
+import { Route as ApiAskRouteImport } from './routes/api/ask'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiBillingActionRouteImport } from './routes/api/billing.$action'
 
@@ -456,6 +457,11 @@ const AiThreadIdRoute = AiThreadIdRouteImport.update({
   path: '/ai/$threadId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAskRoute = ApiAskRouteImport.update({
+  id: '/api/ask',
+  path: '/api/ask',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -541,6 +547,7 @@ export interface FileRoutesByFullPath {
   '/vendor-lifecycle': typeof VendorLifecycleRoute
   '/work-cards': typeof WorkCardsRoute
   '/ai/$threadId': typeof AiThreadIdRoute
+  '/api/ask': typeof ApiAskRoute
   '/api/chat': typeof ApiChatRoute
   '/ai/': typeof AiIndexRoute
   '/api/billing/$action': typeof ApiBillingActionRoute
@@ -619,6 +626,7 @@ export interface FileRoutesByTo {
   '/vendor-lifecycle': typeof VendorLifecycleRoute
   '/work-cards': typeof WorkCardsRoute
   '/ai/$threadId': typeof AiThreadIdRoute
+  '/api/ask': typeof ApiAskRoute
   '/api/chat': typeof ApiChatRoute
   '/ai': typeof AiIndexRoute
   '/api/billing/$action': typeof ApiBillingActionRoute
@@ -698,6 +706,7 @@ export interface FileRoutesById {
   '/vendor-lifecycle': typeof VendorLifecycleRoute
   '/work-cards': typeof WorkCardsRoute
   '/ai/$threadId': typeof AiThreadIdRoute
+  '/api/ask': typeof ApiAskRoute
   '/api/chat': typeof ApiChatRoute
   '/ai/': typeof AiIndexRoute
   '/api/billing/$action': typeof ApiBillingActionRoute
@@ -778,6 +787,7 @@ export interface FileRouteTypes {
     | '/vendor-lifecycle'
     | '/work-cards'
     | '/ai/$threadId'
+    | '/api/ask'
     | '/api/chat'
     | '/ai/'
     | '/api/billing/$action'
@@ -856,6 +866,7 @@ export interface FileRouteTypes {
     | '/vendor-lifecycle'
     | '/work-cards'
     | '/ai/$threadId'
+    | '/api/ask'
     | '/api/chat'
     | '/ai'
     | '/api/billing/$action'
@@ -934,6 +945,7 @@ export interface FileRouteTypes {
     | '/vendor-lifecycle'
     | '/work-cards'
     | '/ai/$threadId'
+    | '/api/ask'
     | '/api/chat'
     | '/ai/'
     | '/api/billing/$action'
@@ -1013,6 +1025,7 @@ export interface RootRouteChildren {
   VendorLifecycleRoute: typeof VendorLifecycleRoute
   WorkCardsRoute: typeof WorkCardsRoute
   AiThreadIdRoute: typeof AiThreadIdRoute
+  ApiAskRoute: typeof ApiAskRoute
   ApiChatRoute: typeof ApiChatRoute
   AiIndexRoute: typeof AiIndexRoute
   ApiBillingActionRoute: typeof ApiBillingActionRoute
@@ -1538,6 +1551,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AiThreadIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ask': {
+      id: '/api/ask'
+      path: '/api/ask'
+      fullPath: '/api/ask'
+      preLoaderRoute: typeof ApiAskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -1629,6 +1649,7 @@ const rootRouteChildren: RootRouteChildren = {
   VendorLifecycleRoute: VendorLifecycleRoute,
   WorkCardsRoute: WorkCardsRoute,
   AiThreadIdRoute: AiThreadIdRoute,
+  ApiAskRoute: ApiAskRoute,
   ApiChatRoute: ApiChatRoute,
   AiIndexRoute: AiIndexRoute,
   ApiBillingActionRoute: ApiBillingActionRoute,

@@ -39,6 +39,7 @@ import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProje
 import { useOnline } from "@/lib/use-online";
 import { NotificationBell } from "@/components/saha/NotificationBell";
 import { CommandSearch } from "@/components/saha/CommandSearch";
+import { AskPanel } from "@/components/saha/AskPanel";
 
 function useSignOut() {
   const queryClient = useQueryClient();
@@ -678,6 +679,7 @@ export function Shell({
           </main>
         )}
 
+        <AskPanel />
         <Link
           to="/ai"
           aria-label="SiteYantra AI Assistant"
