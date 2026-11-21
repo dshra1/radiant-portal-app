@@ -1,3 +1,4 @@
+import { PhoneAlertsNudge } from "@/components/saha/PhoneAlerts";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -655,6 +656,8 @@ export function Shell({
             })}
           </nav>
         )}
+
+        <PhoneAlertsNudge />
 
         {!bare && (
           <div className="border-b border-border bg-gradient-to-b from-primary-soft/50 to-card px-4 pb-5 pt-4 md:px-6">

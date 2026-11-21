@@ -1,3 +1,4 @@
+import { PhoneAlertsRow } from "@/components/saha/PhoneAlerts";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -150,6 +151,8 @@ export function NotificationBell({
               <CheckCheck className="size-3.5" /> Mark all read
             </button>
           </div>
+
+          <PhoneAlertsRow className="m-2 border-dashed" />
 
           <ul className="max-h-80 overflow-y-auto divide-y divide-border">
             {notes.length === 0 && (

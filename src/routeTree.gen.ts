@@ -86,6 +86,7 @@ import { Route as AiThreadIdRouteImport } from './routes/ai.$threadId'
 import { Route as ApiAskRouteImport } from './routes/api/ask'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiBillingActionRouteImport } from './routes/api/billing.$action'
+import { Route as ApiPushSendRouteImport } from './routes/api/push.send'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -472,6 +473,11 @@ const ApiBillingActionRoute = ApiBillingActionRouteImport.update({
   path: '/api/billing/$action',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPushSendRoute = ApiPushSendRouteImport.update({
+  id: '/api/push/send',
+  path: '/api/push/send',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -551,6 +557,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/ai/': typeof AiIndexRoute
   '/api/billing/$action': typeof ApiBillingActionRoute
+  '/api/push/send': typeof ApiPushSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -630,6 +637,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/ai': typeof AiIndexRoute
   '/api/billing/$action': typeof ApiBillingActionRoute
+  '/api/push/send': typeof ApiPushSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -710,6 +718,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/ai/': typeof AiIndexRoute
   '/api/billing/$action': typeof ApiBillingActionRoute
+  '/api/push/send': typeof ApiPushSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -791,6 +800,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/ai/'
     | '/api/billing/$action'
+    | '/api/push/send'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -870,6 +880,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/ai'
     | '/api/billing/$action'
+    | '/api/push/send'
   id:
     | '__root__'
     | '/'
@@ -949,6 +960,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/ai/'
     | '/api/billing/$action'
+    | '/api/push/send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1029,6 +1041,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   AiIndexRoute: typeof AiIndexRoute
   ApiBillingActionRoute: typeof ApiBillingActionRoute
+  ApiPushSendRoute: typeof ApiPushSendRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1572,6 +1585,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBillingActionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/push/send': {
+      id: '/api/push/send'
+      path: '/api/push/send'
+      fullPath: '/api/push/send'
+      preLoaderRoute: typeof ApiPushSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1653,6 +1673,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   AiIndexRoute: AiIndexRoute,
   ApiBillingActionRoute: ApiBillingActionRoute,
+  ApiPushSendRoute: ApiPushSendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,3 +1,4 @@
+import { PhoneAlertsRow } from "@/components/saha/PhoneAlerts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -347,6 +348,7 @@ function Messages() {
       title="Team Chat"
       subtitle="Message people directly or post in a group — recipients get notified instantly"
     >
+      <PhoneAlertsRow className="mb-4" />
       <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="rounded-xl border border-border bg-card p-2">
           <p className="label-caps flex items-center gap-1.5 px-2 py-1 text-muted-foreground">
