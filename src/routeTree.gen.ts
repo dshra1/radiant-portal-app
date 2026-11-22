@@ -85,6 +85,7 @@ import { Route as AiIndexRouteImport } from './routes/ai.index'
 import { Route as AiThreadIdRouteImport } from './routes/ai.$threadId'
 import { Route as ApiAskRouteImport } from './routes/api/ask'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiVoiceRouteImport } from './routes/api/voice'
 import { Route as ApiBillingActionRouteImport } from './routes/api/billing.$action'
 import { Route as ApiPushSendRouteImport } from './routes/api/push.send'
 
@@ -468,6 +469,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVoiceRoute = ApiVoiceRouteImport.update({
+  id: '/api/voice',
+  path: '/api/voice',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBillingActionRoute = ApiBillingActionRouteImport.update({
   id: '/api/billing/$action',
   path: '/api/billing/$action',
@@ -555,6 +561,7 @@ export interface FileRoutesByFullPath {
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/ask': typeof ApiAskRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/voice': typeof ApiVoiceRoute
   '/ai/': typeof AiIndexRoute
   '/api/billing/$action': typeof ApiBillingActionRoute
   '/api/push/send': typeof ApiPushSendRoute
@@ -635,6 +642,7 @@ export interface FileRoutesByTo {
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/ask': typeof ApiAskRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/voice': typeof ApiVoiceRoute
   '/ai': typeof AiIndexRoute
   '/api/billing/$action': typeof ApiBillingActionRoute
   '/api/push/send': typeof ApiPushSendRoute
@@ -716,6 +724,7 @@ export interface FileRoutesById {
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/ask': typeof ApiAskRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/voice': typeof ApiVoiceRoute
   '/ai/': typeof AiIndexRoute
   '/api/billing/$action': typeof ApiBillingActionRoute
   '/api/push/send': typeof ApiPushSendRoute
@@ -798,6 +807,7 @@ export interface FileRouteTypes {
     | '/ai/$threadId'
     | '/api/ask'
     | '/api/chat'
+    | '/api/voice'
     | '/ai/'
     | '/api/billing/$action'
     | '/api/push/send'
@@ -878,6 +888,7 @@ export interface FileRouteTypes {
     | '/ai/$threadId'
     | '/api/ask'
     | '/api/chat'
+    | '/api/voice'
     | '/ai'
     | '/api/billing/$action'
     | '/api/push/send'
@@ -958,6 +969,7 @@ export interface FileRouteTypes {
     | '/ai/$threadId'
     | '/api/ask'
     | '/api/chat'
+    | '/api/voice'
     | '/ai/'
     | '/api/billing/$action'
     | '/api/push/send'
@@ -1039,6 +1051,7 @@ export interface RootRouteChildren {
   AiThreadIdRoute: typeof AiThreadIdRoute
   ApiAskRoute: typeof ApiAskRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiVoiceRoute: typeof ApiVoiceRoute
   AiIndexRoute: typeof AiIndexRoute
   ApiBillingActionRoute: typeof ApiBillingActionRoute
   ApiPushSendRoute: typeof ApiPushSendRoute
@@ -1578,6 +1591,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/voice': {
+      id: '/api/voice'
+      path: '/api/voice'
+      fullPath: '/api/voice'
+      preLoaderRoute: typeof ApiVoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/billing/$action': {
       id: '/api/billing/$action'
       path: '/api/billing/$action'
@@ -1671,6 +1691,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiThreadIdRoute: AiThreadIdRoute,
   ApiAskRoute: ApiAskRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiVoiceRoute: ApiVoiceRoute,
   AiIndexRoute: AiIndexRoute,
   ApiBillingActionRoute: ApiBillingActionRoute,
   ApiPushSendRoute: ApiPushSendRoute,

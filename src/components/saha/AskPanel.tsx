@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MessageCircleQuestion, Send, X, Loader2 } from "lucide-react";
+import { MessageCircleQuestion, Send, X, Loader2, Mic } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -58,6 +58,70 @@ const QUICK: { label: string; intent?: Intent; mode?: Mode; hint?: string }[] = 
   { label: "BOQ quantity of an item…", mode: "boq", hint: "Type a BOQ item, e.g. M25 concrete" },
   { label: "POs awaiting approval or delivery", intent: { kind: "pos" } },
 ];
+
+/** Connect Alexa: a one-time 6-digit code ties an Echo to this login (read-only answers by voice). */
+function AlexaConnect() {
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState<{ code: string; minutes: number; say: string } | null>(null);
+  const [err, setErr] = useState("");
+  async function getCode() {
+    setErr("");
+    const { data } = await supabase.auth.getSession();
+    const r = await fetch("/api/voice", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ action: "code" }),
+    });
+    const j = (await r.json().catch(() => ({}))) as {
+      code?: string;
+      minutes?: number;
+      say?: string;
+      error?: string;
+    };
+    if (!r.ok || !j.code) setErr(j.error || "Could not make a code. Try again.");
+    else setCode({ code: j.code, minutes: j.minutes ?? 10, say: j.say ?? "" });
+  }
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[12px] hover:bg-muted"
+      >
+        <Mic className="h-3.5 w-3.5 text-primary" /> Connect Alexa
+      </button>
+      {open && (
+        <div className="mt-2 rounded-xl border border-border bg-card p-3 text-[12px]">
+          <p className="text-muted-foreground">
+            Ask about stock, stages and orders on your Echo. Alexa answers as you, read-only:
+            nothing is saved by voice.
+          </p>
+          {code ? (
+            <div className="mt-2">
+              <p>Within {code.minutes} minutes, say to your Echo:</p>
+              <p className="mt-1 rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold">
+                “{code.say}”
+              </p>
+              <p className="mt-1 text-2xl font-bold tabular-nums tracking-[0.3em]">{code.code}</p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={getCode}
+              className="mt-2 h-10 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+            >
+              Get a link code
+            </button>
+          )}
+          {err && <p className="mt-1 text-destructive">{err}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Floating "Ask" assistant: tap a question for an instant answer from the app's data, or type anything. */
 export function AskPanel() {
@@ -188,6 +252,7 @@ export function AskPanel() {
             <p className="text-[12px] text-muted-foreground">
               {project.name} · ask, record and check
             </p>
+            <AlexaConnect />
           </SheetHeader>
 
           <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
