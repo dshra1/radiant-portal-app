@@ -47,6 +47,7 @@ export const BACKUP_TABLES = [
   "work_orders",
   "ra_bills",
   "wo_measurements",
+  "wallet_entries",
 ] as const;
 
 export type BackupTable = (typeof BACKUP_TABLES)[number];

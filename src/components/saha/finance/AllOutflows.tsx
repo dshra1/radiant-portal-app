@@ -25,7 +25,7 @@ function inr(n: number): string {
 
 type Row = {
   id: string;
-  kind: "Vendor bill" | "Statutory charge";
+  kind: "Vendor bill" | "Statutory charge" | "Site wallet";
   reference: string;
   payee: string;
   date: string | null;
@@ -87,6 +87,24 @@ export function AllOutflows({ onViewBill }: { onViewBill: (billId: string) => vo
     },
   });
 
+  // Money handed out from the site wallet: paid money requests and advances.
+  const { data: wallet = [] } = useQuery({
+    queryKey: ["wallet", "billing-expenditure", project.id],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wallet_entries")
+        .select(
+          "id,entry_type,person_name,payee,purpose,category,amount,paid_on,entry_date,pay_mode,pay_reference",
+        )
+        .eq("project_id", project.id)
+        .eq("status", "paid");
+      // Before the wallet migration is applied the table is missing: show the rest.
+      if (error) return [];
+      return data ?? [];
+    },
+  });
+
   const rows = useMemo<Row[]>(() => {
     const paidByBill = new Map<string, number>();
     for (const p of payments) {
@@ -124,10 +142,22 @@ export function AllOutflows({ onViewBill }: { onViewBill: (billId: string) => vo
       paid: String(c.status) === "paid" ? num(c.amount) : 0,
       status: String(c.status),
     }));
-    return [...chargeRows, ...billRows].sort((a, b) =>
+    const walletRows: Row[] = wallet.map((w) => ({
+      id: w.id,
+      kind: "Site wallet",
+      reference: `${w.entry_type === "advance" ? "Advance" : "Money request"}${w.pay_reference ? ` · ${w.pay_mode} ${w.pay_reference}` : ""}`,
+      payee: w.payee || w.person_name || "—",
+      date: w.paid_on ?? w.entry_date,
+      category: w.entry_type === "advance" ? "Site advance" : w.category || "Site payment",
+      detail: w.purpose || "",
+      amount: num(w.amount),
+      paid: num(w.amount),
+      status: "paid",
+    }));
+    return [...chargeRows, ...billRows, ...walletRows].sort((a, b) =>
       String(b.date ?? "").localeCompare(String(a.date ?? "")),
     );
-  }, [bills, charges, payments]);
+  }, [bills, charges, payments, wallet]);
 
   const filtered = rows.filter((r) => {
     if (kind === "paid") {
@@ -148,8 +178,17 @@ export function AllOutflows({ onViewBill }: { onViewBill: (billId: string) => vo
     const chargeTotal = rows
       .filter((r) => r.kind === "Statutory charge")
       .reduce((s, r) => s + r.amount, 0);
+    const walletTotal = rows
+      .filter((r) => r.kind === "Site wallet")
+      .reduce((s, r) => s + r.amount, 0);
     const paid = rows.reduce((s, r) => s + r.paid, 0);
-    return { billTotal, chargeTotal, total: billTotal + chargeTotal, paid };
+    return {
+      billTotal,
+      chargeTotal,
+      walletTotal,
+      total: billTotal + chargeTotal + walletTotal,
+      paid,
+    };
   }, [rows]);
 
   const loading = billsPending || chargesPending;
@@ -290,6 +329,13 @@ export function AllOutflows({ onViewBill }: { onViewBill: (billId: string) => vo
                         >
                           View bill
                         </button>
+                      ) : r.kind === "Site wallet" ? (
+                        <Link
+                          to="/wallet"
+                          className="text-primary text-xs font-semibold hover:underline"
+                        >
+                          View wallet
+                        </Link>
                       ) : (
                         <Link
                           to="/common-expenses"

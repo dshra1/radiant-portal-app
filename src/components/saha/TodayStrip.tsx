@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Truck,
   Users,
+  Wallet,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
@@ -63,6 +64,7 @@ const QUICK_ACTIONS: Action[] = [
     roles: SITE,
   },
   { to: "/quality", search: { tab: "ncr" }, label: "Raise NCR", icon: ShieldAlert, roles: SITE },
+  { to: "/wallet", label: "My wallet", icon: Wallet, roles: [...SITE, "accounts"] },
   { to: "/po-create", label: "Raise PO", icon: FileSpreadsheet, roles: BUY },
   { to: "/bills-payments", label: "New bill", icon: Receipt, roles: MONEY },
 ];
@@ -167,8 +169,18 @@ export function TodayStrip() {
         .eq("is_task", true)
         .eq("recipient_id", user!.id)
         .neq("status", "Done");
-      const [a, b, c] = await Promise.all([pending, requests, todos]);
-      return { approvals: a.count ?? 0, requests: b.count ?? 0, todos: c.count ?? 0 };
+      const wallet = supabase
+        .from("wallet_entries")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", pid)
+        .eq("status", "pending")
+        .neq("entry_type", "advance");
+      const [a, b, c, w] = await Promise.all([pending, requests, todos, wallet]);
+      return {
+        approvals: (a.count ?? 0) + (canApprove ? (w.count ?? 0) : 0),
+        requests: b.count ?? 0,
+        todos: c.count ?? 0,
+      };
     },
   });
 
@@ -177,7 +189,7 @@ export function TodayStrip() {
       <div className="grid grid-cols-3 gap-2">
         <Counter
           to={canApprove ? "/purchase-orders" : "/approvals"}
-          label={canApprove ? "POs to approve" : "Waiting approval"}
+          label={canApprove ? "To approve (POs, money)" : "Waiting approval"}
           value={counts.data?.approvals}
           icon={ShieldCheck}
         />

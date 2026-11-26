@@ -138,6 +138,7 @@ export const navGroups: NavGroup[] = [
         alsoIn: ["stock"],
       },
       { to: "/machines", label: "Machines & Diesel", icon: Truck },
+      { to: "/wallet", label: "Site Wallet", icon: Wallet, alsoIn: ["accounts"] },
       { to: "/site-execution", label: "Site Execution", icon: HardHat, more: true },
       { to: "/replan", label: "Programme Re-plan (forecast)", icon: CalendarClock, more: true },
       { to: "/pour-cards", label: "Pour Cards", icon: ClipboardCheck, more: true },
