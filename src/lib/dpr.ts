@@ -132,7 +132,7 @@ export function useDay(projectId: string, date: string) {
 }
 
 /** pdf-lib's standard fonts only draw Latin-1: keep text readable. */
-const safe = (s: string) =>
+export const safe = (s: string) =>
   String(s ?? "")
     .replace(/₹/g, "Rs ")
     .replace(/[–—]/g, "-")
@@ -147,14 +147,14 @@ const safe = (s: string) =>
     .join("");
 
 /** Text pdf-lib's standard font can't draw (Telugu, Hindi, other scripts). */
-const needsImage = (s: string) =>
+export const needsImage = (s: string) =>
   [...String(s ?? "")].some((c) => c.charCodeAt(0) > 0xff && !"₹–—‘’“”".includes(c));
 
 /**
  * Draw text with the phone's own fonts (the browser joins Telugu/Hindi letters correctly)
  * onto a canvas, wrapped to `widthPt`, and return it as a PNG with its height in points.
  */
-async function textPng(text: string, widthPt: number, sizePt: number) {
+export async function textPng(text: string, widthPt: number, sizePt: number) {
   if (typeof document === "undefined") return null;
   const k = 3; // pixels per point: sharp when printed
   const canvas = document.createElement("canvas");
@@ -470,12 +470,12 @@ export async function buildDprPdf(projectName: string, location: string, d: DayD
 }
 
 /** Share the PDF from the phone (WhatsApp etc.), or download it on a laptop. */
-export async function shareDpr(bytes: Uint8Array, fileName: string, title: string) {
+export async function shareDpr(bytes: Uint8Array, fileName: string, title: string, text?: string) {
   const file = new File([bytes as BlobPart], fileName, { type: "application/pdf" });
   const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
   if (nav.canShare?.({ files: [file] })) {
     try {
-      await nav.share({ files: [file], title });
+      await nav.share({ files: [file], title, ...(text ? { text } : {}) });
       return "shared";
     } catch {
       /* cancelled: fall through to download */

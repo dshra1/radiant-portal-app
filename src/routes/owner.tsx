@@ -18,7 +18,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useAccess } from "@/lib/access";
 import { boqTotals } from "@/lib/boq-totals";
-import { useOwnerLiability } from "@/lib/owner-liability";
+import { useOwnerLiability, type Liability } from "@/lib/owner-liability";
+import { buildOwnerStatementPdf } from "@/lib/owner-statement";
+import { shareDpr } from "@/lib/dpr";
 import { fmtDay, plannedPctToday } from "@/lib/programme-progress";
 import { useSiteWeek } from "@/lib/site-week";
 import {
@@ -249,6 +251,40 @@ function OwnerPresentation({ ownerName, lock }: { ownerName: string; lock: boole
   );
 }
 
+/** The owner's own statement of account (and payment request) as a PDF to keep or share. */
+function MyStatementButton({ projectId, liability }: { projectId: string; liability: Liability }) {
+  const [busy, setBusy] = useState(false);
+  const make = async () => {
+    setBusy(true);
+    try {
+      const { data: p, error } = await supabase
+        .from("site_projects")
+        .select(
+          "name,location,company_name,company_gstin,bank_name,bank_account_name,bank_account_last4,bank_ifsc",
+        )
+        .eq("id", projectId)
+        .single();
+      if (error) throw error;
+      const bytes = await buildOwnerStatementPdf(p, liability);
+      await shareDpr(bytes, `My-statement-${todayIso()}.pdf`, `Statement ${p.name}`);
+    } catch (e) {
+      toast.error(`Could not make the statement: ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={make}
+      disabled={busy}
+      className="font-semibold text-primary underline disabled:opacity-50"
+    >
+      {busy ? "Making…" : "My statement (PDF)"}
+    </button>
+  );
+}
+
 // ---------------------------------------------------------------- overview
 function Overview({ projectId, ownerName }: { projectId: string; ownerName: string }) {
   const week = useSiteWeek(projectId);
@@ -405,6 +441,7 @@ function Overview({ projectId, ownerName }: { projectId: string; ownerName: stri
           {!(reqs.data ?? []).length && <li className="text-muted-foreground">Nothing pending.</li>}
         </ul>
         <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          {mine && <MyStatementButton projectId={projectId} liability={mine} />}
           <Link to="/capital-ledger" className="text-primary underline">
             Calls and receipts
           </Link>

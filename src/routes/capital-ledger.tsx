@@ -8,7 +8,14 @@ import { LandownerBreakup } from "@/components/saha/LandownerBreakup";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
 import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProject";
-import { useOwnerLiability } from "@/lib/owner-liability";
+import { useOwnerLiability, type Liability } from "@/lib/owner-liability";
+import {
+  buildOwnerStatementPdf,
+  dueNow,
+  openCallsOf,
+  statementMessage,
+} from "@/lib/owner-statement";
+import { shareDpr } from "@/lib/dpr";
 import { todayIso } from "@/lib/dates";
 
 export const Route = createFileRoute("/capital-ledger")({
@@ -125,7 +132,9 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_projects")
-        .select("id,name,location,target_budget,landowners,investors")
+        .select(
+          "id,name,location,target_budget,landowners,investors,company_name,company_gstin,bank_name,bank_account_name,bank_account_last4,bank_ifsc",
+        )
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -231,6 +240,67 @@ function Page() {
   // "paid" figure on the landowner sheet is not added on top (it would double count).
   const liabilityQuery = useOwnerLiability(activeId);
   const liabilities = useMemo(() => liabilityQuery.data?.list ?? [], [liabilityQuery.data]);
+  const [docBusy, setDocBusy] = useState("");
+
+  /** Statement / payment request PDF for one owner, shared to WhatsApp from the phone. */
+  const sendStatement = async (name: string) => {
+    const l = liabilities.find((x) => x.name.trim().toLowerCase() === name.trim().toLowerCase());
+    if (!l || !project) return setStatus("No figures for this owner yet.");
+    setDocBusy(`st:${name}`);
+    try {
+      const bytes = await buildOwnerStatementPdf(project, l);
+      const how = await shareDpr(
+        bytes,
+        `Statement-${name.replace(/\W+/g, "-")}-${todayIso()}.pdf`,
+        `Statement ${name}`,
+        statementMessage(project, l),
+      );
+      setStatus(
+        how === "shared" ? `Statement shared for ${name}.` : `Statement downloaded for ${name}.`,
+      );
+    } catch (e) {
+      setStatus(`Could not make the statement: ${(e as Error).message}`);
+    } finally {
+      setDocBusy("");
+    }
+  };
+
+  /** Reminder in the owner's app (bell + phone alert) for calls not yet paid. */
+  const remind = async (l: Liability) => {
+    const open = openCallsOf(l);
+    const due = dueNow(l);
+    if (!project || due <= 0) return;
+    setDocBusy(`rm:${l.name}`);
+    try {
+      const { data: links } = await supabase.from("owner_links").select("user_id,owner_name");
+      const ids = (links ?? [])
+        .filter((x) => x.owner_name.trim().toLowerCase() === l.name.trim().toLowerCase())
+        .map((x) => x.user_id);
+      if (ids.length === 0) {
+        setStatus(`${l.name} has no app login linked yet: send the statement on WhatsApp instead.`);
+        return;
+      }
+      const { error } = await supabase.from("notifications").insert(
+        ids.map((id) => ({
+          recipient_id: id,
+          title: `Payment requested: ${inr(due)} for ${project.name}`,
+          body: open
+            .map((e) => [e.milestone || e.reference, inr(e.amount)].filter(Boolean).join(" · "))
+            .join("; "),
+          category: "Payment",
+          priority: "High",
+          link: "/owner",
+          project_id: project.id,
+        })),
+      );
+      if (error) throw error;
+      setStatus(`Reminder sent to ${l.name} in the app.`);
+    } catch (e) {
+      setStatus(`Could not send the reminder: ${(e as Error).message}`);
+    } finally {
+      setDocBusy("");
+    }
+  };
 
   const ownerRows = useMemo(() => {
     const byKey = new Map(liabilities.map((l) => [l.name.trim().toLowerCase(), l]));
@@ -635,7 +705,7 @@ function Page() {
                       {inr(r.pending)}
                     </td>
                     <td className="p-3">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex flex-wrap items-center justify-center gap-2">
                         <button
                           type="button"
                           onClick={() => openFor(r.name, "receipt")}
@@ -652,6 +722,30 @@ function Page() {
                         >
                           Raise call
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => sendStatement(r.name)}
+                          disabled={docBusy === `st:${r.name}`}
+                          className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          {docBusy === `st:${r.name}` ? "Making…" : "Statement (PDF)"}
+                        </button>
+                        {canEdit &&
+                          (() => {
+                            const l = liabilities.find(
+                              (x) => x.name.trim().toLowerCase() === r.name.trim().toLowerCase(),
+                            );
+                            return l && dueNow(l) > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => remind(l)}
+                                disabled={docBusy === `rm:${l.name}`}
+                                className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                              >
+                                Remind
+                              </button>
+                            ) : null;
+                          })()}
                       </div>
                     </td>
                   </tr>
