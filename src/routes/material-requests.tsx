@@ -344,6 +344,18 @@ function RequestForm({
         })) as unknown as Json,
       });
       if (error) throw error;
+      // Alerts Purchase (and every member) on the phone through the existing push trigger.
+      await supabase.from("notifications").insert({
+        title: `Material request: ${lines.length} item${lines.length > 1 ? "s" : ""} for stage ${stage}`,
+        body: lines
+          .slice(0, 4)
+          .map((r) => `${r.name.trim()} ${r.qty} ${r.unit}`.trim())
+          .join(" · "),
+        category: "Purchase",
+        priority: anyOver ? "High" : "Medium",
+        link: "/material-requests",
+        project_id: projectId,
+      });
       await qc.invalidateQueries({ queryKey: ["buy-flow", projectId] });
       await qc.invalidateQueries({ queryKey: ["today-strip"] });
       onDone();

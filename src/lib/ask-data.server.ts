@@ -350,3 +350,150 @@ export async function pendingPOs(sb: Sb, projectId: string): Promise<AskTable> {
     note: rows.length ? "" : "No pending or approved purchase orders for this project.",
   };
 }
+
+const REQ_VENDOR = "To be chosen by Purchase";
+
+/** Material requests and orders still open: waiting for Purchase, PM, delivery or bill. */
+export async function openRequests(sb: Sb, projectId: string): Promise<AskTable> {
+  const { data } = await sb
+    .from("purchase_orders")
+    .select(
+      "po_number,vendor_name,status,delivery_date,raised_by_name,purchase_order_items(description,quantity,unit)",
+    )
+    .eq("project_id", projectId)
+    .eq("vendor_name", REQ_VENDOR)
+    .in("status", ["draft", "pending", "rejected"])
+    .order("created_at", { ascending: false })
+    .limit(30);
+  const rows = (data ?? []) as unknown as {
+    po_number: string;
+    status: string;
+    delivery_date: string | null;
+    raised_by_name: string;
+    purchase_order_items: { description: string; quantity: number; unit: string }[];
+  }[];
+  return {
+    title: "Material requests waiting for Purchase",
+    columns: ["Request", "Raised by", "Needed by", "Status", "Items"],
+    rows: rows.map((r) => [
+      r.po_number,
+      r.raised_by_name || "—",
+      r.delivery_date ?? "—",
+      r.status === "rejected" ? "rejected" : "with Purchase",
+      (r.purchase_order_items ?? [])
+        .slice(0, 3)
+        .map((i) => `${i.description} ${fmt(n(i.quantity))} ${i.unit}`)
+        .join("; "),
+    ]),
+    note: rows.length
+      ? "Open in Material Requests to pick the vendor."
+      : "No material requests waiting.",
+  };
+}
+
+/** What the project owes a vendor or contractor (bills − payments), or the top balances. */
+export async function partyBalance(sb: Sb, projectId: string, query: string): Promise<AskTable> {
+  const [bills, pays] = await Promise.all([
+    sb
+      .from("bills")
+      .select("id,vendor_name,basic_amount,gst_amount,other_charges,retention_amount,deductions")
+      .eq("project_id", projectId),
+    sb.from("bill_payments").select("bill_id,amount").eq("project_id", projectId),
+  ]);
+  const paid = new Map<string, number>();
+  for (const p of (pays.data ?? []) as { bill_id: string; amount: number }[])
+    paid.set(p.bill_id, (paid.get(p.bill_id) ?? 0) + n(p.amount));
+  const by = new Map<
+    string,
+    { name: string; billed: number; retention: number; paid: number; due: number }
+  >();
+  for (const b of (bills.data ?? []) as {
+    id: string;
+    vendor_name: string;
+    basic_amount: number;
+    gst_amount: number;
+    other_charges: number;
+    retention_amount: number;
+    deductions: number;
+  }[]) {
+    const k = norm(b.vendor_name);
+    if (!k) continue;
+    const cur = by.get(k) ?? { name: b.vendor_name, billed: 0, retention: 0, paid: 0, due: 0 };
+    const gross = n(b.basic_amount) + n(b.gst_amount) + n(b.other_charges);
+    cur.billed += gross;
+    cur.retention += n(b.retention_amount);
+    cur.paid += paid.get(b.id) ?? 0;
+    cur.due += gross - n(b.retention_amount) - n(b.deductions) - (paid.get(b.id) ?? 0);
+    by.set(k, cur);
+  }
+  const q = norm(query);
+  const list = [...by.values()]
+    .filter((r) => (q ? norm(r.name).includes(q) || q.includes(norm(r.name)) : Math.abs(r.due) > 1))
+    .sort((a, b) => b.due - a.due)
+    .slice(0, 15);
+  return {
+    title: q ? `Balance with ${query}` : "Who we owe (top balances)",
+    columns: ["Party", "Billed ₹", "Paid ₹", "Retention held ₹", "To pay ₹"],
+    rows: list.map((r) => [r.name, fmt(r.billed), fmt(r.paid), fmt(r.retention), fmt(r.due)]),
+    note: list.length
+      ? "From Bills & Payments."
+      : q
+        ? `No bills for a party matching "${query}".`
+        : "Nothing due.",
+  };
+}
+
+/** Machines on site: hours and diesel today and this month. */
+export async function machinesToday(sb: Sb, projectId: string): Promise<AskTable> {
+  const today = new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
+  const month = today.slice(0, 8) + "01";
+  const [m, l] = await Promise.all([
+    sb
+      .from("machines")
+      .select("id,name,kind,status")
+      .eq("project_id", projectId)
+      .neq("status", "returned"),
+    sb
+      .from("machine_logs")
+      .select("machine_id,log_date,hours,diesel_l")
+      .eq("project_id", projectId)
+      .gte("log_date", month),
+  ]);
+  const logs = (l.data ?? []) as {
+    machine_id: string;
+    log_date: string;
+    hours: number;
+    diesel_l: number;
+  }[];
+  const rows = ((m.data ?? []) as { id: string; name: string; kind: string; status: string }[]).map(
+    (x) => {
+      const mine = logs.filter((g) => g.machine_id === x.id);
+      const t = mine.filter((g) => g.log_date === today);
+      const h = (a: typeof mine) => a.reduce((s, g) => s + n(g.hours), 0);
+      const d = (a: typeof mine) => a.reduce((s, g) => s + n(g.diesel_l), 0);
+      return [
+        x.name,
+        x.kind,
+        fmt(h(t)),
+        fmt(d(t)),
+        fmt(h(mine)),
+        fmt(d(mine)),
+        t.length ? x.status : "no log today",
+      ];
+    },
+  );
+  return {
+    title: "Machines on site",
+    columns: [
+      "Machine",
+      "Type",
+      "Hours today",
+      "Diesel today (l)",
+      "Hours this month",
+      "Diesel this month (l)",
+      "Status",
+    ],
+    rows,
+    note: rows.length ? "From Machines & Diesel." : "No machines registered on this site.",
+  };
+}

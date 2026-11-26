@@ -556,6 +556,14 @@ function WoDetail({
           unbilled.map((x) => x.id),
         );
       if (e2) throw e2;
+      await supabase.from("notifications").insert({
+        title: `RA bill ${raNo} to approve: ${w.contractor}`,
+        body: `${w.wo_no} · ${w.trade} · net ₹${Math.round(net).toLocaleString("en-IN")}`,
+        category: "Approval",
+        priority: "High",
+        link: "/contractors-labour?tab=wo",
+        project_id: w.project_id,
+      });
       toast.success(`RA bill ${raNo} sent for approval`);
       setOther("");
       onChanged();

@@ -70,6 +70,21 @@ export function voiceKind(question: string): { kind: string; q: string; days: nu
       )
       .replace(/\s+/g, " ")
       .trim();
+  if (/\b(material requests?|requests? pending|indents?)\b/.test(t))
+    return { kind: "requests", q: "", days };
+  if (/\b(owe|owed|due to|balance (with|for|of)|payable to|pay to)\b/.test(t))
+    return {
+      kind: "owe",
+      q: strip(
+        t.replace(
+          /\b(owe|owed|due|payable|pay|balance|with|for|to|we|how|much|do|does|is)\b/g,
+          " ",
+        ),
+      ),
+      days,
+    };
+  if (/\b(machines?|jcb|excavator|diesel|equipment)\b/.test(t))
+    return { kind: "machines", q: "", days };
   if (/\b(purchase orders?|pos?|orders? pending|pending orders?)\b/.test(t))
     return { kind: "pos", q: "", days };
   if (/\b(low|reorder|running out|run out|short of stock)\b/.test(t))
@@ -125,6 +140,12 @@ export function speak(kind: string, t: D.AskTable): string {
   } else if (kind === "boq")
     bits = take.map((r) => `${r[0]}: ${r[2]} ${r[3]} at ${money(r[4])}, amount ${money(r[5])}`);
   else if (kind === "pos") bits = take.map((r) => `${r[1]}, ${r[2]}, delivery ${r[3]}`);
+  else if (kind === "requests")
+    bits = take.map((r) => `${r[0]} from ${r[1]}, needed by ${r[2]}: ${r[4]}`);
+  else if (kind === "owe")
+    bits = take.map((r) => `${r[0]}: to pay ${money(r[4])}, retention held ${money(r[3])}`);
+  else if (kind === "machines")
+    bits = take.map((r) => `${r[0]}: ${r[2]} hours and ${r[3]} litres today`);
   return `${head}${bits.join(". ")}.`;
 }
 
@@ -149,6 +170,12 @@ async function run(kind: string, pid: string, q: string, days: number) {
       return D.boqLookup(sb, pid, q);
     case "pos":
       return D.pendingPOs(sb, pid);
+    case "requests":
+      return D.openRequests(sb, pid);
+    case "owe":
+      return D.partyBalance(sb, pid, q);
+    case "machines":
+      return D.machinesToday(sb, pid);
     default:
       return D.stockLookup(sb, pid, q);
   }
@@ -242,7 +269,10 @@ export const Route = createFileRoute("/api/voice")({
           const pid = String(body.project_id ?? "");
           const question = String(body.question ?? "").slice(0, 400);
           const { kind, q, days } = voiceKind(question);
-          if ((kind === "boq" || kind === "pos") && !m.roles.some((r) => MONEY_ROLES.includes(r)))
+          if (
+            (kind === "boq" || kind === "pos" || kind === "owe") &&
+            !m.roles.some((r) => MONEY_ROLES.includes(r))
+          )
             return json({
               ok: true,
               speech: "BOQ rates and purchase orders are for the office team.",
