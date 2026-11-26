@@ -418,23 +418,68 @@ function dryMix(ratio: number[], dryFactor: number) {
 
 const r2 = (n: number) => Math.round(n * 10000) / 10000;
 
-function labourChoice(chosen?: Record<string, string> | undefined) {
+function labourChoice(chosen?: Record<string, string> | undefined, inContract = false) {
   return pick(
     "labour",
     "Labour paid",
     [
+      ...(inContract ? [opt("civil", "In the civil labour contract (its own BOQ line)")] : []),
       opt("contract", "Contractor, paid per unit of work"),
       opt("daily", "Daily wages (mason + helper days)"),
     ],
     null,
-    "contract",
+    inContract ? "civil" : "contract",
     chosen,
+  );
+}
+
+/** Norms whose labour a lump-sum civil labour contract (₹/sft of slab) already pays for. */
+const CIVIL_NORMS = new Set(["rcc", "pcc", "steel", "aac", "brick", "plaster", "shuttering"]);
+const CIVIL_KEYS = new Set([
+  "lab_rcc_rmc",
+  "lab_rcc_site",
+  "lab_pcc",
+  "lab_steel",
+  "lab_aac",
+  "lab_brick",
+  "lab_plaster_int",
+  "lab_plaster_ext",
+  "sub_shuttering",
+  "mason_day",
+  "helper_day",
+  "vibrator",
+]);
+
+/** True when the BOQ has a separate concrete-pumping line (pumping charges per m³). */
+export function hasPumpingLine(lines: { description: string }[]) {
+  return lines.some((l) => {
+    const d = (l.description ?? "").toLowerCase();
+    return (
+      /pumping|pump (charges|hire)|by (concrete )?pump/.test(d) &&
+      readGrade(d) === null &&
+      !/rcc|reinforced/.test(d)
+    );
+  });
+}
+
+/** True when the BOQ pays civil labour as one contract line (e.g. ₹220/sft of slab). */
+export function hasCivilLabourContract(lines: { description: string }[]) {
+  return lines.some((l) =>
+    /civil labou?r contract|labou?r contract.*(sft|slab)/i.test(l.description ?? ""),
   );
 }
 
 // ─── Norms ──────────────────────────────────────────────────────────────────────
 
-type Ctx = { desc: string; d: string; dim: Dim; chosen?: Record<string, string> | undefined };
+type Ctx = {
+  desc: string;
+  d: string;
+  dim: Dim;
+  chosen?: Record<string, string> | undefined;
+  inContract?: boolean;
+  /** The BOQ has its own concrete-pumping line. */
+  pumpLine?: boolean;
+};
 type Norm = {
   id: string;
   label: string;
@@ -538,9 +583,9 @@ const NORMS: Norm[] = [
     dims: ["vol"],
     test: (d) =>
       !/\bpcc\b|plain cement concrete|lean concrete/.test(d) &&
-      ((/concrete/.test(d) && (readGrade(d) ?? 0) >= 15) ||
+      ((/concrete|\brmc\b|ready.?mix/.test(d) && (readGrade(d) ?? 0) >= 15) ||
         /\brcc\b|reinforced cement concrete/.test(d)),
-    build: ({ desc, d, chosen }) => {
+    build: ({ desc, d, chosen, inContract, pumpLine }) => {
       const grade = readGrade(desc) ?? 25;
       const mode = pick(
         "concrete",
@@ -588,7 +633,7 @@ const NORMS: Norm[] = [
         "out",
         chosen,
       );
-      const labour = labourChoice(chosen);
+      const labour = labourChoice(chosen, inContract);
       const comps: Component[] = [];
       const asm: Assumption[] = [mode, element, steelIn];
       const notes: string[] = [];
@@ -599,9 +644,13 @@ const NORMS: Norm[] = [
         const pumped = pick(
           "pumped",
           "Placing",
-          [opt("pump", "Pumped"), opt("chute", "Direct from transit mixer / chute")],
-          /pump/.test(d) ? "pump" : null,
-          element.value === "footing" ? "chute" : "pump",
+          [
+            ...(pumpLine ? [opt("separate", "Pumped, paid in its own BOQ line")] : []),
+            opt("pump", "Pumped"),
+            opt("chute", "Direct from transit mixer / chute"),
+          ],
+          pumpLine ? null : /pump/.test(d) ? "pump" : null,
+          pumpLine ? "separate" : element.value === "footing" ? "chute" : "pump",
           chosen,
         );
         asm.push(pumped);
@@ -775,7 +824,7 @@ const NORMS: Norm[] = [
     test: (d) =>
       /\bpcc\b|plain cement concrete|lean concrete|levelling course|bed concrete/.test(d) ||
       (/concrete/.test(d) && (readRatio(d)?.length ?? 0) === 3),
-    build: ({ desc, chosen }) => {
+    build: ({ desc, chosen, inContract }) => {
       const read = readRatio(desc);
       const ratioA = pick(
         "mix",
@@ -792,7 +841,7 @@ const NORMS: Norm[] = [
       );
       const ratio = ratioA.value.split(":").map(Number);
       const m = dryMix(ratio, 1.54);
-      const labour = labourChoice(chosen);
+      const labour = labourChoice(chosen, inContract);
       const comps: Component[] = [
         {
           key: "cement",
@@ -986,7 +1035,7 @@ const NORMS: Norm[] = [
     label: "AAC block masonry",
     dims: ["vol", "area"],
     test: (d) => /\baac\b|autoclaved|aerated|siporex|light ?weight block/.test(d),
-    build: ({ desc, dim, chosen }) => {
+    build: ({ desc, dim, chosen, inContract }) => {
       const t = readThickness(desc);
       const th = pick(
         "thick",
@@ -1001,7 +1050,7 @@ const NORMS: Norm[] = [
       const perM3 = dim === "vol";
       const blocks = (perM3 ? 1 / (0.12 * tm) : 1 / 0.12) * 1.05;
       const adhesive = perM3 ? 0.85 : 0.85 * tm;
-      const labour = labourChoice(chosen);
+      const labour = labourChoice(chosen, inContract);
       const comps: Component[] = [
         {
           key,
@@ -1056,7 +1105,7 @@ const NORMS: Norm[] = [
     label: "Brick masonry",
     dims: ["vol", "area"],
     test: (d) => /brick ?work|brick masonry|\bbricks?\b/.test(d) && !/aac|tile|bat/.test(d),
-    build: ({ desc, d, dim, chosen }) => {
+    build: ({ desc, d, dim, chosen, inContract }) => {
       const t = readThickness(desc);
       const th = pick(
         "thick",
@@ -1079,7 +1128,7 @@ const NORMS: Norm[] = [
       const scale = dim === "vol" ? 1 : tm; // per m² = per m³ × thickness
       const m = dryMix([1, Number(mix.value)], 1.27);
       const mortar = 0.25; // m³ wet mortar per m³ of brickwork
-      const labour = labourChoice(chosen);
+      const labour = labourChoice(chosen, inContract);
       const comps: Component[] = [
         {
           key: "bricks",
@@ -1142,7 +1191,7 @@ const NORMS: Norm[] = [
     label: "Cement plaster",
     dims: ["area"],
     test: (d) => /plaster/.test(d) && !/gypsum|\bpop\b|plaster of paris|punning/.test(d),
-    build: ({ desc, d, chosen }) => {
+    build: ({ desc, d, chosen, inContract }) => {
       const t = readThickness(desc);
       const thick = pick(
         "thick",
@@ -1189,7 +1238,7 @@ const NORMS: Norm[] = [
       );
       const wet = 0.0138 * (tmm / 12); // m³ wet mortar per m² (CPWD: 0.0138 for 12 mm incl. wastage)
       const m = dryMix([1, Number(mix.value)], 1.27);
-      const labour = labourChoice(chosen);
+      const labour = labourChoice(chosen, inContract);
       const comps: Component[] = [
         {
           key: "cement",
@@ -1427,23 +1476,65 @@ const NORMS: Norm[] = [
 
 /** Breakdown for one BOQ line; null when no norm fits (needs a closer look). */
 export function analyseLine(
-  line: { description: string; unit: string },
+  line: { description: string; unit: string; rate?: number },
   chosen?: Record<string, string>,
+  opts?: { civilContract?: boolean; pumpLine?: boolean },
 ): Analysis | null {
   const desc = line.description ?? "";
   const d = lc(desc);
   const u = unitInfo(line.unit ?? "");
+  // The civil labour contract line itself: its cost is the agreed contract rate.
+  if (/civil labou?r contract|labou?r contract.*(sft|slab)/.test(d) && (line.rate ?? 0) > 0)
+    return {
+      normId: "civil-contract",
+      normLabel: "Civil labour contract",
+      components: [
+        {
+          key: "civil_contract",
+          kind: "labour",
+          name: "Civil labour contract (agreed rate)",
+          unit: line.unit,
+          qty: 1,
+          rate: line.rate ?? 0,
+          basis: "the rate agreed with the contractor, as in the BOQ",
+          origin: "manual",
+        },
+      ],
+      assumptions: [],
+      notes: [],
+    };
   // A norm states quantities per metric unit; an "area" norm also accepts len/vol only if listed.
   for (const n of NORMS) {
     if (!n.test(d)) continue;
     if (!n.dims.includes(u.dim)) continue;
-    const { comps, asm, notes } = n.build({ desc, d, dim: u.dim, chosen });
+    const civil = !!opts?.civilContract && CIVIL_NORMS.has(n.id);
+    const built = n.build({
+      desc,
+      d,
+      dim: u.dim,
+      chosen,
+      inContract: civil,
+      pumpLine: !!opts?.pumpLine,
+    });
+    let comps = built.comps;
+    const asm = built.asm;
+    const notes = built.notes ?? [];
+    if (civil) {
+      // Steel and shuttering have no labour choice of their own: add it here.
+      if (!asm.some((a) => a.id === "labour")) asm.push(labourChoice(chosen, true));
+      if (asm.find((a) => a.id === "labour")?.value === "civil") {
+        comps = comps.filter((c) => !CIVIL_KEYS.has(c.key));
+        notes.push(
+          "Labour is paid in the civil labour contract line (₹/sft of slab), so none is added here.",
+        );
+      }
+    }
     return {
       normId: n.id,
       normLabel: n.label,
       components: comps.map((c) => ({ ...c, qty: c.qty * u.toMetric, origin: "norm" as const })),
       assumptions: asm,
-      notes: notes ?? [],
+      notes,
     };
   }
   return null;
@@ -1676,11 +1767,12 @@ export type LineBudget = {
 };
 
 export function costLine(
-  line: { description: string; unit: string },
+  line: { description: string; unit: string; rate?: number },
   state: LineState | undefined,
   ctx: RateCtx,
+  opts?: { civilContract?: boolean; pumpLine?: boolean },
 ): LineBudget {
-  const analysis = state?.skip ? null : analyseLine(line, state?.choices);
+  const analysis = state?.skip ? null : analyseLine(line, state?.choices, opts);
   const removed = new Set(state?.removed ?? []);
   const base = (analysis?.components ?? []).filter((c) => !removed.has(c.key));
   const all = [...base, ...(state?.skip ? [] : (state?.added ?? []))];

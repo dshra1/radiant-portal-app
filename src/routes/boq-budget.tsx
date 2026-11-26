@@ -29,6 +29,8 @@ import {
   DEFAULT_DIESEL,
   DEFAULT_RATES,
   KIND_LABEL,
+  hasCivilLabourContract,
+  hasPumpingLine,
   lineFlag,
   matchKey,
   poRates,
@@ -270,7 +272,8 @@ function Page() {
   const rows = boqQ.data ?? NO_ROWS;
   const costed = useMemo(() => {
     const m = new Map<string, LineBudget>();
-    for (const r of rows) m.set(r.id, costLine(r, lines[r.id], ctx));
+    const opts = { civilContract: hasCivilLabourContract(rows), pumpLine: hasPumpingLine(rows) };
+    for (const r of rows) m.set(r.id, costLine(r, lines[r.id], ctx, opts));
     return m;
   }, [rows, lines, ctx]);
 

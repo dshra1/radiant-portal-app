@@ -11,7 +11,12 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { costLine, DEFAULT_DIESEL, type LineState } from "@/lib/rate-analysis";
+import {
+  costLine,
+  DEFAULT_DIESEL,
+  hasCivilLabourContract,
+  type LineState,
+} from "@/lib/rate-analysis";
 
 export const MR_VENDOR = "To be chosen by Purchase";
 export const RATE_KEY = "rate:";
@@ -48,11 +53,15 @@ export function useBudgetMaterials(projectId: string) {
       }
       const ctx = { library: {}, po: {}, register: {}, diesel: DEFAULT_DIESEL };
       const m = new Map<string, BudgetMaterial>();
+      const civilContract = hasCivilLabourContract(
+        (rows ?? []).map((r) => ({ description: r.description ?? "" })),
+      );
       for (const r of rows ?? []) {
         const b = costLine(
           { description: r.description ?? "", unit: r.unit ?? "" },
           lines[r.id],
           ctx,
+          { civilContract },
         );
         for (const c of b.components) {
           if (c.kind !== "material") continue;
