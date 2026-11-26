@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { Shell } from "@/components/saha/Shell";
+import { TodayStrip } from "@/components/saha/TodayStrip";
 import { SiteWeekPanel } from "@/components/saha/SiteWeekPanel";
 
 export const Route = createFileRoute("/")({
@@ -201,6 +202,7 @@ function Index() {
       }`}
     >
       <div className="flex w-full flex-col gap-6">
+        {activeProject.id ? <TodayStrip /> : null}
         {activeProject.id ? <SiteWeekPanel projectId={activeProject.id} /> : null}
         {/* Projects — tap a card to open its dashboard */}
         <section>

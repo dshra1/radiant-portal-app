@@ -1607,6 +1607,22 @@ export function poRates(
   return out;
 }
 
+/** The rate-library key a purchase line belongs to, and the factor to its library unit. */
+export function matchKey(
+  description: string,
+  unit: string,
+): { key: string; factor: number } | null {
+  const d = lc(description ?? "");
+  const u = lc(String(unit ?? "")).replace(/[\s.]/g, "");
+  for (const m of PO_MATCH) {
+    if (!m.test.test(d) || (m.not && m.not.test(d))) continue;
+    const f = m.units[u];
+    if (f === undefined) continue;
+    return { key: m.key, factor: f };
+  }
+  return null;
+}
+
 /** Median day rate by trade from the labour register → mason_day / helper_day. */
 export function registerRates(rows: { trade: string; day_rate: number }[]) {
   const mason: number[] = [];

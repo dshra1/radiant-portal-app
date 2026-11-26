@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Shell } from "@/components/saha/Shell";
+import { MR_VENDOR } from "@/lib/material-requests";
 import { useEffect, useMemo, useState } from "react";
 import type { Json } from "@/integrations/supabase/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -350,7 +351,7 @@ function Page() {
         project_name: project?.name ?? "",
         site_address: project?.location ?? "",
         ...vendor,
-        vendor_name: vendor.vendor_name.trim() || "To be chosen by Purchase",
+        vendor_name: vendor.vendor_name.trim() || MR_VENDOR,
         po_date: meta.po_date,
         delivery_date: meta.delivery_date || null,
         payment_terms: meta.payment_terms,

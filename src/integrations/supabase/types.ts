@@ -526,6 +526,143 @@ export type Database = {
           },
         ]
       }
+      machines: {
+        Row: {
+          id: string
+          project_id: string | null
+          name: string
+          kind: string
+          reg_no: string
+          ownership: string
+          hire_party: string
+          hire_rate: number
+          rate_unit: string
+          min_hours_per_day: number
+          diesel_in_hire: boolean
+          diesel_lph: number
+          service_every_hours: number
+          last_service_hours: number
+          hire_start: string | null
+          hire_end: string | null
+          status: string
+          notes: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id?: string | null
+          name?: string
+          kind?: string
+          reg_no?: string
+          ownership?: string
+          hire_party?: string
+          hire_rate?: number
+          rate_unit?: string
+          min_hours_per_day?: number
+          diesel_in_hire?: boolean
+          diesel_lph?: number
+          service_every_hours?: number
+          last_service_hours?: number
+          hire_start?: string | null
+          hire_end?: string | null
+          status?: string
+          notes?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string | null
+          name?: string
+          kind?: string
+          reg_no?: string
+          ownership?: string
+          hire_party?: string
+          hire_rate?: number
+          rate_unit?: string
+          min_hours_per_day?: number
+          diesel_in_hire?: boolean
+          diesel_lph?: number
+          service_every_hours?: number
+          last_service_hours?: number
+          hire_start?: string | null
+          hire_end?: string | null
+          status?: string
+          notes?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machine_logs: {
+        Row: {
+          id: string
+          machine_id: string
+          project_id: string | null
+          log_date: string
+          hours: number
+          diesel_l: number
+          operator: string
+          work_done: string
+          stage_code: string
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          machine_id: string
+          project_id?: string | null
+          log_date?: string
+          hours?: number
+          diesel_l?: number
+          operator?: string
+          work_done?: string
+          stage_code?: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          machine_id?: string
+          project_id?: string | null
+          log_date?: string
+          hours?: number
+          diesel_l?: number
+          operator?: string
+          work_done?: string
+          stage_code?: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machine_logs_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machine_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string

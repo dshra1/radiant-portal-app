@@ -12,11 +12,13 @@ import {
   ListChecks,
   Plus,
   Save,
+  Scale,
   Sparkles,
   Truck,
   X,
 } from "lucide-react";
 import { Shell } from "@/components/saha/Shell";
+import { cn } from "@/lib/utils";
 import { MetricTile, PageTabs, Section, StatusBadge } from "@/components/saha/ui";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSessionUser } from "@/lib/access";
@@ -28,6 +30,7 @@ import {
   DEFAULT_RATES,
   KIND_LABEL,
   lineFlag,
+  matchKey,
   poRates,
   registerRates,
   resolveRate,
@@ -40,6 +43,7 @@ import {
   type RateCtx,
 } from "@/lib/rate-analysis";
 import { suggestRateAnalysis } from "@/lib/rate-analysis.functions";
+import { RATE_KEY } from "@/lib/material-requests";
 
 export const Route = createFileRoute("/boq-budget")({
   head: () => ({
@@ -126,7 +130,7 @@ const SRC_TONE: Record<string, "emerald" | "sky" | "amber" | "slate"> = {
   indicative: "amber",
 };
 
-type Tab = "lines" | "material" | "labour" | "equipment" | "library";
+type Tab = "lines" | "material" | "labour" | "equipment" | "actual" | "library";
 type Filter = "all" | "look" | "closer" | "done";
 
 function Page() {
@@ -435,6 +439,7 @@ function Page() {
     const m = new Map<
       string,
       {
+        key: string;
         name: string;
         unit: string;
         qty: number;
@@ -455,6 +460,7 @@ function Page() {
         if (c.kind !== kind) continue;
         const k = `${c.key}|${c.unit}`;
         const cur = m.get(k) ?? {
+          key: c.key,
           name: c.name,
           unit: c.unit,
           qty: 0,
@@ -578,6 +584,7 @@ function Page() {
                 { key: "material", label: "Materials", icon: <Boxes className="size-4" /> },
                 { key: "labour", label: "Labour", icon: <HardHat className="size-4" /> },
                 { key: "equipment", label: "Equipment", icon: <Truck className="size-4" /> },
+                { key: "actual", label: "Budget vs actual", icon: <Scale className="size-4" /> },
                 { key: "library", label: "Rate library", icon: <Library className="size-4" /> },
               ]}
               active={tab}
@@ -719,6 +726,15 @@ function Page() {
                   </p>
                 )}
               </Section>
+            )}
+
+            {tab === "actual" && (
+              <BudgetVsActual
+                projectId={pid}
+                materials={schedule("material")}
+                budget={totals.byKind}
+                diesel={dieselRate}
+              />
             )}
 
             {tab === "library" && (
@@ -1314,5 +1330,218 @@ function RateLibrary({
         </table>
       </div>
     </Section>
+  );
+}
+
+/**
+ * Budget vs actual: what is committed (approved POs) and spent (labour register, machine log)
+ * against the BOQ Budget, by material and by kind.
+ */
+function BudgetVsActual({
+  projectId,
+  materials,
+  budget,
+  diesel,
+}: {
+  projectId: string;
+  materials: { key: string; name: string; unit: string; qty: number; amount: number }[];
+  budget: Record<Kind, number>;
+  diesel: number;
+}) {
+  const q = useQuery({
+    queryKey: ["budget-vs-actual", projectId],
+    enabled: Boolean(projectId),
+    queryFn: async () => {
+      const [pos, labour, machines, logs] = await Promise.all([
+        supabase
+          .from("purchase_orders")
+          .select(
+            "id,status,purchase_order_items(description,unit,quantity,rate,discount_pct,material_key)",
+          )
+          .eq("project_id", projectId)
+          .in("status", ["approved", "pending"]),
+        supabase
+          .from("labour_entries")
+          .select("headcount,day_rate,hours")
+          .eq("project_id", projectId),
+        supabase
+          .from("machines")
+          .select("id,ownership,hire_rate,rate_unit,min_hours_per_day,diesel_in_hire"),
+        supabase
+          .from("machine_logs")
+          .select("machine_id,log_date,hours,diesel_l")
+          .eq("project_id", projectId),
+      ]);
+      for (const r of [pos, labour, machines, logs]) if (r.error) throw r.error;
+      type Item = {
+        description: string;
+        unit: string;
+        quantity: number;
+        rate: number;
+        discount_pct: number;
+        material_key: string;
+      };
+      const byKey = new Map<string, { qty: number; amount: number; pendingAmount: number }>();
+      let other = 0;
+      let pending = 0;
+      for (const po of (pos.data ?? []) as unknown as {
+        status: string;
+        purchase_order_items: Item[];
+      }[]) {
+        for (const it of po.purchase_order_items ?? []) {
+          const amount = num(it.quantity) * num(it.rate) * (1 - num(it.discount_pct) / 100);
+          const fromKey = it.material_key?.startsWith(RATE_KEY)
+            ? { key: it.material_key.slice(RATE_KEY.length), factor: 1 }
+            : null;
+          const k = fromKey ?? matchKey(it.description, it.unit);
+          if (po.status === "pending") pending += amount;
+          if (!k) {
+            if (po.status === "approved") other += amount;
+            continue;
+          }
+          const cur = byKey.get(k.key) ?? { qty: 0, amount: 0, pendingAmount: 0 };
+          if (po.status === "approved") {
+            cur.qty += num(it.quantity) / k.factor;
+            cur.amount += amount;
+          } else cur.pendingAmount += amount;
+          byKey.set(k.key, cur);
+        }
+      }
+      const labourSpent = (labour.data ?? []).reduce(
+        (s, l) => s + num(l.headcount) * num(l.day_rate) * (num(l.hours || 8) / 8),
+        0,
+      );
+      const mById = new Map((machines.data ?? []).map((m) => [m.id, m]));
+      const days = new Map<string, number>();
+      let fuel = 0;
+      for (const l of logs.data ?? []) {
+        const k = `${l.machine_id}|${l.log_date}`;
+        days.set(k, (days.get(k) ?? 0) + num(l.hours));
+        const m = mById.get(l.machine_id);
+        if (!m?.diesel_in_hire) fuel += num(l.diesel_l);
+      }
+      let hire = 0;
+      for (const [k, h] of days) {
+        const m = mById.get(k.split("|")[0] ?? "");
+        if (!m || m.ownership !== "hired") continue;
+        hire +=
+          m.rate_unit === "day"
+            ? num(m.hire_rate)
+            : m.rate_unit === "month"
+              ? num(m.hire_rate) / 26
+              : Math.max(h, num(m.min_hours_per_day)) * num(m.hire_rate);
+      }
+      return { byKey, other, pending, labourSpent, hire, fuel };
+    },
+  });
+  const d = q.data;
+  const materialActual = d ? [...d.byKey.values()].reduce((s, x) => s + x.amount, 0) + d.other : 0;
+  const rows: { kind: string; budget: number; actual: number; note: string }[] = [
+    {
+      kind: "Material (approved POs)",
+      budget: budget.material,
+      actual: materialActual,
+      note: d && d.pending ? `+ ${inr(d.pending)} awaiting approval` : "",
+    },
+    {
+      kind: "Labour (labour register)",
+      budget: budget.labour,
+      actual: d?.labourSpent ?? 0,
+      note: "headcount × day rate",
+    },
+    {
+      kind: "Equipment (machine log)",
+      budget: budget.equipment,
+      actual: (d?.hire ?? 0) + (d?.fuel ?? 0) * diesel,
+      note: d ? `hire ${inr(d.hire)} + ${Math.round(d.fuel)} l diesel` : "",
+    },
+  ];
+  return (
+    <div className="space-y-4">
+      <Section title="By kind">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[32rem] text-sm">
+            <thead className="text-xs text-muted-foreground">
+              <tr>
+                <th className="px-3 py-1.5 text-left">Kind</th>
+                <th className="px-3 py-1.5 text-right">Budget</th>
+                <th className="px-3 py-1.5 text-right">Committed / spent</th>
+                <th className="px-3 py-1.5 text-right">Used</th>
+                <th className="px-3 py-1.5 text-left" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const pct = r.budget > 0 ? (r.actual / r.budget) * 100 : 0;
+                return (
+                  <tr key={r.kind} className="border-t border-border">
+                    <td className="px-3 py-1.5 font-medium">{r.kind}</td>
+                    <td className="px-3 py-1.5 text-right">{lakh(r.budget)}</td>
+                    <td className="px-3 py-1.5 text-right font-semibold">{lakh(r.actual)}</td>
+                    <td className="px-3 py-1.5 text-right">
+                      <StatusBadge tone={pct > 100 ? "red" : pct > 85 ? "amber" : "emerald"}>
+                        {pct.toFixed(0)}%
+                      </StatusBadge>
+                    </td>
+                    <td className="px-3 py-1.5 text-xs text-muted-foreground">{r.note}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+      <Section title="Materials: budget quantity vs ordered">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[36rem] text-sm">
+            <thead className="text-xs text-muted-foreground">
+              <tr>
+                <th className="px-3 py-1.5 text-left">Material</th>
+                <th className="px-3 py-1.5 text-right">Budget qty</th>
+                <th className="px-3 py-1.5 text-right">Ordered</th>
+                <th className="px-3 py-1.5 text-right">Left</th>
+                <th className="px-3 py-1.5 text-right">Budget ₹</th>
+                <th className="px-3 py-1.5 text-right">Ordered ₹</th>
+              </tr>
+            </thead>
+            <tbody>
+              {materials.map((m) => {
+                const a = d?.byKey.get(m.key);
+                const left = m.qty - (a?.qty ?? 0);
+                const over = (a?.amount ?? 0) > m.amount * 1.001 || left < -1e-6;
+                return (
+                  <tr
+                    key={m.key + m.unit}
+                    className={cn("border-t border-border", over && "bg-destructive-soft")}
+                  >
+                    <td className="px-3 py-1.5 font-medium">{m.name}</td>
+                    <td className="px-3 py-1.5 text-right">
+                      {qtyFmt(m.qty)} {m.unit}
+                    </td>
+                    <td className="px-3 py-1.5 text-right">{qtyFmt(a?.qty ?? 0)}</td>
+                    <td
+                      className={cn(
+                        "px-3 py-1.5 text-right",
+                        left < 0 && "font-semibold text-destructive",
+                      )}
+                    >
+                      {qtyFmt(left)}
+                    </td>
+                    <td className="px-3 py-1.5 text-right">{inr(m.amount)}</td>
+                    <td className="px-3 py-1.5 text-right font-semibold">{inr(a?.amount ?? 0)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {d && d.other > 0 && (
+          <p className="px-3 py-2 text-xs text-muted-foreground">
+            {inr(d.other)} of approved POs are for items not in the budget breakdown (fixtures,
+            lift, etc.).
+          </p>
+        )}
+      </Section>
+    </div>
   );
 }

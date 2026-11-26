@@ -42,7 +42,9 @@ import { Route as InstallRouteImport } from './routes/install'
 import { Route as InventoryControlRouteImport } from './routes/inventory-control'
 import { Route as JobRouteImport } from './routes/job'
 import { Route as LandownersInvestmentRouteImport } from './routes/landowners-investment'
+import { Route as MachinesRouteImport } from './routes/machines'
 import { Route as ManualRouteImport } from './routes/manual'
+import { Route as MaterialRequestsRouteImport } from './routes/material-requests'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -255,9 +257,19 @@ const LandownersInvestmentRoute = LandownersInvestmentRouteImport.update({
   path: '/landowners-investment',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MachinesRoute = MachinesRouteImport.update({
+  id: '/machines',
+  path: '/machines',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManualRoute = ManualRouteImport.update({
   id: '/manual',
   path: '/manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MaterialRequestsRoute = MaterialRequestsRouteImport.update({
+  id: '/material-requests',
+  path: '/material-requests',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MediaUploadStudioRoute = MediaUploadStudioRouteImport.update({
@@ -525,7 +537,9 @@ export interface FileRoutesByFullPath {
   '/inventory-control': typeof InventoryControlRoute
   '/job': typeof JobRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
+  '/machines': typeof MachinesRoute
   '/manual': typeof ManualRoute
+  '/material-requests': typeof MaterialRequestsRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
@@ -607,7 +621,9 @@ export interface FileRoutesByTo {
   '/inventory-control': typeof InventoryControlRoute
   '/job': typeof JobRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
+  '/machines': typeof MachinesRoute
   '/manual': typeof ManualRoute
+  '/material-requests': typeof MaterialRequestsRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
@@ -690,7 +706,9 @@ export interface FileRoutesById {
   '/inventory-control': typeof InventoryControlRoute
   '/job': typeof JobRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
+  '/machines': typeof MachinesRoute
   '/manual': typeof ManualRoute
+  '/material-requests': typeof MaterialRequestsRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
@@ -774,7 +792,9 @@ export interface FileRouteTypes {
     | '/inventory-control'
     | '/job'
     | '/landowners-investment'
+    | '/machines'
     | '/manual'
+    | '/material-requests'
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
@@ -856,7 +876,9 @@ export interface FileRouteTypes {
     | '/inventory-control'
     | '/job'
     | '/landowners-investment'
+    | '/machines'
     | '/manual'
+    | '/material-requests'
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
@@ -938,7 +960,9 @@ export interface FileRouteTypes {
     | '/inventory-control'
     | '/job'
     | '/landowners-investment'
+    | '/machines'
     | '/manual'
+    | '/material-requests'
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
@@ -1021,7 +1045,9 @@ export interface RootRouteChildren {
   InventoryControlRoute: typeof InventoryControlRoute
   JobRoute: typeof JobRoute
   LandownersInvestmentRoute: typeof LandownersInvestmentRoute
+  MachinesRoute: typeof MachinesRoute
   ManualRoute: typeof ManualRoute
+  MaterialRequestsRoute: typeof MaterialRequestsRoute
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
   MessagesRoute: typeof MessagesRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -1303,11 +1329,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LandownersInvestmentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/machines': {
+      id: '/machines'
+      path: '/machines'
+      fullPath: '/machines'
+      preLoaderRoute: typeof MachinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manual': {
       id: '/manual'
       path: '/manual'
       fullPath: '/manual'
       preLoaderRoute: typeof ManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/material-requests': {
+      id: '/material-requests'
+      path: '/material-requests'
+      fullPath: '/material-requests'
+      preLoaderRoute: typeof MaterialRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/media-upload-studio': {
@@ -1669,7 +1709,9 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryControlRoute: InventoryControlRoute,
   JobRoute: JobRoute,
   LandownersInvestmentRoute: LandownersInvestmentRoute,
+  MachinesRoute: MachinesRoute,
   ManualRoute: ManualRoute,
+  MaterialRequestsRoute: MaterialRequestsRoute,
   MediaUploadStudioRoute: MediaUploadStudioRoute,
   MessagesRoute: MessagesRoute,
   NotificationsRoute: NotificationsRoute,
