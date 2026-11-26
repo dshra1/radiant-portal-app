@@ -18,6 +18,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BillingExpenditureRouteImport } from './routes/billing-expenditure'
 import { Route as BillsPaymentsRouteImport } from './routes/bills-payments'
 import { Route as BoqRouteImport } from './routes/boq'
+import { Route as BoqBudgetRouteImport } from './routes/boq-budget'
 import { Route as BoqEngineRouteImport } from './routes/boq-engine'
 import { Route as BoqFromDrawingsRouteImport } from './routes/boq-from-drawings'
 import { Route as BoqUploadRouteImport } from './routes/boq-upload'
@@ -41,7 +42,9 @@ import { Route as InstallRouteImport } from './routes/install'
 import { Route as InventoryControlRouteImport } from './routes/inventory-control'
 import { Route as JobRouteImport } from './routes/job'
 import { Route as LandownersInvestmentRouteImport } from './routes/landowners-investment'
+import { Route as MachinesRouteImport } from './routes/machines'
 import { Route as ManualRouteImport } from './routes/manual'
+import { Route as MaterialRequestsRouteImport } from './routes/material-requests'
 import { Route as MediaUploadStudioRouteImport } from './routes/media-upload-studio'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -132,6 +135,11 @@ const BillsPaymentsRoute = BillsPaymentsRouteImport.update({
 const BoqRoute = BoqRouteImport.update({
   id: '/boq',
   path: '/boq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BoqBudgetRoute = BoqBudgetRouteImport.update({
+  id: '/boq-budget',
+  path: '/boq-budget',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BoqEngineRoute = BoqEngineRouteImport.update({
@@ -249,9 +257,19 @@ const LandownersInvestmentRoute = LandownersInvestmentRouteImport.update({
   path: '/landowners-investment',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MachinesRoute = MachinesRouteImport.update({
+  id: '/machines',
+  path: '/machines',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ManualRoute = ManualRouteImport.update({
   id: '/manual',
   path: '/manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MaterialRequestsRoute = MaterialRequestsRouteImport.update({
+  id: '/material-requests',
+  path: '/material-requests',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MediaUploadStudioRoute = MediaUploadStudioRouteImport.update({
@@ -495,6 +513,7 @@ export interface FileRoutesByFullPath {
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
+  '/boq-budget': typeof BoqBudgetRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-from-drawings': typeof BoqFromDrawingsRoute
   '/boq-upload': typeof BoqUploadRoute
@@ -518,7 +537,9 @@ export interface FileRoutesByFullPath {
   '/inventory-control': typeof InventoryControlRoute
   '/job': typeof JobRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
+  '/machines': typeof MachinesRoute
   '/manual': typeof ManualRoute
+  '/material-requests': typeof MaterialRequestsRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
@@ -576,6 +597,7 @@ export interface FileRoutesByTo {
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
+  '/boq-budget': typeof BoqBudgetRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-from-drawings': typeof BoqFromDrawingsRoute
   '/boq-upload': typeof BoqUploadRoute
@@ -599,7 +621,9 @@ export interface FileRoutesByTo {
   '/inventory-control': typeof InventoryControlRoute
   '/job': typeof JobRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
+  '/machines': typeof MachinesRoute
   '/manual': typeof ManualRoute
+  '/material-requests': typeof MaterialRequestsRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
@@ -658,6 +682,7 @@ export interface FileRoutesById {
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
+  '/boq-budget': typeof BoqBudgetRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-from-drawings': typeof BoqFromDrawingsRoute
   '/boq-upload': typeof BoqUploadRoute
@@ -681,7 +706,9 @@ export interface FileRoutesById {
   '/inventory-control': typeof InventoryControlRoute
   '/job': typeof JobRoute
   '/landowners-investment': typeof LandownersInvestmentRoute
+  '/machines': typeof MachinesRoute
   '/manual': typeof ManualRoute
+  '/material-requests': typeof MaterialRequestsRoute
   '/media-upload-studio': typeof MediaUploadStudioRoute
   '/messages': typeof MessagesRoute
   '/notifications': typeof NotificationsRoute
@@ -741,6 +768,7 @@ export interface FileRouteTypes {
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
+    | '/boq-budget'
     | '/boq-engine'
     | '/boq-from-drawings'
     | '/boq-upload'
@@ -764,7 +792,9 @@ export interface FileRouteTypes {
     | '/inventory-control'
     | '/job'
     | '/landowners-investment'
+    | '/machines'
     | '/manual'
+    | '/material-requests'
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
@@ -822,6 +852,7 @@ export interface FileRouteTypes {
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
+    | '/boq-budget'
     | '/boq-engine'
     | '/boq-from-drawings'
     | '/boq-upload'
@@ -845,7 +876,9 @@ export interface FileRouteTypes {
     | '/inventory-control'
     | '/job'
     | '/landowners-investment'
+    | '/machines'
     | '/manual'
+    | '/material-requests'
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
@@ -903,6 +936,7 @@ export interface FileRouteTypes {
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
+    | '/boq-budget'
     | '/boq-engine'
     | '/boq-from-drawings'
     | '/boq-upload'
@@ -926,7 +960,9 @@ export interface FileRouteTypes {
     | '/inventory-control'
     | '/job'
     | '/landowners-investment'
+    | '/machines'
     | '/manual'
+    | '/material-requests'
     | '/media-upload-studio'
     | '/messages'
     | '/notifications'
@@ -985,6 +1021,7 @@ export interface RootRouteChildren {
   BillingExpenditureRoute: typeof BillingExpenditureRoute
   BillsPaymentsRoute: typeof BillsPaymentsRoute
   BoqRoute: typeof BoqRoute
+  BoqBudgetRoute: typeof BoqBudgetRoute
   BoqEngineRoute: typeof BoqEngineRoute
   BoqFromDrawingsRoute: typeof BoqFromDrawingsRoute
   BoqUploadRoute: typeof BoqUploadRoute
@@ -1008,7 +1045,9 @@ export interface RootRouteChildren {
   InventoryControlRoute: typeof InventoryControlRoute
   JobRoute: typeof JobRoute
   LandownersInvestmentRoute: typeof LandownersInvestmentRoute
+  MachinesRoute: typeof MachinesRoute
   ManualRoute: typeof ManualRoute
+  MaterialRequestsRoute: typeof MaterialRequestsRoute
   MediaUploadStudioRoute: typeof MediaUploadStudioRoute
   MessagesRoute: typeof MessagesRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -1120,6 +1159,13 @@ declare module '@tanstack/react-router' {
       path: '/boq'
       fullPath: '/boq'
       preLoaderRoute: typeof BoqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/boq-budget': {
+      id: '/boq-budget'
+      path: '/boq-budget'
+      fullPath: '/boq-budget'
+      preLoaderRoute: typeof BoqBudgetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/boq-engine': {
@@ -1283,11 +1329,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LandownersInvestmentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/machines': {
+      id: '/machines'
+      path: '/machines'
+      fullPath: '/machines'
+      preLoaderRoute: typeof MachinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/manual': {
       id: '/manual'
       path: '/manual'
       fullPath: '/manual'
       preLoaderRoute: typeof ManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/material-requests': {
+      id: '/material-requests'
+      path: '/material-requests'
+      fullPath: '/material-requests'
+      preLoaderRoute: typeof MaterialRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/media-upload-studio': {
@@ -1625,6 +1685,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillingExpenditureRoute: BillingExpenditureRoute,
   BillsPaymentsRoute: BillsPaymentsRoute,
   BoqRoute: BoqRoute,
+  BoqBudgetRoute: BoqBudgetRoute,
   BoqEngineRoute: BoqEngineRoute,
   BoqFromDrawingsRoute: BoqFromDrawingsRoute,
   BoqUploadRoute: BoqUploadRoute,
@@ -1648,7 +1709,9 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryControlRoute: InventoryControlRoute,
   JobRoute: JobRoute,
   LandownersInvestmentRoute: LandownersInvestmentRoute,
+  MachinesRoute: MachinesRoute,
   ManualRoute: ManualRoute,
+  MaterialRequestsRoute: MaterialRequestsRoute,
   MediaUploadStudioRoute: MediaUploadStudioRoute,
   MessagesRoute: MessagesRoute,
   NotificationsRoute: NotificationsRoute,

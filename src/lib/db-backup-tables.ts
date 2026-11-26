@@ -30,6 +30,23 @@ export const BACKUP_TABLES = [
   "site_stages",
   "stock_items",
   "stock_movements",
+  "notification_reads",
+  "programme_replans",
+  "stage_finance",
+  "quality_checks",
+  "cube_tests",
+  "ncrs",
+  "flat_types",
+  "flats",
+  "flat_options",
+  "flat_selections",
+  "owner_links",
+  "owner_change_requests",
+  "machines",
+  "machine_logs",
+  "work_orders",
+  "ra_bills",
+  "wo_measurements",
 ] as const;
 
 export type BackupTable = (typeof BACKUP_TABLES)[number];

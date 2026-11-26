@@ -6,7 +6,7 @@
  *
  * The restore file:
  *  1. (optional) creates every table, function, policy and storage bucket
- *     (supabase/setup/schema.sql, the 43 migrations in order);
+ *     (supabase/setup/schema.sql, every migration in order);
  *  2. creates the sign-in accounts with the same ids and e-mails, without
  *     passwords: each person sets a new one with "Forgot password";
  *  3. loads every table in dependency order, keeping all ids.
@@ -44,7 +44,11 @@ export async function readAllTables(onTable?: (t: string, n: number) => void): P
         .from(table)
         .select("*")
         .range(from, from + PAGE - 1);
-      if (error) throw new Error(`${table}: ${error.message}`);
+      if (error) {
+        // A table from a migration not yet applied to this database: back up the rest.
+        if (/does not exist|could not find the table|schema cache/i.test(error.message)) break;
+        throw new Error(`${table}: ${error.message}`);
+      }
       rows.push(...((data ?? []) as Row[]));
       if (!data || data.length < PAGE) break;
     }

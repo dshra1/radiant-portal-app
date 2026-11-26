@@ -147,7 +147,7 @@ export const Route = createFileRoute("/api/ask")({
             stopWhen: stepCountIs(6),
             system: [
               `You are Ask, the assistant inside the SiteYantra Construction app: it answers from the live records, records entries the user confirms, and checks what supervisors and accounts entered. The user works on the project "${project.name}" (${project.location}).`,
-              "Answer ONLY from the tools. They read the live app: stock register, programme stages with their material ledger, BOQ and purchase orders. Never guess a quantity, rate or date. If a tool returns nothing, say so and suggest what to check.",
+              "Answer ONLY from the tools. They read the live app: stock register, programme stages with their material ledger, BOQ, purchase orders, material requests, party balances (bills and payments) and machines. Never guess a quantity, rate or date. If a tool returns nothing, say so and suggest what to check.",
               "The tool results are shown to the user as tables under your answer, so do not repeat every row: give the answer in 1 to 3 short sentences (the key number first), then mention anything short or late.",
               "ENTRIES: when the user reports something to record (material received or issued, stage progress, labour on site), call the matching record_* tool. It does NOT save: the user sees a card and must tap Confirm. Tell them to check the card and confirm; mention any warnings plainly. Never claim it is saved.",
               "CHECKING: you are also the confirming party for what site supervisors and accounts enter. When asked whether something is right, or to check entries, use check_entries and the lookups and say clearly what matches and what doesn't.",
@@ -261,6 +261,25 @@ export const Route = createFileRoute("/api/ask")({
                 description: "Purchase orders awaiting approval or delivery.",
                 inputSchema: z.object({}),
                 execute: async () => keep(await D.pendingPOs(sb, pid)),
+              }),
+              material_requests: tool({
+                description:
+                  "Material requests from site still waiting for Purchase to choose the vendor.",
+                inputSchema: z.object({}),
+                execute: async () => keep(await D.openRequests(sb, pid)),
+              }),
+              party_balance: tool({
+                description:
+                  "What the project owes a vendor, subcontractor or hire party (billed, paid, retention, to pay). Empty party lists the top balances.",
+                inputSchema: z.object({
+                  party: z.string().describe("Party name or part of it; empty for all"),
+                }),
+                execute: async ({ party }) => keep(await D.partyBalance(sb, pid, party)),
+              }),
+              machines: tool({
+                description: "Machines on site with hours and diesel today and this month.",
+                inputSchema: z.object({}),
+                execute: async () => keep(await D.machinesToday(sb, pid)),
               }),
             },
           });

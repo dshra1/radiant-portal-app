@@ -1,5 +1,5 @@
 -- Saha OS (radiant-portal-app): full database setup for a NEW, EMPTY Supabase project.
--- Generated from supabase/migrations (43 files, in order) plus the 7 private storage buckets.
+-- Generated from supabase/migrations (61 files, in order) plus the 7 private storage buckets.
 -- Run once in the new project's SQL Editor. Do not run on a database that already has these tables.
 
 -- ===== 20260904050637_a0e50756-e361-4a79-88fe-b9de4a0ccaf6.sql =====
@@ -2468,3 +2468,559 @@ create trigger site_stages_dates_guard before update on public.site_stages
   for each row execute function public.site_stages_dates_guard();
 
 notify pgrst, 'reload schema';
+
+-- ===== 20261117130000_saha_billing =====
+-- SAHA central AI billing: firms, prepaid credit wallets, reservations, payments, GST invoices.
+-- Lives in SAHA's own database. Row-level security is on with NO policies, so only the server
+-- (service role) can read or write; firms reach it only through SAHA's billing API.
+
+create table if not exists public.billing_firms (
+  id text primary key,                       -- short firm code, e.g. 'acme-builders'
+  name text not null,
+  api_key_hash text not null,                -- sha-256 of the firm's key
+  active boolean not null default true,
+  balance numeric(14,2) not null default 0,
+  billing jsonb not null default '{}'::jsonb, -- GSTIN, address, state, contact (latest from the firm)
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.billing_reservations (
+  id uuid primary key default gen_random_uuid(),
+  firm_id text not null references public.billing_firms(id),
+  feature text not null,
+  credits numeric(14,2) not null,
+  status text not null default 'reserved' check (status in ('reserved','settled','released')),
+  by_user text,
+  created_at timestamptz not null default now(),
+  closed_at timestamptz
+);
+create index if not exists billing_reservations_open on public.billing_reservations (status, created_at);
+
+create table if not exists public.billing_events (
+  id bigserial primary key,
+  firm_id text not null references public.billing_firms(id),
+  type text not null check (type in ('use','refund','topup','adjust')),
+  feature text,
+  credits numeric(14,2) not null,            -- + in, − out
+  balance_after numeric(14,2) not null,
+  ref text,
+  by_user text,
+  at timestamptz not null default now()
+);
+create index if not exists billing_events_firm_at on public.billing_events (firm_id, at desc);
+
+create table if not exists public.billing_counters (
+  fy text primary key,                       -- e.g. '2026-27'
+  last integer not null default 0
+);
+
+create table if not exists public.billing_payments (
+  payment_id text primary key,               -- Razorpay payment id (or 'bank:<ref>')
+  order_id text,
+  firm_id text not null references public.billing_firms(id),
+  pack text not null,
+  amount_paise bigint not null,              -- incl. GST
+  credits numeric(14,2) not null,
+  source text not null,                      -- 'checkout' | 'webhook' | 'bank'
+  invoice_no text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.billing_invoices (
+  invoice_no text primary key,
+  fy text not null,
+  seq integer not null,
+  firm_id text not null references public.billing_firms(id),
+  payment_id text references public.billing_payments(payment_id),
+  buyer jsonb not null,
+  taxable numeric(14,2) not null,
+  cgst numeric(14,2) not null default 0,
+  sgst numeric(14,2) not null default 0,
+  igst numeric(14,2) not null default 0,
+  total numeric(14,2) not null,
+  pdf_path text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.billing_firms enable row level security;
+alter table public.billing_reservations enable row level security;
+alter table public.billing_events enable row level security;
+alter table public.billing_counters enable row level security;
+alter table public.billing_payments enable row level security;
+alter table public.billing_invoices enable row level security;
+
+-- Reserve credits for one AI use: one atomic step, so two uses at the same moment can't both
+-- pass on the same balance. Returns the reservation id, or raises 'insufficient' / 'inactive'.
+create or replace function public.billing_reserve(p_firm text, p_feature text, p_credits numeric, p_user text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_bal numeric; v_id uuid;
+begin
+  update billing_firms set balance = balance - p_credits, updated_at = now()
+    where id = p_firm and active and balance >= p_credits
+    returning balance into v_bal;
+  if v_bal is null then
+    if exists (select 1 from billing_firms where id = p_firm and not active) then raise exception 'inactive'; end if;
+    raise exception 'insufficient';
+  end if;
+  insert into billing_reservations (firm_id, feature, credits, by_user) values (p_firm, p_feature, p_credits, p_user)
+    returning id into v_id;
+  insert into billing_events (firm_id, type, feature, credits, balance_after, ref, by_user)
+    values (p_firm, 'use', p_feature, -p_credits, v_bal, v_id::text, p_user);
+  return v_id;
+end $$;
+
+-- The AI run succeeded: keep the charge.
+create or replace function public.billing_settle(p_id uuid)
+returns void language sql security definer set search_path = public as $$
+  update billing_reservations set status = 'settled', closed_at = now() where id = p_id and status = 'reserved';
+$$;
+
+-- The AI run failed: give the credits back (once).
+create or replace function public.billing_release(p_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare r billing_reservations; v_bal numeric;
+begin
+  update billing_reservations set status = 'released', closed_at = now()
+    where id = p_id and status = 'reserved' returning * into r;
+  if r.id is null then return; end if;
+  update billing_firms set balance = balance + r.credits, updated_at = now() where id = r.firm_id returning balance into v_bal;
+  insert into billing_events (firm_id, type, feature, credits, balance_after, ref)
+    values (r.firm_id, 'refund', r.feature, r.credits, v_bal, r.id::text);
+end $$;
+
+-- A top-up paid: record the payment once (checkout, webhook or bank), add credits, take the
+-- next invoice number for the financial year. Returns the invoice number, or null if this
+-- payment was already recorded.
+create or replace function public.billing_topup(
+  p_payment text, p_order text, p_firm text, p_pack text, p_amount_paise bigint, p_credits numeric,
+  p_source text, p_fy text, p_prefix text, p_by text)
+returns text language plpgsql security definer set search_path = public as $$
+declare v_seq int; v_no text; v_bal numeric;
+begin
+  insert into billing_payments (payment_id, order_id, firm_id, pack, amount_paise, credits, source)
+    values (p_payment, p_order, p_firm, p_pack, p_amount_paise, p_credits, p_source)
+    on conflict (payment_id) do nothing;
+  if not found then return null; end if;
+  update billing_firms set balance = balance + p_credits, updated_at = now() where id = p_firm returning balance into v_bal;
+  insert into billing_events (firm_id, type, credits, balance_after, ref, by_user)
+    values (p_firm, 'topup', p_credits, v_bal, p_payment, p_by);
+  insert into billing_counters (fy, last) values (p_fy, 1)
+    on conflict (fy) do update set last = billing_counters.last + 1
+    returning last into v_seq;
+  v_no := p_prefix || '/' || p_fy || '/' || lpad(v_seq::text, 4, '0');
+  update billing_payments set invoice_no = v_no where payment_id = p_payment;
+  return v_no;
+end $$;
+
+-- SAHA staff correction (no invoice).
+create or replace function public.billing_adjust(p_firm text, p_credits numeric, p_note text, p_by text)
+returns numeric language plpgsql security definer set search_path = public as $$
+declare v_bal numeric;
+begin
+  update billing_firms set balance = balance + p_credits, updated_at = now() where id = p_firm returning balance into v_bal;
+  if v_bal is null then raise exception 'unknown firm'; end if;
+  insert into billing_events (firm_id, type, credits, balance_after, ref, by_user) values (p_firm, 'adjust', p_credits, v_bal, p_note, p_by);
+  return v_bal;
+end $$;
+
+-- Reservations left open by a crashed run are refunded after 15 minutes (called by the API).
+create or replace function public.billing_release_stale()
+returns integer language plpgsql security definer set search_path = public as $$
+declare r record; n int := 0;
+begin
+  for r in select id from billing_reservations where status = 'reserved' and created_at < now() - interval '15 minutes' loop
+    perform billing_release(r.id); n := n + 1;
+  end loop;
+  return n;
+end $$;
+
+revoke all on function public.billing_reserve(text,text,numeric,text) from public, anon, authenticated;
+revoke all on function public.billing_settle(uuid) from public, anon, authenticated;
+revoke all on function public.billing_release(uuid) from public, anon, authenticated;
+revoke all on function public.billing_topup(text,text,text,text,bigint,numeric,text,text,text,text) from public, anon, authenticated;
+revoke all on function public.billing_adjust(text,numeric,text,text) from public, anon, authenticated;
+revoke all on function public.billing_release_stale() from public, anon, authenticated;
+grant execute on function public.billing_reserve(text,text,numeric,text) to service_role;
+grant execute on function public.billing_settle(uuid) to service_role;
+grant execute on function public.billing_release(uuid) to service_role;
+grant execute on function public.billing_topup(text,text,text,text,bigint,numeric,text,text,text,text) to service_role;
+grant execute on function public.billing_adjust(text,numeric,text,text) to service_role;
+grant execute on function public.billing_release_stale() to service_role;
+
+-- ===== 20261122090000_phone_alerts =====
+-- Phone alerts (Web Push), owner 22 Nov 2026: staff mostly use the app on a phone and must be alerted
+-- when a team message or an action-centre notification arrives, even with the app closed.
+
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  device text not null default '',
+  created_at timestamptz not null default now(),
+  last_sent_at timestamptz
+);
+create index if not exists push_subscriptions_user_idx on public.push_subscriptions (user_id);
+alter table public.push_subscriptions enable row level security;
+drop policy if exists "Own phone alerts: read" on public.push_subscriptions;
+create policy "Own phone alerts: read" on public.push_subscriptions for select to authenticated using (user_id = auth.uid());
+drop policy if exists "Own phone alerts: remove" on public.push_subscriptions;
+create policy "Own phone alerts: remove" on public.push_subscriptions for delete to authenticated using (user_id = auth.uid());
+grant select, delete on public.push_subscriptions to authenticated;
+grant all on public.push_subscriptions to service_role;
+
+-- A phone may change hands: subscribing moves the device to whoever is signed in now.
+create or replace function public.push_subscribe(p_endpoint text, p_p256dh text, p_auth text, p_device text default '')
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Please sign in'; end if;
+  insert into public.push_subscriptions (user_id, endpoint, p256dh, auth, device)
+  values (auth.uid(), p_endpoint, p_p256dh, p_auth, coalesce(p_device, ''))
+  on conflict (endpoint) do update
+    set user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth,
+        device = excluded.device, created_at = now();
+end $$;
+revoke all on function public.push_subscribe(text, text, text, text) from public, anon;
+grant execute on function public.push_subscribe(text, text, text, text) to authenticated;
+
+-- Each message or notification is sent to phones once only.
+create table if not exists public.push_sent (
+  source text not null,
+  row_id uuid not null,
+  sent_at timestamptz not null default now(),
+  primary key (source, row_id)
+);
+alter table public.push_sent enable row level security;
+grant all on public.push_sent to service_role;
+
+-- New team message or notification -> ask the app server to alert the phones. The server reads the row
+-- itself with its own key, so this call carries only the table and id. Never blocks the insert.
+create extension if not exists pg_net with schema extensions;
+
+create or replace function public.push_after_insert()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  perform net.http_post(
+    url := 'https://radiant-portal-app.dshra1.workers.dev/api/push/send',
+    body := jsonb_build_object('table', tg_table_name, 'id', new.id),
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    timeout_milliseconds := 5000
+  );
+  return new;
+exception when others then
+  return new;
+end $$;
+
+drop trigger if exists push_team_messages on public.team_messages;
+create trigger push_team_messages after insert on public.team_messages
+  for each row execute function public.push_after_insert();
+drop trigger if exists push_notifications on public.notifications;
+create trigger push_notifications after insert on public.notifications
+  for each row execute function public.push_after_insert();
+
+-- ===== 20261126100000_buy_flow_and_machines =====
+-- Buy flow and machines (26 Nov 2026).
+-- 1. Material requests are purchase orders with vendor 'To be chosen by Purchase' (raised from
+--    site). Purchase may now open such a request to pick the vendor and rate; before, only the
+--    person who raised it or an admin / PM could edit it.
+-- 2. Machines & diesel: owned and hired machines, and a daily log of hours, diesel and work,
+--    per project. Site roles log; managers delete. Landowner / investor logins read only.
+-- Safe to run more than once.
+
+create or replace function public.save_purchase_order(p_header jsonb, p_items jsonb, p_id uuid default null)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  po public.purchase_orders%rowtype;
+  st text := coalesce(nullif(p_header->>'status', ''), 'draft');
+begin
+  if uid is null or not public.can_write(uid) then
+    raise exception 'You do not have permission to raise purchase orders';
+  end if;
+  if st not in ('draft', 'pending') then
+    raise exception 'A purchase order can only be saved as draft or sent for approval';
+  end if;
+  if coalesce(btrim(p_header->>'vendor_name'), '') = '' then
+    raise exception 'Vendor name is required';
+  end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'Add at least one line item';
+  end if;
+
+  if p_id is null then
+    insert into public.purchase_orders (
+      po_number, project_id, project_name, site_address, vendor_name, vendor_address, vendor_gstin,
+      vendor_contact, vendor_email, quote_reference, po_date, delivery_date, payment_terms,
+      delivery_terms, freight_charges, other_charges, tax_mode, stage_code, terms, notes, status,
+      raised_by, raised_by_name)
+    values (
+      public.next_po_number(),
+      nullif(p_header->>'project_id', '')::uuid,
+      coalesce(p_header->>'project_name', ''),
+      coalesce(p_header->>'site_address', ''),
+      btrim(p_header->>'vendor_name'),
+      coalesce(p_header->>'vendor_address', ''),
+      coalesce(p_header->>'vendor_gstin', ''),
+      coalesce(p_header->>'vendor_contact', ''),
+      coalesce(p_header->>'vendor_email', ''),
+      coalesce(p_header->>'quote_reference', ''),
+      coalesce(nullif(p_header->>'po_date', '')::date, current_date),
+      nullif(p_header->>'delivery_date', '')::date,
+      coalesce(p_header->>'payment_terms', ''),
+      coalesce(p_header->>'delivery_terms', ''),
+      coalesce(nullif(p_header->>'freight_charges', '')::numeric, 0),
+      coalesce(nullif(p_header->>'other_charges', '')::numeric, 0),
+      coalesce(nullif(p_header->>'tax_mode', ''), 'intra'),
+      coalesce(p_header->>'stage_code', ''),
+      coalesce(p_header->>'terms', ''),
+      coalesce(p_header->>'notes', ''),
+      st,
+      uid,
+      coalesce(p_header->>'raised_by_name', ''))
+    returning * into po;
+  else
+    select * into po from public.purchase_orders where id = p_id for update;
+    if not found then
+      raise exception 'Purchase order not found';
+    end if;
+    if po.status not in ('draft', 'pending', 'rejected') then
+      raise exception '% is %: only draft, pending or rejected purchase orders can be edited', po.po_number, po.status;
+    end if;
+    if not (
+      po.raised_by = uid
+      or public.is_manager(uid)
+      -- Purchase picks the vendor and rate on a site material request.
+      or (public.has_role(uid, 'purchase_stores') and po.vendor_name = 'To be chosen by Purchase')
+    ) then
+      raise exception 'Only the person who raised % or an admin / PM can edit it', po.po_number;
+    end if;
+    update public.purchase_orders set
+      project_id = nullif(p_header->>'project_id', '')::uuid,
+      project_name = coalesce(p_header->>'project_name', ''),
+      site_address = coalesce(p_header->>'site_address', ''),
+      vendor_name = btrim(p_header->>'vendor_name'),
+      vendor_address = coalesce(p_header->>'vendor_address', ''),
+      vendor_gstin = coalesce(p_header->>'vendor_gstin', ''),
+      vendor_contact = coalesce(p_header->>'vendor_contact', ''),
+      vendor_email = coalesce(p_header->>'vendor_email', ''),
+      quote_reference = coalesce(p_header->>'quote_reference', ''),
+      po_date = coalesce(nullif(p_header->>'po_date', '')::date, po.po_date),
+      delivery_date = nullif(p_header->>'delivery_date', '')::date,
+      payment_terms = coalesce(p_header->>'payment_terms', ''),
+      delivery_terms = coalesce(p_header->>'delivery_terms', ''),
+      freight_charges = coalesce(nullif(p_header->>'freight_charges', '')::numeric, 0),
+      other_charges = coalesce(nullif(p_header->>'other_charges', '')::numeric, 0),
+      tax_mode = coalesce(nullif(p_header->>'tax_mode', ''), 'intra'),
+      stage_code = coalesce(p_header->>'stage_code', ''),
+      terms = coalesce(p_header->>'terms', ''),
+      notes = coalesce(p_header->>'notes', ''),
+      status = st,
+      approved_by = null,
+      approved_by_name = '',
+      approved_at = null,
+      rejection_reason = ''
+    where id = p_id
+    returning * into po;
+    delete from public.purchase_order_items where po_id = p_id;
+  end if;
+
+  insert into public.purchase_order_items (
+    po_id, item_code, description, brand, unit, quantity, rate, discount_pct, gst_pct,
+    sort_order, stage_code, material_key)
+  select po.id,
+         coalesce(x.item_code, ''), coalesce(x.description, ''), coalesce(x.brand, ''),
+         coalesce(x.unit, ''), coalesce(x.quantity, 0), coalesce(x.rate, 0),
+         coalesce(x.discount_pct, 0), coalesce(x.gst_pct, 18),
+         coalesce(x.sort_order, (e.ord - 1)::int), coalesce(x.stage_code, ''),
+         coalesce(x.material_key, '')
+    from jsonb_array_elements(p_items) with ordinality as e(item, ord)
+    cross join lateral jsonb_to_record(e.item) as x(
+      item_code text, description text, brand text, unit text, quantity numeric, rate numeric,
+      discount_pct numeric, gst_pct numeric, sort_order int, stage_code text, material_key text)
+   order by e.ord;
+
+  return jsonb_build_object('id', po.id, 'po_number', po.po_number, 'status', po.status);
+end;
+$$;
+
+
+revoke execute on function public.save_purchase_order(jsonb, jsonb, uuid) from public, anon;
+grant execute on function public.save_purchase_order(jsonb, jsonb, uuid) to authenticated;
+
+create table if not exists public.machines (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.site_projects(id) on delete set null,
+  name text not null default '',
+  kind text not null default '',
+  reg_no text not null default '',
+  ownership text not null default 'hired' check (ownership in ('owned', 'hired')),
+  hire_party text not null default '',
+  hire_rate numeric not null default 0,
+  rate_unit text not null default 'hour' check (rate_unit in ('hour', 'day', 'month')),
+  min_hours_per_day numeric not null default 0,
+  diesel_in_hire boolean not null default false,
+  diesel_lph numeric not null default 0,
+  service_every_hours numeric not null default 0,
+  last_service_hours numeric not null default 0,
+  hire_start date,
+  hire_end date,
+  status text not null default 'working' check (status in ('working', 'idle', 'returned')),
+  notes text not null default '',
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.machine_logs (
+  id uuid primary key default gen_random_uuid(),
+  machine_id uuid not null references public.machines(id) on delete cascade,
+  project_id uuid references public.site_projects(id) on delete cascade,
+  log_date date not null default current_date,
+  hours numeric not null default 0,
+  diesel_l numeric not null default 0,
+  operator text not null default '',
+  work_done text not null default '',
+  stage_code text not null default '',
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+create index if not exists machine_logs_machine_idx on public.machine_logs (machine_id, log_date);
+create index if not exists machine_logs_project_idx on public.machine_logs (project_id, log_date);
+
+grant select, insert, update, delete on public.machines, public.machine_logs to authenticated;
+grant all on public.machines, public.machine_logs to service_role;
+alter table public.machines enable row level security;
+alter table public.machine_logs enable row level security;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['machines', 'machine_logs'] loop
+    execute format('drop policy if exists %I on public.%I', t || '_select', t);
+    execute format('drop policy if exists %I on public.%I', t || '_insert', t);
+    execute format('drop policy if exists %I on public.%I', t || '_update', t);
+    execute format('drop policy if exists %I on public.%I', t || '_delete', t);
+    execute format('create policy %I on public.%I for select to authenticated using (public.is_approved(auth.uid()))', t || '_select', t);
+    execute format('create policy %I on public.%I for insert to authenticated with check (public.can_write(auth.uid()))', t || '_insert', t);
+    execute format('create policy %I on public.%I for update to authenticated using (public.can_write(auth.uid())) with check (public.can_write(auth.uid()))', t || '_update', t);
+    execute format('create policy %I on public.%I for delete to authenticated using (public.is_manager(auth.uid()))', t || '_delete', t);
+  end loop;
+end $$;
+
+-- ===== 20261126120000_work_orders_ra_gps =====
+-- Subcontract work orders, measurements and RA bills; GPS on labour entries (26 Nov 2026).
+--   work_orders: scope lines with qty and rate (items jsonb), retention %, advance and recovery %.
+--   wo_measurements: work measured at site against a work-order line; billed once in an RA bill.
+--   ra_bills: running-account bills; only an admin / PM can approve; the approved bill is posted
+--     to bills (cost_type labour) so it is paid and tracked like any other bill.
+--   labour_entries: where the entry was made (lat/lng/accuracy, distance from the site in m).
+-- Safe to run more than once.
+
+alter table public.labour_entries
+  add column if not exists geo_lat numeric,
+  add column if not exists geo_lng numeric,
+  add column if not exists geo_accuracy_m numeric,
+  add column if not exists geo_distance_m numeric;
+
+create table if not exists public.work_orders (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.site_projects(id) on delete cascade,
+  wo_no text not null default '',
+  contractor text not null default '',
+  contractor_phone text not null default '',
+  contractor_gstin text not null default '',
+  trade text not null default '',
+  scope text not null default '',
+  items jsonb not null default '[]'::jsonb,
+  gst_pct numeric not null default 0,
+  retention_pct numeric not null default 5,
+  advance numeric not null default 0,
+  advance_recovery_pct numeric not null default 10,
+  start_date date,
+  end_date date,
+  status text not null default 'active' check (status in ('draft', 'active', 'closed')),
+  notes text not null default '',
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.wo_measurements (
+  id uuid primary key default gen_random_uuid(),
+  work_order_id uuid not null references public.work_orders(id) on delete cascade,
+  project_id uuid references public.site_projects(id) on delete cascade,
+  item_id text not null default '',
+  measured_on date not null default current_date,
+  qty numeric not null default 0,
+  location text not null default '',
+  stage_code text not null default '',
+  remarks text not null default '',
+  measured_by_name text not null default '',
+  ra_bill_id uuid,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+create index if not exists wo_measurements_wo_idx on public.wo_measurements (work_order_id, measured_on);
+
+create table if not exists public.ra_bills (
+  id uuid primary key default gen_random_uuid(),
+  work_order_id uuid not null references public.work_orders(id) on delete cascade,
+  project_id uuid references public.site_projects(id) on delete cascade,
+  ra_no integer not null default 1,
+  bill_date date not null default current_date,
+  gross numeric not null default 0,
+  gst numeric not null default 0,
+  retention numeric not null default 0,
+  advance_recovery numeric not null default 0,
+  other_deductions numeric not null default 0,
+  net numeric not null default 0,
+  status text not null default 'submitted' check (status in ('draft', 'submitted', 'approved', 'rejected')),
+  bill_id uuid references public.bills(id) on delete set null,
+  approved_by_name text not null default '',
+  notes text not null default '',
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+create index if not exists ra_bills_wo_idx on public.ra_bills (work_order_id, ra_no);
+
+grant select, insert, update, delete on public.work_orders, public.wo_measurements, public.ra_bills to authenticated;
+grant all on public.work_orders, public.wo_measurements, public.ra_bills to service_role;
+alter table public.work_orders enable row level security;
+alter table public.wo_measurements enable row level security;
+alter table public.ra_bills enable row level security;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['work_orders', 'wo_measurements', 'ra_bills'] loop
+    execute format('drop policy if exists %I on public.%I', t || '_select', t);
+    execute format('drop policy if exists %I on public.%I', t || '_insert', t);
+    execute format('drop policy if exists %I on public.%I', t || '_update', t);
+    execute format('drop policy if exists %I on public.%I', t || '_delete', t);
+    execute format('create policy %I on public.%I for select to authenticated using (public.is_approved(auth.uid()))', t || '_select', t);
+    execute format('create policy %I on public.%I for insert to authenticated with check (public.can_write(auth.uid()))', t || '_insert', t);
+    execute format('create policy %I on public.%I for update to authenticated using (public.can_write(auth.uid())) with check (public.can_write(auth.uid()))', t || '_update', t);
+    execute format('create policy %I on public.%I for delete to authenticated using (public.is_manager(auth.uid()))', t || '_delete', t);
+  end loop;
+end $$;
+
+-- Only an admin / PM approves or rejects an RA bill, and an approved bill is not edited.
+create or replace function public.ra_bills_guard()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'UPDATE' and old.status = 'approved' and not public.is_manager(auth.uid()) then
+    raise exception 'RA bill % is approved: only an admin / PM can change it', old.ra_no;
+  end if;
+  if new.status in ('approved', 'rejected')
+     and (tg_op = 'INSERT' or old.status is distinct from new.status)
+     and not public.is_manager(auth.uid()) then
+    raise exception 'Only an admin / PM can approve or reject an RA bill';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists ra_bills_guard on public.ra_bills;
+create trigger ra_bills_guard before insert or update on public.ra_bills
+  for each row execute function public.ra_bills_guard();

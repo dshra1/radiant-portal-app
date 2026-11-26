@@ -39,6 +39,7 @@ import { useActiveProject, useActiveProjectSetter } from "@/hooks/useActiveProje
 import { useOnline } from "@/lib/use-online";
 import { NotificationBell } from "@/components/saha/NotificationBell";
 import { CommandSearch } from "@/components/saha/CommandSearch";
+import { QuickActionGrid } from "@/components/saha/TodayStrip";
 import { AskPanel } from "@/components/saha/AskPanel";
 
 function useSignOut() {
@@ -197,6 +198,7 @@ export function Shell({
   }, [role]);
   const [projectMenu, setProjectMenu] = useState(false);
   const [addMenu, setAddMenu] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const online = useOnline();
   const signOut = useSignOut();
@@ -213,6 +215,8 @@ export function Shell({
     [groups, pathname],
   );
   const [open, setOpen] = useState<Record<string, boolean>>({ [activeGroup]: true });
+  /** Groups whose occasional ("more") pages are shown in the sidebar. */
+  const [showMore, setShowMore] = useState<Record<string, boolean>>({});
 
   /** Group the user last pressed in the sidebar; its items show in the top bar. */
   const [pickedGroup, setPickedGroup] = useState<string | null>(null);
@@ -351,27 +355,45 @@ export function Shell({
 
                 {isOpen && (
                   <div className="mt-0.5 space-y-0.5">
-                    {group.items.map((item) => {
-                      const active = pathname === item.to;
-                      return (
-                        <Link
-                          key={item.to}
-                          to={item.to}
-                          title={item.label}
-                          className={cn(
-                            "flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-foreground transition-all",
-                            active
-                              ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_2px_0_0_0_var(--color-sidebar-primary)]"
-                              : "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-                          )}
-                        >
-                          <item.icon
-                            className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
-                          />
-                          {expanded && <span className="truncate">{item.label}</span>}
-                        </Link>
-                      );
-                    })}
+                    {group.items
+                      .filter((item) => !item.more || showMore[group.id] || pathname === item.to)
+                      .map((item) => {
+                        const active = pathname === item.to;
+                        return (
+                          <Link
+                            key={item.to}
+                            to={item.to}
+                            title={item.label}
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-foreground transition-all",
+                              active
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_2px_0_0_0_var(--color-sidebar-primary)]"
+                                : "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                            )}
+                          >
+                            <item.icon
+                              className={cn("size-4 shrink-0", active && "text-sidebar-primary")}
+                            />
+                            {expanded && <span className="truncate">{item.label}</span>}
+                          </Link>
+                        );
+                      })}
+                    {expanded && group.items.some((i) => i.more && i.to !== pathname) && (
+                      <button
+                        type="button"
+                        onClick={() => setShowMore((p) => ({ ...p, [group.id]: !p[group.id] }))}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-[12px] font-medium text-sidebar-foreground/60 hover:text-sidebar-accent-foreground"
+                      >
+                        {showMore[group.id] ? (
+                          <ChevronDown className="size-3.5" />
+                        ) : (
+                          <ChevronRight className="size-3.5" />
+                        )}
+                        {showMore[group.id]
+                          ? "Fewer"
+                          : `More (${group.items.filter((i) => i.more && i.to !== pathname).length})`}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -636,24 +658,26 @@ export function Shell({
               />
               {topGroup.label}
             </span>
-            {topGroup.items.map((item) => {
-              const active = pathname === item.to;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                  )}
-                >
-                  <item.icon className="size-3.5" />
-                  {item.label}
-                </Link>
-              );
-            })}
+            {topGroup.items
+              .filter((item) => !item.more || item.to === pathname)
+              .map((item) => {
+                const active = pathname === item.to;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={cn(
+                      "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+                      active
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                    )}
+                  >
+                    <item.icon className="size-3.5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
           </nav>
         )}
 
@@ -683,24 +707,83 @@ export function Shell({
 
         <AskPanel />
 
+        {quickOpen && (
+          <div
+            className="fixed inset-0 z-40 md:hidden"
+            role="dialog"
+            aria-label="Quick actions and menu"
+          >
+            <button
+              type="button"
+              aria-label="Close"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setQuickOpen(false)}
+            />
+            <div className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-card p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl">
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+              <p className="label-caps mb-2 text-muted-foreground">Do now</p>
+              <QuickActionGrid onPick={() => setQuickOpen(false)} />
+              <p className="label-caps mb-2 mt-4 text-muted-foreground">Go to</p>
+              <div className="space-y-3">
+                {groups.map((g) => (
+                  <div key={g.id}>
+                    <p className="mb-1 text-xs font-semibold" style={{ color: groupTone(g.id) }}>
+                      {g.label}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {g.items
+                        .filter((i) => !i.more)
+                        .map((i) => (
+                          <Link
+                            key={i.to}
+                            to={i.to}
+                            onClick={() => setQuickOpen(false)}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium"
+                          >
+                            <i.icon className="size-3.5" />
+                            {i.label}
+                          </Link>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <nav className="sticky bottom-0 z-20 flex min-h-16 w-full items-center justify-around border-t border-border bg-card px-2 pb-[env(safe-area-inset-bottom)] md:hidden">
-          {phoneBarFor(role).map((item) => {
-            const active = pathname === item.to;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                aria-label={item.label}
-                className={cn(
-                  "flex min-h-12 flex-1 flex-col items-center justify-center gap-1 py-1 text-[11px] font-medium transition-colors",
-                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <item.icon className="size-5" />
-                <span className="leading-none">{item.label}</span>
-              </Link>
-            );
-          })}
+          <button
+            type="button"
+            aria-label="Quick actions and menu"
+            onClick={() => setQuickOpen(true)}
+            className="order-[3] flex min-h-12 flex-1 flex-col items-center justify-center"
+          >
+            <span className="grid size-11 place-items-center rounded-full bg-primary text-primary-foreground shadow-md">
+              <Plus className="size-5" />
+            </span>
+          </button>
+          {phoneBarFor(role)
+            .slice(0, 4)
+            .map((item, idx) => ({ item, idx }))
+            .map(({ item, idx }) => {
+              const active = pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  aria-label={item.label}
+                  className={cn(
+                    idx < 2 ? "order-[1]" : "order-[5]",
+                    "flex min-h-12 flex-1 flex-col items-center justify-center gap-1 py-1 text-[11px] font-medium transition-colors",
+                    active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <item.icon className="size-5" />
+                  <span className="leading-none">{item.label}</span>
+                </Link>
+              );
+            })}
         </nav>
       </div>
     </div>
