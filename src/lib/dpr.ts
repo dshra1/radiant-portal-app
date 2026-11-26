@@ -146,6 +146,52 @@ const safe = (s: string) =>
     })
     .join("");
 
+/** Text pdf-lib's standard font can't draw (Telugu, Hindi, other scripts). */
+const needsImage = (s: string) =>
+  [...String(s ?? "")].some((c) => c.charCodeAt(0) > 0xff && !"₹–—‘’“”".includes(c));
+
+/**
+ * Draw text with the phone's own fonts (the browser joins Telugu/Hindi letters correctly)
+ * onto a canvas, wrapped to `widthPt`, and return it as a PNG with its height in points.
+ */
+async function textPng(text: string, widthPt: number, sizePt: number) {
+  if (typeof document === "undefined") return null;
+  const k = 3; // pixels per point: sharp when printed
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const font = `${sizePt * k}px "Noto Sans Telugu","Noto Sans Devanagari","Nirmala UI","Kohinoor Telugu",system-ui,sans-serif`;
+  ctx.font = font;
+  const maxW = widthPt * k;
+  const lines: string[] = [];
+  for (const para of String(text).split(/\n/)) {
+    let cur = "";
+    for (const w of para.split(/\s+/).filter(Boolean)) {
+      const t = cur ? `${cur} ${w}` : w;
+      if (ctx.measureText(t).width > maxW && cur) {
+        lines.push(cur);
+        cur = w;
+      } else cur = t;
+    }
+    lines.push(cur);
+  }
+  const lh = sizePt * 1.35 * k;
+  canvas.width = Math.ceil(maxW);
+  const pad = sizePt * 0.35 * k;
+  canvas.height = Math.max(1, Math.ceil(lines.length * lh + 2 * pad));
+  ctx.font = font;
+  ctx.fillStyle = "#000";
+  ctx.textBaseline = "top";
+  lines.forEach((ln, i) => ctx.fillText(ln, 0, pad + i * lh));
+  const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, "image/png"));
+  if (!blob) return null;
+  return {
+    png: new Uint8Array(await blob.arrayBuffer()),
+    heightPt: canvas.height / k,
+    widthPt: canvas.width / k,
+  };
+}
+
 export async function buildDprPdf(projectName: string, location: string, d: DayData) {
   const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const doc = await PDFDocument.create();
@@ -194,7 +240,7 @@ export async function buildDprPdf(projectName: string, location: string, d: DayD
     text(`${s}${count !== undefined ? `  (${count})` : ""}`, M + 6, 11, bold, green);
     y -= 20;
   };
-  const table = (cols: { label: string; w: number }[], rows: string[][]) => {
+  const table = async (cols: { label: string; w: number }[], rows: string[][]) => {
     if (rows.length === 0) {
       ensure(14);
       text("Nothing recorded.", M + 6, 9, font, grey);
@@ -208,9 +254,19 @@ export async function buildDprPdf(projectName: string, location: string, d: DayD
       x += c.w;
     }
     y -= 12;
-    rows.forEach((r, n) => {
-      const cells = r.map((v, i) => wrap(v, 9, (cols[i]?.w ?? 60) - 8));
-      const h = Math.max(...cells.map((c) => c.length)) * 11 + 6;
+    for (const [n, r] of rows.entries()) {
+      const cells = await Promise.all(
+        r.map(async (v, i) => {
+          const w = (cols[i]?.w ?? 60) - 8;
+          if (needsImage(v)) {
+            const img = await textPng(v, w, 9);
+            if (img) return { img, h: img.heightPt };
+          }
+          const lines = wrap(v, 9, w);
+          return { lines, h: lines.length * 11 };
+        }),
+      );
+      const h = Math.max(...cells.map((c) => c.h)) + 6;
       ensure(h);
       if (n > 0)
         page.drawLine({
@@ -220,12 +276,21 @@ export async function buildDprPdf(projectName: string, location: string, d: DayD
           color: rgb(0.85, 0.85, 0.85),
         });
       x = M;
-      cells.forEach((lines, i) => {
-        lines.forEach((ln, k) => page.drawText(ln, { x: x + 4, y: y - k * 11, size: 9, font }));
+      for (const [i, c] of cells.entries()) {
+        if ("img" in c && c.img) {
+          const png = await doc.embedPng(c.img.png);
+          page.drawImage(png, {
+            x: x + 4,
+            y: y + 9 - c.img.heightPt,
+            width: c.img.widthPt,
+            height: c.img.heightPt,
+          });
+        } else if ("lines" in c && c.lines)
+          c.lines.forEach((ln, k) => page.drawText(ln, { x: x + 4, y: y - k * 11, size: 9, font }));
         x += cols[i]?.w ?? 60;
-      });
+      }
       y -= h;
-    });
+    }
   };
 
   // Header
@@ -264,18 +329,30 @@ export async function buildDprPdf(projectName: string, location: string, d: DayD
     y -= 14;
   }
   for (const r of d.report) {
-    for (const ln of wrap(r.body, 10, W - 2 * M - 12)) {
-      ensure(13);
-      text(ln, M + 6, 10);
-      y -= 13;
-    }
+    const img = needsImage(r.body) ? await textPng(r.body, W - 2 * M - 12, 10) : null;
+    if (img) {
+      ensure(Math.min(img.heightPt, H - 2 * M));
+      const png = await doc.embedPng(img.png);
+      page.drawImage(png, {
+        x: M + 6,
+        y: y + 10 - img.heightPt,
+        width: img.widthPt,
+        height: img.heightPt,
+      });
+      y -= img.heightPt;
+    } else
+      for (const ln of wrap(r.body, 10, W - 2 * M - 12)) {
+        ensure(13);
+        text(ln, M + 6, 10);
+        y -= 13;
+      }
     ensure(13);
     text(`- ${r.by}`, M + 6, 8, font, grey);
     y -= 14;
   }
 
   heading("Labour", heads);
-  table(
+  await table(
     [
       { label: "Contractor", w: 130 },
       { label: "Trade", w: 100 },
@@ -290,7 +367,7 @@ export async function buildDprPdf(projectName: string, location: string, d: DayD
     ]),
   );
   heading("Machines & diesel", d.machines.length);
-  table(
+  await table(
     [
       { label: "Machine", w: 160 },
       { label: "Hours", w: 60 },
@@ -305,7 +382,7 @@ export async function buildDprPdf(projectName: string, location: string, d: DayD
     ]),
   );
   heading("Material received", d.received.length);
-  table(
+  await table(
     [
       { label: "Item", w: 200 },
       { label: "Qty", w: 80 },
@@ -315,7 +392,7 @@ export async function buildDprPdf(projectName: string, location: string, d: DayD
     d.received.map((r) => [r.item, `${r.qty} ${r.unit}`, r.party, r.po]),
   );
   heading("Material used", d.used.length);
-  table(
+  await table(
     [
       { label: "Item", w: 255 },
       { label: "Qty", w: 100 },
@@ -324,7 +401,7 @@ export async function buildDprPdf(projectName: string, location: string, d: DayD
     d.used.map((r) => [r.item, `${r.qty} ${r.unit}`, r.stage]),
   );
   heading("Subcontract progress", d.subcon.length);
-  table(
+  await table(
     [
       { label: "Contractor", w: 130 },
       { label: "Work", w: 200 },

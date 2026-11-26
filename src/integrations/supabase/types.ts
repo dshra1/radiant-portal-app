@@ -897,6 +897,89 @@ export type Database = {
           },
         ]
       }
+      wallet_entries: {
+        Row: {
+          id: string
+          project_id: string | null
+          person_id: string | null
+          person_name: string
+          entry_type: string
+          entry_date: string
+          amount: number
+          category: string
+          payee: string
+          purpose: string
+          stage_code: string
+          photo_path: string
+          status: string
+          decided_by_name: string
+          decided_at: string | null
+          rejection_reason: string
+          paid_by_name: string
+          paid_on: string | null
+          pay_mode: string
+          pay_reference: string
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id?: string | null
+          person_id?: string | null
+          person_name?: string
+          entry_type: string
+          entry_date?: string
+          amount?: number
+          category?: string
+          payee?: string
+          purpose?: string
+          stage_code?: string
+          photo_path?: string
+          status?: string
+          decided_by_name?: string
+          decided_at?: string | null
+          rejection_reason?: string
+          paid_by_name?: string
+          paid_on?: string | null
+          pay_mode?: string
+          pay_reference?: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string | null
+          person_id?: string | null
+          person_name?: string
+          entry_type?: string
+          entry_date?: string
+          amount?: number
+          category?: string
+          payee?: string
+          purpose?: string
+          stage_code?: string
+          photo_path?: string
+          status?: string
+          decided_by_name?: string
+          decided_at?: string | null
+          rejection_reason?: string
+          paid_by_name?: string
+          paid_on?: string | null
+          pay_mode?: string
+          pay_reference?: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string

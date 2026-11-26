@@ -83,6 +83,7 @@ import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as TenderComparisonRouteImport } from './routes/tender-comparison'
 import { Route as VendorDirectoryRouteImport } from './routes/vendor-directory'
 import { Route as VendorLifecycleRouteImport } from './routes/vendor-lifecycle'
+import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as WorkCardsRouteImport } from './routes/work-cards'
 import { Route as AiIndexRouteImport } from './routes/ai.index'
 import { Route as AiThreadIdRouteImport } from './routes/ai.$threadId'
@@ -462,6 +463,11 @@ const VendorLifecycleRoute = VendorLifecycleRouteImport.update({
   path: '/vendor-lifecycle',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WalletRoute = WalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkCardsRoute = WorkCardsRouteImport.update({
   id: '/work-cards',
   path: '/work-cards',
@@ -578,6 +584,7 @@ export interface FileRoutesByFullPath {
   '/tender-comparison': typeof TenderComparisonRoute
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
+  '/wallet': typeof WalletRoute
   '/work-cards': typeof WorkCardsRoute
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/ask': typeof ApiAskRoute
@@ -662,6 +669,7 @@ export interface FileRoutesByTo {
   '/tender-comparison': typeof TenderComparisonRoute
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
+  '/wallet': typeof WalletRoute
   '/work-cards': typeof WorkCardsRoute
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/ask': typeof ApiAskRoute
@@ -747,6 +755,7 @@ export interface FileRoutesById {
   '/tender-comparison': typeof TenderComparisonRoute
   '/vendor-directory': typeof VendorDirectoryRoute
   '/vendor-lifecycle': typeof VendorLifecycleRoute
+  '/wallet': typeof WalletRoute
   '/work-cards': typeof WorkCardsRoute
   '/ai/$threadId': typeof AiThreadIdRoute
   '/api/ask': typeof ApiAskRoute
@@ -833,6 +842,7 @@ export interface FileRouteTypes {
     | '/tender-comparison'
     | '/vendor-directory'
     | '/vendor-lifecycle'
+    | '/wallet'
     | '/work-cards'
     | '/ai/$threadId'
     | '/api/ask'
@@ -917,6 +927,7 @@ export interface FileRouteTypes {
     | '/tender-comparison'
     | '/vendor-directory'
     | '/vendor-lifecycle'
+    | '/wallet'
     | '/work-cards'
     | '/ai/$threadId'
     | '/api/ask'
@@ -1001,6 +1012,7 @@ export interface FileRouteTypes {
     | '/tender-comparison'
     | '/vendor-directory'
     | '/vendor-lifecycle'
+    | '/wallet'
     | '/work-cards'
     | '/ai/$threadId'
     | '/api/ask'
@@ -1086,6 +1098,7 @@ export interface RootRouteChildren {
   TenderComparisonRoute: typeof TenderComparisonRoute
   VendorDirectoryRoute: typeof VendorDirectoryRoute
   VendorLifecycleRoute: typeof VendorLifecycleRoute
+  WalletRoute: typeof WalletRoute
   WorkCardsRoute: typeof WorkCardsRoute
   AiThreadIdRoute: typeof AiThreadIdRoute
   ApiAskRoute: typeof ApiAskRoute
@@ -1616,6 +1629,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VendorLifecycleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wallet': {
+      id: '/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof WalletRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/work-cards': {
       id: '/work-cards'
       path: '/work-cards'
@@ -1750,6 +1770,7 @@ const rootRouteChildren: RootRouteChildren = {
   TenderComparisonRoute: TenderComparisonRoute,
   VendorDirectoryRoute: VendorDirectoryRoute,
   VendorLifecycleRoute: VendorLifecycleRoute,
+  WalletRoute: WalletRoute,
   WorkCardsRoute: WorkCardsRoute,
   AiThreadIdRoute: AiThreadIdRoute,
   ApiAskRoute: ApiAskRoute,
