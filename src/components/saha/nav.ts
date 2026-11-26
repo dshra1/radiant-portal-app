@@ -62,6 +62,12 @@ export const navGroups: NavGroup[] = [
       { to: "/boq-engine", label: "BOQ Engine", icon: Calculator },
       { to: "/project-import", label: "Import PMC Workbooks", icon: FileSpreadsheet },
       { to: "/stage-budget", label: "Stage Budget & Owner Payments", icon: IndianRupee },
+      {
+        to: "/boq-budget",
+        label: "BOQ Budget (rate analysis)",
+        icon: Calculator,
+        alsoIn: ["stock"],
+      },
       { to: "/budget-fit", label: "Budget Fit", icon: IndianRupee },
       { to: "/drawing-decipher", label: "Drawings & Documents", icon: FileText, alsoIn: ["site"] },
       { to: "/renders", label: "Renders (bathrooms, walls)", icon: Sparkles, alsoIn: ["site"] },

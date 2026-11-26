@@ -57,8 +57,11 @@ export const AI_FEATURES: AiFeature[] = [
   {
     key: "boq-ai",
     name: "BOQ estimator and rates",
-    does: "Drafts a BOQ from a project brief, suggests brand options, finds product images and proposes labour rates.",
-    where: [{ to: "/boq-engine", label: "BOQ Engine" }],
+    does: "Drafts a BOQ from a project brief, suggests brand options, finds product images, proposes labour rates and breaks down BOQ lines no standard norm fits.",
+    where: [
+      { to: "/boq-engine", label: "BOQ Engine" },
+      { to: "/boq-budget", label: "BOQ Budget" },
+    ],
     inTok: 10000,
     outTok: 25000,
     per: "estimate or suggestion run",

@@ -18,6 +18,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BillingExpenditureRouteImport } from './routes/billing-expenditure'
 import { Route as BillsPaymentsRouteImport } from './routes/bills-payments'
 import { Route as BoqRouteImport } from './routes/boq'
+import { Route as BoqBudgetRouteImport } from './routes/boq-budget'
 import { Route as BoqEngineRouteImport } from './routes/boq-engine'
 import { Route as BoqFromDrawingsRouteImport } from './routes/boq-from-drawings'
 import { Route as BoqUploadRouteImport } from './routes/boq-upload'
@@ -132,6 +133,11 @@ const BillsPaymentsRoute = BillsPaymentsRouteImport.update({
 const BoqRoute = BoqRouteImport.update({
   id: '/boq',
   path: '/boq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BoqBudgetRoute = BoqBudgetRouteImport.update({
+  id: '/boq-budget',
+  path: '/boq-budget',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BoqEngineRoute = BoqEngineRouteImport.update({
@@ -495,6 +501,7 @@ export interface FileRoutesByFullPath {
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
+  '/boq-budget': typeof BoqBudgetRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-from-drawings': typeof BoqFromDrawingsRoute
   '/boq-upload': typeof BoqUploadRoute
@@ -576,6 +583,7 @@ export interface FileRoutesByTo {
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
+  '/boq-budget': typeof BoqBudgetRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-from-drawings': typeof BoqFromDrawingsRoute
   '/boq-upload': typeof BoqUploadRoute
@@ -658,6 +666,7 @@ export interface FileRoutesById {
   '/billing-expenditure': typeof BillingExpenditureRoute
   '/bills-payments': typeof BillsPaymentsRoute
   '/boq': typeof BoqRoute
+  '/boq-budget': typeof BoqBudgetRoute
   '/boq-engine': typeof BoqEngineRoute
   '/boq-from-drawings': typeof BoqFromDrawingsRoute
   '/boq-upload': typeof BoqUploadRoute
@@ -741,6 +750,7 @@ export interface FileRouteTypes {
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
+    | '/boq-budget'
     | '/boq-engine'
     | '/boq-from-drawings'
     | '/boq-upload'
@@ -822,6 +832,7 @@ export interface FileRouteTypes {
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
+    | '/boq-budget'
     | '/boq-engine'
     | '/boq-from-drawings'
     | '/boq-upload'
@@ -903,6 +914,7 @@ export interface FileRouteTypes {
     | '/billing-expenditure'
     | '/bills-payments'
     | '/boq'
+    | '/boq-budget'
     | '/boq-engine'
     | '/boq-from-drawings'
     | '/boq-upload'
@@ -985,6 +997,7 @@ export interface RootRouteChildren {
   BillingExpenditureRoute: typeof BillingExpenditureRoute
   BillsPaymentsRoute: typeof BillsPaymentsRoute
   BoqRoute: typeof BoqRoute
+  BoqBudgetRoute: typeof BoqBudgetRoute
   BoqEngineRoute: typeof BoqEngineRoute
   BoqFromDrawingsRoute: typeof BoqFromDrawingsRoute
   BoqUploadRoute: typeof BoqUploadRoute
@@ -1120,6 +1133,13 @@ declare module '@tanstack/react-router' {
       path: '/boq'
       fullPath: '/boq'
       preLoaderRoute: typeof BoqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/boq-budget': {
+      id: '/boq-budget'
+      path: '/boq-budget'
+      fullPath: '/boq-budget'
+      preLoaderRoute: typeof BoqBudgetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/boq-engine': {
@@ -1625,6 +1645,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillingExpenditureRoute: BillingExpenditureRoute,
   BillsPaymentsRoute: BillsPaymentsRoute,
   BoqRoute: BoqRoute,
+  BoqBudgetRoute: BoqBudgetRoute,
   BoqEngineRoute: BoqEngineRoute,
   BoqFromDrawingsRoute: BoqFromDrawingsRoute,
   BoqUploadRoute: BoqUploadRoute,
