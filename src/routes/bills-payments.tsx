@@ -10,14 +10,15 @@ import { toast } from "sonner";
 import { StageSelect } from "@/components/saha/StageSelect";
 import { PageTabs } from "@/components/saha/ui";
 import { AllOutflows } from "@/components/saha/finance/AllOutflows";
+import { PartyLedger } from "@/components/saha/finance/PartyLedger";
 import { todayIso } from "@/lib/dates";
 
-type Tab = "bills" | "outflows";
+type Tab = "bills" | "parties" | "outflows";
 type Search = { tab?: Tab; bill?: string };
 
 export const Route = createFileRoute("/bills-payments")({
   validateSearch: (s: Record<string, unknown>): Search => ({
-    ...(s["tab"] === "outflows" ? { tab: "outflows" as const } : {}),
+    ...(s["tab"] === "outflows" || s["tab"] === "parties" ? { tab: s["tab"] as Tab } : {}),
     ...(typeof s["bill"] === "string" && s["bill"] ? { bill: s["bill"] } : {}),
   }),
   head: () => ({
@@ -50,6 +51,7 @@ function Page() {
         <PageTabs
           tabs={[
             { key: "bills", label: "Vendor bills & payments" },
+            { key: "parties", label: "Parties (who we owe)" },
             { key: "outflows", label: "All outflows" },
           ]}
           active={tab}
@@ -58,7 +60,9 @@ function Page() {
           }
         />
       </div>
-      {tab === "outflows" ? (
+      {tab === "parties" ? (
+        <PartyLedger />
+      ) : tab === "outflows" ? (
         <AllOutflows onViewBill={(id) => void navigate({ search: { bill: id } })} />
       ) : (
         <BillsRegister

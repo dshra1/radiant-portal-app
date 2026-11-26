@@ -1,13 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Camera,
   ClipboardCheck,
   FileSpreadsheet,
   HardHat,
   ListChecks,
   PackageCheck,
   Receipt,
+  Ruler,
   ShieldAlert,
   ShieldCheck,
   Truck,
@@ -55,7 +55,13 @@ const QUICK_ACTIONS: Action[] = [
     icon: Truck,
     roles: SITE,
   },
-  { to: "/site-media", label: "Site photos", icon: Camera, roles: SITE },
+  {
+    to: "/contractors-labour",
+    search: { tab: "wo" },
+    label: "Measure subcon work",
+    icon: Ruler,
+    roles: SITE,
+  },
   { to: "/quality", search: { tab: "ncr" }, label: "Raise NCR", icon: ShieldAlert, roles: SITE },
   { to: "/po-create", label: "Raise PO", icon: FileSpreadsheet, roles: BUY },
   { to: "/bills-payments", label: "New bill", icon: Receipt, roles: MONEY },

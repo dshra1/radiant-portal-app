@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Shell } from "@/components/saha/Shell";
+import { DayTiles } from "@/components/saha/DayTiles";
+import { distanceM, getFix } from "@/lib/geo";
 import { StageCloseout } from "@/components/saha/StageCloseout";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/useActiveProject";
@@ -81,6 +83,10 @@ function Page() {
             </p>
           )}
         </header>
+
+        {project.id && (
+          <DayTiles projectId={project.id} projectName={project.name} location={project.location} />
+        )}
 
         {q.isPending && <p className="text-sm text-muted-foreground">Loading…</p>}
         {w && list.length === 0 && (
@@ -307,8 +313,30 @@ function DailyReport({
     const date = todayIso();
     try {
       if (booked.length) {
+        // Where the report was sent from (distance from the site pin, when the site has one).
+        const fix = await getFix();
+        const pin = await supabase
+          .from("site_projects")
+          .select("latitude,longitude")
+          .eq("id", projectId)
+          .maybeSingle();
+        const site =
+          pin.data?.latitude != null && pin.data?.longitude != null
+            ? { lat: Number(pin.data.latitude), lng: Number(pin.data.longitude) }
+            : null;
+        const geo = fix
+          ? {
+              geo_lat: fix.lat,
+              geo_lng: fix.lng,
+              geo_accuracy_m: Math.round(fix.accuracy),
+              geo_distance_m: site
+                ? Math.max(0, Math.round(distanceM(fix, site) - fix.accuracy))
+                : null,
+            }
+          : {};
         const { error } = await supabase.from("labour_entries").insert(
           booked.map((g) => ({
+            ...geo,
             project_id: projectId,
             work_date: date,
             contractor: g.contractor,

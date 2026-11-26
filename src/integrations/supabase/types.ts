@@ -479,6 +479,10 @@ export type Database = {
           updated_at: string
           work_date: string
           work_done: string
+          geo_lat: number | null
+          geo_lng: number | null
+          geo_accuracy_m: number | null
+          geo_distance_m: number | null
         }
         Insert: {
           stage_code?: string
@@ -497,6 +501,10 @@ export type Database = {
           updated_at?: string
           work_date?: string
           work_done?: string
+          geo_lat?: number | null
+          geo_lng?: number | null
+          geo_accuracy_m?: number | null
+          geo_distance_m?: number | null
         }
         Update: {
           stage_code?: string
@@ -515,6 +523,10 @@ export type Database = {
           updated_at?: string
           work_date?: string
           work_done?: string
+          geo_lat?: number | null
+          geo_lng?: number | null
+          geo_accuracy_m?: number | null
+          geo_distance_m?: number | null
         }
         Relationships: [
           {
@@ -659,6 +671,228 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders: {
+        Row: {
+          id: string
+          project_id: string | null
+          wo_no: string
+          contractor: string
+          contractor_phone: string
+          contractor_gstin: string
+          trade: string
+          scope: string
+          items: Json
+          gst_pct: number
+          retention_pct: number
+          advance: number
+          advance_recovery_pct: number
+          start_date: string | null
+          end_date: string | null
+          status: string
+          notes: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id?: string | null
+          wo_no?: string
+          contractor?: string
+          contractor_phone?: string
+          contractor_gstin?: string
+          trade?: string
+          scope?: string
+          items?: Json
+          gst_pct?: number
+          retention_pct?: number
+          advance?: number
+          advance_recovery_pct?: number
+          start_date?: string | null
+          end_date?: string | null
+          status?: string
+          notes?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string | null
+          wo_no?: string
+          contractor?: string
+          contractor_phone?: string
+          contractor_gstin?: string
+          trade?: string
+          scope?: string
+          items?: Json
+          gst_pct?: number
+          retention_pct?: number
+          advance?: number
+          advance_recovery_pct?: number
+          start_date?: string | null
+          end_date?: string | null
+          status?: string
+          notes?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wo_measurements: {
+        Row: {
+          id: string
+          work_order_id: string
+          project_id: string | null
+          item_id: string
+          measured_on: string
+          qty: number
+          location: string
+          stage_code: string
+          remarks: string
+          measured_by_name: string
+          ra_bill_id: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          work_order_id: string
+          project_id?: string | null
+          item_id?: string
+          measured_on?: string
+          qty?: number
+          location?: string
+          stage_code?: string
+          remarks?: string
+          measured_by_name?: string
+          ra_bill_id?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          work_order_id?: string
+          project_id?: string | null
+          item_id?: string
+          measured_on?: string
+          qty?: number
+          location?: string
+          stage_code?: string
+          remarks?: string
+          measured_by_name?: string
+          ra_bill_id?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wo_measurements_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wo_measurements_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ra_bills: {
+        Row: {
+          id: string
+          work_order_id: string
+          project_id: string | null
+          ra_no: number
+          bill_date: string
+          gross: number
+          gst: number
+          retention: number
+          advance_recovery: number
+          other_deductions: number
+          net: number
+          status: string
+          bill_id: string | null
+          approved_by_name: string
+          notes: string
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          work_order_id: string
+          project_id?: string | null
+          ra_no?: number
+          bill_date?: string
+          gross?: number
+          gst?: number
+          retention?: number
+          advance_recovery?: number
+          other_deductions?: number
+          net?: number
+          status?: string
+          bill_id?: string | null
+          approved_by_name?: string
+          notes?: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          work_order_id?: string
+          project_id?: string | null
+          ra_no?: number
+          bill_date?: string
+          gross?: number
+          gst?: number
+          retention?: number
+          advance_recovery?: number
+          other_deductions?: number
+          net?: number
+          status?: string
+          bill_id?: string | null
+          approved_by_name?: string
+          notes?: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ra_bills_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ra_bills_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "site_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ra_bills_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
             referencedColumns: ["id"]
           },
         ]
